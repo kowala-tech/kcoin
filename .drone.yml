@@ -1,0 +1,8 @@
+pipeline:
+
+  test-and-build:
+    image: deis/go-dev
+    commands:
+      - make
+    when:
+      branch: [master, develop]
