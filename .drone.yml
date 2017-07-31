@@ -19,5 +19,6 @@ pipeline:
       - sha512
       - adler32
       - crc32
+    api_key: ${GITHUB_RELEASE_API_KEY}
     when:
       event: tag
