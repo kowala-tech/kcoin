@@ -5,6 +5,7 @@ pipeline:
     commands:
       - make
     when:
+      event: [push, tag]
       branch: [master, develop, refs/tags/*]
       
   github_release:
