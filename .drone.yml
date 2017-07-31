@@ -3,6 +3,7 @@ pipeline:
   test-and-build:
     image: deis/go-dev
     commands:
+      - printenv
       - make
     when:
       event: [push, tag]
