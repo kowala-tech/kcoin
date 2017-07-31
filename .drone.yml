@@ -20,4 +20,4 @@ pipeline:
       - adler32
       - crc32
     when:
-      event: create
+      event: tag
