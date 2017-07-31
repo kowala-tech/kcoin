@@ -19,5 +19,4 @@ pipeline:
       - adler32
       - crc32
     when:
-      branch: master
       event: tag
