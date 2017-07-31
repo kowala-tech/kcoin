@@ -5,7 +5,7 @@ pipeline:
     commands:
       - make
     when:
-      branch: [master, develop]
+      branch: [master, develop, refs/tags/*]
       
   github_release:
     image: plugins/github-release
