@@ -6,7 +6,7 @@ pipeline:
     commands:
       - printenv
       - echo $GITHUB_RELEASE_API_KEY
-      - echo ${GITHUB_RELEASE_API_KEY}
+      - echo $${GITHUB_RELEASE_API_KEY}
       - make
     when:
       event: [push, tag]
