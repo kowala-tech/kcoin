@@ -1,10 +1,9 @@
 pipeline:
 
   test-and-build:
-    image: deis/go-dev
+    image: golang
     secrets: [ GITHUB_RELEASE_API_KEY ] 
     commands:
-      - printenv
       - echo $GITHUB_RELEASE_API_KEY
       - echo $${GITHUB_RELEASE_API_KEY}
       - make
