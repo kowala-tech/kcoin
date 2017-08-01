@@ -10,7 +10,7 @@ pipeline:
       
   github_release:
     image: plugins/github-release
-    secrets: [ test, github_release_api_key ] 
+    secrets: [ github_release_api_key ] 
     files:
       - build/bin/geth
     checksum:
