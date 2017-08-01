@@ -3,6 +3,29 @@ pipeline:
   test-and-build:
     image: deis/go-dev
     commands:
+      - printenv
+14
+      - build/bin/geth
+15
+    checksum:
+16
+      - md5
+17
+      - sha1
+18
+      - sha256
+19
+      - sha512
+20
+      - adler32
+21
+      - crc32
+22
+    when:
+23
+      event: tag
+24
+
       - make
     when:
       event: [push, tag]
