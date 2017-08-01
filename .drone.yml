@@ -10,7 +10,6 @@ pipeline:
       
   github_release:
     image: plugins/github-release
-    api_key: $GITHUB_RELEASE_API_KEY
     files:
       - build/bin/geth
     checksum:
