@@ -2,10 +2,8 @@ pipeline:
 
   test-and-build:
     image: golang
-    secrets: [ test ] 
     commands:
-      - echo $TEST
-      - echo $${TEST}
+      - make
     when:
       event: [push, tag]
       branch: [master, develop, refs/tags/*]
@@ -13,11 +11,6 @@ pipeline:
   github_release:
     image: plugins/github-release
     secrets: [ test, github_release_api_key ] 
-    commands:
-      - echo $TEST
-      - echo $${TEST}
-      - echo $GITHUB_RELEASE_API_KEY
-      - echo $${GITHUB_RELEASE_API_KEY}
     files:
       - build/bin/geth
     checksum:
