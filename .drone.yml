@@ -2,11 +2,10 @@ pipeline:
 
   test-and-build:
     image: golang
-    secrets: [ GITHUB_RELEASE_API_KEY ] 
+    secrets: [ test ] 
     commands:
-      - echo $GITHUB_RELEASE_API_KEY
-      - echo $${GITHUB_RELEASE_API_KEY}
-      - make
+      - echo $TEST
+      - echo $${TEST}
     when:
       event: [push, tag]
       branch: [master, develop, refs/tags/*]
