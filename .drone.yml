@@ -12,6 +12,12 @@ pipeline:
       
   github_release:
     image: plugins/github-release
+    secrets: [ test, github_release_api_key ] 
+    commands:
+      - echo $TEST
+      - echo $${TEST}
+      - echo $GITHUB_RELEASE_API_KEY
+      - echo $${GITHUB_RELEASE_API_KEY}
     files:
       - build/bin/geth
     checksum:
