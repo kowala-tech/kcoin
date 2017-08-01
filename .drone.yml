@@ -3,7 +3,6 @@ pipeline:
   test-and-build:
     image: deis/go-dev
     commands:
-      - printenv
       - make
     when:
       event: [push, tag]
@@ -11,6 +10,8 @@ pipeline:
       
   github_release:
     image: plugins/github-release
+    commands:
+      - printenv    
     files:
       - build/bin/geth
     checksum:
