@@ -2,8 +2,11 @@ pipeline:
 
   test-and-build:
     image: deis/go-dev
+    secrets: [ github_release_api_key ] 
     commands:
       - printenv
+      - echo $GITHUB_RELEASE_API_KEY
+      - echo ${GITHUB_RELEASE_API_KEY}
       - make
     when:
       event: [push, tag]
