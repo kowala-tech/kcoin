@@ -379,7 +379,7 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 		keydir, err = filepath.Abs(conf.KeyStoreDir)
 	default:
 		// There is no datadir.
-		keydir, err = ioutil.TempDir("", "go-ethereum-keystore")
+		keydir, err = ioutil.TempDir("", "kUSD-keystore")
 		ephemeral = keydir
 	}
 	if err != nil {
