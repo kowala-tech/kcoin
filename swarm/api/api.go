@@ -29,9 +29,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/swarm/storage"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kUSD/swarm/storage"
 )
 
 var (

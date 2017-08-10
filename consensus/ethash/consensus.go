@@ -24,13 +24,13 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/common/math"
+	"github.com/kowala-tech/kUSD/consensus"
+	"github.com/kowala-tech/kUSD/consensus/misc"
+	"github.com/kowala-tech/kUSD/core/state"
+	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/params"
 	set "gopkg.in/fatih/set.v0"
 )
 

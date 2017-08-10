@@ -19,9 +19,9 @@ package vm
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/common/math"
+	"github.com/kowala-tech/kUSD/params"
 )
 
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so

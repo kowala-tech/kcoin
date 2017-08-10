@@ -23,15 +23,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/light"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/core"
+	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/light"
+	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kUSD/trie"
 )
 
 var (

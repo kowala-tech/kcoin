@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kUSD/params"
 )
 
 var (

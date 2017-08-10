@@ -29,9 +29,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/core"
+	"github.com/kowala-tech/kUSD/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

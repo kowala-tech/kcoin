@@ -22,15 +22,15 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/common/hexutil"
+	"github.com/kowala-tech/kUSD/common/math"
+	"github.com/kowala-tech/kUSD/core"
+	"github.com/kowala-tech/kUSD/core/state"
+	"github.com/kowala-tech/kUSD/core/vm"
+	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/params"
 )
 
 // VMTest checks EVM execution without block or transaction context.

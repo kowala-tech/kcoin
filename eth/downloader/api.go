@@ -20,9 +20,9 @@ import (
 	"context"
 	"sync"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/rpc"
+	ethereum "github.com/kowala-tech/kUSD"
+	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/rpc"
 )
 
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.

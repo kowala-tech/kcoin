@@ -24,10 +24,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/kowala-tech/kUSD/common/mclock"
+	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kUSD/p2p/discover"
+	"github.com/kowala-tech/kUSD/rlp"
 )
 
 const (

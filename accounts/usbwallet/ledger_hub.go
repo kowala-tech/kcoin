@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/kowala-tech/kUSD/accounts"
+	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/log"
 	"github.com/karalabe/hid"
 )
 

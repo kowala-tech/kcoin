@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/ethdb"
 )
 
 // makeTestTrie create a sample test trie to test node-wise reconstruction.

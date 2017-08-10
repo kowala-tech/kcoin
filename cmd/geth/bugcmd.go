@@ -26,10 +26,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/cmd/internal/browser"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/kowala-tech/kUSD/cmd/internal/browser"
+	"github.com/kowala-tech/kUSD/params"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/kowala-tech/kUSD/cmd/utils"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -41,7 +41,7 @@ var bugCommand = cli.Command{
 	Category:  "MISCELLANEOUS COMMANDS",
 }
 
-const issueUrl = "https://github.com/ethereum/go-ethereum/issues/new"
+const issueUrl = "https://github.com/kowala-tech/kUSD/issues/new"
 
 // reportBug reports a bug by opening a new URL to the go-ethereum GH issue
 // tracker and setting default values as the issue body.
@@ -100,10 +100,10 @@ func printCmdOut(w io.Writer, prefix, path string, args ...string) {
 const header = `Please answer these questions before submitting your issue. Thanks!
 
 #### What did you do?
- 
+
 #### What did you expect to see?
- 
+
 #### What did you see instead?
- 
+
 #### System details
 `

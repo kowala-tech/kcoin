@@ -25,14 +25,14 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/accounts/usbwallet"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
+	"github.com/kowala-tech/kUSD/accounts"
+	"github.com/kowala-tech/kUSD/accounts/keystore"
+	"github.com/kowala-tech/kUSD/accounts/usbwallet"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kUSD/p2p"
+	"github.com/kowala-tech/kUSD/p2p/discover"
 )
 
 var (

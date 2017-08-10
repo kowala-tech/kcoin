@@ -21,10 +21,10 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/console"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/kowala-tech/kUSD/cmd/utils"
+	"github.com/kowala-tech/kUSD/console"
+	"github.com/kowala-tech/kUSD/node"
+	"github.com/kowala-tech/kUSD/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

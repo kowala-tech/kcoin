@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/kowala-tech/kUSD/common"
 )
 
 func TestSimpleMethodUnpack(t *testing.T) {

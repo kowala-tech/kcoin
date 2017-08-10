@@ -27,12 +27,12 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/internal/cmdtest"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/swarm"
+	"github.com/kowala-tech/kUSD/accounts/keystore"
+	"github.com/kowala-tech/kUSD/internal/cmdtest"
+	"github.com/kowala-tech/kUSD/node"
+	"github.com/kowala-tech/kUSD/p2p"
+	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kUSD/swarm"
 )
 
 func init() {

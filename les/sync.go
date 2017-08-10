@@ -20,9 +20,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/light"
+	"github.com/kowala-tech/kUSD/core"
+	"github.com/kowala-tech/kUSD/eth/downloader"
+	"github.com/kowala-tech/kUSD/light"
 )
 
 const (
