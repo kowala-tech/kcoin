@@ -11,8 +11,8 @@ Vcs-Browser: https://github.com/kowala-tech/kUSD
 Package: {{.Name}}
 Architecture: any
 Depends: ${misc:Depends}, {{.ExeList}}
-Description: Meta-package to install geth and other tools
- Meta-package to install geth and other tools
+Description: Meta-package to install kusd and other tools
+ Meta-package to install kusd and other tools
 
 {{range .Executables}}
 Package: {{$.ExeName .}}

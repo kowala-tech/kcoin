@@ -12,7 +12,7 @@ pipeline:
     image: plugins/github-release
     secrets: [ github_release_api_key ] 
     files:
-      - build/bin/geth
+      - build/bin/kusd
     checksum:
       - md5
       - sha1
