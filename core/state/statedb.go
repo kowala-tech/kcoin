@@ -18,6 +18,7 @@
 package state
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sort"
@@ -233,11 +234,35 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 
 func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	stateObject := self.getStateObject(a)
+	var r common.Hash
 	if stateObject != nil {
-		return stateObject.GetState(self.db, b)
+		r = stateObject.GetState(self.db, b)
 	}
-	return common.Hash{}
+	fmt.Printf("getState(0x%s, 0x%s): 0x%s\n",
+		hex.EncodeToString(a[:]),
+		hex.EncodeToString(b[:]),
+		hex.EncodeToString(r[:]),
+	)
+	return r
 }
+
+// func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
+// 	stateObject := self.getStateObject(a)
+// 	var s common.Hash
+// 	if stateObject != nil {
+// 		s = stateObject.GetState(self.db, b)
+// 	} else {
+// 		s = common.Hash{}
+// 	}
+
+// 	fmt.Printf(">> 0x%s: 0x%s: 0x%s\n",
+// 		hex.EncodeToString(a[:]),
+// 		hex.EncodeToString(b[:]),
+// 		hex.EncodeToString(s[:]),
+// 	)
+
+// 	return s
+// }
 
 // StorageTrie returns the storage trie of an account.
 // The return value is a copy and is nil for non-existent accounts.
