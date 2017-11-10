@@ -86,8 +86,8 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(math.MaxInt64) /*disabled*/, new(EthashConfig), nil}
-	TestChainConfig    = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(math.MaxInt64) /*disabled*/, new(EthashConfig), nil, nil}
+	TestChainConfig    = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil, nil}
 	TestRules          = TestChainConfig.Rules(new(big.Int))
 )
 
@@ -113,8 +113,9 @@ type ChainConfig struct {
 	MetropolisBlock *big.Int `json:"metropolisBlock,omitempty"` // Metropolis switch block (nil = no fork, 0 = alraedy on homestead)
 
 	// Various consensus engines
-	Ethash *EthashConfig `json:"ethash,omitempty"`
-	Clique *CliqueConfig `json:"clique,omitempty"`
+	Ethash     *EthashConfig     `json:"ethash,omitempty"`
+	Clique     *CliqueConfig     `json:"clique,omitempty"`
+	Tendermint *TendermintConfig `json:"tendermint,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -136,6 +137,11 @@ func (c *CliqueConfig) String() string {
 	return "clique"
 }
 
+// TendermintConfig is the config for tendermint consensus engine
+type TendermintConfig struct{}
+
+func (c *TendermintConfig) String() string { return "tendermint" }
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -144,6 +150,8 @@ func (c *ChainConfig) String() string {
 		engine = c.Ethash
 	case c.Clique != nil:
 		engine = c.Clique
+	case c.Tendermint != nil:
+		engine = c.Tendermint
 	default:
 		engine = "unknown"
 	}

@@ -31,6 +31,7 @@ import (
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/consensus/clique"
 	"github.com/kowala-tech/kUSD/consensus/ethash"
+	"github.com/kowala-tech/kUSD/consensus/tendermint"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
@@ -212,6 +213,10 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
+	// Use tendermint
+	if chainConfig.Tendermint != nil {
+		return tendermint.New()
+	}
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
@@ -334,6 +339,8 @@ func (s *Ethereum) StartMining(local bool) error {
 			return fmt.Errorf("singer missing: %v", err)
 		}
 		clique.Authorize(eb, wallet.SignHash)
+	} else if _, ok := s.engine.(*tendermint.Tendermint); ok {
+		// any tendermint checks here
 	}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection

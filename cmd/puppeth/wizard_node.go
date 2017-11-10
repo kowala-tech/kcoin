@@ -134,6 +134,8 @@ func (w *wizard) deployNode(boot bool) {
 					return
 				}
 			}
+		} else if w.conf.genesis.Config.Tendermint != nil {
+			// wizard code here
 		}
 		// Establish the gas dynamics to be enforced by the signer
 		fmt.Println()
