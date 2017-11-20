@@ -215,7 +215,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
 	// Use tendermint
 	if chainConfig.Tendermint != nil {
-		return tendermint.New()
+		return tendermint.New(ctx)
 	}
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {

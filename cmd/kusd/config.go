@@ -33,6 +33,7 @@ import (
 	"github.com/kowala-tech/kUSD/eth"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kUSD/tendermint"
 	whisper "github.com/kowala-tech/kUSD/whisper/whisperv5"
 	"github.com/naoina/toml"
 )
@@ -76,10 +77,11 @@ type ethstatsConfig struct {
 }
 
 type kusdConfig struct {
-	Eth      eth.Config
-	Shh      whisper.Config
-	Node     node.Config
-	Ethstats ethstatsConfig
+	Eth        eth.Config
+	Shh        whisper.Config
+	Node       node.Config
+	Ethstats   ethstatsConfig
+	Tendermint tendermint.Config
 }
 
 func loadConfig(file string, cfg *kusdConfig) error {
@@ -150,6 +152,13 @@ func enableWhisper(ctx *cli.Context) bool {
 
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
+
+	// tendermint gossip network
+	if err := stack.Register(func(n *node.ServiceContext) (node.Service, error) {
+		return tendermint.New(&cfg.Tendermint, stack), nil
+	}); err != nil {
+		utils.Fatalf("Failed to register the tendermint gossip network: %v", err)
+	}
 
 	utils.RegisterEthService(stack, &cfg.Eth)
 
