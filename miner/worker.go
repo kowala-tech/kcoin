@@ -27,7 +27,6 @@ import (
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/consensus/misc"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -433,9 +432,9 @@ func (self *worker) commitNewWork() {
 	}
 	// Create the current work task and check any fork transitions needed
 	work := self.current
-	if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
-		misc.ApplyDAOHardFork(work.state)
-	}
+	//if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
+	//	misc.ApplyDAOHardFork(work.state)
+	//}
 	pending, err := self.eth.TxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)

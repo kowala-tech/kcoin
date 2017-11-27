@@ -21,7 +21,6 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus/misc"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
@@ -174,9 +173,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 				}
 			}
 		}
-		if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(h.Number) == 0 {
-			misc.ApplyDAOHardFork(statedb)
-		}
+
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)

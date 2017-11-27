@@ -33,8 +33,6 @@ import (
 	"github.com/kowala-tech/kUSD/eth"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/params"
-	"github.com/kowala-tech/kUSD/tendermint"
-	whisper "github.com/kowala-tech/kUSD/whisper/whisperv5"
 	"github.com/naoina/toml"
 )
 
@@ -44,7 +42,7 @@ var (
 		Name:        "dumpconfig",
 		Usage:       "Show configuration values",
 		ArgsUsage:   "",
-		Flags:       append(append(nodeFlags, rpcFlags...), whisperFlags...),
+		Flags:       append(append(nodeFlags, rpcFlags...)),
 		Category:    "MISCELLANEOUS COMMANDS",
 		Description: `The dumpconfig command shows configuration values.`,
 	}
@@ -77,11 +75,9 @@ type ethstatsConfig struct {
 }
 
 type kusdConfig struct {
-	Eth        eth.Config
-	Shh        whisper.Config
-	Node       node.Config
-	Ethstats   ethstatsConfig
-	Tendermint tendermint.Config
+	Eth      eth.Config
+	Node     node.Config
+	Ethstats ethstatsConfig
 }
 
 func loadConfig(file string, cfg *kusdConfig) error {
@@ -113,7 +109,6 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kusdConfig) {
 	// Load defaults.
 	cfg := kusdConfig{
 		Eth:  eth.DefaultConfig,
-		Shh:  whisper.DefaultConfig,
 		Node: defaultNodeConfig(),
 	}
 
@@ -135,45 +130,13 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kusdConfig) {
 		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
 	}
 
-	utils.SetShhConfig(ctx, stack, &cfg.Shh)
-
 	return stack, cfg
-}
-
-// enableWhisper returns true in case one of the whisper flags is set.
-func enableWhisper(ctx *cli.Context) bool {
-	for _, flag := range whisperFlags {
-		if ctx.GlobalIsSet(flag.GetName()) {
-			return true
-		}
-	}
-	return false
 }
 
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	// tendermint gossip network
-	if err := stack.Register(func(n *node.ServiceContext) (node.Service, error) {
-		return tendermint.New(&cfg.Tendermint, stack), nil
-	}); err != nil {
-		utils.Fatalf("Failed to register the tendermint gossip network: %v", err)
-	}
-
 	utils.RegisterEthService(stack, &cfg.Eth)
-
-	// Whisper must be explicitly enabled by specifying at least 1 whisper flag or in dev mode
-	shhEnabled := enableWhisper(ctx)
-	shhAutoEnabled := !ctx.GlobalIsSet(utils.WhisperEnabledFlag.Name) && ctx.GlobalIsSet(utils.DevModeFlag.Name)
-	if shhEnabled || shhAutoEnabled {
-		if ctx.GlobalIsSet(utils.WhisperMaxMessageSizeFlag.Name) {
-			cfg.Shh.MaxMessageSize = uint32(ctx.Int(utils.WhisperMaxMessageSizeFlag.Name))
-		}
-		if ctx.GlobalIsSet(utils.WhisperMinPOWFlag.Name) {
-			cfg.Shh.MinimumAcceptedPOW = ctx.Float64(utils.WhisperMinPOWFlag.Name)
-		}
-		utils.RegisterShhService(stack, &cfg.Shh)
-	}
 
 	// Add the Ethereum Stats daemon if requested.
 	if cfg.Ethstats.URL != "" {

@@ -27,7 +27,6 @@ import (
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/consensus/misc"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/eth/downloader"
@@ -433,10 +432,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				p.forkDrop = nil
 
 				// Validate the header and either drop the peer or continue
-				if err := misc.VerifyDAOHeaderExtraData(pm.chainconfig, headers[0]); err != nil {
-					p.Log().Debug("Verified to be on the other side of the DAO fork, dropping")
-					return err
-				}
+				//if err := misc.VerifyDAOHeaderExtraData(pm.chainconfig, headers[0]); err != nil {
+				//	p.Log().Debug("Verified to be on the other side of the DAO fork, dropping")
+				//	return err
+				//}
 				p.Log().Debug("Verified to be on the same side of the DAO fork")
 				return nil
 			}
