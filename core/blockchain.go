@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	mrand "math/rand"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/mclock"
 	"github.com/kowala-tech/kUSD/consensus"
@@ -42,7 +42,6 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rlp"
 	"github.com/kowala-tech/kUSD/trie"
-	"github.com/hashicorp/golang-lru"
 )
 
 var (
@@ -397,10 +396,12 @@ func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
+	// @TODO(rgeraldes)
 	// Prepare the genesis block and reinitialise the chain
-	if err := bc.hc.WriteTd(genesis.Hash(), genesis.NumberU64(), genesis.Difficulty()); err != nil {
-		log.Crit("Failed to write genesis block TD", "err", err)
-	}
+	//if err := bc.hc.WriteTd(genesis.Hash(), genesis.NumberU64(), genesis.Difficulty()); err != nil {
+	//	log.Crit("Failed to write genesis block TD", "err", err)
+	//}
+
 	if err := WriteBlock(bc.chainDb, genesis); err != nil {
 		log.Crit("Failed to write genesis block", "err", err)
 	}
@@ -832,33 +833,36 @@ func (bc *BlockChain) WriteBlock(block *types.Block) (status WriteStatus, err er
 		return
 	}
 
-	localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
-	externTd := new(big.Int).Add(block.Difficulty(), ptd)
+	// @TODO(rgeraldes)
+	/*
+		localTd := bc.GetTd(bc.currentBlock.Hash(), bc.currentBlock.NumberU64())
+		externTd := new(big.Int).Add(block.Difficulty(), ptd)
 
-	// Irrelevant of the canonical status, write the block itself to the database
-	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
-		log.Crit("Failed to write block total difficulty", "err", err)
-	}
-	if err := WriteBlock(bc.chainDb, block); err != nil {
-		log.Crit("Failed to write block contents", "err", err)
-	}
-
-	// If the total difficulty is higher than our known, add it to the canonical chain
-	// Second clause in the if statement reduces the vulnerability to selfish mining.
-	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
-		// Reorganise the chain if the parent is not the head block
-		if block.ParentHash() != bc.currentBlock.Hash() {
-			if err := bc.reorg(bc.currentBlock, block); err != nil {
-				return NonStatTy, err
-			}
+		// Irrelevant of the canonical status, write the block itself to the database
+		if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
+			log.Crit("Failed to write block total difficulty", "err", err)
 		}
-		bc.insert(block) // Insert the block as the new head of the chain
-		status = CanonStatTy
-	} else {
-		status = SideStatTy
-	}
+		if err := WriteBlock(bc.chainDb, block); err != nil {
+			log.Crit("Failed to write block contents", "err", err)
+		}
 
+		// If the total difficulty is higher than our known, add it to the canonical chain
+		// Second clause in the if statement reduces the vulnerability to selfish mining.
+		// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
+
+			if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+				// Reorganise the chain if the parent is not the head block
+				if block.ParentHash() != bc.currentBlock.Hash() {
+					if err := bc.reorg(bc.currentBlock, block); err != nil {
+						return NonStatTy, err
+					}
+				}
+				bc.insert(block) // Insert the block as the new head of the chain
+				status = CanonStatTy
+			} else {
+				status = SideStatTy
+			}
+	*/
 	bc.futureBlocks.Remove(block.Hash())
 
 	return
@@ -1014,7 +1018,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 				return i, err
 			}
 		case SideStatTy:
-			log.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "diff", block.Difficulty(), "elapsed",
+			log.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "elapsed",
 				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()))
 
 			blockInsertTimer.UpdateSince(bstart)

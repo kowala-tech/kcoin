@@ -65,7 +65,6 @@ type Context struct {
 	GasLimit    *big.Int       // Provides information for GASLIMIT
 	BlockNumber *big.Int       // Provides information for NUMBER
 	Time        *big.Int       // Provides information for TIME
-	Difficulty  *big.Int       // Provides information for DIFFICULTY
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides

@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/core"
@@ -32,7 +33,6 @@ import (
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rlp"
-	"github.com/hashicorp/golang-lru"
 )
 
 var (
@@ -195,9 +195,10 @@ func (bc *LightChain) ResetWithGenesisBlock(genesis *types.Block) {
 	defer bc.mu.Unlock()
 
 	// Prepare the genesis block and reinitialise the chain
-	if err := core.WriteTd(bc.chainDb, genesis.Hash(), genesis.NumberU64(), genesis.Difficulty()); err != nil {
-		log.Crit("Failed to write genesis block TD", "err", err)
-	}
+	// @TODO(rgeraldes)
+	//if err := core.WriteTd(bc.chainDb, genesis.Hash(), genesis.NumberU64(), genesis.Difficulty()); err != nil {
+	//	log.Crit("Failed to write genesis block TD", "err", err)
+	//}
 	if err := core.WriteBlock(bc.chainDb, genesis); err != nil {
 		log.Crit("Failed to write genesis block", "err", err)
 	}

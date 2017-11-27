@@ -18,34 +18,17 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/kowala-tech/kUSD/cmd/utils"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
 	"github.com/kowala-tech/kUSD/eth"
 	"github.com/kowala-tech/kUSD/params"
 	"gopkg.in/urfave/cli.v1"
 )
 
 var (
-	makedagCommand = cli.Command{
-		Action:    utils.MigrateFlags(makedag),
-		Name:      "makedag",
-		Usage:     "Generate ethash DAG (for testing)",
-		ArgsUsage: "<blockNum> <outputDir>",
-		Category:  "MISCELLANEOUS COMMANDS",
-		Description: `
-The makedag command generates an ethash DAG in /tmp/dag.
-
-This command exists to support the system testing project.
-Regular users do not need to execute it.
-`,
-	}
 	versionCommand = cli.Command{
 		Action:    utils.MigrateFlags(version),
 		Name:      "version",
@@ -64,36 +47,6 @@ The output of this command is supposed to be machine-readable.
 		Category:  "MISCELLANEOUS COMMANDS",
 	}
 )
-
-func makedag(ctx *cli.Context) error {
-	args := ctx.Args()
-	wrongArgs := func() {
-		utils.Fatalf(`Usage: kusd makedag <block number> <outputdir>`)
-	}
-	switch {
-	case len(args) == 2:
-		blockNum, err := strconv.ParseUint(args[0], 0, 64)
-		dir := args[1]
-		if err != nil {
-			wrongArgs()
-		} else {
-			dir = filepath.Clean(dir)
-			// seems to require a trailing slash
-			if !strings.HasSuffix(dir, "/") {
-				dir = dir + "/"
-			}
-			_, err = ioutil.ReadDir(dir)
-			if err != nil {
-				utils.Fatalf("Can't find dir")
-			}
-			fmt.Println("making DAG, this could take awhile...")
-			ethash.MakeDataset(blockNum, dir)
-		}
-	default:
-		wrongArgs()
-	}
-	return nil
-}
 
 func version(ctx *cli.Context) error {
 	fmt.Println(strings.Title(clientIdentifier))

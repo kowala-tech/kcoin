@@ -18,7 +18,6 @@
 package types
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 	"math/big"
@@ -37,63 +36,32 @@ var (
 	EmptyUncleHash = CalcUncleHash(nil)
 )
 
-// A BlockNonce is a 64-bit hash which proves (combined with the
-// mix-hash) that a sufficient amount of computation has been carried
-// out on a block.
-type BlockNonce [8]byte
-
-// EncodeNonce converts the given integer to a block nonce.
-func EncodeNonce(i uint64) BlockNonce {
-	var n BlockNonce
-	binary.BigEndian.PutUint64(n[:], i)
-	return n
-}
-
-// Uint64 returns the integer value of a block nonce.
-func (n BlockNonce) Uint64() uint64 {
-	return binary.BigEndian.Uint64(n[:])
-}
-
-// MarshalText encodes n as a hex string with 0x prefix.
-func (n BlockNonce) MarshalText() ([]byte, error) {
-	return hexutil.Bytes(n[:]).MarshalText()
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (n *BlockNonce) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedText("BlockNonce", input, n[:])
-}
-
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
+	Coinbase    common.Address `json:"validator"        gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
 	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
 	Number      *big.Int       `json:"number"           gencodec:"required"`
 	GasLimit    *big.Int       `json:"gasLimit"         gencodec:"required"`
 	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 }
 
 // field type overrides for gencodec
 type headerMarshaling struct {
-	Difficulty *hexutil.Big
-	Number     *hexutil.Big
-	GasLimit   *hexutil.Big
-	GasUsed    *hexutil.Big
-	Time       *hexutil.Big
-	Extra      hexutil.Bytes
-	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Number   *hexutil.Big
+	GasLimit *hexutil.Big
+	GasUsed  *hexutil.Big
+	Time     *hexutil.Big
+	Extra    hexutil.Bytes
+	Hash     common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -112,7 +80,6 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.TxHash,
 		h.ReceiptHash,
 		h.Bloom,
-		h.Difficulty,
 		h.Number,
 		h.GasLimit,
 		h.GasUsed,
@@ -145,28 +112,11 @@ type Block struct {
 	hash atomic.Value
 	size atomic.Value
 
-	// Td is used by package core to store the total difficulty
-	// of the chain up to and including the block.
-	td *big.Int
-
 	// These fields are used by package eth to track
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
 }
-
-// DeprecatedTd is an old relic for extracting the TD of a block. It is in the
-// code solely to facilitate upgrading the database from the old format to the
-// new, after which it should be deleted. Do not use!
-func (b *Block) DeprecatedTd() *big.Int {
-	return b.td
-}
-
-// [deprecated by eth/63]
-// StorageBlock defines the RLP encoding of a Block stored in the
-// state database. The StorageBlock encoding contains fields that
-// would otherwise need to be recomputed.
-type StorageBlock Block
 
 // "external" block encoding. used for eth protocol, etc.
 type extblock struct {
@@ -192,7 +142,7 @@ type storageblock struct {
 // are ignored and set to values derived from the given txs, uncles
 // and receipts.
 func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt) *Block {
-	b := &Block{header: CopyHeader(header), td: new(big.Int)}
+	b := &Block{header: CopyHeader(header)}
 
 	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
@@ -237,9 +187,6 @@ func CopyHeader(h *Header) *Header {
 	if cpy.Time = new(big.Int); h.Time != nil {
 		cpy.Time.Set(h.Time)
 	}
-	if cpy.Difficulty = new(big.Int); h.Difficulty != nil {
-		cpy.Difficulty.Set(h.Difficulty)
-	}
 	if cpy.Number = new(big.Int); h.Number != nil {
 		cpy.Number.Set(h.Number)
 	}
@@ -277,16 +224,6 @@ func (b *Block) EncodeRLP(w io.Writer) error {
 	})
 }
 
-// [deprecated by eth/63]
-func (b *StorageBlock) DecodeRLP(s *rlp.Stream) error {
-	var sb storageblock
-	if err := s.Decode(&sb); err != nil {
-		return err
-	}
-	b.header, b.uncles, b.transactions, b.td = sb.Header, sb.Uncles, sb.Txs, sb.TD
-	return nil
-}
-
 // TODO: copies
 
 func (b *Block) Uncles() []*Header          { return b.uncles }
@@ -301,15 +238,12 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 	return nil
 }
 
-func (b *Block) Number() *big.Int     { return new(big.Int).Set(b.header.Number) }
-func (b *Block) GasLimit() *big.Int   { return new(big.Int).Set(b.header.GasLimit) }
-func (b *Block) GasUsed() *big.Int    { return new(big.Int).Set(b.header.GasUsed) }
-func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficulty) }
-func (b *Block) Time() *big.Int       { return new(big.Int).Set(b.header.Time) }
+func (b *Block) Number() *big.Int   { return new(big.Int).Set(b.header.Number) }
+func (b *Block) GasLimit() *big.Int { return new(big.Int).Set(b.header.GasLimit) }
+func (b *Block) GasUsed() *big.Int  { return new(big.Int).Set(b.header.GasUsed) }
+func (b *Block) Time() *big.Int     { return new(big.Int).Set(b.header.Time) }
 
 func (b *Block) NumberU64() uint64        { return b.header.Number.Uint64() }
-func (b *Block) MixDigest() common.Hash   { return b.header.MixDigest }
-func (b *Block) Nonce() uint64            { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
 func (b *Block) Bloom() Bloom             { return b.header.Bloom }
 func (b *Block) Coinbase() common.Address { return b.header.Coinbase }
 func (b *Block) Root() common.Hash        { return b.header.Root }
@@ -409,15 +343,12 @@ func (h *Header) String() string {
 	TxSha		    %x
 	ReceiptSha:	    %x
 	Bloom:		    %x
-	Difficulty:	    %v
 	Number:		    %v
 	GasLimit:	    %v
 	GasUsed:	    %v
 	Time:		    %v
 	Extra:		    %s
-	MixDigest:      %x
-	Nonce:		    %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce)
+]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra)
 }
 
 type Blocks []*Block

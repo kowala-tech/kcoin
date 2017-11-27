@@ -60,12 +60,6 @@ var (
 		utils.DataDirFlag,
 		utils.KeyStoreDirFlag,
 		utils.NoUSBFlag,
-		utils.EthashCacheDirFlag,
-		utils.EthashCachesInMemoryFlag,
-		utils.EthashCachesOnDiskFlag,
-		utils.EthashDatasetDirFlag,
-		utils.EthashDatasetsInMemoryFlag,
-		utils.EthashDatasetsOnDiskFlag,
 		utils.TxPoolNoLocalsFlag,
 		utils.TxPoolJournalFlag,
 		utils.TxPoolRejournalFlag,
@@ -100,7 +94,6 @@ var (
 		utils.NodeKeyHexFlag,
 		utils.DevModeFlag,
 		utils.TestnetFlag,
-		utils.RinkebyFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
@@ -157,7 +150,6 @@ func init() {
 		attachCommand,
 		javascriptCommand,
 		// See misccmd.go:
-		makedagCommand,
 		versionCommand,
 		bugCommand,
 		licenseCommand,
@@ -276,9 +268,9 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			}
 		}
 		// Set the gas price to the limits from the CLI and start mining
-		ethereum.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
-		if err := ethereum.StartMining(true); err != nil {
-			utils.Fatalf("Failed to start mining: %v", err)
-		}
+		//ethereum.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
+		//if err := ethereum.StartMining(true); err != nil {
+		//	utils.Fatalf("Failed to start mining: %v", err)
+		//}
 	}
 }

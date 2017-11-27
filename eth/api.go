@@ -35,8 +35,6 @@ import (
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/internal/ethapi"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/miner"
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rlp"
 	"github.com/kowala-tech/kUSD/rpc"
@@ -71,6 +69,7 @@ func (api *PublicEthereumAPI) Hashrate() hexutil.Uint64 {
 	return hexutil.Uint64(api.e.Miner().HashRate())
 }
 
+/*
 // PublicMinerAPI provides an API to control the miner.
 // It offers only methods that operate on data that pose no security risk when it is publicly accessible.
 type PublicMinerAPI struct {
@@ -204,6 +203,7 @@ func (api *PrivateMinerAPI) SetEtherbase(etherbase common.Address) bool {
 func (api *PrivateMinerAPI) GetHashrate() uint64 {
 	return uint64(api.e.miner.HashRate())
 }
+*/
 
 // PrivateAdminAPI is the collection of Etheruem full node-related APIs
 // exposed over the private admin endpoint.

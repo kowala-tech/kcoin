@@ -438,11 +438,6 @@ func opNumber(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 	return nil, nil
 }
 
-func opDifficulty(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(math.U256(new(big.Int).Set(evm.Difficulty)))
-	return nil, nil
-}
-
 func opGasLimit(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	stack.push(math.U256(new(big.Int).Set(evm.GasLimit)))
 	return nil, nil

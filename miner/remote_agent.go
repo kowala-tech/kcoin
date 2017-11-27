@@ -16,19 +16,7 @@
 
 package miner
 
-import (
-	"errors"
-	"math/big"
-	"sync"
-	"sync/atomic"
-	"time"
-
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/log"
-)
+/*
 
 type hashrate struct {
 	ping time.Time
@@ -116,7 +104,7 @@ func (a *RemoteAgent) GetWork() ([3]string, error) {
 		block := a.currentWork.Block
 
 		res[0] = block.HashNoNonce().Hex()
-		seedHash := ethash.SeedHash(block.NumberU64())
+		//seedHash := ethash.SeedHash(block.NumberU64())
 		res[1] = common.BytesToHash(seedHash).Hex()
 		// Calculate the "target" to be returned to the external miner
 		n := big.NewInt(1)
@@ -199,3 +187,5 @@ func (a *RemoteAgent) loop(workCh chan *Work, quitCh chan struct{}) {
 		}
 	}
 }
+
+*/

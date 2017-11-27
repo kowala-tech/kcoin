@@ -23,15 +23,11 @@ import (
 	"math/big"
 	"runtime"
 	"sync"
-	"sync/atomic"
 
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
 	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/consensus/clique"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
-	"github.com/kowala-tech/kUSD/consensus/tendermint"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
@@ -116,7 +112,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
+		engine:         nil, //CreateConsensusEngine(ctx, config, chainConfig, chainDb),
 		shutdownChan:   make(chan bool),
 		stopDbUpgrade:  stopDbUpgrade,
 		networkId:      config.NetworkId,
@@ -211,6 +207,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 	return db, nil
 }
 
+/*
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
 	// Use tendermint
@@ -239,6 +236,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		return engine
 	}
 }
+*/
 
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
@@ -258,18 +256,8 @@ func (s *Ethereum) APIs() []rpc.API {
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   NewPublicMinerAPI(s),
-			Public:    true,
-		}, {
-			Namespace: "eth",
-			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
-		}, {
-			Namespace: "miner",
-			Version:   "1.0",
-			Service:   NewPrivateMinerAPI(s),
-			Public:    false,
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",
@@ -326,6 +314,7 @@ func (self *Ethereum) SetEtherbase(etherbase common.Address) {
 	self.miner.SetEtherbase(etherbase)
 }
 
+/*
 func (s *Ethereum) StartMining(local bool) error {
 	eb, err := s.Etherbase()
 	if err != nil {
@@ -352,6 +341,7 @@ func (s *Ethereum) StartMining(local bool) error {
 	go s.miner.Start(eb)
 	return nil
 }
+*/
 
 func (s *Ethereum) StopMining()         { s.miner.Stop() }
 func (s *Ethereum) IsMining() bool      { return s.miner.Mining() }

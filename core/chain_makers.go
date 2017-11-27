@@ -21,7 +21,6 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
 	"github.com/kowala-tech/kUSD/consensus/misc"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -142,7 +141,9 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 	if b.header.Time.Cmp(b.parent.Header().Time) <= 0 {
 		panic("block time out of range")
 	}
-	b.header.Difficulty = ethash.CalcDifficulty(b.config, b.header.Time.Uint64(), b.parent.Header())
+
+	// @TODO(rgeraldes) - analyze
+	//b.header.Difficulty = ethash.CalcDifficulty(b.config, b.header.Time.Uint64(), b.parent.Header())
 }
 
 // GenerateChain creates a chain of n blocks. The first block's
@@ -180,7 +181,9 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 		if gen != nil {
 			gen(i, b)
 		}
-		ethash.AccumulateRewards(statedb, h, b.uncles)
+
+		// TODO(rgeraldes) analyze
+		//ethash.AccumulateRewards(statedb, h, b.uncles)
 		root, err := statedb.CommitTo(db, config.IsEIP158(h.Number))
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))
@@ -214,16 +217,10 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 		Root:       state.IntermediateRoot(config.IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
-		Difficulty: ethash.CalcDifficulty(config, time.Uint64(), &types.Header{
-			Number:     parent.Number(),
-			Time:       new(big.Int).Sub(time, big.NewInt(10)),
-			Difficulty: parent.Difficulty(),
-			UncleHash:  parent.UncleHash(),
-		}),
-		GasLimit: CalcGasLimit(parent),
-		GasUsed:  new(big.Int),
-		Number:   new(big.Int).Add(parent.Number(), common.Big1),
-		Time:     time,
+		GasLimit:   CalcGasLimit(parent),
+		GasUsed:    new(big.Int),
+		Number:     new(big.Int).Add(parent.Number(), common.Big1),
+		Time:       time,
 	}
 }
 
@@ -236,7 +233,8 @@ func newCanonical(n int, full bool) (ethdb.Database, *BlockChain, error) {
 	db, _ := ethdb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, params.AllProtocolChanges, ethash.NewFaker(), new(event.TypeMux), vm.Config{})
+	// TODO(rgeraldes) - remove the consensus engine argument (nil) on the next line
+	blockchain, _ := NewBlockChain(db, params.AllProtocolChanges, nil, new(event.TypeMux), vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil

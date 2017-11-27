@@ -29,7 +29,6 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
 	"github.com/kowala-tech/kUSD/common/math"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
@@ -743,13 +742,10 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"number":           (*hexutil.Big)(head.Number),
 		"hash":             b.Hash(),
 		"parentHash":       head.ParentHash,
-		"nonce":            head.Nonce,
-		"mixHash":          head.MixDigest,
 		"sha3Uncles":       head.UncleHash,
 		"logsBloom":        head.Bloom,
 		"stateRoot":        head.Root,
 		"miner":            head.Coinbase,
-		"difficulty":       (*hexutil.Big)(head.Difficulty),
 		"totalDifficulty":  (*hexutil.Big)(s.b.GetTd(b.Hash())),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"size":             hexutil.Uint64(uint64(b.Size().Int64())),
@@ -1309,6 +1305,8 @@ func (api *PublicDebugAPI) PrintBlock(ctx context.Context, number uint64) (strin
 	return fmt.Sprintf("%s", block), nil
 }
 
+// TODO(rgeraldes) - analyze
+/*
 // SeedHash retrieves the seed hash of a block.
 func (api *PublicDebugAPI) SeedHash(ctx context.Context, number uint64) (string, error) {
 	block, _ := api.b.BlockByNumber(ctx, rpc.BlockNumber(number))
@@ -1317,6 +1315,7 @@ func (api *PublicDebugAPI) SeedHash(ctx context.Context, number uint64) (string,
 	}
 	return fmt.Sprintf("0x%x", ethash.SeedHash(number)), nil
 }
+*/
 
 // PrivateDebugAPI is the collection of Etheruem APIs exposed over the private
 // debugging endpoint.

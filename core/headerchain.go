@@ -25,13 +25,13 @@ import (
 	mrand "math/rand"
 	"time"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
-	"github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -139,54 +139,62 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	if ptd == nil {
 		return NonStatTy, consensus.ErrUnknownAncestor
 	}
-	localTd := hc.GetTd(hc.currentHeaderHash, hc.currentHeader.Number.Uint64())
-	externTd := new(big.Int).Add(header.Difficulty, ptd)
 
-	// Irrelevant of the canonical status, write the td and header to the database
-	if err := hc.WriteTd(hash, number, externTd); err != nil {
-		log.Crit("Failed to write header total difficulty", "err", err)
-	}
+	// @TODO - rgeraldes
+	/*
+		localTd := hc.GetTd(hc.currentHeaderHash, hc.currentHeader.Number.Uint64())
+		externTd := new(big.Int).Add(header.Difficulty, ptd)
+
+		// Irrelevant of the canonical status, write the td and header to the database
+		if err := hc.WriteTd(hash, number, externTd); err != nil {
+			log.Crit("Failed to write header total difficulty", "err", err)
+		}
+	*/
+
 	if err := WriteHeader(hc.chainDb, header); err != nil {
 		log.Crit("Failed to write header content", "err", err)
 	}
-	// If the total difficulty is higher than our known, add it to the canonical chain
-	// Second clause in the if statement reduces the vulnerability to selfish mining.
-	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
-		// Delete any canonical number assignments above the new head
-		for i := number + 1; ; i++ {
-			hash := GetCanonicalHash(hc.chainDb, i)
-			if hash == (common.Hash{}) {
-				break
+
+	/*
+		// If the total difficulty is higher than our known, add it to the canonical chain
+		// Second clause in the if statement reduces the vulnerability to selfish mining.
+		// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
+		if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
+			// Delete any canonical number assignments above the new head
+			for i := number + 1; ; i++ {
+				hash := GetCanonicalHash(hc.chainDb, i)
+				if hash == (common.Hash{}) {
+					break
+				}
+				DeleteCanonicalHash(hc.chainDb, i)
 			}
-			DeleteCanonicalHash(hc.chainDb, i)
-		}
-		// Overwrite any stale canonical number assignments
-		var (
-			headHash   = header.ParentHash
-			headNumber = header.Number.Uint64() - 1
-			headHeader = hc.GetHeader(headHash, headNumber)
-		)
-		for GetCanonicalHash(hc.chainDb, headNumber) != headHash {
-			WriteCanonicalHash(hc.chainDb, headHash, headNumber)
+			// Overwrite any stale canonical number assignments
+			var (
+				headHash   = header.ParentHash
+				headNumber = header.Number.Uint64() - 1
+				headHeader = hc.GetHeader(headHash, headNumber)
+			)
+			for GetCanonicalHash(hc.chainDb, headNumber) != headHash {
+				WriteCanonicalHash(hc.chainDb, headHash, headNumber)
 
-			headHash = headHeader.ParentHash
-			headNumber = headHeader.Number.Uint64() - 1
-			headHeader = hc.GetHeader(headHash, headNumber)
-		}
-		// Extend the canonical chain with the new header
-		if err := WriteCanonicalHash(hc.chainDb, hash, number); err != nil {
-			log.Crit("Failed to insert header number", "err", err)
-		}
-		if err := WriteHeadHeaderHash(hc.chainDb, hash); err != nil {
-			log.Crit("Failed to insert head header hash", "err", err)
-		}
-		hc.currentHeaderHash, hc.currentHeader = hash, types.CopyHeader(header)
+				headHash = headHeader.ParentHash
+				headNumber = headHeader.Number.Uint64() - 1
+				headHeader = hc.GetHeader(headHash, headNumber)
+			}
+			// Extend the canonical chain with the new header
+			if err := WriteCanonicalHash(hc.chainDb, hash, number); err != nil {
+				log.Crit("Failed to insert header number", "err", err)
+			}
+			if err := WriteHeadHeaderHash(hc.chainDb, hash); err != nil {
+				log.Crit("Failed to insert head header hash", "err", err)
+			}
+			hc.currentHeaderHash, hc.currentHeader = hash, types.CopyHeader(header)
 
-		status = CanonStatTy
-	} else {
-		status = SideStatTy
-	}
+			status = CanonStatTy
+		} else {
+			status = SideStatTy
+		}
+	*/
 
 	hc.headerCache.Add(hash, header)
 	hc.numberCache.Add(hash, number)
