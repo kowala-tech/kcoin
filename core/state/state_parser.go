@@ -2,7 +2,6 @@ package state
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -15,15 +14,8 @@ import (
 )
 
 var (
-	// // ErrNotEnoughData is returned when there is not enough data to parse
-	// ErrNotEnoughData = errors.New("no data to parse")
 	// ErrNeedValidStructPointer is returned by the reflection code
 	ErrNeedValidStructPointer = errors.New("r needs to be a valid pointer to a struct type")
-
-// // ErrSizeRequired is returned when the size field is set to a value < 1
-// ErrSizeRequired = errors.New("size is required")
-// // ErrToBig is returned when the size field is set to a value > 32
-// ErrToBig = errors.New("size can't be bigger than 32")
 )
 
 // ParseState is used to parse a contract's local storage, starting
@@ -48,7 +40,7 @@ var (
 //
 // Ints and uints up to 64 bits can be parsed to the corresponding Go type
 // or the closest match in size (a Solidity uint24 can be parsed into
-// a uin32 or uint64). A *big.Int is used to parse ints and uints bigger
+// a uint32 or uint64). A *big.Int is used to parse ints and uints bigger
 // than 64 bits. If there is no "solSize" or "solSign" present, defaults
 // to uint256 (32 bytes in size, unsigned).
 //
@@ -193,9 +185,11 @@ func (sp *stateParser) readValue(v *reflect.Value, size int, signed bool) error 
 		v.Set(reflect.ValueOf(common.BytesToAddress(sp.readN(20))))
 		return nil
 	case Mapping:
-		// parse mappings here
-		panic("mapping parsing not implemented")
-
+		vv.SetRoot(sp.sdb, sp.addr, common.BytesToHash(sp.keyBytes()))
+		if len(sp.curBytes) == 32 {
+			sp.readN(1)
+		}
+		sp.nextFullWord()
 	}
 
 	switch k := v.Kind(); k {
@@ -232,7 +226,7 @@ func (sp *stateParser) readValue(v *reflect.Value, size int, signed bool) error 
 		}
 		typeSz = sz
 		if size > 0 {
-			if size < sz {
+			if size > sz {
 				return fmt.Errorf("can only read %v bytes (%v requested)", sz, size)
 			}
 			sz = size
@@ -279,29 +273,24 @@ func (sp *stateParser) readValue(v *reflect.Value, size int, signed bool) error 
 		sp.nextFullWord()
 		if sp.curBytes[31]%2 == 0 {
 			fullWord := sp.readN(32)
-			fullWord = fullWord[:fullWord[0]/2]
+			fullWord = fullWord[:fullWord[31]/2]
 			v.Set(reflect.ValueOf(string(fullWord)))
+			sp.nextFullWord()
 		} else {
-			sz := sp.readInt(32, false)
-			h := keccak256Sum(sp.curKey.Bytes())
-
-			fmt.Println(">>>", hex.EncodeToString(h))
-
-			strSp := newStateParser(sp.sdb, sp.addr, common.BytesToHash(h))
-			_ = strSp
-
-			nWords := new(big.Int).Set(sz)
-			rem := new(big.Int)
-			nWords.DivMod(nWords, common.Big32, rem)
+			sz := sp.readInt(31, false)
+			sz.Div(sz, common.Big2)
+			h := keccak256Sum(sp.keyBytes())
+			nWords, rem := new(big.Int).DivMod(sz, common.Big32, new(big.Int))
 			if rem.Cmp(common.Big0) != 0 {
 				nWords.Add(nWords, common.Big1)
 			}
 			if nWords.Cmp(big64k) > 0 {
 				panic("string to big")
 			}
+			strSp := newStateParser(sp.sdb, sp.addr, common.BytesToHash(h))
 			nw := nWords.Uint64()
 			s := strSp.readN(int(nw * 32))
-			v.Set(reflect.ValueOf(string(s[sz.Int64():])))
+			v.Set(reflect.ValueOf(string(s[:sz.Int64()])))
 		}
 		return nil
 	case reflect.Struct:
@@ -349,13 +338,37 @@ func (sp *stateParser) readValue(v *reflect.Value, size int, signed bool) error 
 			}
 		}
 		return nil
-
-	case reflect.Array:
-		// parse arrays here
-		panic("array parsing not implemented")
-	case reflect.Slice:
-		// parse slices here
-		panic("slice parsing not implemented")
+	case reflect.Array, reflect.Slice:
+		var (
+			newSp *stateParser
+			sz    int
+		)
+		if k == reflect.Array {
+			newSp = sp
+			sz = v.Len()
+		} else {
+			sz = int(sp.readInt(31, false).Int64())
+			newSp = newStateParser(sp.sdb, sp.addr, common.BytesToHash(keccak256Sum(sp.keyBytes())))
+			sp.nextFullWord()
+		}
+		newS := reflect.New(reflect.SliceOf(v.Type().Elem())).Elem()
+		for i := 0; i < sz; i++ {
+			var newV reflect.Value
+			if k == reflect.Array {
+				newV = reflect.New(v.Type().Elem()).Elem()
+			} else {
+				newV = reflect.New(v.Type().Elem()).Elem()
+			}
+			if err := newSp.readValue(&newV, 0, false); err != nil {
+				return err
+			}
+			newS = reflect.Append(newS, newV)
+		}
+		if k == reflect.Array {
+			reflect.Copy(*v, newS)
+		} else {
+			v.Set(newS)
+		}
 	case reflect.Ptr:
 		if v.IsNil() {
 			nv := reflect.New(v.Type().Elem())
@@ -365,6 +378,11 @@ func (sp *stateParser) readValue(v *reflect.Value, size int, signed bool) error 
 		return sp.readValue(&nv, size, signed)
 	}
 	return nil
+}
+
+func (sp *stateParser) keyBytes() []byte {
+	b := sp.curKey.Bytes()
+	return append(make([]byte, 32-len(b)), b...)
 }
 
 func keccak256Sum(b []byte) []byte {
@@ -383,22 +401,12 @@ func NewMapping(sdb *StateDB, addr common.Address, key common.Hash) *Mapping {
 	return &Mapping{sdb: sdb, addr: addr, mapKey: key}
 }
 
-// func (m *Mapping) FirstKey(key common.Hash) common.Hash {
-// 	b := make([]byte, 0, len(key)*2)
-// 	b = append(b, m.mapKey[:]...)
-// 	b = append(b, key[:]...)
-// 	return common.BytesToHash(keccak256Sum(b))
-// }
+func (m *Mapping) SetRoot(sdb *StateDB, addr common.Address, key common.Hash) {
+	*m = Mapping{sdb: sdb, addr: addr, mapKey: key}
+}
 
-// func (m *Mapping) Get(key common.Hash, r interface{}) error {
-// 	v, err := valueOfStructPointer(r)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	h := sha3.NewKeccak256()
-// 	h.Write(m.mapKey[:])
-// 	h.Write(key[:])
-// 	k := h.Sum(nil)
-// 	sp := newStateParser(m.sdb, m.addr, common.BytesToHash(k))
-// 	return parseState(sp, v, nil)
-// }
+func NewEmptyMapping() *Mapping { return &Mapping{} }
+
+func (m *Mapping) Get(k, v interface{}) {}
+
+func (m *Mapping) Set(k, v interface{}) {}
