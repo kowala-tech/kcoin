@@ -17,7 +17,6 @@
 package miner
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 	"sync"
@@ -255,72 +254,74 @@ func (self *worker) update() {
 }
 
 func (self *worker) wait() {
-	for {
-		mustCommitNewWork := true
-		for result := range self.recv {
-			atomic.AddInt32(&self.atWork, -1)
+	/*
+		for {
+			mustCommitNewWork := true
+			for result := range self.recv {
+				atomic.AddInt32(&self.atWork, -1)
 
-			if result == nil {
-				continue
-			}
-			block := result.Block
-			work := result.Work
-
-			if self.fullValidation {
-				if _, err := self.chain.InsertChain(types.Blocks{block}); err != nil {
-					log.Error("Mined invalid block", "err", err)
+				if result == nil {
 					continue
 				}
-				go self.mux.Post(core.NewMinedBlockEvent{Block: block})
-			} else {
-				work.state.CommitTo(self.chainDb, self.config.IsEIP158(block.Number()))
-				stat, err := self.chain.WriteBlock(block)
-				if err != nil {
-					log.Error("Failed writing block to chain", "err", err)
-					continue
-				}
-				// update block hash since it is now available and not when the receipt/log of individual transactions were created
-				for _, r := range work.receipts {
-					for _, l := range r.Logs {
-						l.BlockHash = block.Hash()
+				block := result.Block
+				work := result.Work
+
+				if self.fullValidation {
+					if _, err := self.chain.InsertChain(types.Blocks{block}); err != nil {
+						log.Error("Mined invalid block", "err", err)
+						continue
 					}
-				}
-				for _, log := range work.state.Logs() {
-					log.BlockHash = block.Hash()
-				}
+					go self.mux.Post(core.NewMinedBlockEvent{Block: block})
+				} else {
+					work.state.CommitTo(self.chainDb, self.config.IsEIP158(block.Number()))
+					stat, err := self.chain.WriteBlock(block)
+					if err != nil {
+						log.Error("Failed writing block to chain", "err", err)
+						continue
+					}
+					// update block hash since it is now available and not when the receipt/log of individual transactions were created
+					for _, r := range work.receipts {
+						for _, l := range r.Logs {
+							l.BlockHash = block.Hash()
+						}
+					}
+					for _, log := range work.state.Logs() {
+						log.BlockHash = block.Hash()
+					}
 
-				// check if canon block and write transactions
-				if stat == core.CanonStatTy {
-					// This puts transactions in a extra db for rpc
-					core.WriteTxLookupEntries(self.chainDb, block)
-					// Write map map bloom filters
-					core.WriteMipmapBloom(self.chainDb, block.NumberU64(), work.receipts)
-					// implicit by posting ChainHeadEvent
-					mustCommitNewWork = false
-				}
-
-				// broadcast before waiting for validation
-				go func(block *types.Block, logs []*types.Log, receipts []*types.Receipt) {
-					self.mux.Post(core.NewMinedBlockEvent{Block: block})
-					self.mux.Post(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-
+					// check if canon block and write transactions
 					if stat == core.CanonStatTy {
-						self.mux.Post(core.ChainHeadEvent{Block: block})
-						self.mux.Post(logs)
+						// This puts transactions in a extra db for rpc
+						core.WriteTxLookupEntries(self.chainDb, block)
+						// Write map map bloom filters
+						core.WriteMipmapBloom(self.chainDb, block.NumberU64(), work.receipts)
+						// implicit by posting ChainHeadEvent
+						mustCommitNewWork = false
 					}
-					if err := core.WriteBlockReceipts(self.chainDb, block.Hash(), block.NumberU64(), receipts); err != nil {
-						log.Warn("Failed writing block receipts", "err", err)
-					}
-				}(block, work.state.Logs(), work.receipts)
-			}
-			// Insert the block into the set of pending ones to wait for confirmations
-			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
-			if mustCommitNewWork {
-				self.commitNewWork()
+					// broadcast before waiting for validation
+					go func(block *types.Block, logs []*types.Log, receipts []*types.Receipt) {
+						self.mux.Post(core.NewMinedBlockEvent{Block: block})
+						self.mux.Post(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+
+						if stat == core.CanonStatTy {
+							self.mux.Post(core.ChainHeadEvent{Block: block})
+							self.mux.Post(logs)
+						}
+						if err := core.WriteBlockReceipts(self.chainDb, block.Hash(), block.NumberU64(), receipts); err != nil {
+							log.Warn("Failed writing block receipts", "err", err)
+						}
+					}(block, work.state.Logs(), work.receipts)
+				}
+				// Insert the block into the set of pending ones to wait for confirmations
+				self.unconfirmed.Insert(block.NumberU64(), block.Hash())
+
+				if mustCommitNewWork {
+					self.commitNewWork()
+				}
 			}
 		}
-	}
+	*/
 }
 
 // push sends a new work task to currently live miner agents.
@@ -412,18 +413,21 @@ func (self *worker) commitNewWork() {
 		return
 	}
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
-	if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
-		// Check whether the block is among the fork extra-override range
-		limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
-		if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
-			// Depending whether we support or oppose the fork, override differently
-			if self.config.DAOForkSupport {
-				header.Extra = common.CopyBytes(params.DAOForkBlockExtra)
-			} else if bytes.Equal(header.Extra, params.DAOForkBlockExtra) {
-				header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
+	/*
+		if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
+			// Check whether the block is among the fork extra-override range
+			limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
+			if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
+				// Depending whether we support or oppose the fork, override differently
+				if self.config.DAOForkSupport {
+					header.Extra = common.CopyBytes(params.DAOForkBlockExtra)
+				} else if bytes.Equal(header.Extra, params.DAOForkBlockExtra) {
+					header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
+				}
 			}
 		}
-	}
+	*/
+
 	// Could potentially happen if starting to mine in an odd state.
 	err := self.makeCurrent(parent, header)
 	if err != nil {
@@ -513,12 +517,14 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		from, _ := types.Sender(env.signer, tx)
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
-		if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
-			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
+		/*
+			if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
+				log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
 
-			txs.Pop()
-			continue
-		}
+				txs.Pop()
+				continue
+			}
+		*/
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 

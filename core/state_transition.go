@@ -215,7 +215,9 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	msg := st.msg
 	sender := st.from() // err checked in preCheck
 
-	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
+	// @TODO(rgeraldes)
+	//homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
+	homestead := false
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic gas

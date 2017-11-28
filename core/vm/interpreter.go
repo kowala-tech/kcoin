@@ -69,8 +69,10 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
 		switch {
-		case evm.ChainConfig().IsHomestead(evm.BlockNumber):
-			cfg.JumpTable = homesteadInstructionSet
+		/*
+			case evm.ChainConfig().IsHomestead(evm.BlockNumber):
+				cfg.JumpTable = homesteadInstructionSet
+		*/
 		default:
 			cfg.JumpTable = frontierInstructionSet
 		}

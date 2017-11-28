@@ -16,16 +16,6 @@
 
 package core
 
-import (
-	"bytes"
-	"fmt"
-	"math/big"
-
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/params"
-)
-
 // ValidateDAOHeaderExtraData validates the extra-data field of a block header to
 // ensure it conforms to DAO hard-fork rules.
 //
@@ -34,6 +24,8 @@ import (
 //      with the fork specific extra-data set
 //   b) if the node is pro-fork, require blocks in the specific range to have the
 //      unique extra-data set.
+
+/*
 func ValidateDAOHeaderExtraData(config *params.ChainConfig, header *types.Header) error {
 	// Short circuit validation if the node doesn't care about the DAO fork
 	if config.DAOForkBlock == nil {
@@ -58,6 +50,7 @@ func ValidateDAOHeaderExtraData(config *params.ChainConfig, header *types.Header
 	return nil
 }
 
+
 // ApplyDAOHardFork modifies the state database according to the DAO hard-fork
 // rules, transferring all balances of a set of DAO accounts to a single refund
 // contract.
@@ -73,3 +66,5 @@ func ApplyDAOHardFork(statedb *state.StateDB) {
 		statedb.SetBalance(addr, new(big.Int))
 	}
 }
+
+*/

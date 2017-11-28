@@ -164,15 +164,18 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
 	genblock := func(i int, h *types.Header, statedb *state.StateDB) (*types.Block, types.Receipts) {
 		b := &BlockGen{parent: parent, i: i, chain: blocks, header: h, statedb: statedb, config: config}
-		// Mutate the state and block according to any hard-fork specs
-		if daoBlock := config.DAOForkBlock; daoBlock != nil {
-			limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
-			if h.Number.Cmp(daoBlock) >= 0 && h.Number.Cmp(limit) < 0 {
-				if config.DAOForkSupport {
-					h.Extra = common.CopyBytes(params.DAOForkBlockExtra)
+
+		/*
+			// Mutate the state and block according to any hard-fork specs
+			if daoBlock := config.DAOForkBlock; daoBlock != nil {
+				limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
+				if h.Number.Cmp(daoBlock) >= 0 && h.Number.Cmp(limit) < 0 {
+					if config.DAOForkSupport {
+						h.Extra = common.CopyBytes(params.DAOForkBlockExtra)
+					}
 				}
 			}
-		}
+		*/
 
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
@@ -181,7 +184,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 
 		// TODO(rgeraldes) analyze
 		//ethash.AccumulateRewards(statedb, h, b.uncles)
-		root, err := statedb.CommitTo(db, config.IsEIP158(h.Number))
+		root, err := statedb.CommitTo(db /*config.IsEIP158(h.Number)*/, false)
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))
 		}
@@ -211,7 +214,7 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 	}
 
 	return &types.Header{
-		Root:       state.IntermediateRoot(config.IsEIP158(parent.Number())),
+		Root:       state.IntermediateRoot( /*config.IsEIP158(parent.Number())*/ false),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
 		GasLimit:   CalcGasLimit(parent),

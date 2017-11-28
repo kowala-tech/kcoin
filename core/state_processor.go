@@ -101,11 +101,15 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 
 	// Update the state with pending changes
 	var root []byte
-	if config.IsMetropolis(header.Number) {
-		statedb.Finalise()
-	} else {
-		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
-	}
+
+	// @TODO(rgeraldes)
+	/*
+		if config.IsMetropolis(header.Number) {
+			statedb.Finalise()
+		} else {
+			root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
+		}
+	*/
 	usedGas.Add(usedGas, gas)
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
