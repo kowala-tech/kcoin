@@ -136,7 +136,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kusdConfig) {
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	utils.RegisterEthService(stack, &cfg.Eth)
+	utils.RegisterKUSDService(stack, &cfg.Eth)
 
 	// Add the Ethereum Stats daemon if requested.
 	if cfg.Ethstats.URL != "" {

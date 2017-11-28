@@ -20,8 +20,8 @@ import (
 	"reflect"
 
 	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/p2p"
 	"github.com/kowala-tech/kUSD/rpc"
 )
@@ -39,11 +39,11 @@ type ServiceContext struct {
 // OpenDatabase opens an existing database with the given name (or creates one
 // if no previous can be found) from within the node's data directory. If the
 // node is an ephemeral one, a memory database is returned.
-func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (ethdb.Database, error) {
+func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (kusddb.Database, error) {
 	if ctx.config.DataDir == "" {
-		return ethdb.NewMemDatabase()
+		return kusddb.NewMemDatabase()
 	}
-	db, err := ethdb.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
+	db, err := kusddb.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
 	if err != nil {
 		return nil, err
 	}

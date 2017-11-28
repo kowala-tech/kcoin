@@ -30,8 +30,8 @@ import (
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
 	"gopkg.in/fatih/set.v0"
@@ -96,7 +96,7 @@ type worker struct {
 	eth     Backend
 	chain   *core.BlockChain
 	proc    core.Validator
-	chainDb ethdb.Database
+	chainDb kusddb.Database
 
 	coinbase common.Address
 	extra    []byte

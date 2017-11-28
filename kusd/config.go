@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package eth
+package kusd
 
 import (
 	"math/big"
@@ -29,7 +29,7 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 )
 
-// DefaultConfig contains default settings for use on the Ethereum main net.
+// DefaultConfig contains default settings for use on the KUSD main net.
 var DefaultConfig = Config{
 	SyncMode:      downloader.FastSync,
 	NetworkId:     1,
@@ -61,7 +61,7 @@ type Config struct {
 	Genesis *core.Genesis `toml:",omitempty"`
 
 	// Protocol options
-	NetworkId uint64 // Network ID to use for selecting peers to connect to
+	NetworkID uint64 // Network ID to use for selecting peers to connect to
 	SyncMode  downloader.SyncMode
 
 	// Light client options

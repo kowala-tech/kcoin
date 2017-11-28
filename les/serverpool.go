@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kUSD/common/mclock"
-	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/p2p"
 	"github.com/kowala-tech/kUSD/p2p/discover"
@@ -95,7 +95,7 @@ const (
 // known light server nodes. It received discovered nodes, stores statistics about
 // known nodes and takes care of always having enough good quality servers connected.
 type serverPool struct {
-	db     ethdb.Database
+	db     kusddb.Database
 	dbKey  []byte
 	server *p2p.Server
 	quit   chan struct{}
@@ -120,7 +120,7 @@ type serverPool struct {
 }
 
 // newServerPool creates a new serverPool instance
-func newServerPool(db ethdb.Database, quit chan struct{}, wg *sync.WaitGroup) *serverPool {
+func newServerPool(db kusddb.Database, quit chan struct{}, wg *sync.WaitGroup) *serverPool {
 	pool := &serverPool{
 		db:           db,
 		quit:         quit,

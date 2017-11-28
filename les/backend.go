@@ -28,13 +28,13 @@ import (
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/eth"
 	"github.com/kowala-tech/kUSD/eth/downloader"
 	"github.com/kowala-tech/kUSD/eth/filters"
 	"github.com/kowala-tech/kUSD/eth/gasprice"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/internal/ethapi"
+	"github.com/kowala-tech/kUSD/kusd"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/light"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/node"
@@ -59,7 +59,7 @@ type LightEthereum struct {
 	reqDist         *requestDistributor
 	retriever       *retrieveManager
 	// DB interfaces
-	chainDb ethdb.Database // Block chain database
+	chainDb kusddb.Database // Block chain database
 
 	ApiBackend *LesApiBackend
 
@@ -74,8 +74,8 @@ type LightEthereum struct {
 	wg       sync.WaitGroup
 }
 
-func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
-	chainDb, err := eth.CreateDB(ctx, config, "lightchaindata")
+func New(ctx *node.ServiceContext, config *kusd.Config) (*LightEthereum, error) {
+	chainDb, err := kusd.CreateDB(ctx, config, "lightchaindata")
 	if err != nil {
 		return nil, err
 	}

@@ -26,7 +26,7 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/rlp"
 )
 
@@ -36,13 +36,13 @@ var NoOdr = context.Background()
 
 // OdrBackend is an interface to a backend service that handles ODR retrievals type
 type OdrBackend interface {
-	Database() ethdb.Database
+	Database() kusddb.Database
 	Retrieve(ctx context.Context, req OdrRequest) error
 }
 
 // OdrRequest is an interface for retrieval requests
 type OdrRequest interface {
-	StoreResult(db ethdb.Database)
+	StoreResult(db kusddb.Database)
 }
 
 // TrieID identifies a state or account storage trie
@@ -84,12 +84,12 @@ type TrieRequest struct {
 }
 
 // StoreResult stores the retrieved data in local database
-func (req *TrieRequest) StoreResult(db ethdb.Database) {
+func (req *TrieRequest) StoreResult(db kusddb.Database) {
 	storeProof(db, req.Proof)
 }
 
 // storeProof stores the new trie nodes obtained from a merkle proof in the database
-func storeProof(db ethdb.Database, proof []rlp.RawValue) {
+func storeProof(db kusddb.Database, proof []rlp.RawValue) {
 	for _, buf := range proof {
 		hash := crypto.Keccak256(buf)
 		val, _ := db.Get(hash)
@@ -108,7 +108,7 @@ type CodeRequest struct {
 }
 
 // StoreResult stores the retrieved data in local database
-func (req *CodeRequest) StoreResult(db ethdb.Database) {
+func (req *CodeRequest) StoreResult(db kusddb.Database) {
 	db.Put(req.Hash[:], req.Data)
 }
 
@@ -121,7 +121,7 @@ type BlockRequest struct {
 }
 
 // StoreResult stores the retrieved data in local database
-func (req *BlockRequest) StoreResult(db ethdb.Database) {
+func (req *BlockRequest) StoreResult(db kusddb.Database) {
 	core.WriteBodyRLP(db, req.Hash, req.Number, req.Rlp)
 }
 
@@ -134,7 +134,7 @@ type ReceiptsRequest struct {
 }
 
 // StoreResult stores the retrieved data in local database
-func (req *ReceiptsRequest) StoreResult(db ethdb.Database) {
+func (req *ReceiptsRequest) StoreResult(db kusddb.Database) {
 	core.WriteBlockReceipts(db, req.Hash, req.Number, req.Receipts)
 }
 
@@ -149,7 +149,7 @@ type ChtRequest struct {
 }
 
 // StoreResult stores the retrieved data in local database
-func (req *ChtRequest) StoreResult(db ethdb.Database) {
+func (req *ChtRequest) StoreResult(db kusddb.Database) {
 	// if there is a canonical hash, there is a header too
 	core.WriteHeader(db, req.Header)
 	hash, num := req.Header.Hash(), req.Header.Number.Uint64()

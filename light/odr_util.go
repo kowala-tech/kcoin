@@ -26,7 +26,7 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/rlp"
 )
 
@@ -51,7 +51,7 @@ type TrustedCht struct {
 	Root   common.Hash
 }
 
-func GetTrustedCht(db ethdb.Database) TrustedCht {
+func GetTrustedCht(db kusddb.Database) TrustedCht {
 	data, _ := db.Get(trustedChtKey)
 	var res TrustedCht
 	if err := rlp.DecodeBytes(data, &res); err != nil {
@@ -60,12 +60,12 @@ func GetTrustedCht(db ethdb.Database) TrustedCht {
 	return res
 }
 
-func WriteTrustedCht(db ethdb.Database, cht TrustedCht) {
+func WriteTrustedCht(db kusddb.Database, cht TrustedCht) {
 	data, _ := rlp.EncodeToBytes(cht)
 	db.Put(trustedChtKey, data)
 }
 
-func DeleteTrustedCht(db ethdb.Database) {
+func DeleteTrustedCht(db kusddb.Database) {
 	db.Delete(trustedChtKey)
 }
 

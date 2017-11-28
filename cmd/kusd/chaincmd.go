@@ -31,7 +31,7 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/trie"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -196,7 +196,7 @@ func importChain(ctx *cli.Context) error {
 	fmt.Printf("Import done in %v.\n\n", time.Since(start))
 
 	// Output pre-compaction stats mostly to see the import trashing
-	db := chainDb.(*ethdb.LDBDatabase)
+	db := chainDb.(*kusddb.LDBDatabase)
 
 	stats, err := db.LDB().GetProperty("leveldb.stats")
 	if err != nil {

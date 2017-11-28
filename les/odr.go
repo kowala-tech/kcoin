@@ -19,19 +19,19 @@ package les
 import (
 	"context"
 
-	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/light"
 	"github.com/kowala-tech/kUSD/log"
 )
 
 // LesOdr implements light.OdrBackend
 type LesOdr struct {
-	db        ethdb.Database
+	db        kusddb.Database
 	stop      chan struct{}
 	retriever *retrieveManager
 }
 
-func NewLesOdr(db ethdb.Database, retriever *retrieveManager) *LesOdr {
+func NewLesOdr(db kusddb.Database, retriever *retrieveManager) *LesOdr {
 	return &LesOdr{
 		db:        db,
 		retriever: retriever,
@@ -43,7 +43,7 @@ func (odr *LesOdr) Stop() {
 	close(odr.stop)
 }
 
-func (odr *LesOdr) Database() ethdb.Database {
+func (odr *LesOdr) Database() kusddb.Database {
 	return odr.db
 }
 

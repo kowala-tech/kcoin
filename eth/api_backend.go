@@ -29,8 +29,8 @@ import (
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/eth/downloader"
 	"github.com/kowala-tech/kUSD/eth/gasprice"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rpc"
 )
@@ -163,7 +163,7 @@ func (b *EthApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
 
-func (b *EthApiBackend) ChainDb() ethdb.Database {
+func (b *EthApiBackend) ChainDb() kusddb.Database {
 	return b.eth.ChainDb()
 }
 

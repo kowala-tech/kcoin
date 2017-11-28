@@ -26,8 +26,8 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rlp"
@@ -51,7 +51,7 @@ type TxPool struct {
 	mu       sync.RWMutex
 	chain    *LightChain
 	odr      OdrBackend
-	chainDb  ethdb.Database
+	chainDb  kusddb.Database
 	relay    TxRelayBackend
 	head     common.Hash
 	nonce    map[common.Address]uint64            // "pending" nonce

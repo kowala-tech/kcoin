@@ -26,8 +26,8 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/eth"
-	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/kusd"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/les/flowcontrol"
 	"github.com/kowala-tech/kUSD/light"
 	"github.com/kowala-tech/kUSD/log"
@@ -47,9 +47,9 @@ type LesServer struct {
 	stopped         bool
 }
 
-func NewLesServer(eth *eth.Ethereum, config *eth.Config) (*LesServer, error) {
+func NewLesServer(kusd *kusd.KUSD, config *kusd.Config) (*LesServer, error) {
 	quitSync := make(chan struct{})
-	pm, err := NewProtocolManager(eth.BlockChain().Config(), false, config.NetworkId, eth.EventMux(), eth.Engine(), newPeerSet(), eth.BlockChain(), eth.TxPool(), eth.ChainDb(), nil, nil, quitSync, new(sync.WaitGroup))
+	pm, err := NewProtocolManager(kusd.BlockChain().Config(), false, config.NetworkId, kusd.EventMux(), kusd.Engine(), newPeerSet(), kusd.BlockChain(), kusd.TxPool(), kusd.ChainDb(), nil, nil, quitSync, new(sync.WaitGroup))
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func NewLesServer(eth *eth.Ethereum, config *eth.Config) (*LesServer, error) {
 	srv := &LesServer{
 		protocolManager: pm,
 		quitSync:        quitSync,
-		lesTopic:        lesTopic(eth.BlockChain().Genesis().Hash()),
+		lesTopic:        lesTopic(kusd.BlockChain().Genesis().Hash()),
 	}
 	pm.server = srv
 
@@ -67,7 +67,7 @@ func NewLesServer(eth *eth.Ethereum, config *eth.Config) (*LesServer, error) {
 		MinRecharge: 50000,
 	}
 	srv.fcManager = flowcontrol.NewClientManager(uint64(config.LightServ), 10, 1000000000)
-	srv.fcCostStats = newCostStats(eth.ChainDb())
+	srv.fcCostStats = newCostStats(kusd.ChainDb())
 	return srv, nil
 }
 
@@ -190,7 +190,7 @@ func linRegFromBytes(data []byte) *linReg {
 
 type requestCostStats struct {
 	lock  sync.RWMutex
-	db    ethdb.Database
+	db    kusddb.Database
 	stats map[uint64]*linReg
 }
 
@@ -201,7 +201,7 @@ type requestCostStatsRlp []struct {
 
 var rcStatsKey = []byte("_requestCostStats")
 
-func newCostStats(db ethdb.Database) *requestCostStats {
+func newCostStats(db kusddb.Database) *requestCostStats {
 	stats := make(map[uint64]*linReg)
 	for _, code := range reqList {
 		stats[code] = &linReg{cnt: 100}
@@ -343,20 +343,20 @@ var (
 	chtPrefix  = []byte("cht")           // chtPrefix + chtNum (uint64 big endian) -> trie root hash
 )
 
-func getChtRoot(db ethdb.Database, num uint64) common.Hash {
+func getChtRoot(db kusddb.Database, num uint64) common.Hash {
 	var encNumber [8]byte
 	binary.BigEndian.PutUint64(encNumber[:], num)
 	data, _ := db.Get(append(chtPrefix, encNumber[:]...))
 	return common.BytesToHash(data)
 }
 
-func storeChtRoot(db ethdb.Database, num uint64, root common.Hash) {
+func storeChtRoot(db kusddb.Database, num uint64, root common.Hash) {
 	var encNumber [8]byte
 	binary.BigEndian.PutUint64(encNumber[:], num)
 	db.Put(append(chtPrefix, encNumber[:]...), root[:])
 }
 
-func makeCht(db ethdb.Database) bool {
+func makeCht(db kusddb.Database) bool {
 	headHash := core.GetHeadBlockHash(db)
 	headNum := core.GetBlockNumber(db, headHash)
 
