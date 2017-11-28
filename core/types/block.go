@@ -41,7 +41,6 @@ var (
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
 	Coinbase    common.Address `json:"validator"        gencodec:"required"`
 	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
@@ -52,6 +51,7 @@ type Header struct {
 	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
+	//ValidatorsHash common.Hash `json:""`
 }
 
 // field type overrides for gencodec
@@ -74,7 +74,6 @@ func (h *Header) Hash() common.Hash {
 func (h *Header) HashNoNonce() common.Hash {
 	return rlpHash([]interface{}{
 		h.ParentHash,
-		h.UncleHash,
 		h.Coinbase,
 		h.Root,
 		h.TxHash,
@@ -160,16 +159,6 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 		b.header.Bloom = CreateBloom(receipts)
 	}
 
-	if len(uncles) == 0 {
-		b.header.UncleHash = EmptyUncleHash
-	} else {
-		b.header.UncleHash = CalcUncleHash(uncles)
-		b.uncles = make([]*Header, len(uncles))
-		for i := range uncles {
-			b.uncles[i] = CopyHeader(uncles[i])
-		}
-	}
-
 	return b
 }
 
@@ -250,7 +239,6 @@ func (b *Block) Root() common.Hash        { return b.header.Root }
 func (b *Block) ParentHash() common.Hash  { return b.header.ParentHash }
 func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
-func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
@@ -337,7 +325,6 @@ func (h *Header) String() string {
 	return fmt.Sprintf(`Header(%x):
 [
 	ParentHash:	    %x
-	UncleHash:	    %x
 	Coinbase:	    %x
 	Root:		    %x
 	TxSha		    %x
@@ -348,7 +335,7 @@ func (h *Header) String() string {
 	GasUsed:	    %v
 	Time:		    %v
 	Extra:		    %s
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra)
+]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra)
 }
 
 type Blocks []*Block
