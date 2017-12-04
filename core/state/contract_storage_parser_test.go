@@ -1,14 +1,13 @@
 package state_test
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/kowala-tech/kUSD/accounts/abi"
@@ -16,98 +15,10 @@ import (
 	"github.com/kowala-tech/kUSD/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/crypto"
 	"github.com/kowala-tech/kUSD/params"
 )
-
-func newKeyAddr() (*ecdsa.PrivateKey, common.Address, error) {
-	key, err := crypto.GenerateKey()
-	if err != nil {
-		return nil, common.Address{}, err
-	}
-	return key, crypto.PubkeyToAddress(key.PublicKey), nil
-}
-
-func parseAddress(a string) common.Address {
-	a = strings.ToLower(strings.TrimSpace(a))
-	if strings.HasPrefix(a, "0x") {
-		a = strings.TrimPrefix(a, "0x")
-	}
-	b, err := hex.DecodeString(a)
-	if err != nil {
-		panic(err)
-	}
-	return common.BytesToAddress(b)
-}
-
-func loadContract(name string) ([]byte, abi.ABI, error) {
-	// read contract bytecode
-	hexBytecode, err := ioutil.ReadFile(path.Join("test_contracts", name+".bin"))
-	if err != nil {
-		return nil, abi.ABI{}, err
-	}
-	contractBytecode := make([]byte, len(hexBytecode)/2)
-	if _, err = hex.Decode(contractBytecode, hexBytecode); err != nil {
-		return nil, abi.ABI{}, err
-	}
-	// read contract ABI
-	f, err := os.Open(path.Join("test_contracts", name+".abi"))
-	if err != nil {
-		return nil, abi.ABI{}, err
-	}
-	defer f.Close()
-	contractABI, err := abi.JSON(f)
-	if err != nil {
-		return nil, abi.ABI{}, err
-	}
-	return contractBytecode, contractABI, nil
-}
-
-type contractTest struct {
-	contract struct {
-		bytecode []byte
-		abi      abi.ABI
-		addr     common.Address
-		tx       *types.Transaction
-	}
-	privKey struct {
-		key  *ecdsa.PrivateKey
-		addr common.Address
-	}
-	sim *backends.SimulatedBackend
-}
-
-func newParserTest(name string) (*contractTest, error) {
-	r := &contractTest{}
-	// load contract
-	var err error
-	if r.contract.bytecode, r.contract.abi, err = loadContract(name); err != nil {
-		return nil, err
-	}
-	// generate new private key
-	if r.privKey.key, r.privKey.addr, err = newKeyAddr(); err != nil {
-		return nil, err
-	}
-	// create a new simulated backend
-	r.sim = backends.NewSimulatedBackend(core.GenesisAlloc{
-		r.privKey.addr: core.GenesisAccount{
-			Balance: new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.Ether)),
-		},
-	})
-	r.sim.Commit()
-	// deploy contract
-	if r.contract.addr, r.contract.tx, _, err = bind.DeployContract(
-		bind.NewKeyedTransactor(r.privKey.key),
-		r.contract.abi,
-		r.contract.bytecode,
-		r.sim,
-	); err != nil {
-		return nil, err
-	}
-	r.sim.Commit()
-	return r, nil
-}
 
 //go:generate solc --bin --abi --overwrite --out test_contracts test_contracts/SmallInts.sol
 //go:generate solc --bin --abi --overwrite --out test_contracts test_contracts/BigInts.sol
@@ -116,18 +27,60 @@ func newParserTest(name string) (*contractTest, error) {
 //go:generate solc --bin --abi --overwrite --out test_contracts test_contracts/Mappings.sol
 
 func parseFromTest(name string, v interface{}) error {
-	tt, err := newParserTest(name)
+	// read contract bytecode
+	hexBytecode, err := ioutil.ReadFile(path.Join("test_contracts", name+".bin"))
 	if err != nil {
 		return err
 	}
-	stateDb, err := tt.sim.BlockChain.State()
+	contractBytecode := make([]byte, len(hexBytecode)/2)
+	if _, err = hex.Decode(contractBytecode, hexBytecode); err != nil {
+		return err
+	}
+	// read contract ABI
+	f, err := os.Open(path.Join("test_contracts", name+".abi"))
 	if err != nil {
 		return err
 	}
-	if err = stateDb.ParseState(
-		&tt.contract.addr,
+	defer f.Close()
+	contractABI, err := abi.JSON(f)
+	if err != nil {
+		return err
+	}
+	// generate new private key
+	privKey, err := crypto.GenerateKey()
+	if err != nil {
+		return err
+	}
+	// create a new simulated backend
+	sim := backends.NewSimulatedBackend(core.GenesisAlloc{
+		crypto.PubkeyToAddress(privKey.PublicKey): core.GenesisAccount{
+			Balance: new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.Ether)),
+		},
+	})
+	sim.Commit()
+	// deploy contract
+	contractAddr, _, _, err := bind.DeployContract(
+		bind.NewKeyedTransactor(privKey),
+		contractABI,
+		contractBytecode,
+		sim,
+	)
+	if err != nil {
+		return err
+	}
+	sim.Commit()
+	// get stateDB
+	stateDb, err := sim.BlockChain.State()
+	if err != nil {
+		return err
+	}
+	// parse state
+	err = stateDb.UnmarshalState(
+		&contractAddr,
 		common.Hash{},
-		v); err != nil {
+		v,
+	)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -370,6 +323,10 @@ type bigStruct struct {
 	Nonce *big.Int `solSize:"16"`
 }
 
+func (b bigStruct) Cmp(x bigStruct) bool {
+	return b.Id.Cmp(x.Id) == 0 && b.Addr == x.Addr && b.Nonce.Cmp(x.Nonce) == 0
+}
+
 type dataArrays struct {
 	Owners        [3]common.Address
 	Votes         []common.Address
@@ -456,79 +413,78 @@ func TestContractStorageParserArrays(t *testing.T) {
 	}
 }
 
-type dataMappings struct{}
+type dataMappings struct {
+	IdAddr       map[uint64]common.Address
+	AddrsSmall   map[common.Address]smallStruct
+	BigKeys      map[*big.Int]bigStruct
+	StringMedium map[string]mediumStruct
+}
 
 func TestContractStorageParserMappings(t *testing.T) {
-	// exp := dataArrays{
-	// 	Owners: [3]common.Address{
-	// 		common.HexToAddress("0xe92a2a4e3f4c378495145619f2975ce8c60819c2"),
-	// 		common.HexToAddress("0x14dd8d9c759a6827aacbf726085ef13a357989ec"),
-	// 		common.HexToAddress("0xa1f0a100522350ee2a044fe69831cf469c0f7123"),
-	// 	},
-	// }
-	// exp.Votes = exp.Owners[:]
-	// for i := 0; i < 3; i++ {
-	// 	s := smallStruct{uint64(i), uint32(i + 1)}
-	// 	exp.SmallFixed[i] = s
-	// 	exp.SmallDynamic = append(exp.SmallDynamic, s)
-	// 	m := mediumStruct{uint64(i), exp.Owners[i]}
-	// 	exp.MediumFixed[i] = m
-	// 	exp.MediumDynamic = append(exp.MediumDynamic, m)
-	// 	b := bigStruct{big.NewInt(int64(i)), exp.Owners[i], big.NewInt(int64(i) * 256)}
-	// 	exp.BigFixed[i] = b
-	// 	exp.BigDynamic = append(exp.BigDynamic, b)
-	// }
-	// got := dataArrays{}
+	exp := dataMappings{
+		IdAddr: map[uint64]common.Address{
+			0: common.HexToAddress("0xe92a2a4e3f4c378495145619f2975ce8c60819c2"),
+			1: common.HexToAddress("0x14dd8d9c759a6827aacbf726085ef13a357989ec"),
+			2: common.HexToAddress("0xa1f0a100522350ee2a044fe69831cf469c0f7123"),
+		},
+		AddrsSmall:   make(map[common.Address]smallStruct, 3),
+		BigKeys:      make(map[*big.Int]bigStruct, 3),
+		StringMedium: make(map[string]mediumStruct, 3),
+	}
+	for id, addr := range exp.IdAddr {
+		exp.AddrsSmall[addr] = smallStruct{Id: id, Nonce: uint32(id) + 1}
+		exp.BigKeys[big.NewInt(int64(id))] = bigStruct{Id: big.NewInt(int64(id)), Addr: exp.IdAddr[id], Nonce: big.NewInt(int64(id) * 256)}
+		exp.StringMedium["small string"] = mediumStruct{Id: 0, Addr: exp.IdAddr[0]}
+		exp.StringMedium["still a small string"] = mediumStruct{Id: 1, Addr: exp.IdAddr[1]}
+		exp.StringMedium["a big string must be longer than 31 bytes"] = mediumStruct{Id: 2, Addr: exp.IdAddr[2]}
+	}
+	got := struct {
+		IdAddr       *state.Mapping
+		AddrsSmall   *state.Mapping
+		BigKeys      *state.Mapping
+		StringMedium *state.Mapping
+	}{}
+	if err := parseFromTest("Mappings", &got); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareMaps(exp.IdAddr, got.IdAddr); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareMaps(exp.AddrsSmall, got.AddrsSmall); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareMaps(exp.StringMedium, got.StringMedium); err != nil {
+		t.Error(err)
+		return
+	}
+	for k, v := range exp.BigKeys {
+		bs := &bigStruct{}
+		if err := got.BigKeys.Get(k, bs); err != nil {
+			t.Error(err)
+			return
+		}
+		if !v.Cmp(*bs) {
+			t.Errorf("expected: %#+v\ngot: %#+v", v, bs)
+			return
+		}
+	}
+}
 
-	// if err := parseFromTest("Arrays", &got); err != nil {
-	// 	t.Error(err)
-	// 	return
-	// }
-
-	// if !reflect.DeepEqual(exp.Owners, got.Owners) {
-	// 	t.Errorf("expected: %v\ngot: %v\n", exp, got)
-	// 	return
-	// }
-	// if !reflect.DeepEqual(exp.Votes, got.Votes) {
-	// 	t.Errorf("expected: %v\ngot: %v\n", exp, got)
-	// 	return
-	// }
-	// if !reflect.DeepEqual(exp.SmallFixed, got.SmallFixed) {
-	// 	t.Errorf("expected: %v\ngot: %v\n", exp, got)
-	// 	return
-	// }
-	// if !reflect.DeepEqual(exp.SmallDynamic, got.SmallDynamic) {
-	// 	t.Errorf("expected: %v\ngot: %v\n", exp, got)
-	// 	return
-	// }
-	// if !reflect.DeepEqual(exp.MediumFixed, got.MediumFixed) {
-	// 	t.Errorf("expected: %v\ngot: %v\n", exp, got)
-	// 	return
-	// }
-	// if !reflect.DeepEqual(exp.MediumDynamic, got.MediumDynamic) {
-	// 	t.Errorf("expected: %v\ngot: %v\n", exp, got)
-	// 	return
-	// }
-	// cmpBigStruct := func(bs1, bs2 *bigStruct) bool {
-	// 	if !reflect.DeepEqual(bs1.Addr, bs2.Addr) {
-	// 		return false
-	// 	}
-	// 	if bs1.Id.Cmp(bs2.Id) != 0 {
-	// 		return false
-	// 	}
-	// 	if bs1.Nonce.Cmp(bs2.Nonce) != 0 {
-	// 		return false
-	// 	}
-	// 	return true
-	// }
-	// for i := 0; i < 3; i++ {
-	// 	if !cmpBigStruct(&exp.BigFixed[i], &got.BigFixed[i]) {
-	// 		t.Errorf("expected: %v\ngot: %v\n", exp.BigFixed[i], got.BigFixed[i])
-	// 		return
-	// 	}
-	// 	if !cmpBigStruct(&exp.BigDynamic[i], &got.BigDynamic[i]) {
-	// 		t.Errorf("expected: %v\ngot: %v\n", exp.BigDynamic[i], got.BigDynamic[i])
-	// 		return
-	// 	}
-	// }
+func compareMaps(m interface{}, sm *state.Mapping) error {
+	mv := reflect.ValueOf(m)
+	if mv.Kind() != reflect.Map {
+		return fmt.Errorf("need a map")
+	}
+	for _, k := range mv.MapKeys() {
+		mVal := mv.MapIndex(k)
+		gotV := reflect.New(mVal.Type())
+		sm.Get(k.Interface(), gotV.Interface())
+		if !reflect.DeepEqual(mVal.Interface(), gotV.Elem().Interface()) {
+			return fmt.Errorf("got a mismatch")
+		}
+	}
+	return nil
 }

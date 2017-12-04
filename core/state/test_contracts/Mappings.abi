@@ -1,1 +1,1 @@
-[{"inputs":[],"payable":false,"statemutability":"nonpayable","type":"constructor"}]
+[{"constant":true,"inputs":[{"name":"","type":"uint64"}],"name":"id_addrs","outputs":[{"name":"","type":"address"}],"payable":false,"statemutability":"view","type":"function"},{"inputs":[],"payable":false,"statemutability":"nonpayable","type":"constructor"}]

@@ -237,31 +237,8 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	if stateObject != nil {
 		r = stateObject.GetState(self.db, b)
 	}
-	// fmt.Printf("StateDB.GetState(0x%s, 0x%s): 0x%s\n",
-	// 	hex.EncodeToString(a[:]),
-	// 	hex.EncodeToString(b[:]),
-	// 	hex.EncodeToString(r[:]),
-	// )
 	return r
 }
-
-// func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
-// 	stateObject := self.getStateObject(a)
-// 	var s common.Hash
-// 	if stateObject != nil {
-// 		s = stateObject.GetState(self.db, b)
-// 	} else {
-// 		s = common.Hash{}
-// 	}
-
-// 	fmt.Printf(">> 0x%s: 0x%s: 0x%s\n",
-// 		hex.EncodeToString(a[:]),
-// 		hex.EncodeToString(b[:]),
-// 		hex.EncodeToString(s[:]),
-// 	)
-
-// 	return s
-// }
 
 // StorageTrie returns the storage trie of an account.
 // The return value is a copy and is nil for non-existent accounts.

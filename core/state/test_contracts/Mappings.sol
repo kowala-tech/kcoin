@@ -17,10 +17,10 @@ contract Mappings {
 		uint128 nonce;
 	}
 
-	mapping(uint64 => address) id_addrs;
+	mapping(uint64 => address) public id_addrs;
 	mapping(address => SmallStruct) addrs_small;
 	mapping(uint128 => BigStruct) big_keys;
-	mapping(string => MediumStruct) small_medium;
+	mapping(string => MediumStruct) string_medium;
 
 	function Mappings() {
 		id_addrs[0] = 0xe92a2a4e3f4c378495145619f2975ce8c60819c2;
@@ -31,8 +31,8 @@ contract Mappings {
 			addrs_small[id_addrs[i]] = SmallStruct(i, i+1);
 			big_keys[i] = BigStruct(i, id_addrs[i],i * 256);
 		}
-		small_medium["small string"] = MediumStruct(0, id_addrs[0]);
-		small_medium["still a small string"] = MediumStruct(1, id_addrs[1]);
-		small_medium["a big string must be longer than 31 bytes"] = MediumStruct(2, id_addrs[2]);
+		string_medium["small string"] = MediumStruct(0, id_addrs[0]);
+		string_medium["still a small string"] = MediumStruct(1, id_addrs[1]);
+		string_medium["a big string must be longer than 31 bytes"] = MediumStruct(2, id_addrs[2]);
 	}
 }
