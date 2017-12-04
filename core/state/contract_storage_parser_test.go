@@ -75,12 +75,7 @@ func parseFromTest(name string, v interface{}) error {
 		return err
 	}
 	// parse state
-	err = stateDb.UnmarshalState(
-		&contractAddr,
-		common.Hash{},
-		v,
-	)
-	if err != nil {
+	if err = stateDb.UnmarshalState(contractAddr, v); err != nil {
 		return err
 	}
 	return nil

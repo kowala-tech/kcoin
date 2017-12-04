@@ -55,7 +55,11 @@ var (
 // Solidity mappings need to be parsed by the provided type Mapping.
 //
 // A field can be ignored by using the tag solIgnore (any value).
-func (s *StateDB) UnmarshalState(addr *common.Address, first common.Hash, r interface{}) error {
+func (s *StateDB) UnmarshalState(addr common.Address, r interface{}) error {
+	return s.GetOrNewStateObject(addr).UnmarshalState(r)
+}
+
+func (so *stateObject) UnmarshalState(r interface{}) error {
 	// needs to be a pointer
 	val := reflect.ValueOf(r)
 	if val.Kind() != reflect.Ptr {
@@ -71,7 +75,7 @@ func (s *StateDB) UnmarshalState(addr *common.Address, first common.Hash, r inte
 		return ErrNeedValidStructPointer
 	}
 	// parse
-	return newStateReader(s, *addr, first).readValue(&val, 0, false)
+	return newStateReader(so, common.Hash{}).readValue(&val, 0, false)
 }
 
 var (
@@ -118,15 +122,13 @@ type StateUnmarshaler interface {
 }
 
 type stateIo struct {
-	sdb    *StateDB
-	addr   common.Address
+	so     *stateObject
 	curKey *big.Int
 }
 
-func newStateIo(sdb *StateDB, addr common.Address, firstKey common.Hash) *stateIo {
+func newStateIo(so *stateObject, firstKey common.Hash) *stateIo {
 	return &stateIo{
-		sdb:    sdb,
-		addr:   addr,
+		so:     so,
 		curKey: new(big.Int).SetBytes(firstKey.Bytes()),
 	}
 }
@@ -141,10 +143,10 @@ type stateReader struct {
 }
 
 // create a new state parser
-func newStateReader(sdb *StateDB, addr common.Address, firstKey common.Hash) *stateReader {
+func newStateReader(so *stateObject, firstKey common.Hash) *stateReader {
 	return &stateReader{
-		stateIo:  newStateIo(sdb, addr, firstKey),
-		curBytes: sdb.GetState(addr, firstKey).Bytes(),
+		stateIo:  newStateIo(so, firstKey),
+		curBytes: so.GetState(so.db.db, firstKey).Bytes(),
 	}
 }
 
@@ -153,7 +155,7 @@ func (sr *stateReader) nextFullWord() {
 		return
 	}
 	sr.curKey.Add(sr.curKey, common.Big1)
-	sr.curBytes = sr.sdb.GetState(sr.addr, common.BytesToHash(sr.curKey.Bytes())).Bytes()
+	sr.curBytes = sr.so.GetState(sr.so.db.db, sr.keyHash()).Bytes()
 }
 
 func (sr *stateReader) readN(n int) []byte {
@@ -206,7 +208,7 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 			v.Set(reflect.New(v.Type().Elem()))
 			vv = v.Interface().(*Mapping)
 		}
-		vv.SetRoot(sr.sdb, sr.addr, sr.keyHash())
+		vv.SetRoot(sr.so, sr.keyHash())
 		if len(sr.curBytes) == 32 {
 			sr.readN(1)
 		}
@@ -309,7 +311,7 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 			if nWords.Cmp(big64k) > 0 {
 				panic("string to big")
 			}
-			strSr := newStateReader(sr.sdb, sr.addr, common.BytesToHash(h))
+			strSr := newStateReader(sr.so, common.BytesToHash(h))
 			nw := nWords.Uint64()
 			s := strSr.readN(int(nw * 32))
 			v.Set(reflect.ValueOf(string(s[:sz.Int64()])))
@@ -373,7 +375,7 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 			sz = v.Len()
 		} else {
 			sz = int(sr.readInt(31, false).Int64())
-			newSr = newStateReader(sr.sdb, sr.addr, common.BytesToHash(keccak256Sum(sr.keyBytes())))
+			newSr = newStateReader(sr.so, common.BytesToHash(keccak256Sum(sr.keyBytes())))
 			sr.nextFullWord()
 		}
 		newS := reflect.New(reflect.SliceOf(v.Type().Elem())).Elem()
@@ -413,8 +415,7 @@ func keccak256Sum(b []byte) []byte {
 
 // Mapping is the type used to access solidity's mapping type.
 type Mapping struct {
-	sdb    *StateDB
-	addr   common.Address
+	so     *stateObject
 	mapKey common.Hash
 }
 
@@ -422,13 +423,13 @@ type Mapping struct {
 func NewEmptyMapping() *Mapping { return &Mapping{} }
 
 // NewMapping returns a new *Mapping.
-func NewMapping(sdb *StateDB, addr common.Address, key common.Hash) *Mapping {
-	return &Mapping{sdb: sdb, addr: addr, mapKey: key}
+func NewMapping(so *stateObject, key common.Hash) *Mapping {
+	return &Mapping{so: so, mapKey: key}
 }
 
 // SetRoot is used to set the StateDB and address fields.
-func (m *Mapping) SetRoot(sdb *StateDB, addr common.Address, key common.Hash) {
-	*m = Mapping{sdb: sdb, addr: addr, mapKey: key}
+func (m *Mapping) SetRoot(so *stateObject, key common.Hash) {
+	*m = Mapping{so: so, mapKey: key}
 }
 
 // Get unmarshals the value of v (must be a non nil pointer)
@@ -450,26 +451,8 @@ func (m *Mapping) Get(k, v interface{}) error {
 // using k as the key (already marshaled data).
 func (m *Mapping) GetWithKeyBytes(k []byte, v interface{}) error {
 	vv := reflect.ValueOf(v)
-	return newStateReader(
-		m.sdb,
-		m.addr,
-		m.getFirstKey(k),
-	).readValue(&vv, 0, false)
+	return newStateReader(m.so, m.getFirstKey(k)).readValue(&vv, 0, false)
 }
-
-// // Set marshals the value of v (must be a non nil pointer) using k as
-// // the key (only solidity primitive types allowed).
-// func (m *Mapping) Set(k, v interface{}) error {
-// 	kb, err := marshalMappingKey(k)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return m.SetWithKeyBytes(kb, v)
-// }
-
-// func (m *Mapping) SetWithKeyBytes(k []byte, v interface{}) error {
-// 	return newStateWriter(m.sdb, m.addr, m.getFirstKey(k)).writeValue(reflect.ValueOf(v), 0, false)
-// }
 
 func (m *Mapping) getFirstKey(b []byte) common.Hash {
 	kb := make([]byte, 0, len(b)+32)
@@ -619,35 +602,3 @@ func packBytesIntoWords(chunks [][]byte) [][]byte {
 type StateMarshaler interface {
 	MarshalStateBytes() ([]byte, error)
 }
-
-// // MarshalState
-// func (s *StateDB) MarshalState(addr *common.Address, first common.Hash, r interface{}) error {
-// 	v := reflect.ValueOf(r)
-// 	if v.Kind() == reflect.Ptr {
-// 		if v.IsNil() {
-// 			return ErrNilPointer
-// 		}
-// 		return s.MarshalState(addr, first, v.Elem().Interface())
-// 	}
-// 	if v.Kind() != reflect.Struct {
-// 		return fmt.Errorf("need a struct (or pointer to a struct)")
-// 	}
-// 	return newStateWriter(s, *addr, first).writeValue(reflect.ValueOf(r), 0, false)
-// }
-
-// type stateWriter struct {
-// 	*stateIo
-// 	chunks [][]byte
-// }
-
-// func newStateWriter(sdb *StateDB, addr common.Address, firstKey common.Hash) *stateWriter {
-// 	return &stateWriter{
-// 		stateIo: newStateIo(sdb, addr, firstKey),
-// 		chunks:  make([][]byte, 0, 1024),
-// 	}
-// }
-
-// func (sw *stateWriter) writeValue(v reflect.Value, size int, signed bool) error {
-// 	// TODO(hrosa): code here
-// 	return nil
-// }
