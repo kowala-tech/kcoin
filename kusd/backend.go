@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	ErrLightModeNotSupported = errors.New("can't run kusd.KUSD in light sync mode, use lks.LightKUSD")
+	ErrLightModeNotSupported = errors.New("can't run kusd.KUSD in light sync mode, use ls.LightKUSD")
 	ErrValidatorNotFound     = errors.New("the genesis file must have at least one validator")
 )
 
