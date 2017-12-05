@@ -1,20 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-// Package types contains data types related to Ethereum consensus.
 package types
 
 import (
@@ -33,12 +16,11 @@ import (
 
 var (
 	EmptyRootHash  = DeriveSha(Transactions{})
-	EmptyUncleHash = CalcUncleHash(nil)
 )
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
-// Header represents a block header in the Ethereum blockchain.
+// Header represents a block header in the KUSD blockchain.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Coinbase    common.Address `json:"validator"        gencodec:"required"`
@@ -46,21 +28,18 @@ type Header struct {
 	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
 	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
+	Height      *big.Int       `json:"height"           gencodec:"required"`
 	GasLimit    *big.Int       `json:"gasLimit"         gencodec:"required"`
 	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	//ValidatorsHash common.Hash `json:""`
 }
 
 // field type overrides for gencodec
 type headerMarshaling struct {
-	Number   *hexutil.Big
+	Height   *hexutil.Big
 	GasLimit *hexutil.Big
 	GasUsed  *hexutil.Big
 	Time     *hexutil.Big
-	Extra    hexutil.Bytes
 	Hash     common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
 
@@ -68,23 +47,6 @@ type headerMarshaling struct {
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
 	return rlpHash(h)
-}
-
-// HashNoNonce returns the hash which is used as input for the proof-of-work search.
-func (h *Header) HashNoNonce() common.Hash {
-	return rlpHash([]interface{}{
-		h.ParentHash,
-		h.Coinbase,
-		h.Root,
-		h.TxHash,
-		h.ReceiptHash,
-		h.Bloom,
-		h.Number,
-		h.GasLimit,
-		h.GasUsed,
-		h.Time,
-		h.Extra,
-	})
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -95,52 +57,39 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
-// a block's data contents (transactions and uncles) together.
+// a block's data contents (transactions) together.
 type Body struct {
 	Transactions []*Transaction
-	Uncles       []*Header
 }
 
-// Block represents an entire block in the Ethereum blockchain.
+// Block represents an entire block in the KUSD blockchain.
 type Block struct {
 	header       *Header
-	uncles       []*Header
 	transactions Transactions
 
 	// caches
 	hash atomic.Value
 	size atomic.Value
 
-	// These fields are used by package eth to track
+	// These fields are used by package kusd to track
 	// inter-peer block relay.
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
 }
 
-// "external" block encoding. used for eth protocol, etc.
+// "external" block encoding. used for kusd protocol, etc.
 type extblock struct {
 	Header *Header
 	Txs    []*Transaction
-	Uncles []*Header
-}
-
-// [deprecated by eth/63]
-// "storage" block encoding. used for database.
-type storageblock struct {
-	Header *Header
-	Txs    []*Transaction
-	Uncles []*Header
-	TD     *big.Int
 }
 
 // NewBlock creates a new block. The input data is copied,
 // changes to header and to the field values will not affect the
 // block.
 //
-// The values of TxHash, UncleHash, ReceiptHash and Bloom in header
-// are ignored and set to values derived from the given txs, uncles
-// and receipts.
-func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*Receipt) *Block {
+// The values of TxHash, ReceiptHash and Bloom in header
+// are ignored and set to values derived from the given txs and receipts.
+func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	b := &Block{header: CopyHeader(header)}
 
 	// TODO: panic if len(txs) != len(receipts)
@@ -176,8 +125,8 @@ func CopyHeader(h *Header) *Header {
 	if cpy.Time = new(big.Int); h.Time != nil {
 		cpy.Time.Set(h.Time)
 	}
-	if cpy.Number = new(big.Int); h.Number != nil {
-		cpy.Number.Set(h.Number)
+	if cpy.Height = new(big.Int); h.Height != nil {
+		cpy.Height.Set(h.Height)
 	}
 	if cpy.GasLimit = new(big.Int); h.GasLimit != nil {
 		cpy.GasLimit.Set(h.GasLimit)
@@ -185,37 +134,31 @@ func CopyHeader(h *Header) *Header {
 	if cpy.GasUsed = new(big.Int); h.GasUsed != nil {
 		cpy.GasUsed.Set(h.GasUsed)
 	}
-	if len(h.Extra) > 0 {
-		cpy.Extra = make([]byte, len(h.Extra))
-		copy(cpy.Extra, h.Extra)
-	}
 	return &cpy
 }
 
-// DecodeRLP decodes the Ethereum
+// DecodeRLP decodes the KUSD RLP block format
 func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	var eb extblock
 	_, size, _ := s.Kind()
 	if err := s.Decode(&eb); err != nil {
 		return err
 	}
-	b.header, b.uncles, b.transactions = eb.Header, eb.Uncles, eb.Txs
+	b.header, b.transactions = eb.Header, eb.Txs
 	b.size.Store(common.StorageSize(rlp.ListSize(size)))
 	return nil
 }
 
-// EncodeRLP serializes b into the Ethereum RLP block format.
+// EncodeRLP serializes b into the KUSD RLP block format.
 func (b *Block) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, extblock{
 		Header: b.header,
 		Txs:    b.transactions,
-		Uncles: b.uncles,
 	})
 }
 
 // TODO: copies
 
-func (b *Block) Uncles() []*Header          { return b.uncles }
 func (b *Block) Transactions() Transactions { return b.transactions }
 
 func (b *Block) Transaction(hash common.Hash) *Transaction {
@@ -227,28 +170,23 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 	return nil
 }
 
-func (b *Block) Number() *big.Int   { return new(big.Int).Set(b.header.Number) }
+func (b *Block) Height() *big.Int   { return new(big.Int).Set(b.header.Height) }
 func (b *Block) GasLimit() *big.Int { return new(big.Int).Set(b.header.GasLimit) }
 func (b *Block) GasUsed() *big.Int  { return new(big.Int).Set(b.header.GasUsed) }
 func (b *Block) Time() *big.Int     { return new(big.Int).Set(b.header.Time) }
 
-func (b *Block) NumberU64() uint64        { return b.header.Number.Uint64() }
+func (b *Block) HeightU64() uint64        { return b.header.Height.Uint64() }
 func (b *Block) Bloom() Bloom             { return b.header.Bloom }
 func (b *Block) Coinbase() common.Address { return b.header.Coinbase }
 func (b *Block) Root() common.Hash        { return b.header.Root }
 func (b *Block) ParentHash() common.Hash  { return b.header.ParentHash }
 func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
-func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
-
-func (b *Block) HashNoNonce() common.Hash {
-	return b.header.HashNoNonce()
-}
+func (b *Block) Body() *Body { return &Body{b.transactions} }
 
 func (b *Block) Size() common.StorageSize {
 	if size := b.size.Load(); size != nil {
@@ -267,10 +205,6 @@ func (c *writeCounter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-func CalcUncleHash(uncles []*Header) common.Hash {
-	return rlpHash(uncles)
-}
-
 // WithSeal returns a new block with the data from b but the header replaced with
 // the sealed one.
 func (b *Block) WithSeal(header *Header) *Block {
@@ -279,21 +213,16 @@ func (b *Block) WithSeal(header *Header) *Block {
 	return &Block{
 		header:       &cpy,
 		transactions: b.transactions,
-		uncles:       b.uncles,
 	}
 }
 
-// WithBody returns a new block with the given transaction and uncle contents.
+// WithBody returns a new block with the given transactions.
 func (b *Block) WithBody(transactions []*Transaction, uncles []*Header) *Block {
 	block := &Block{
 		header:       CopyHeader(b.header),
 		transactions: make([]*Transaction, len(transactions)),
-		uncles:       make([]*Header, len(uncles)),
 	}
 	copy(block.transactions, transactions)
-	for i := range uncles {
-		block.uncles[i] = CopyHeader(uncles[i])
-	}
 	return block
 }
 
@@ -310,14 +239,11 @@ func (b *Block) Hash() common.Hash {
 
 func (b *Block) String() string {
 	str := fmt.Sprintf(`Block(#%v): Size: %v {
-MinerHash: %x
 %v
 Transactions:
 %v
-Uncles:
-%v
 }
-`, b.Number(), b.Size(), b.header.HashNoNonce(), b.header, b.transactions, b.uncles)
+`, b.Height(), b.Size(), b.header, b.transactions)
 	return str
 }
 
@@ -330,12 +256,11 @@ func (h *Header) String() string {
 	TxSha		    %x
 	ReceiptSha:	    %x
 	Bloom:		    %x
-	Number:		    %v
+	Height:		    %v
 	GasLimit:	    %v
 	GasUsed:	    %v
 	Time:		    %v
-	Extra:		    %s
-]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra)
+]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Height, h.GasLimit, h.GasUsed, h.Time)
 }
 
 type Blocks []*Block
