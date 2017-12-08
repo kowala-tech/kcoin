@@ -233,11 +233,10 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 
 func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	stateObject := self.getStateObject(a)
-	var r common.Hash
 	if stateObject != nil {
-		r = stateObject.GetState(self.db, b)
+		return stateObject.GetState(self.db, b)
 	}
-	return r
+	return common.Hash{}
 }
 
 // StorageTrie returns the storage trie of an account.
