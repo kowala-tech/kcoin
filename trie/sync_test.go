@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package trie
 
 import (
@@ -21,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/kusddb"
 )
 
 // makeTestTrie create a sample test trie to test node-wise reconstruction.
-func makeTestTrie() (ethdb.Database, *Trie, map[string][]byte) {
+func makeTestTrie() (kusddb.Database, *Trie, map[string][]byte) {
 	// Create an empty trie
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	trie, _ := New(common.Hash{}, db)
 
 	// Fill it with some arbitrary data
@@ -92,7 +76,7 @@ func TestEmptyTrieSync(t *testing.T) {
 	emptyB, _ := New(emptyRoot, nil)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
-		db, _ := ethdb.NewMemDatabase()
+		db, _ := kusddb.NewMemDatabase()
 		if req := NewTrieSync(common.BytesToHash(trie.Root()), db, nil).Missing(1); len(req) != 0 {
 			t.Errorf("test %d: content requested for empty trie: %v", i, req)
 		}
@@ -109,7 +93,7 @@ func testIterativeTrieSync(t *testing.T, batch int) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := ethdb.NewMemDatabase()
+	dstDb, _ := kusddb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := append([]common.Hash{}, sched.Missing(batch)...)
@@ -141,7 +125,7 @@ func TestIterativeDelayedTrieSync(t *testing.T) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := ethdb.NewMemDatabase()
+	dstDb, _ := kusddb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := append([]common.Hash{}, sched.Missing(10000)...)
@@ -178,7 +162,7 @@ func testIterativeRandomTrieSync(t *testing.T, batch int) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := ethdb.NewMemDatabase()
+	dstDb, _ := kusddb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := make(map[common.Hash]struct{})
@@ -218,7 +202,7 @@ func TestIterativeRandomDelayedTrieSync(t *testing.T) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := ethdb.NewMemDatabase()
+	dstDb, _ := kusddb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := make(map[common.Hash]struct{})
@@ -264,7 +248,7 @@ func TestDuplicateAvoidanceTrieSync(t *testing.T) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := ethdb.NewMemDatabase()
+	dstDb, _ := kusddb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := append([]common.Hash{}, sched.Missing(0)...)
@@ -303,7 +287,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 	srcDb, srcTrie, _ := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := ethdb.NewMemDatabase()
+	dstDb, _ := kusddb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	added := []common.Hash{}
