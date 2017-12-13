@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package params
 
 import "math/big"
@@ -34,16 +18,16 @@ const (
 	EcrecoverGas          uint64 = 3000  //
 	Sha256WordGas         uint64 = 12    //
 
-	Sha3Gas          uint64 = 30    // Once per SHA3 operation.
-	Sha256Gas        uint64 = 60    //
-	IdentityWordGas  uint64 = 3     //
-	Sha3WordGas      uint64 = 6     // Once per word of the SHA3 operation's data.
-	SstoreResetGas   uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.
-	SstoreClearGas   uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.
-	SstoreRefundGas  uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.
-	JumpdestGas      uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
-	IdentityGas      uint64 = 15    //
-	EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
+	Sha3Gas         uint64 = 30    // Once per SHA3 operation.
+	Sha256Gas       uint64 = 60    //
+	IdentityWordGas uint64 = 3     //
+	Sha3WordGas     uint64 = 6     // Once per word of the SHA3 operation's data.
+	SstoreResetGas  uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.
+	SstoreClearGas  uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.
+	SstoreRefundGas uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.
+	JumpdestGas     uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
+	IdentityGas     uint64 = 15    //
+	//EpochDuration    uint64 = 30000 // Duration between proof-of-work epochs.
 	CallGas          uint64 = 40    // Once per CALL operation & message call transaction.
 	CreateDataGas    uint64 = 200   //
 	Ripemd160Gas     uint64 = 600   //
@@ -59,6 +43,15 @@ const (
 	SuicideRefundGas uint64 = 24000 // Refunded following a suicide operation.
 	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
 	TxDataNonZeroGas uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
+
+	// POS timeouts (milliseconds)
+	ProposeDuration        uint64 = 3000
+	ProposeDeltaDuration   uint64 = 500
+	PreVoteDuration        uint64 = 1000
+	PreVoteDeltaDuration   uint64 = 500
+	PreCommitDuration      uint64 = 1000
+	PreCommitDeltaDuration uint64 = 500
+	CommitDuration         uint64 = 1000
 
 	MaxCodeSize = 24576
 )
