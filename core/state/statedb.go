@@ -1,3 +1,4 @@
+// Package state provides a caching layer atop the Ethereum state trie.
 package state
 
 import (
@@ -29,9 +30,8 @@ type StateDB struct {
 	trie Trie
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
-	stateObjects           map[common.Address]*stateObject
-	stateObjectsDirty      map[common.Address]struct{}
-	stateObjectsDestructed map[common.Address]struct{}
+	stateObjects      map[common.Address]*stateObject
+	stateObjectsDirty map[common.Address]struct{}
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -66,14 +66,13 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		return nil, err
 	}
 	return &StateDB{
-		db:                     db,
-		trie:                   tr,
-		stateObjects:           make(map[common.Address]*stateObject),
-		stateObjectsDirty:      make(map[common.Address]struct{}),
-		stateObjectsDestructed: make(map[common.Address]struct{}),
-		refund:                 new(big.Int),
-		logs:                   make(map[common.Hash][]*types.Log),
-		preimages:              make(map[common.Hash][]byte),
+		db:                db,
+		trie:              tr,
+		stateObjects:      make(map[common.Address]*stateObject),
+		stateObjectsDirty: make(map[common.Address]struct{}),
+		refund:            new(big.Int),
+		logs:              make(map[common.Hash][]*types.Log),
+		preimages:         make(map[common.Hash][]byte),
 	}, nil
 }
 
@@ -98,7 +97,6 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.trie = tr
 	self.stateObjects = make(map[common.Address]*stateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
-	self.stateObjectsDestructed = make(map[common.Address]struct{})
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
 	self.txIndex = 0
@@ -306,7 +304,6 @@ func (self *StateDB) Suicide(addr common.Address) bool {
 	})
 	stateObject.markSuicided()
 	stateObject.data.Balance = new(big.Int)
-	self.stateObjectsDestructed[addr] = struct{}{}
 
 	return true
 }
@@ -439,23 +436,19 @@ func (self *StateDB) Copy() *StateDB {
 
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
-		db:                     self.db,
-		trie:                   self.trie,
-		stateObjects:           make(map[common.Address]*stateObject, len(self.stateObjectsDirty)),
-		stateObjectsDirty:      make(map[common.Address]struct{}, len(self.stateObjectsDirty)),
-		stateObjectsDestructed: make(map[common.Address]struct{}, len(self.stateObjectsDestructed)),
-		refund:                 new(big.Int).Set(self.refund),
-		logs:                   make(map[common.Hash][]*types.Log, len(self.logs)),
-		logSize:                self.logSize,
-		preimages:              make(map[common.Hash][]byte),
+		db:                self.db,
+		trie:              self.db.CopyTrie(self.trie),
+		stateObjects:      make(map[common.Address]*stateObject, len(self.stateObjectsDirty)),
+		stateObjectsDirty: make(map[common.Address]struct{}, len(self.stateObjectsDirty)),
+		refund:            new(big.Int).Set(self.refund),
+		logs:              make(map[common.Hash][]*types.Log, len(self.logs)),
+		logSize:           self.logSize,
+		preimages:         make(map[common.Hash][]byte),
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.stateObjectsDirty {
 		state.stateObjects[addr] = self.stateObjects[addr].deepCopy(state, state.MarkStateObjectDirty)
 		state.stateObjectsDirty[addr] = struct{}{}
-		if self.stateObjects[addr].suicided {
-			state.stateObjectsDestructed[addr] = struct{}{}
-		}
 	}
 	for hash, logs := range self.logs {
 		state.logs[hash] = make([]*types.Log, len(logs))
@@ -503,10 +496,9 @@ func (self *StateDB) GetRefund() *big.Int {
 	return self.refund
 }
 
-// IntermediateRoot computes the current root hash of the state trie.
-// It is called in between transactions to get the root hash that
-// goes into transaction receipts.
-func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+// Finalise finalises the state by removing the self destructed objects
+// and clears the journal as well as the refunds.
+func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 	for addr := range s.stateObjectsDirty {
 		stateObject := s.stateObjects[addr]
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
@@ -518,6 +510,13 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	}
 	// Invalidate journal because reverting across transactions is not allowed.
 	s.clearJournalAndRefund()
+}
+
+// IntermediateRoot computes the current root hash of the state trie.
+// It is called in between transactions to get the root hash that
+// goes into transaction receipts.
+func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+	s.Finalise(deleteEmptyObjects)
 	return s.trie.Hash()
 }
 
@@ -527,19 +526,6 @@ func (self *StateDB) Prepare(thash, bhash common.Hash, ti int) {
 	self.thash = thash
 	self.bhash = bhash
 	self.txIndex = ti
-}
-
-// Finalise finalises the state by removing the self destructed objects
-// in the current stateObjectsDestructed buffer and clears the journal
-// as well as the refunds.
-//
-// Please note that Finalise is used by EIP#98 and is used instead of
-// IntermediateRoot.
-func (s *StateDB) Finalise() {
-	for addr := range s.stateObjectsDestructed {
-		s.deleteStateObject(s.stateObjects[addr])
-	}
-	s.clearJournalAndRefund()
 }
 
 // DeleteSuicides flags the suicided objects for deletion so that it
