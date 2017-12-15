@@ -204,13 +204,16 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 		v.Set(reflect.ValueOf(common.BytesToAddress(sr.readN(20))))
 		return nil
 	case *Mapping:
+		if len(sr.curBytes) != 32 {
+			sr.nextFullWord()
+		}
 		if vv == nil {
 			v.Set(reflect.New(v.Type().Elem()))
 			vv = v.Interface().(*Mapping)
 		}
 		vv.SetRoot(sr.so, sr.keyHash())
 		if len(sr.curBytes) == 32 {
-			sr.readN(1)
+			sr.curBytes = []byte{}
 		}
 		sr.nextFullWord()
 		return nil
