@@ -29,11 +29,11 @@ contract Arrays {
     BigStruct[3] big_fixed;
     BigStruct[] big_dynamic;
 
-    function Arrays() {
+    function Arrays() public {
         uint8 i;
-        owners[0] = 0xe92a2a4e3f4c378495145619f2975ce8c60819c2;
-        owners[1] = 0x14dd8d9c759a6827aacbf726085ef13a357989ec;
-        owners[2] = 0xa1f0a100522350ee2a044fe69831cf469c0f7123;
+        owners[0] = 0xE92A2a4E3F4c378495145619F2975ce8c60819C2;
+        owners[1] = 0x14Dd8d9c759A6827AACBF726085Ef13A357989ec;
+        owners[2] = 0xA1F0a100522350Ee2A044Fe69831cf469C0f7123;
         for (i = 0; i < 3; i++) { votes.push(owners[i]); }
         for (i = 0; i < 3; i++) {
             small_fixed[i] = SmallStruct(i, i + 1);

@@ -22,10 +22,10 @@ contract Mappings {
 	mapping(uint128 => BigStruct) big_keys;
 	mapping(string => MediumStruct) string_medium;
 
-	function Mappings() {
-		id_addrs[0] = 0xe92a2a4e3f4c378495145619f2975ce8c60819c2;
-		id_addrs[1] = 0x14dd8d9c759a6827aacbf726085ef13a357989ec;
-		id_addrs[2] = 0xa1f0a100522350ee2a044fe69831cf469c0f7123;
+	function Mappings() public {
+		id_addrs[0] = 0xE92A2a4E3F4c378495145619F2975ce8c60819C2;
+		id_addrs[1] = 0x14Dd8d9c759A6827AACBF726085Ef13A357989ec;
+		id_addrs[2] = 0xA1F0a100522350Ee2A044Fe69831cf469C0f7123;
 		uint8 i;
 		for (i = 0; i < 3; i++) {
 			addrs_small[id_addrs[i]] = SmallStruct(i, i+1);

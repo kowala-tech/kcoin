@@ -54,7 +54,7 @@ contract BigInts {
 	int i32_2 = i32;
 	uint u32_2 = u32;
 
-    address addr_u20 = 0xddea7d9bdc0a21b1e88788de4ce1fc89fcd17fd7;
+    address addr_u20 = 0xDdea7D9bDC0a21b1e88788dE4Ce1FC89fcD17Fd7;
 }
 
 
