@@ -1,23 +1,10 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-// Package bind generates Ethereum contract Go bindings.
+// Package bind generates KUSD contract Go bindings.
 //
 // Detailed usage document and tutorial available on the go-ethereum Wiki page:
 // https://github.com/ethereum/go-ethereum/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts
+
+// @TODO (rgeraldes) - document info in our knowledge base
+
 package bind
 
 import (
@@ -122,14 +109,14 @@ func Bind(types []string, abis []string, bytecodes []string, pkg string, lang La
 	}
 	// For Go bindings pass the code through goimports to clean it up and double check
 	if lang == LangGo {
-		code, err := imports.Process("", buffer.Bytes(), nil)
+		code, err := imports.Process(".", buffer.Bytes(), nil)
 		if err != nil {
 			return "", fmt.Errorf("%v\n%s", err, buffer)
 		}
 		return string(code), nil
 	}
 	// For all others just return as is for now
-	return string(buffer.Bytes()), nil
+	return buffer.String(), nil
 }
 
 // bindType is a set of type binders that convert Solidity types to some supported
