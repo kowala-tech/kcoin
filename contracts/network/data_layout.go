@@ -156,6 +156,10 @@ func (po *PriceOracle) PriceForCrypto(cryptoAmount *big.Int) *big.Int {
 // NetworkStats data layout.
 type NetworkStats struct {
 	Ownable
-	// Total mined wei.
-	TotalMinedWei *big.Int
+	// Total supply of wei. Must be updated every block.
+	TotalSupplyWei *big.Int
+	// Reward calculated for the last block. Must be updated every block.
+	LastBlockReward *big.Int
+	// Price established by the price oracle for the last block. Must be updated every block.
+	LastBlockPrice *big.Int
 }

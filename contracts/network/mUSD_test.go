@@ -374,7 +374,7 @@ func TestPriceOracle(t *testing.T) {
 	})
 	ca := new(big.Int).SetUint64(params.Ether)
 	fa := big.NewInt(1 * 10000)
-	addr, _, priceOracle, err := nc.DeployPriceOracleContract(owner.auth, sim, ca, fa)
+	addr, _, priceOracle, err := nc.DeployPriceOracleContract(owner.auth, sim, "kUSD", "kUSD", 18, ca, "US Dollar", "USD", 4, fa)
 	if err != nil {
 		t.Error(err)
 		return

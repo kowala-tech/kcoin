@@ -14,10 +14,10 @@ import (
 )
 
 // NetworkStatsContractABI is the input ABI used to generate the binding from.
-const NetworkStatsContractABI = `[{"constant":true,"inputs":[],"name":"totalMinedWei","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"oldAddr","type":"address"},{"indexed":false,"name":"newAddr","type":"address"}],"name":"OwnershipTransfer","type":"event"}]`
+const NetworkStatsContractABI = `[{"constant":true,"inputs":[],"name":"lastBlockReward","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupplyWei","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"lastBlockPrice","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"oldAddr","type":"address"},{"indexed":false,"name":"newAddr","type":"address"}],"name":"OwnershipTransfer","type":"event"}]`
 
 // NetworkStatsContractBin is the compiled bytecode used for deploying new contracts.
-const NetworkStatsContractBin = `60606040526000600155336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555061023b806100586000396000f30060606040526004361061004c576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806321d3fab314610051578063f2fde38b1461007a575b600080fd5b341561005c57600080fd5b6100646100b3565b6040518082815260200191505060405180910390f35b341561008557600080fd5b6100b1600480803573ffffffffffffffffffffffffffffffffffffffff169060200190919050506100b9565b005b60015481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614151561011457600080fd5b806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055507f22500af037c600dd7b720644ab6e358635085601d9ac508ad83eb2d6b2d729ca6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1682604051808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019250505060405180910390a1505600a165627a7a72305820cb527a869e9553177f98549f6afb220768dd98195f45f8ca33d54ad5df2e053f0029`
+const NetworkStatsContractBin = `6060604052600060015560006002556000600355336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506102af806100626000396000f300606060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680635798a6d51461006757806370a8f25b14610090578063cf689d01146100b9578063f2fde38b146100e2575b600080fd5b341561007257600080fd5b61007a61011b565b6040518082815260200191505060405180910390f35b341561009b57600080fd5b6100a3610121565b6040518082815260200191505060405180910390f35b34156100c457600080fd5b6100cc610127565b6040518082815260200191505060405180910390f35b34156100ed57600080fd5b610119600480803573ffffffffffffffffffffffffffffffffffffffff1690602001909190505061012d565b005b60025481565b60015481565b60035481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614151561018857600080fd5b806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055507f22500af037c600dd7b720644ab6e358635085601d9ac508ad83eb2d6b2d729ca6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1682604051808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019250505060405180910390a1505600a165627a7a72305820a51ea406359d47754d9fc6f1f07488841ec0c23449991594fc35cdc00c789ddd0029`
 
 // DeployNetworkStatsContract deploys a new Ethereum contract, binding an instance of NetworkStatsContract to it.
 func DeployNetworkStatsContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *NetworkStatsContract, error) {
@@ -159,30 +159,82 @@ func (_NetworkStatsContract *NetworkStatsContractTransactorRaw) Transact(opts *b
 	return _NetworkStatsContract.Contract.contract.Transact(opts, method, params...)
 }
 
-// TotalMinedWei is a free data retrieval call binding the contract method 0x21d3fab3.
+// LastBlockPrice is a free data retrieval call binding the contract method 0xcf689d01.
 //
-// Solidity: function totalMinedWei() constant returns(uint256)
-func (_NetworkStatsContract *NetworkStatsContractCaller) TotalMinedWei(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function lastBlockPrice() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractCaller) LastBlockPrice(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
 	out := ret0
-	err := _NetworkStatsContract.contract.Call(opts, out, "totalMinedWei")
+	err := _NetworkStatsContract.contract.Call(opts, out, "lastBlockPrice")
 	return *ret0, err
 }
 
-// TotalMinedWei is a free data retrieval call binding the contract method 0x21d3fab3.
+// LastBlockPrice is a free data retrieval call binding the contract method 0xcf689d01.
 //
-// Solidity: function totalMinedWei() constant returns(uint256)
-func (_NetworkStatsContract *NetworkStatsContractSession) TotalMinedWei() (*big.Int, error) {
-	return _NetworkStatsContract.Contract.TotalMinedWei(&_NetworkStatsContract.CallOpts)
+// Solidity: function lastBlockPrice() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractSession) LastBlockPrice() (*big.Int, error) {
+	return _NetworkStatsContract.Contract.LastBlockPrice(&_NetworkStatsContract.CallOpts)
 }
 
-// TotalMinedWei is a free data retrieval call binding the contract method 0x21d3fab3.
+// LastBlockPrice is a free data retrieval call binding the contract method 0xcf689d01.
 //
-// Solidity: function totalMinedWei() constant returns(uint256)
-func (_NetworkStatsContract *NetworkStatsContractCallerSession) TotalMinedWei() (*big.Int, error) {
-	return _NetworkStatsContract.Contract.TotalMinedWei(&_NetworkStatsContract.CallOpts)
+// Solidity: function lastBlockPrice() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractCallerSession) LastBlockPrice() (*big.Int, error) {
+	return _NetworkStatsContract.Contract.LastBlockPrice(&_NetworkStatsContract.CallOpts)
+}
+
+// LastBlockReward is a free data retrieval call binding the contract method 0x5798a6d5.
+//
+// Solidity: function lastBlockReward() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractCaller) LastBlockReward(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _NetworkStatsContract.contract.Call(opts, out, "lastBlockReward")
+	return *ret0, err
+}
+
+// LastBlockReward is a free data retrieval call binding the contract method 0x5798a6d5.
+//
+// Solidity: function lastBlockReward() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractSession) LastBlockReward() (*big.Int, error) {
+	return _NetworkStatsContract.Contract.LastBlockReward(&_NetworkStatsContract.CallOpts)
+}
+
+// LastBlockReward is a free data retrieval call binding the contract method 0x5798a6d5.
+//
+// Solidity: function lastBlockReward() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractCallerSession) LastBlockReward() (*big.Int, error) {
+	return _NetworkStatsContract.Contract.LastBlockReward(&_NetworkStatsContract.CallOpts)
+}
+
+// TotalSupplyWei is a free data retrieval call binding the contract method 0x70a8f25b.
+//
+// Solidity: function totalSupplyWei() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractCaller) TotalSupplyWei(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _NetworkStatsContract.contract.Call(opts, out, "totalSupplyWei")
+	return *ret0, err
+}
+
+// TotalSupplyWei is a free data retrieval call binding the contract method 0x70a8f25b.
+//
+// Solidity: function totalSupplyWei() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractSession) TotalSupplyWei() (*big.Int, error) {
+	return _NetworkStatsContract.Contract.TotalSupplyWei(&_NetworkStatsContract.CallOpts)
+}
+
+// TotalSupplyWei is a free data retrieval call binding the contract method 0x70a8f25b.
+//
+// Solidity: function totalSupplyWei() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractCallerSession) TotalSupplyWei() (*big.Int, error) {
+	return _NetworkStatsContract.Contract.TotalSupplyWei(&_NetworkStatsContract.CallOpts)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.

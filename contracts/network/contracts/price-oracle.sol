@@ -21,13 +21,13 @@ contract PriceOracleInterface {
     uint8 public fiatDecimals;
 
     // Return the amount of the crytocurrency corresponding to fiatAmount.
-    function priceForFiat(uint256 fiatAmount) public view returns (uint256 cryptoAmount);
+    function priceForFiat(uint256 _fiatAmount) public view returns (uint256 _cryptoAmount);
 
     // Return the amount of fiat corresponding to cryptoAmount.
-    function priceForCrypto(uint256 cryptoAmount) public view returns (uint256 fiatAmount);
+    function priceForCrypto(uint256 _cryptoAmount) public view returns (uint256 _fiatAmount);
 
     // Set the price.
-    function setPrice(uint256 cryptoAmount, uint256 fiatAmount) public returns (bool success);
+    function setPrice(uint256 _cryptoAmount, uint256 _fiatAmount) public returns (bool success);
 
     // Triggered when a new price is set.
     event NewPrice(uint256 cryptoPrice, uint256 fiatPrice);
@@ -36,30 +36,45 @@ contract PriceOracleInterface {
 // Simple implementation.
 contract PriceOracle is Ownable, PriceOracleInterface {
     // Amounts of each currency to store the relationship.
-    uint256 lastCryptoAmount = 0;
-    uint256 lastFiatAmount = 0;
+    uint256 cryptoAmount = 0;
+    uint256 fiatAmount = 0;
 
     // Initialize.
-    function PriceOracle(uint256 cryptoAmount, uint256 fiatAmount) public {
-        lastCryptoAmount = cryptoAmount;
-        lastFiatAmount = fiatAmount;
+    function PriceOracle(
+        string _cryptoName,
+        string _cryptoSymbol,
+        uint8 _cryptoDecimals,
+        uint256 _cryptoAmount,
+        string _fiatName,
+        string _fiatSymbol,
+        uint8 _fiatDecimals,
+        uint256 _fiatAmount
+    ) public {
+        cryptoName = _cryptoName;
+        cryptoSymbol = _cryptoSymbol;
+        cryptoDecimals = _cryptoDecimals;
+        cryptoAmount = _cryptoAmount;
+        fiatName = _fiatName;
+        fiatSymbol = _fiatSymbol;
+        fiatDecimals = _fiatDecimals;
+        fiatAmount = _fiatAmount;
     }
 
     // Return the amount of the crytocurrency corresponding to fiatAmount.
-    function priceForFiat(uint256 fiatAmount) public view returns (uint256 cryptoAmount) {
-        return fiatAmount * lastCryptoAmount / lastFiatAmount;
+    function priceForFiat(uint256 _fiatAmount) public view returns (uint256 _cryptoAmount) {
+        return _fiatAmount * cryptoAmount / fiatAmount;
     }
 
     // Return the amount of fiat corresponding to cryptoAmount.
-    function priceForCrypto(uint256 cryptoAmount) public view returns (uint256 fiatAmount) {
-        return cryptoAmount * lastFiatAmount / lastCryptoAmount;
+    function priceForCrypto(uint256 _cryptoAmount) public view returns (uint256 _fiatAmount) {
+        return _cryptoAmount * fiatAmount / cryptoAmount;
     }
 
     // Set the price.
-    function setPrice(uint256 cryptoAmount, uint256 fiatAmount) onlyOwner public returns (bool success) {
-        lastCryptoAmount = cryptoAmount;
-        lastFiatAmount = fiatAmount;
-        NewPrice(lastCryptoAmount, lastFiatAmount);
+    function setPrice(uint256 _cryptoAmount, uint256 _fiatAmount) onlyOwner public returns (bool success) {
+        cryptoAmount = _cryptoAmount;
+        fiatAmount = _fiatAmount;
+        NewPrice(cryptoAmount, fiatAmount);
         return true;
     }
 }
