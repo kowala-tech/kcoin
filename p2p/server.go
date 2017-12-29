@@ -11,6 +11,7 @@ import (
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/mclock"
+	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/p2p/discover"
 	"github.com/kowala-tech/kUSD/p2p/discv5"
@@ -114,10 +115,17 @@ type Config struct {
 
 	// If Dialer is set to a non-nil value, the given Dialer
 	// is used to dial outbound peer connections.
-	Dialer *net.Dialer `toml:"-"`
+	Dialer NodeDialer `toml:"-"`
 
 	// If NoDial is true, the server will not dial any peers.
 	NoDial bool `toml:",omitempty"`
+
+	// If EnableMsgEvents is set then the server will emit PeerEvents
+	// whenever a message is sent to or received from a peer
+	EnableMsgEvents bool
+
+	// Logger is a custom logger to use with the p2p.Server.
+	Logger log.Logger
 }
 
 // Server manages all peer connections.
@@ -150,6 +158,8 @@ type Server struct {
 	addpeer       chan *conn
 	delpeer       chan peerDrop
 	loopWG        sync.WaitGroup // loop, listenLoop
+	peerFeed      event.Feed
+	log           log.Logger
 }
 
 type peerOpFunc func(map[discover.NodeID]*Peer)
@@ -175,7 +185,7 @@ type conn struct {
 	fd net.Conn
 	transport
 	flags connFlag
-	cont  chan error      // The run loop uses cont to signal errors to setupConn.
+	cont  chan error      // The run loop uses cont to signal errors to SetupConn.
 	id    discover.NodeID // valid after the encryption handshake
 	caps  []Cap           // valid after the protocol handshake
 	name  string          // valid after the protocol handshake
@@ -275,6 +285,11 @@ func (srv *Server) RemovePeer(node *discover.Node) {
 	}
 }
 
+// SubscribePeers subscribes the given channel to peer events
+func (srv *Server) SubscribeEvents(ch chan *PeerEvent) event.Subscription {
+	return srv.peerFeed.Subscribe(ch)
+}
+
 // Self returns the local node's endpoint information.
 func (srv *Server) Self() *discover.Node {
 	srv.lock.Lock()
@@ -332,7 +347,11 @@ func (srv *Server) Start() (err error) {
 		return errors.New("server already running")
 	}
 	srv.running = true
-	log.Info("Starting P2P networking")
+	srv.log = srv.Config.Logger
+	if srv.log == nil {
+		srv.log = log.New()
+	}
+	srv.log.Info("Starting P2P networking")
 
 	// static fields
 	if srv.PrivateKey == nil {
@@ -342,7 +361,7 @@ func (srv *Server) Start() (err error) {
 		srv.newTransport = newRLPX
 	}
 	if srv.Dialer == nil {
-		srv.Dialer = &net.Dialer{Timeout: defaultDialTimeout}
+		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
 	}
 	srv.quit = make(chan struct{})
 	srv.addpeer = make(chan *conn)
@@ -394,7 +413,7 @@ func (srv *Server) Start() (err error) {
 		}
 	}
 	if srv.NoDial && srv.ListenAddr == "" {
-		log.Warn("P2P server will be useless, neither dialing nor listening")
+		srv.log.Warn("P2P server will be useless, neither dialing nor listening")
 	}
 
 	srv.loopWG.Add(1)
@@ -418,7 +437,7 @@ func (srv *Server) startListening() error {
 	if !laddr.IP.IsLoopback() && srv.NAT != nil {
 		srv.loopWG.Add(1)
 		go func() {
-			nat.Map(srv.NAT, srv.quit, "tcp", laddr.Port, laddr.Port, "kusd p2p")
+			nat.Map(srv.NAT, srv.quit, "tcp", laddr.Port, laddr.Port, "ethereum p2p")
 			srv.loopWG.Done()
 		}()
 	}
@@ -462,7 +481,7 @@ func (srv *Server) run(dialstate dialer) {
 		i := 0
 		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
 			t := ts[i]
-			log.Trace("New dial task", "task", t)
+			srv.log.Trace("New dial task", "task", t)
 			go func() { t.Do(srv); taskdone <- t }()
 			runningTasks = append(runningTasks, t)
 		}
@@ -490,13 +509,13 @@ running:
 			// This channel is used by AddPeer to add to the
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
-			log.Debug("Adding static node", "node", n)
+			srv.log.Debug("Adding static node", "node", n)
 			dialstate.addStatic(n)
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
 			// stop keeping the node connected
-			log.Debug("Removing static node", "node", n)
+			srv.log.Debug("Removing static node", "node", n)
 			dialstate.removeStatic(n)
 			if p, ok := peers[n.ID]; ok {
 				p.Disconnect(DiscRequested)
@@ -509,7 +528,7 @@ running:
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
-			log.Trace("Dial task done", "task", t)
+			srv.log.Trace("Dial task done", "task", t)
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:
@@ -520,7 +539,11 @@ running:
 				c.flags |= trustedConn
 			}
 			// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
-			c.cont <- srv.encHandshakeChecks(peers, c)
+			select {
+			case c.cont <- srv.encHandshakeChecks(peers, c):
+			case <-srv.quit:
+				break running
+			}
 		case c := <-srv.addpeer:
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
@@ -528,15 +551,24 @@ running:
 			if err == nil {
 				// The handshakes are done and it passed all checks.
 				p := newPeer(c, srv.Protocols)
+				// If message events are enabled, pass the peerFeed
+				// to the peer
+				if srv.EnableMsgEvents {
+					p.events = &srv.peerFeed
+				}
 				name := truncateName(c.name)
-				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
+				srv.log.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
 				peers[c.id] = p
 				go srv.runPeer(p)
 			}
 			// The dialer logic relies on the assumption that
 			// dial tasks complete after the peer has been added or
 			// discarded. Unblock the task last.
-			c.cont <- err
+			select {
+			case c.cont <- err:
+			case <-srv.quit:
+				break running
+			}
 		case pd := <-srv.delpeer:
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
@@ -545,7 +577,7 @@ running:
 		}
 	}
 
-	log.Trace("P2P networking is spinning down")
+	srv.log.Trace("P2P networking is spinning down")
 
 	// Terminate discovery. If there is a running lookup it will terminate soon.
 	if srv.ntab != nil {
@@ -599,7 +631,7 @@ type tempError interface {
 // inbound connections.
 func (srv *Server) listenLoop() {
 	defer srv.loopWG.Done()
-	log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener, srv.ntab))
+	srv.log.Info("RLPx listener up", "self", srv.makeSelf(srv.listener, srv.ntab))
 
 	// This channel acts as a semaphore limiting
 	// active inbound connections that are lingering pre-handshake.
@@ -624,10 +656,10 @@ func (srv *Server) listenLoop() {
 		for {
 			fd, err = srv.listener.Accept()
 			if tempErr, ok := err.(tempError); ok && tempErr.Temporary() {
-				log.Debug("Temporary read error", "err", err)
+				srv.log.Debug("Temporary read error", "err", err)
 				continue
 			} else if err != nil {
-				log.Debug("Read error", "err", err)
+				srv.log.Debug("Read error", "err", err)
 				return
 			}
 			break
@@ -636,7 +668,7 @@ func (srv *Server) listenLoop() {
 		// Reject connections that do not match NetRestrict.
 		if srv.NetRestrict != nil {
 			if tcp, ok := fd.RemoteAddr().(*net.TCPAddr); ok && !srv.NetRestrict.Contains(tcp.IP) {
-				log.Debug("Rejected conn (not whitelisted in NetRestrict)", "addr", fd.RemoteAddr())
+				srv.log.Debug("Rejected conn (not whitelisted in NetRestrict)", "addr", fd.RemoteAddr())
 				fd.Close()
 				slots <- struct{}{}
 				continue
@@ -644,69 +676,79 @@ func (srv *Server) listenLoop() {
 		}
 
 		fd = newMeteredConn(fd, true)
-		log.Trace("Accepted connection", "addr", fd.RemoteAddr())
+		srv.log.Trace("Accepted connection", "addr", fd.RemoteAddr())
 
 		// Spawn the handler. It will give the slot back when the connection
 		// has been established.
 		go func() {
-			srv.setupConn(fd, inboundConn, nil)
+			srv.SetupConn(fd, inboundConn, nil)
 			slots <- struct{}{}
 		}()
 	}
 }
 
-// setupConn runs the handshakes and attempts to add the connection
+// SetupConn runs the handshakes and attempts to add the connection
 // as a peer. It returns when the connection has been added as a peer
 // or the handshakes have failed.
-func (srv *Server) setupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) {
+func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
+	self := srv.Self()
+	if self == nil {
+		return errors.New("shutdown")
+	}
+	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, cont: make(chan error)}
+	err := srv.setupConn(c, flags, dialDest)
+	if err != nil {
+		c.close(err)
+		srv.log.Trace("Setting up connection failed", "id", c.id, "err", err)
+	}
+	return err
+}
+
+func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *discover.Node) error {
 	// Prevent leftover pending conns from entering the handshake.
 	srv.lock.Lock()
 	running := srv.running
 	srv.lock.Unlock()
-	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, cont: make(chan error)}
 	if !running {
-		c.close(errServerStopped)
-		return
+		return errServerStopped
 	}
 	// Run the encryption handshake.
 	var err error
 	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
-		log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
-		c.close(err)
-		return
+		srv.log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
+		return err
 	}
-	clog := log.New("id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags)
+	clog := srv.log.New("id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags)
 	// For dialed connections, check that the remote public key matches.
 	if dialDest != nil && c.id != dialDest.ID {
-		c.close(DiscUnexpectedIdentity)
 		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
-		return
+		return DiscUnexpectedIdentity
 	}
-	if err := srv.checkpoint(c, srv.posthandshake); err != nil {
+	err = srv.checkpoint(c, srv.posthandshake)
+	if err != nil {
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
-		c.close(err)
-		return
+		return err
 	}
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
 		clog.Trace("Failed proto handshake", "err", err)
-		c.close(err)
-		return
+		return err
 	}
 	if phs.ID != c.id {
 		clog.Trace("Wrong devp2p handshake identity", "err", phs.ID)
-		c.close(DiscUnexpectedIdentity)
-		return
+		return DiscUnexpectedIdentity
 	}
 	c.caps, c.name = phs.Caps, phs.Name
-	if err := srv.checkpoint(c, srv.addpeer); err != nil {
+	err = srv.checkpoint(c, srv.addpeer)
+	if err != nil {
 		clog.Trace("Rejected peer", "err", err)
-		c.close(err)
-		return
+		return err
 	}
 	// If the checks completed successfully, runPeer has now been
 	// launched by run.
+	clog.Trace("connection set up", "inbound", dialDest == nil)
+	return nil
 }
 
 func truncateName(s string) string {
@@ -739,7 +781,23 @@ func (srv *Server) runPeer(p *Peer) {
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)
 	}
+
+	// broadcast peer add
+	srv.peerFeed.Send(&PeerEvent{
+		Type: PeerEventTypeAdd,
+		Peer: p.ID(),
+	})
+
+	// run the protocol
 	remoteRequested, err := p.run()
+
+	// broadcast peer drop
+	srv.peerFeed.Send(&PeerEvent{
+		Type:  PeerEventTypeDrop,
+		Peer:  p.ID(),
+		Error: err.Error(),
+	})
+
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	srv.delpeer <- peerDrop{p, err, remoteRequested}

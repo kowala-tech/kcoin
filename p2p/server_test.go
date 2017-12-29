@@ -3,6 +3,7 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"errors"
+	"log"
 	"math/rand"
 	"net"
 	"reflect"
@@ -190,6 +191,7 @@ func TestServerTaskScheduling(t *testing.T) {
 		quit:    make(chan struct{}),
 		ntab:    fakeTable{},
 		running: true,
+		log:     log.New(),
 	}
 	srv.loopWG.Add(1)
 	go func() {
@@ -230,7 +232,12 @@ func TestServerManyTasks(t *testing.T) {
 	}
 
 	var (
-		srv        = &Server{quit: make(chan struct{}), ntab: fakeTable{}, running: true}
+		srv = &Server{
+			quit:    make(chan struct{}),
+			ntab:    fakeTable{},
+			running: true,
+			log:     log.New(),
+		}
 		done       = make(chan *testTask)
 		start, end = 0, 0
 	)
@@ -412,6 +419,7 @@ func TestServerSetupConn(t *testing.T) {
 				Protocols:  []Protocol{discard},
 			},
 			newTransport: func(fd net.Conn) transport { return test.tt },
+			log:          log.New(),
 		}
 		if !test.dontstart {
 			if err := srv.Start(); err != nil {
