@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackpal/go-nat-pmp"
 	"github.com/kowala-tech/kUSD/log"
 )
 
