@@ -98,7 +98,6 @@ func PrintDisassembled(code string) error {
 			fmt.Printf("%06v: %v\n", it.PC(), it.Op())
 		}
 	}
-
 	return it.Error()
 }
 
