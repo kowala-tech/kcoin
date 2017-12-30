@@ -542,11 +542,7 @@ func opCreate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 		gas          = contract.Gas
 	)
 
-	/*
-		if evm.ChainConfig().IsEIP150(evm.BlockNumber) {
-			gas -= gas / 64
-		}
-	*/
+	gas -= gas / 64
 
 	contract.UseGas(gas)
 	_, addr, returnGas, suberr := evm.Create(contract, input, gas, value)

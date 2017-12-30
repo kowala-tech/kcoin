@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package runtime
 
 import (
@@ -33,7 +17,6 @@ import (
 // the EVM.
 type Config struct {
 	ChainConfig *params.ChainConfig
-	Difficulty  *big.Int
 	Origin      common.Address
 	Coinbase    common.Address
 	BlockNumber *big.Int
@@ -53,19 +36,10 @@ type Config struct {
 func setDefaults(cfg *Config) {
 	if cfg.ChainConfig == nil {
 		cfg.ChainConfig = &params.ChainConfig{
-			ChainId:        big.NewInt(1),
-			HomesteadBlock: new(big.Int),
-			DAOForkBlock:   new(big.Int),
-			DAOForkSupport: false,
-			EIP150Block:    new(big.Int),
-			EIP155Block:    new(big.Int),
-			EIP158Block:    new(big.Int),
+			ChainId: big.NewInt(1),
 		}
 	}
 
-	if cfg.Difficulty == nil {
-		cfg.Difficulty = new(big.Int)
-	}
 	if cfg.Time == nil {
 		cfg.Time = big.NewInt(time.Now().Unix())
 	}
@@ -106,7 +80,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	}
 	var (
 		address = common.StringToAddress("contract")
-		vmenv   = NewEnv(cfg, cfg.State)
+		vmenv   = NewEnv(cfg)
 		sender  = vm.AccountRef(cfg.Origin)
 	)
 	cfg.State.CreateAccount(address)
@@ -136,7 +110,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(db))
 	}
 	var (
-		vmenv  = NewEnv(cfg, cfg.State)
+		vmenv  = NewEnv(cfg)
 		sender = vm.AccountRef(cfg.Origin)
 	)
 
@@ -158,7 +132,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, error) {
 	setDefaults(cfg)
 
-	vmenv := NewEnv(cfg, cfg.State)
+	vmenv := NewEnv(cfg)
 
 	sender := cfg.State.GetOrNewStateObject(cfg.Origin)
 	// Call the code with the given configuration.
