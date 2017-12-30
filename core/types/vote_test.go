@@ -1,3 +1,3 @@
 package types
 
-// @TODO(rgeraldes) - complete tests
+// @TODO (rgeraldes) - complete
