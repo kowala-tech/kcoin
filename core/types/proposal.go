@@ -6,7 +6,6 @@ import (
 	"io"
 	"math/big"
 	"sync/atomic"
-	"time"
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
@@ -31,7 +30,7 @@ type proposaldata struct {
 	Round         int            `json:"round"		gencodec:"required"`
 	POLRound      int            `json:"polround"	gencodec:"required"`
 	POLBlock      common.Hash    `json: polblock	gencodec:"required"`
-	Timestamp     time.Time      `json:"time"		gencoded:"required"` // @TODO(rgeraldes) confirm if it's necessary
+	//Timestamp     time.Time      `json:"time"		gencoded:"required"` // @TODO(rgeraldes) confirm if it's necessary
 
 	// signature values
 	V *big.Int `json:"v"	gencodec:"required"`
@@ -88,9 +87,10 @@ func (p *Proposal) DecodeRLP(s *rlp.Stream) error {
 func (p *Proposal) BlockNumber() *big.Int         { return p.data.BlockNumber }
 func (p *Proposal) BlockMetaData() *core.Metadata { return p.data.BlockMetaData }
 func (p *Proposal) Round() int                    { return p.data.Round }
-func (p *Proposal) Timestamp() time.Time          { return p.data.Timestamp }
-func (p *Proposal) POLRound() int                 { return p.data.POLRound }
-func (p *Proposal) POLBlock() common.Hash         { return p.data.POLBlock }
+
+//func (p *Proposal) Timestamp() time.Time          { return p.data.Timestamp }
+func (p *Proposal) POLRound() int         { return p.data.POLRound }
+func (p *Proposal) POLBlock() common.Hash { return p.data.POLBlock }
 func (p *Proposal) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
 	return p.data.V, p.data.R, p.data.S
 }
@@ -141,12 +141,12 @@ func SignProposal(p *Proposal, s Signer, prv *ecdsa.PrivateKey) (*Proposal, erro
 
 // SenderHash returns the hash to be signed by the sender.
 // It does not uniquely identify the proposal.
-func (p *Proposal) SenderHash(proposal *Proposal, chainID *big.Int) common.Hash {
+func (p *Proposal) SenderHash(chainID *big.Int) common.Hash {
 	return rlpHash([]interface{}{
 		p.data.BlockNumber,
 		p.data.BlockMetaData,
 		p.data.Round,
-		p.data.Timestamp,
+		//p.data.Timestamp,
 		p.data.POLRound,
 		p.data.POLRound,
 		chainID, uint(0), uint(0),
@@ -160,7 +160,6 @@ func (p *Proposal) String() string {
 	Block Number:		%v
 	Block Metadata:		%v
 	Round:	  			%d
-	Timestamp:			%v
 	POLBlock:			%x
 	POLRound:			%d
 	V:        			%#x
@@ -172,7 +171,7 @@ func (p *Proposal) String() string {
 		p.data.BlockNumber,
 		p.data.BlockMetaData,
 		p.data.Round,
-		p.data.Timestamp
+		//p.data.Timestamp
 		p.data.V,
 		p.data.R,
 		p.data.S,

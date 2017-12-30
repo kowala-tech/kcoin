@@ -158,7 +158,6 @@ func (v *Vote) String() string {
 	Block Hash:			%x
 	Round:	  			%d
 	Type: 				%v
-	Timestamp:			%v
 	V:        			%#x
 	R:        			%#x
 	S:        			%#x
@@ -169,7 +168,7 @@ func (v *Vote) String() string {
 		p.data.BlockHash,
 		p.data.Round,
 		p.data.Type
-		p.data.Timestamp
+		//p.data.Timestamp
 		p.data.V,
 		p.data.R,
 		p.data.S,
