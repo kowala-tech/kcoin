@@ -86,9 +86,9 @@ events when certain actions occur.
 
 A simulation network emits the following events:
 
-* node event       - when nodes are created / started / stopped
+* node event - when nodes are created / started / stopped
 * connection event - when nodes are connected / disconnected
-* message event    - when a protocol message is sent between two nodes
+* message event - when a protocol message is sent between two nodes
 
 The events have a "control" flag which when set indicates that the event is the
 outcome of a controlled simulation action (e.g. creating a node or explicitly
@@ -113,12 +113,12 @@ with a `Step` which has the following fields:
 * `Action` - a function which performs some action in the network
 
 * `Expect` - an expectation function which returns whether or not a
-    given node meets the expectation
+  given node meets the expectation
 
 * `Trigger` - a channel which receives node IDs which then trigger a check
-    of the expectation function to be performed against that node
+  of the expectation function to be performed against that node
 
-As a concrete example, consider a simulated network of Ethereum nodes. An
+As a concrete example, consider a simulated network of Kowala nodes. An
 `Action` could be the sending of a transaction, `Expect` it being included in
 a block, and `Trigger` a check for every block that is mined.
 
