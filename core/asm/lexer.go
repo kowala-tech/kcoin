@@ -150,7 +150,7 @@ func (l *lexer) acceptRun(valid string) {
 // to advance the seeker until the rune has been found.
 func (l *lexer) acceptRunUntil(until rune) bool {
 	// Continues running until a rune is found
-	for i := l.next(); strings.ContainsRune(string(until), i); i = l.next() {
+	for i := l.next(); !strings.ContainsRune(string(until), i); i = l.next() {
 		if i == 0 {
 			return false
 		}
