@@ -280,8 +280,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 			if _, ok := s.membatch.batch[hash]; ok {
 				continue
 			}
-			blob, _ := s.database.Get(node)
-			if local, err := decodeNode(node[:], blob, 0); local != nil && err == nil {
+			if ok, _ := s.database.Has(node); ok {
 				continue
 			}
 			// Locally unknown node, schedule for retrieval
