@@ -10,8 +10,6 @@ import (
 	"github.com/kowala-tech/kUSD/rlp"
 )
 
-// @TODO(rgeraldes) - review errCode
-
 // Constants to match up protocol versions and messages
 const (
 	kusd1 = 1
@@ -24,7 +22,7 @@ var ProtocolName = "kusd"
 var ProtocolVersions = []uint{kusd1}
 
 // Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17}
+var ProtocolLengths = []uint64{18}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -47,10 +45,10 @@ const (
 	ReceiptsMsg        = 0x10
 
 	// consensus
-	NewStateMsg = 0x11 
+	NewStateMsg = 0x11
 	ProposalMsg    = 0x12 
-	ProposalPOLMsg = 0x13
-	VoteMsg    = 0x14 
+	ProposalPOLMsg	= 0x13
+	VoteMsg	= 0x14 
 	ElectedMsg = 0x15 
 	BlockFragmentMsg = 0x17
 )
