@@ -38,6 +38,32 @@ var (
 	miscInTrafficMeter        = metrics.NewMeter("kusd/misc/in/traffic")
 	miscOutPacketsMeter       = metrics.NewMeter("kusd/misc/out/packets")
 	miscOutTrafficMeter       = metrics.NewMeter("kusd/misc/out/traffic")
+
+	// consensus
+	stateInPacketsMeter        = metrics.NewMeter("kusd/consensus/state/in/packets")
+	stateInTrafficMeter        = metrics.NewMeter("kusd/consensus/state/in/traffic")
+	stateOutPacketsMeter       = metrics.NewMeter("kusd/consensus/state/out/packets")
+	stateOutTrafficMeter       = metrics.NewMeter("kusd/consensus/state/out/traffic")
+	proposalInPacketsMeter     = metrics.NewMeter("kusd/consensus/proposals/in/packets")
+	proposalInTrafficMeter     = metrics.NewMeter("kusd/consensus/proposals/in/traffic")
+	proposalOutPacketsMeter    = metrics.NewMeter("kusd/consensus/proposals/out/packets")
+	proposalOutTrafficMeter    = metrics.NewMeter("kusd/consensus/proposals/out/traffic")
+	polProposalInPacketsMeter  = metrics.NewMeter("kusd/consensus/polproposals/in/packets")
+	polProposalInTrafficMeter  = metrics.NewMeter("kusd/consensus/polproposals/in/traffic")
+	polProposalOutPacketsMeter = metrics.NewMeter("kusd/consensus/polproposals/out/packets")
+	polProposalOutTrafficMeter = metrics.NewMeter("kusd/consensus/polproposals/out/traffic")
+	voteInPacketsMeter         = metrics.NewMeter("kusd/consensus/votes/in/packets")
+	voteInTrafficMeter         = metrics.NewMeter("kusd/consensus/votes/in/traffic")
+	voteOutPacketsMeter        = metrics.NewMeter("kusd/consensus/votes/out/packets")
+	voteOutTrafficMeter        = metrics.NewMeter("kusd/consensus/votes/out/traffic")
+	electionInPacketsMeter     = metrics.NewMeter("kusd/consensus/elections/in/packets")
+	electionInTrafficMeter     = metrics.NewMeter("kusd/consensus/elections/in/traffic")
+	electionOutPacketsMeter    = metrics.NewMeter("kusd/consensus/elections/out/packets")
+	electionOutTrafficMeter    = metrics.NewMeter("kusd/consensus/elections/out/traffic")
+	fragmentInPacketsMeter     = metrics.NewMeter("kusd/consensus/fragments/in/packets")
+	fragmentInTrafficMeter     = metrics.NewMeter("kusd/consensus/fragments/in/traffic")
+	fragmentOutPacketsMeter    = metrics.NewMeter("kusd/consensus/fragments/out/packets")
+	fragmentOutTrafficMeter    = metrics.NewMeter("kusd/consensus/fragments/out/traffic")
 )
 
 // meteredMsgReadWriter is a wrapper around a p2p.MsgReadWriter, capable of
@@ -71,6 +97,23 @@ func (rw *meteredMsgReadWriter) ReadMsg() (p2p.Msg, error) {
 	// Account for the data traffic
 	packets, traffic := miscInPacketsMeter, miscInTrafficMeter
 	switch {
+	// @NOTE(rgeraldes) - order is important (most common ones at the top)
+	case msg.Code == TxMsg:
+		packets, traffic = propTxnInPacketsMeter, propTxnInTrafficMeter
+
+	case msg.Code == NewStateMsg:
+		packets, traffic = stateInPacketsMeter, stateInTrafficMeter
+	case msg.Code == BlockFragmentMsg:
+		packets, traffic = fragmentInPacketsMeter, fragmentInTrafficMeter
+	case msg.Code == VoteMsg:
+		packets, traffic = voteInPacketsMeter, voteInTrafficMeter
+	case msg.Code == ElectionMsg:
+		packets, traffic = electionInPacketsMeter, electionInTrafficMeter
+	case msg.Code == ProposalMsg:
+		packets, trafic = proposalInPacketsMeter, proposalInTrafficMeter
+	case msg.Code == ProposalPOLMsg:
+		packets, traffic = polProposalInPacketsMeter, polProposalInTrafficMeter
+
 	case msg.Code == BlockHeadersMsg:
 		packets, traffic = reqHeaderInPacketsMeter, reqHeaderInTrafficMeter
 	case msg.Code == BlockBodiesMsg:
@@ -85,9 +128,8 @@ func (rw *meteredMsgReadWriter) ReadMsg() (p2p.Msg, error) {
 		packets, traffic = propHashInPacketsMeter, propHashInTrafficMeter
 	case msg.Code == NewBlockMsg:
 		packets, traffic = propBlockInPacketsMeter, propBlockInTrafficMeter
-	case msg.Code == TxMsg:
-		packets, traffic = propTxnInPacketsMeter, propTxnInTrafficMeter
 	}
+
 	packets.Mark(1)
 	traffic.Mark(int64(msg.Size))
 
@@ -98,6 +140,22 @@ func (rw *meteredMsgReadWriter) WriteMsg(msg p2p.Msg) error {
 	// Account for the data traffic
 	packets, traffic := miscOutPacketsMeter, miscOutTrafficMeter
 	switch {
+	case msg.Code == TxMsg:
+		packets, traffic = propTxnOutPacketsMeter, propTxnOutTrafficMeter
+
+	case msg.Code == NewStateMsg:
+		packets, traffic = stateOutPacketsMeter, stateOutTrafficMeter
+	case msg.Code == BlockFragmentMsg:
+		packets, traffic = fragmentnOutPacketsMeter, fragmentOutTrafficMeter
+	case msg.Code == VoteMsg:
+		packets, traffic = voteOutPacketsMeter, voteOutTrafficMeter
+	case msg.Code == ElectionMsg:
+		packets, traffic = electionOutPacketsMeter, electionOutTrafficMeter
+	case msg.Code == ProposalMsg:
+		packets, trafic = proposalOutPacketsMeter, proposalOutTrafficMeter
+	case msg.Code == ProposalPOLMsg:
+		packets, traffic = polProposalOutPacketsMeter, polProposalOutTrafficMeter
+
 	case msg.Code == BlockHeadersMsg:
 		packets, traffic = reqHeaderOutPacketsMeter, reqHeaderOutTrafficMeter
 	case msg.Code == BlockBodiesMsg:
@@ -112,9 +170,8 @@ func (rw *meteredMsgReadWriter) WriteMsg(msg p2p.Msg) error {
 		packets, traffic = propHashOutPacketsMeter, propHashOutTrafficMeter
 	case msg.Code == NewBlockMsg:
 		packets, traffic = propBlockOutPacketsMeter, propBlockOutTrafficMeter
-	case msg.Code == TxMsg:
-		packets, traffic = propTxnOutPacketsMeter, propTxnOutTrafficMeter
 	}
+
 	packets.Mark(1)
 	traffic.Mark(int64(msg.Size))
 

@@ -49,7 +49,7 @@ const (
 	ProposalMsg    = 0x12 
 	ProposalPOLMsg	= 0x13
 	VoteMsg	= 0x14 
-	ElectedMsg = 0x15 
+	ElectionMsg = 0x15 
 	BlockFragmentMsg = 0x17
 )
 
@@ -138,8 +138,8 @@ type proposalPOLData struct {
 	POL         *types.BitArray
 }
 
-// electedData is the network packet that is sent to indicate that a given candidate (block) has seen +2/3 votes
-type electedData struct {
+// ElectionData is the network packet that is sent to indicate that a given candidate (block) has seen +2/3 votes
+type ElectionData struct {
 	Type types.VoteType
 	BlockNumber   *big.Int
 	BlockHash common.Hash
