@@ -2,17 +2,15 @@ package kusd
 
 import (
 	"math/big"
-	"os"
-	"os/user"
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/eth/downloader"
-	"github.com/kowala-tech/kUSD/eth/gasprice"
+	"github.com/kowala-tech/kUSD/kusd/downloader"
+	"github.com/kowala-tech/kUSD/kusd/gasprice"
 	"github.com/kowala-tech/kUSD/params"
 )
 
-// DefaultConfig contains default settings for use on the KUSD main net.
+// DefaultConfig contains default settings for use on the Kowala main net.
 var DefaultConfig = Config{
 	SyncMode:      downloader.FastSync,
 	NetworkID:     1,
@@ -26,49 +24,32 @@ var DefaultConfig = Config{
 	},
 }
 
-func init() {
-	home := os.Getenv("HOME")
-	if home == "" {
-		if user, err := user.Current(); err == nil {
-			home = user.HomeDir
-		}
-	}
-}
-
-//go:generate gencodec -type Config -formats toml -out gen_config.go
-
 type Config struct {
 	// The genesis block, which is inserted if the database is empty.
-	// If nil, the Ethereum main net block is used.
-	Genesis *core.Genesis `toml:",omitempty"`
+	// If nil, the Kowala main net block is used.
+	Genesis *core.Genesis `mapstructure:"genesis"`
 
 	// Protocol options
-	NetworkID uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  downloader.SyncMode
+	NetworkID uint64              `mapstructure:"networkid"` // Network ID to use for selecting peers to connect to
+	SyncMode  downloader.SyncMode `mapstructure:"syncmode"`
 
-	MaxPeers int `toml:"-"` // Maximum number of global peers
-
-	// Database option
-	//@TODO(rgeraldes) - analyze in the future
-	//SkipBcVersionCheck bool `toml:"-"`
-	DatabaseHandles int `toml:"-"`
-	DatabaseCache   int
+	// Database options
+	DatabaseHandles int `mapstructure:"dbhandles"`
+	DatabaseCache   int `mapstructure:"dbcache"`
 
 	// Validator-related options
-	Coinbase common.Address `toml:",omitempty"`
-	GasPrice *big.Int
+	Coinbase common.Address `mapstructure:"coinbase"`
+	GasPrice *big.Int       `mapstructure:"gasprice"`
 
 	// Transaction pool options
-	TxPool core.TxPoolConfig
+	TxPool core.TxPoolConfig `mapstructure:"txpool"`
 
 	// Gas Price Oracle options
-	GPO gasprice.Config
+	GPO gasprice.Config `mapstructure:"gpo"`
 
 	// Enables tracking of SHA3 preimages in the VM
-	EnablePreimageRecording bool
+	EnablePreimageRecording bool `mapstructure:"preimage"`
 
 	// Miscellaneous options
-	DocRoot string `toml:"-"`
+	DocRoot string `mapstructure:"docroot"`
 }
-
-// @NOTE(rgeraldes) - removed the gencodec overrides struct
