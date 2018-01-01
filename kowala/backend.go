@@ -1,4 +1,4 @@
-package kusd
+package kowala
 
 import (
 	"errors"
