@@ -2,28 +2,6 @@ package kusd
 
 /*
 
-import (
-	"crypto/ecdsa"
-	"crypto/rand"
-	"math/big"
-	"sort"
-	"sync"
-	"testing"
-
-	"github.com/kowala-tech/kUSD/common"
-	
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/kusd/downloader"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/params"
-)
-
 var (
 	testBankKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	testBank       = crypto.PubkeyToAddress(testBankKey.PublicKey)
@@ -34,26 +12,25 @@ var (
 // channels for different events.
 func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func(int, *core.BlockGen), newtx chan<- []*types.Transaction) (*ProtocolManager, error) {
 	var (
-		evmux  = new(event.TypeMux)
-		engine = ethash.NewFaker()
-		db, _  = ethdb.NewMemDatabase()
-		gspec  = &core.Genesis{
+		evmux = new(event.TypeMux)
+		db, _ = kusddb.NewMemDatabase()
+		gspec = &core.Genesis{
 			Config: params.TestChainConfig,
 			Alloc:  core.GenesisAlloc{testBank: {Balance: big.NewInt(1000000)}},
 		}
 		genesis       = gspec.MustCommit(db)
-		blockchain, _ = core.NewBlockChain(db, gspec.Config, engine, evmux, vm.Config{})
+		blockchain, _ = core.NewBlockChain(db, gspec.Config, vm.Config{})
 	)
 	chain, _ := core.GenerateChain(gspec.Config, genesis, db, blocks, generator)
 	if _, err := blockchain.InsertChain(chain); err != nil {
 		panic(err)
 	}
 
-	pm, err := NewProtocolManager(gspec.Config, mode, DefaultConfig.NetworkId, 1000, evmux, &testTxPool{added: newtx}, engine, blockchain, db)
+	pm, err := NewProtocolManager(gspec.Config, mode, DefaultConfig.NetworkId, evmux, &testTxPool{added: newtx}, blockchain, db)
 	if err != nil {
 		return nil, err
 	}
-	pm.Start()
+	pm.Start(1000)
 	return pm, nil
 }
 
@@ -71,15 +48,16 @@ func newTestProtocolManagerMust(t *testing.T, mode downloader.SyncMode, blocks i
 
 // testTxPool is a fake, helper transaction pool for testing purposes
 type testTxPool struct {
-	pool  []*types.Transaction        // Collection of all transactions
-	added chan<- []*types.Transaction // Notification channel for new transactions
+	txFeed event.Feed
+	pool   []*types.Transaction        // Collection of all transactions
+	added  chan<- []*types.Transaction // Notification channel for new transactions
 
 	lock sync.RWMutex // Protects the transaction pool
 }
 
 // AddRemotes appends a batch of transactions to the pool, and notifies any
 // listeners if the addition channel is non nil
-func (p *testTxPool) AddRemotes(txs []*types.Transaction) error {
+func (p *testTxPool) AddRemotes(txs []*types.Transaction) []error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -87,8 +65,7 @@ func (p *testTxPool) AddRemotes(txs []*types.Transaction) error {
 	if p.added != nil {
 		p.added <- txs
 	}
-
-	return nil
+	return make([]error, len(txs))
 }
 
 // Pending returns all the transactions known to the pool
@@ -105,6 +82,10 @@ func (p *testTxPool) Pending() (map[common.Address]types.Transactions, error) {
 		sort.Sort(types.TxByNonce(batch))
 	}
 	return batches, nil
+}
+
+func (p *testTxPool) SubscribeTxPreEvent(ch chan<- core.TxPreEvent) event.Subscription {
+	return p.txFeed.Subscribe(ch)
 }
 
 // newTestTransaction create a new dummy transaction.
@@ -174,5 +155,4 @@ func (p *testPeer) handshake(t *testing.T, td *big.Int, head common.Hash, genesi
 func (p *testPeer) close() {
 	p.app.Close()
 }
-
 */
