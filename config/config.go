@@ -1,22 +1,20 @@
 package config
 
 import (
+	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/node"
-	"github.com/kowala-tech/kUSD/stats"
 )
 
 // Config defines the top level configuration for a Kowala node
 type Config struct {
-	Node      *node.Config      `mapstructure:"node"`
-	Stats     *stats.Config     `mapstructure:"stats"`
-	Consensus *consensus.Config `mapstructure:"consensus"`
+	Node   *node.Config `mapstructure:"node"`
+	Kowala *kusd.Config `mapstructure:"kusd"`
 }
 
 // DefaultConfig returns a default configuration for a Kowala node
 func DefaultConfig() *Config {
 	return &Config{
-		Node:      node.DefaultConfig,
-		Stats:     stats.DefaultConfig,
-		Consensus: consensus.DefaultConfig,
+		Node:   node.DefaultConfig,
+		Kowala: kusd.DefaultConfig,
 	}
 }
