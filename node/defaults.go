@@ -10,20 +10,9 @@ import (
 	"github.com/kowala-tech/kUSD/p2p/nat"
 )
 
-const (
-	DefaultHTTPHost = "localhost" // Default host interface for the HTTP RPC server
-	DefaultHTTPPort = 11223       // Default TCP port for the HTTP RPC server
-	DefaultWSHost   = "localhost" // Default host interface for the websocket RPC server
-	DefaultWSPort   = 8546        // Default TCP port for the websocket RPC server
-)
-
 // DefaultConfig contains reasonable default settings.
 var DefaultConfig = Config{
-	DataDir:     DefaultDataDir(),
-	HTTPPort:    DefaultHTTPPort,
-	HTTPModules: []string{"net", "web3"},
-	WSPort:      DefaultWSPort,
-	WSModules:   []string{"net", "web3"},
+	DataDir: DefaultDataDir(),
 	P2P: p2p.Config{
 		ListenAddr:      ":22334",
 		DiscoveryV5Addr: ":30304",
@@ -39,11 +28,11 @@ func DefaultDataDir() string {
 	home := homeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
-			return filepath.Join(home, "Library", "kUSD")
+			return filepath.Join(home, "Library", "Kowala")
 		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", "kUSD")
+			return filepath.Join(home, "AppData", "Roaming", "Kowala")
 		} else {
-			return filepath.Join(home, ".kUSD")
+			return filepath.Join(home, ".kowala")
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later

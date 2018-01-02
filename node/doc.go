@@ -1,5 +1,5 @@
 /*
-Package node sets up multi-protocol KUSD nodes.
+Package node sets up multi-protocol Kowala nodes.
 
 In the model exposed by this package, a node is a collection of services which use shared
 resources to provide RPC APIs. Services can also offer devp2p protocols, which are wired
@@ -27,7 +27,7 @@ Service implementations can open LevelDB databases through the service context. 
 node chooses the file system location of each database. If the node is configured to run
 without a data directory, databases are opened in memory instead.
 
-Node also creates the shared store of encrypted KUSD account keys. Services can access
+Node also creates the shared store of encrypted Kowala account keys. Services can access
 the account manager through the service context.
 
 
@@ -52,7 +52,7 @@ unless its location is changed through the KeyStoreDir configuration option.
 
 Data Directory Sharing Example
 
-In this exanple, two node instances named A and B are started with the same data
+In this example, two node instances named A and B are started with the same data
 directory. Mode instance A opens the database "db", node instance B opens the databases
 "db" and "db-2". The following files will be created in the data directory:
 
