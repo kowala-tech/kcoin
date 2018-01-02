@@ -1,5 +1,3 @@
-
-
 package kusd
 
 // @TODO(rgeraldes) - fix these tests
@@ -268,7 +266,7 @@ func testGetBlockBodies(t *testing.T, protocol int) {
 					block := pm.blockchain.GetBlockByNumber(uint64(num))
 					hashes = append(hashes, block.Hash())
 					if len(bodies) < tt.expected {
-						bodies = append(bodies, &blockBody{Transactions: block.Transactions(), Uncles: block.Uncles()})
+						bodies = append(bodies, &blockBody{Transactions: block.Transactions()})
 					}
 					break
 				}
@@ -278,7 +276,7 @@ func testGetBlockBodies(t *testing.T, protocol int) {
 			hashes = append(hashes, hash)
 			if tt.available[j] && len(bodies) < tt.expected {
 				block := pm.blockchain.GetBlockByHash(hash)
-				bodies = append(bodies, &blockBody{Transactions: block.Transactions(), Uncles: block.Uncles()})
+				bodies = append(bodies, &blockBody{Transactions: block.Transactions()})
 			}
 		}
 		// Send the hash request and verify the response
