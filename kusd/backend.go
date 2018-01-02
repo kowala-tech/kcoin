@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"sync/atomic"
 
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
@@ -23,84 +24,68 @@ import (
 	"github.com/kowala-tech/kUSD/rpc"
 )
 
-// NOTE(rgeraldes) - removed references to the light service
-// we can add them later as soon as we need them
-
 const (
 	ChainDBFilename        = "chaindata"
 	MetricsCollectorPrefix = "kusd/db/chaindata/"
 )
 
 var (
-	ErrLightModeNotSupported = errors.New("can't run kusd.KUSD in light sync mode, use ls.LightKUSD")
-	ErrValidatorNotFound     = errors.New("the genesis file must have at least one validator")
+	ErrLightModeNotSupported = errors.New("can't run kusd.Kowala in light sync mode, use ls.LightKowala")
+	//ErrValidatorNotFound     = errors.New("the genesis file must have at least one validator")
 )
 
-// KUSD implements the KUSD full node service.
-type KUSD struct {
-	config      *Config             // service config
-	chainConfig *params.ChainConfig // chain config
-
-	chainDB kusddb.Database // blockchain db
+// Kowala implements the Kowala full node service.
+type Kowala struct {
+	networkID   uint64
+	config      *Config
+	chainConfig *params.ChainConfig
 
 	// handlers
 	blockchain      *core.BlockChain
-	txPool          *core.TxPool     // tx handler
-	protocolManager *ProtocolManager // msg handler
+	txPool          *core.TxPool
+	protocolManager *ProtocolManager
+
+	// db
+	chainDB kusddb.Database
 
 	// consensus
-	validator *validator.Validator // consensus validator
-	coinbase  common.Address       // validator's KUSD account address
+	lock      sync.RWMutex // Protects the variadic fields (e.g. gas price and mUSDBase)
+	coinbase  common.Address
 	gasPrice  *big.Int
+	validator *validator.Validator
 
-	eventMux       *event.TypeMux // kusd events
+	// events
+	eventMux *event.TypeMux // events
+
 	accountManager *accounts.Manager
 
+	// bloom
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
-
-	networkID uint64
-
-	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and mUSDBase)
 }
 
-// New creates a new KUSD object (including the
-// initialisation of the common KUSD object)
-func New(ctx *node.ServiceContext, config *Config) (*KUSD, error) {
-	// config validation
+// New creates a new kowala object (including the
+// initialisation of the common kowala object)
+func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
 	if config.SyncMode == downloader.LightSync {
 		return nil, ErrLightModeNotSupported
 	}
-	/*
-		// @TODO(rgeraldes) - need to review
-		if genesis := config.Genesis; genesis != nil {
-			if len(genesis.Validators) == 0 {
-				return nil, ErrValidatorNotFound
-			}
-			for _, validator := range genesis.Validators {
-				if validator.Power == 0 {
-					return nil, fmt.Errorf("The genesis file cannot contain validators with no voting power: %v", validator)
-				}
-			}
-	}*/
 
-	// setup blockchain db
 	chainDB, err := CreateDB(ctx, config, ChainDBFilename)
 	if err != nil {
 		return nil, err
 	}
 
-	// genesis setup (if necessary)
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDB, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
-	kusd := &KUSD{
+	kowala := &Kowala{
 		config:         config,
 		chainConfig:    chainConfig,
 		chainDB:        chainDB,
@@ -113,42 +98,28 @@ func New(ctx *node.ServiceContext, config *Config) (*KUSD, error) {
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
 
-	log.Info("Initialising KUSD protocol", "versions", ProtocolVersions, "network", config.NetworkID)
+	log.Info("Initialising kowala protocol", "versions", ProtocolVersions, "network", config.NetworkID)
 
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-
-	// @TODO(rgeraldes) - engine set to nil (analyze)
-	kusd.blockchain, err = core.NewBlockChain(chainDb, kusd.chainConfig, nil, vmConfig)
+	kowala.blockchain, err = core.NewBlockChain(chainDb, kowala.chainConfig, vmConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	kusd.bloomIndexer.Start(kusd.blockchain)
+	kowala.bloomIndexer.Start(kowala.blockchain)
 
-	// transaction pool journal
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	kusd.txPool = core.NewTxPool(config.TxPool, kusd.chainConfig, kusd.blockchain)
+	kowala.txPool = core.NewTxPool(config.TxPool, kowala.chainConfig, kowala.blockchain)
 
-	// msg handler
-	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkID, kusd.eventMux, kusd.txPool, kusd.blockchain, chainDb); err != nil {
+	if kowala.protocolManager, err = NewProtocolManager(kowala.chainConfig, config.SyncMode, config.NetworkID, kowala.eventMux, kowala.txPool, kowala.blockchain, chainDb); err != nil {
 		return nil, err
 	}
 
-	// consensus validator
-	kusd.validator = validator.New(kusd)
+	kowala.validator = validator.New(kowala, kowala.chainConfig, kowala.EventMux())
 
-	/* @TODO(rgeraldes) - analyze
-	eth.ApiBackend = &EthApiBackend{eth, nil}
-	gpoParams := config.GPO
-	if gpoParams.Default == nil {
-		gpoParams.Default = config.GasPrice
-	}
-	eth.ApiBackend.gpo = gasprice.NewOracle(eth.ApiBackend, gpoParams)
-	*/
-
-	return kusd, nil
+	return kowala, nil
 }
 
 // CreateDB creates the chain database.
@@ -163,17 +134,16 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kusddb.Dat
 	return db, nil
 }
 
-// @TODO(rgeraldes) - review (#11)
-// APIs returns a collection of RPC services offered by the kusd service
-func (s *KUSD) APIs() []rpc.API {
+// APIs returns a collection of RPC services offered by the kowala service
+func (s *Kowala) APIs() []rpc.API {
 	return []rpc.API{}
 }
 
-func (s *KUSD) ResetWithGenesisBlock(gb *types.Block) {
+func (s *Kowala) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *KUSD) Coinbase() (ommon.Address, error) {
+func (s *Kowala) Coinbase() (common.Address, error) {
 	s.lock.RLock()
 	coinbase := s.coinbase
 	s.lock.RUnlock()
@@ -183,14 +153,21 @@ func (s *KUSD) Coinbase() (ommon.Address, error) {
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			return accounts[0].Address, nil
+			coinbase = accounts[0].Address
+
+			s.lock.Lock()
+			s.coinbase = coinbase
+			s.lock.Unlock()
+
+			log.Info("Coinbase automatically configured", "address", coinbase)
+			return coinbase, nil
 		}
 	}
 	return common.Address{}, fmt.Errorf("coinbase must be explicitly specified")
 }
 
 // set in js console via admin interface or wrapper from cli flags
-func (s *KUSD) SetCoinbase(coinbase common.Address) {
+func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	s.lock.Lock()
 	s.coinbase = coinbase
 	s.lock.Unlock()
@@ -198,61 +175,45 @@ func (s *KUSD) SetCoinbase(coinbase common.Address) {
 	self.validator.SetCoinbase(coinbase)
 }
 
-func (s *KUSD) StartValidating(local bool) error {
-	addr, err := s.Coinbase()
+func (s *Kowala) StartValidating(local bool) error {
+	cb, err := s.Coinbase()
 	if err != nil {
-		log.Error("Cannot start validating without the coinbase", "err", err)
+		log.Error("Cannot start validation without the coinbase", "err", err)
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
-	// @TODO(rgeraldes) - verify in tendermint if it makes sense to accept transactions during sync
-	// it probably does not make sense.
-	/*
-		if local {
-			// If local (CPU) mining is started, we can disable the transaction rejection
-			// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
-			// so noone will ever hit this path, whereas marking sync done on CPU mining
-			// will ensure that private networks work in single miner mode too.
-			atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
-		}
-	*/
+	// disable the transaction rejection mechanism introduced to speed sync times.
+	atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
-	go s.validator.Start(eb)
+	go s.validator.Start(cb)
 	return nil
 }
 
-func (s *KUSD) StopValidating()                 { s.validating.Stop() }
-func (s *KUSD) IsValidating() bool              { return s.validator.IsValidating() }
-func (s *KUSD) Validator() *validator.Validator { return s.validator }
+func (s *Kowala) StopValidating()                 { s.validating.Stop() }
+func (s *Kowala) IsValidating() bool              { return s.validator.IsValidating() }
+func (s *Kowala) Validator() *validator.Validator { return s.validator }
 
-func (s *KUSD) BlockChain() *core.BlockChain { return s.blockchain }
-func (s *KUSD) TxPool() *core.TxPool         { return s.txPool }
-func (s *KUSD) EventMux() *event.TypeMux     { return s.eventMux }
-func (s *KUSD) ChainDb() kusddb.Database     { return s.chainDb }
-
-// @TODO(rgeraldes) - analyze
-func (s *KUSD) IsListening() bool                  { return true } // Always listening
-func (s *KUSD) KUSDVersion() int                   { return int(s.protocolManager.SubProtocols[0].Version) }
-func (s *KUSD) NetVersion() uint64                 { return s.networkID }
-func (s *KUSD) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *Kowala) AccountManager() *accounts.Manager  { return s.accountManager }
+func (s *Kowala) BlockChain() *core.BlockChain       { return s.blockchain }
+func (s *Kowala) TxPool() *core.TxPool               { return s.txPool }
+func (s *Kowala) EventMux() *event.TypeMux           { return s.eventMux }
+func (s *Kowala) ChainDb() kusddb.Database           { return s.chainDb }
+func (s *Kowala) IsListening() bool                  { return true } // Always listening
+func (s *Kowala) KowalaVersion() int                 { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *Kowala) NetworkVersion() uint64             { return s.networkId }
+func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *KUSD) Protocols() []p2p.Protocol {
-	if s.lesServer == nil {
-		return s.protocolManager.SubProtocols
-	}
+func (s *Kowala) Protocols() []p2p.Protocol {
+	return s.protocolManager.SubProtocols
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// KUSD protocol implementation.
-func (s *KUSD) Start(srvr *p2p.Server) error {
+// Kowala protocol implementation.
+func (s *Kowala) Start(srvr *p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
-
-	// @TODO(rgeraldes) - grpc topic (#11)
-	// Start the RPC service
-	//s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.NetVersion())
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers
@@ -272,8 +233,12 @@ func (s *Ethereum) Stop() error {
 	s.txPool.Stop()
 	s.validator.Stop()
 	s.eventMux.Stop()
-
 	s.chainDb.Close()
-
 	return nil
+}
+
+func RegisterService(node *node.Node, cfg *kowala.Config) err {
+	return node.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		return Kowala.New(ctx, cfg)
+	})
 }
