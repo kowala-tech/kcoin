@@ -225,13 +225,14 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Ethereum protocol.
-func (s *Ethereum) Stop() error {
+// Kowala protocol.
+func (s *Kowala) Stop() error {
+	// @NOTE(rgeraldes) - very important - validator should be stopped before anything else
+	s.validator.Stop()
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()
 	s.txPool.Stop()
-	s.validator.Stop()
 	s.eventMux.Stop()
 	s.chainDb.Close()
 	return nil

@@ -45,11 +45,8 @@ type peer struct {
 	knownTxs       *set.Set // Set of transaction hashes known to be known by this peer
 	knownProposals *set.Set // Set of proposal hashes known to be known by this peer
 
+
 	/*
-
-
-
-
 		forkDrop *time.Timer // Timed connection dropper if forks aren't validated in time
 
 		head common.Hash	// peer head

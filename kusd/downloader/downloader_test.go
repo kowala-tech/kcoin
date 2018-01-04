@@ -87,8 +87,7 @@ func newTester() *downloadTester {
 
 // makeChain creates a chain of n blocks starting at and including parent.
 // the returned hash chain is ordered head->parent. In addition, every 3rd block
-// contains a transaction and every 5th an uncle to allow testing correct block
-// reassembly.
+// contains a transaction to allow testing correct block reassembly.
 func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, parentReceipts types.Receipts, heavy bool) ([]common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]types.Receipts) {
 	// Generate the block chain
 	blocks, receipts := core.GenerateChain(params.TestChainConfig, parent, dl.peerDb, n, func(i int, block *core.BlockGen) {
@@ -106,13 +105,6 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 				panic(err)
 			}
 			block.AddTx(tx)
-		}
-		// If the block number is a multiple of 5, add a bonus uncle to the block
-		if i > 0 && i%5 == 0 {
-			block.AddUncle(&types.Header{
-				ParentHash: block.PrevBlock(i - 1).Hash(),
-				Number:     big.NewInt(block.Number().Int64() - 1),
-			})
 		}
 	})
 	// Convert the block-chain into a hash-chain and header/block maps
@@ -518,15 +510,13 @@ func (dlp *downloadTesterPeer) RequestBodies(hashes []common.Hash) error {
 	blocks := dlp.dl.peerBlocks[dlp.id]
 
 	transactions := make([][]*types.Transaction, 0, len(hashes))
-	uncles := make([][]*types.Header, 0, len(hashes))
 
 	for _, hash := range hashes {
 		if block, ok := blocks[hash]; ok {
 			transactions = append(transactions, block.Transactions())
-			uncles = append(uncles, block.Uncles())
 		}
 	}
-	go dlp.dl.downloader.DeliverBodies(dlp.id, transactions, uncles)
+	go dlp.dl.downloader.DeliverBodies(dlp.id, transactions)
 
 	return nil
 }
@@ -1071,7 +1061,7 @@ func testEmptyShortCircuit(t *testing.T, protocol int, mode SyncMode) {
 	// Validate the number of block bodies that should have been requested
 	bodiesNeeded, receiptsNeeded := 0, 0
 	for _, block := range blocks {
-		if mode != LightSync && block != tester.genesis && (len(block.Transactions()) > 0 || len(block.Uncles()) > 0) {
+		if mode != LightSync && block != tester.genesis && (len(block.Transactions()) > 0 {
 			bodiesNeeded++
 		}
 	}

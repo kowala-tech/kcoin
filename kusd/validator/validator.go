@@ -111,6 +111,24 @@ func New(kusd Backend, config *params.ChainConfig, eventMux *event.TypeMux) *Val
 	return validator
 }
 
+// Start
+func (self *Validator) Start(coinbase common.Address, deposit int) {
+	atomic.StoreInt32(&self.shouldStart, 1)
+
+	if atomic.LoadInt32(&self.canStart) == 0 {
+		log.Info("Network syncing, will start validator afterwards")
+		return
+	}
+
+	log.Info("Starting validation operation")
+
+	atomic.StoreInt32(&self.validating, 1)
+
+	go self.run()
+	go self.handle()
+}
+
+/*
 // WithMaxStateTransactions limits the validator state transactions
 func (self *Validator) WithMaxStateTransactions(maxTransitions int) {
 	self.maxTransitions = maxTransitions
@@ -173,22 +191,7 @@ func (self *Validator) handle() {
 }
 
 
-// Start
-func (self *Validator) Start(coinbase common.Address, deposit int) {
-	atomic.StoreInt32(&self.shouldStart, 1)
 
-	if atomic.LoadInt32(&self.canStart) == 0 {
-		log.Info("Network syncing, will start validator afterwards")
-		return
-	}
-
-	log.Info("Starting validation operation")
-
-	atomic.StoreInt32(&self.validating, 1)
-
-	go self.run()
-	go self.handle()
-}
 
 
 
@@ -262,7 +265,7 @@ func (self *Validator) restoreLastcommit() {
 	}
 
 	lastCommit := currentBlock.Commit()
-	lastPreCommits := core.NewVoteSet(currentBlock.Number(), lastCommit.Round(), types.PreCommit /*state.lastValidators*/)
+	lastPreCommits := core.NewVoteSet(currentBlock.Number(), lastCommit.Round(), types.PreCommit, state.lastValidators)
 	for _, preCommit := range lastCommit.PreCommits() {
 		if preCommit == nil {
 			continue
