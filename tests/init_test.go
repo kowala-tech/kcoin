@@ -29,7 +29,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/kowala-tech/kUSD/params"
 )
 
 var (
@@ -39,7 +39,6 @@ var (
 	transactionTestDir = filepath.Join(baseDir, "TransactionTests")
 	vmTestDir          = filepath.Join(baseDir, "VMTests")
 	rlpTestDir         = filepath.Join(baseDir, "RLPTests")
-	difficultyTestDir  = filepath.Join(baseDir, "BasicTests")
 )
 
 func readJson(reader io.Reader, value interface{}) error {

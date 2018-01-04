@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/common/hexutil"
+	"github.com/kowala-tech/kUSD/common/math"
+	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kUSD/rlp"
 )
 
 // TransactionTest checks RLP decoding and sender derivation of transactions.
