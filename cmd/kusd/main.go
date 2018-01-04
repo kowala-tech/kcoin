@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/kowala-tech/kUSD/cmd/kusd/cmd"
+	"github.com/kowala-tech/kUSD/cmd/kusd/cmds"
 )
 
 func main() {

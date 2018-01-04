@@ -62,7 +62,11 @@ func rlpHash(x interface{}) (h common.Hash) {
 // Commit contains the evidence that a block was committed by a set of validators
 type Commit struct {
 	// @NOTE (rgeraldes) - pre-commits are in order of address
-	PreCommits Votes `json:"votes"	gencodec:"required"`
+	preCommits Votes `json:"votes"	gencodec:"required"`
+}
+
+func (c *Commit) PreCommits() Votes {
+	return c.preCommits
 }
 
 func (c *Commit) Hash() common.Hash {
@@ -207,6 +211,8 @@ func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
 func (b *Block) Body() *Body { return &Body{b.transactions} }
+
+func (b *Block) Commit() *Commit { return b.lastCommit }
 
 func (b *Block) Size() common.StorageSize {
 	if size := b.size.Load(); size != nil {

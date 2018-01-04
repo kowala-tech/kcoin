@@ -1,30 +1,15 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // +build none
 
 /*
 The ci command is called from Continuous Integration scripts.
 
-Usage: go run ci.go <command> <command flags/arguments>
+Usage: go run build/ci.go <command> <command flags/arguments>
 
 Available commands are:
 
    install    [ -arch architecture ] [ packages... ]                                           -- builds packages and executables
-   test       [ -coverage ] [ -misspell ] [ packages... ]                                      -- runs the tests
+   test       [ -coverage ] [ packages... ]                                                    -- runs the tests
+   lint                                                                                        -- runs certain pre-selected linters
    archive    [ -arch architecture ] [ -type zip|tar ] [ -signer key-envvar ] [ -upload dest ] -- archives build artefacts
    importkeys                                                                                  -- imports signing keys from env
    debsrc     [ -signer key-id ] [ -upload dest ]                                              -- creates a debian source package
@@ -37,6 +22,7 @@ Available commands are:
 For all commands, -n prevents execution of external programs (dry run mode).
 
 */
+
 package main
 
 import (
@@ -57,7 +43,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kUSD/internal/build"
+	"github.com/kowala-teck/kUSD/internal/build"
 )
 
 var (
@@ -96,7 +82,7 @@ var (
 		},
 		{
 			Name:        "kusd",
-			Description: "Ethereum CLI client.",
+			Description: "Kowala CLI client.",
 		},
 		{
 			Name:        "puppeth",
@@ -119,7 +105,8 @@ var (
 	// Distros for which packages are created.
 	// Note: vivid is unsupported because there is no golang-1.6 package for it.
 	// Note: wily is unsupported because it was officially deprecated on lanchpad.
-	debDistros = []string{"trusty", "xenial", "yakkety", "zesty"}
+	// Note: yakkety is unsupported because it was officially deprecated on lanchpad.
+	debDistros = []string{"trusty", "xenial", "zesty", "artful"}
 )
 
 var GOBIN, _ = filepath.Abs(filepath.Join("build", "bin"))
@@ -145,6 +132,8 @@ func main() {
 		doInstall(os.Args[2:])
 	case "test":
 		doTest(os.Args[2:])
+	case "lint":
+		doLint(os.Args[2:])
 	case "archive":
 		doArchive(os.Args[2:])
 	case "debsrc":
@@ -177,7 +166,7 @@ func doInstall(cmdline []string) {
 	// failure with outdated Go. This should save them the trouble.
 	if runtime.Version() < "go1.7" && !strings.Contains(runtime.Version(), "devel") {
 		log.Println("You have Go version", runtime.Version())
-		log.Println("kUSD requires at least Go version 1.7 and cannot")
+		log.Println("go-ethereum requires at least Go version 1.7 and cannot")
 		log.Println("be compiled with an earlier version. Please upgrade your Go installation.")
 		os.Exit(1)
 	}
@@ -195,7 +184,7 @@ func doInstall(cmdline []string) {
 		build.MustRun(goinstall)
 		return
 	}
-	// If we are cross compiling to ARMv5 ARMv6 or ARMv7, clean any prvious builds
+	// If we are cross compiling to ARMv5 ARMv6 or ARMv7, clean any previous builds
 	if *arch == "arm" {
 		os.RemoveAll(filepath.Join(runtime.GOROOT(), "pkg", runtime.GOOS+"_arm"))
 		for _, path := range filepath.SplitList(build.GOPATH()) {
@@ -249,10 +238,7 @@ func goTool(subcmd string, args ...string) *exec.Cmd {
 }
 
 func goToolArch(arch string, subcmd string, args ...string) *exec.Cmd {
-	gocmd := filepath.Join(runtime.GOROOT(), "bin", "go")
-	cmd := exec.Command(gocmd, subcmd)
-	cmd.Args = append(cmd.Args, args...)
-
+	cmd := build.GoTool(subcmd, args...)
 	if subcmd == "build" || subcmd == "install" || subcmd == "test" {
 		// Go CGO has a Windows linker error prior to 1.8 (https://github.com/golang/go/issues/8756).
 		// Work around issue by allowing multiple definitions for <1.8 builds.
@@ -282,7 +268,6 @@ func goToolArch(arch string, subcmd string, args ...string) *exec.Cmd {
 
 func doTest(cmdline []string) {
 	var (
-		misspell = flag.Bool("misspell", false, "Whether to run the spell checker")
 		coverage = flag.Bool("coverage", false, "Whether to record code coverage")
 	)
 	flag.CommandLine.Parse(cmdline)
@@ -296,10 +281,7 @@ func doTest(cmdline []string) {
 
 	// Run analysis tools before the tests.
 	build.MustRun(goTool("vet", packages...))
-	if *misspell {
-		// TODO(karalabe): Reenable after false detection is fixed: https://github.com/client9/misspell/issues/105
-		// spellcheck(packages)
-	}
+
 	// Run the actual tests.
 	gotest := goTool("test", buildFlags(env)...)
 	// Test a single package at a time. CI builders are slow
@@ -308,35 +290,39 @@ func doTest(cmdline []string) {
 	if *coverage {
 		gotest.Args = append(gotest.Args, "-covermode=atomic", "-cover")
 	}
+
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
 }
 
-// spellcheck runs the client9/misspell spellchecker package on all Go, Cgo and
-// test files in the requested packages.
-func spellcheck(packages []string) {
-	// Ensure the spellchecker is available
-	build.MustRun(goTool("get", "github.com/client9/misspell/cmd/misspell"))
+// runs gometalinter on requested packages
+func doLint(cmdline []string) {
+	flag.CommandLine.Parse(cmdline)
 
-	// Windows chokes on long argument lists, check packages individually
-	for _, pkg := range packages {
-		// The spell checker doesn't work on packages, gather all .go files for it
-		out, err := goTool("list", "-f", "{{.Dir}}{{range .GoFiles}}\n{{.}}{{end}}{{range .CgoFiles}}\n{{.}}{{end}}{{range .TestGoFiles}}\n{{.}}{{end}}", pkg).CombinedOutput()
-		if err != nil {
-			log.Fatalf("source file listing failed: %v\n%s", err, string(out))
-		}
-		// Retrieve the folder and assemble the source list
-		lines := strings.Split(string(out), "\n")
-		root := lines[0]
+	packages := []string{"./..."}
+	if len(flag.CommandLine.Args()) > 0 {
+		packages = flag.CommandLine.Args()
+	}
+	// Get metalinter and install all supported linters
+	build.MustRun(goTool("get", "gopkg.in/alecthomas/gometalinter.v2"))
+	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), "--install")
 
-		sources := make([]string, 0, len(lines)-1)
-		for _, line := range lines[1:] {
-			if line = strings.TrimSpace(line); line != "" {
-				sources = append(sources, filepath.Join(root, line))
-			}
-		}
-		// Run the spell checker for this particular package
-		build.MustRunCommand(filepath.Join(GOBIN, "misspell"), append([]string{"-error"}, sources...)...)
+	// Run fast linters batched together
+	configs := []string{
+		"--vendor",
+		"--disable-all",
+		"--enable=vet",
+		"--enable=gofmt",
+		"--enable=misspell",
+		"--enable=goconst",
+		"--min-occurrences=6", // for goconst
+	}
+	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), append(configs, packages...)...)
+
+	// Run slow linters one by one
+	for _, linter := range []string{"unconvert", "gosimple"} {
+		configs = []string{"--vendor", "--deadline=10m", "--disable-all", "--enable=" + linter}
+		build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), append(configs, packages...)...)
 	}
 }
 
@@ -456,7 +442,7 @@ func maybeSkipArchive(env build.Environment) {
 func doDebianSource(cmdline []string) {
 	var (
 		signer  = flag.String("signer", "", `Signing key name, also used as package author`)
-		upload  = flag.String("upload", "", `Where to upload the source package (usually "ppa:ethereum/ethereum")`)
+		upload  = flag.String("upload", "", `Where to upload the source package (usually "ppa:kowala/kowala")`)
 		workdir = flag.String("workdir", "", `Output directory for packages (uses temp dir if unset)`)
 		now     = time.Now()
 	)
@@ -518,7 +504,7 @@ func isUnstableBuild(env build.Environment) bool {
 type debMetadata struct {
 	Env build.Environment
 
-	// kUSD version being built. Note that this
+	// kusd version being built. Note that this
 	// is not the debian package version. The package version
 	// is constructed by VersionString.
 	Version string
@@ -535,7 +521,7 @@ type debExecutable struct {
 func newDebMetadata(distro, author string, env build.Environment, t time.Time) debMetadata {
 	if author == "" {
 		// No signing key, use default author.
-		author = "Ethereum Builds <fjl@ethereum.org>"
+		author = "Kowala Builds <rgeraldes@ethereum.org>"
 	}
 	return debMetadata{
 		Env:         env,
@@ -551,9 +537,9 @@ func newDebMetadata(distro, author string, env build.Environment, t time.Time) d
 // on all executable packages.
 func (meta debMetadata) Name() string {
 	if isUnstableBuild(meta.Env) {
-		return "ethereum-unstable"
+		return "kowala-unstable"
 	}
-	return "ethereum"
+	return "kowala"
 }
 
 // VersionString returns the debian version of the packages.
@@ -667,7 +653,7 @@ func doWindowsInstaller(cmdline []string) {
 	// first section contains the kusd binary, second section holds the dev tools.
 	templateData := map[string]interface{}{
 		"License":  "COPYING",
-		"kusd":     kusdTool,
+		"KUSD":     kusdTool,
 		"DevTools": devTools,
 	}
 	build.Render("build/nsis.kusd.nsi", filepath.Join(*workdir, "kusd.nsi"), 0644, nil)
@@ -723,7 +709,7 @@ func doAndroidArchive(cmdline []string) {
 	// Build the Android archive and Maven resources
 	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile"))
 	build.MustRun(gomobileTool("init", "--ndk", os.Getenv("ANDROID_NDK")))
-	build.MustRun(gomobileTool("bind", "--target", "android", "--javapkg", "org.kowala", "-v", "github.com/kowala-tech/kUSD/mobile"))
+	build.MustRun(gomobileTool("bind", "--target", "android", "--javapkg", "org.ethereum", "-v", "github.com/ethereum/go-ethereum/mobile"))
 
 	if *local {
 		// If we're building locally, copy bundle to build dir and skip Maven
@@ -843,7 +829,7 @@ func doXCodeFramework(cmdline []string) {
 	// Build the iOS XCode framework
 	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile"))
 	build.MustRun(gomobileTool("init"))
-	bind := gomobileTool("bind", "--target", "ios", "--tags", "ios", "-v", "github.com/kowala-tech/kUSD/mobile")
+	bind := gomobileTool("bind", "--target", "ios", "--tags", "ios", "-v", "github.com/ethereum/go-ethereum/mobile")
 
 	if *local {
 		// If we're building locally, use the build folder and stop afterwards
@@ -869,8 +855,8 @@ func doXCodeFramework(cmdline []string) {
 	// Prepare and upload a PodSpec to CocoaPods
 	if *deploy != "" {
 		meta := newPodMetadata(env, archive)
-		build.Render("build/pod.podspec", "Kusd.podspec", 0755, meta)
-		build.MustRunCommand("pod", *deploy, "push", "Kusd.podspec", "--allow-warnings", "--verbose")
+		build.Render("build/pod.podspec", "KUSD.podspec", 0755, meta)
+		build.MustRunCommand("pod", *deploy, "push", "KUSD.podspec", "--allow-warnings", "--verbose")
 	}
 }
 

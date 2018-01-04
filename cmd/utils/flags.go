@@ -1,111 +1,12 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
-// Package utils contains internal helper functions for go-ethereum commands.
 package utils
 
-import (
-	"crypto/ecdsa"
-	"fmt"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strconv"
-	"strings"
+/*
 
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/accounts/keystore"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/eth"
-	"github.com/kowala-tech/kUSD/eth/downloader"
-	"github.com/kowala-tech/kUSD/eth/gasprice"
-	"github.com/kowala-tech/kUSD/ethstats"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusd"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/les"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/metrics"
-	"github.com/kowala-tech/kUSD/node"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/p2p/discv5"
-	"github.com/kowala-tech/kUSD/p2p/nat"
-	"github.com/kowala-tech/kUSD/p2p/netutil"
-	"github.com/kowala-tech/kUSD/params"
-	"gopkg.in/urfave/cli.v1"
-)
+// @NOTE (rgeraldes) These are all the supported command line flags.
 
 var (
-	CommandHelpTemplate = `{{.cmd.Name}}{{if .cmd.Subcommands}} command{{end}}{{if .cmd.Flags}} [command options]{{end}} [arguments...]
-{{if .cmd.Description}}{{.cmd.Description}}
-{{end}}{{if .cmd.Subcommands}}
-SUBCOMMANDS:
-	{{range .cmd.Subcommands}}{{.cmd.Name}}{{with .cmd.ShortName}}, {{.cmd}}{{end}}{{ "\t" }}{{.cmd.Usage}}
-	{{end}}{{end}}{{if .categorizedFlags}}
-{{range $idx, $categorized := .categorizedFlags}}{{$categorized.Name}} OPTIONS:
-{{range $categorized.Flags}}{{"\t"}}{{.}}
-{{end}}
-{{end}}{{end}}`
+	DataDirFlag = flag.String("datadir",node.DefaultDataDir(), "Data directory for the databases and keystore")
 )
-
-func init() {
-	cli.AppHelpTemplate = `{{.Name}} {{if .Flags}}[global options] {{end}}command{{if .Flags}} [command options]{{end}} [arguments...]
-
-VERSION:
-   {{.Version}}
-
-COMMANDS:
-   {{range .Commands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
-   {{end}}{{if .Flags}}
-GLOBAL OPTIONS:
-   {{range .Flags}}{{.}}
-   {{end}}{{end}}
-`
-
-	cli.CommandHelpTemplate = CommandHelpTemplate
-}
-
-// NewApp creates an app with sane defaults.
-func NewApp(gitCommit, usage string) *cli.App {
-	app := cli.NewApp()
-	app.Name = filepath.Base(os.Args[0])
-	app.Author = ""
-	//app.Authors = nil
-	app.Email = ""
-	app.Version = params.Version
-	if gitCommit != "" {
-		app.Version += "-" + gitCommit[:8]
-	}
-	app.Usage = usage
-	return app
-}
-
-// These are all the command line flags we support.
-// If you add to this list, please remember to include the
-// flag in the appropriate command definition.
-//
-// The flags are defined here so their names and help texts
-// are the same for all commands.
 
 var (
 	// General settings
@@ -114,19 +15,7 @@ var (
 		Usage: "Data directory for the databases and keystore",
 		Value: DirectoryString{node.DefaultDataDir()},
 	}
-	KeyStoreDirFlag = DirectoryFlag{
-		Name:  "keystore",
-		Usage: "Directory for the keystore (default = inside the datadir)",
-	}
-	NoUSBFlag = cli.BoolFlag{
-		Name:  "nousb",
-		Usage: "Disables monitoring for and managine USB hardware wallets",
-	}
-	NetworkIdFlag = cli.Uint64Flag{
-		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
-		Value: eth.DefaultConfig.NetworkId,
-	}
+
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
 		Usage: "Ropsten network: pre-configured proof-of-work test network",
@@ -152,11 +41,10 @@ var (
 		Name:  "light",
 		Usage: "Enable light client mode",
 	}
-	defaultSyncMode = eth.DefaultConfig.SyncMode
-	SyncModeFlag    = TextMarshalerFlag{
+	SyncModeFlag = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
-		Value: &defaultSyncMode,
+		Value: &kusd.DefaultConfig.SyncMode,
 	}
 
 	LightServFlag = cli.IntFlag{
@@ -168,10 +56,6 @@ var (
 		Name:  "lightpeers",
 		Usage: "Maximum number of LES client peers",
 		Value: 20,
-	}
-	LightKDFFlag = cli.BoolFlag{
-		Name:  "lightkdf",
-		Usage: "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
@@ -191,38 +75,39 @@ var (
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: eth.DefaultConfig.TxPool.PriceLimit,
+		Value: kusd.DefaultConfig.TxPool.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: eth.DefaultConfig.TxPool.PriceBump,
+		Value: kusd.DefaultConfig.TxPool.PriceBump,
 	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
 		Usage: "Minimum number of executable transaction slots guaranteed per account",
-		Value: eth.DefaultConfig.TxPool.AccountSlots,
+		Value: kusd.DefaultConfig.TxPool.AccountSlots,
 	}
 	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.globalslots",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: eth.DefaultConfig.TxPool.GlobalSlots,
+		Value: kusd.DefaultConfig.TxPool.GlobalSlots,
 	}
 	TxPoolAccountQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.accountqueue",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: eth.DefaultConfig.TxPool.AccountQueue,
+		Value: kusd.DefaultConfig.TxPool.AccountQueue,
 	}
 	TxPoolGlobalQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.globalqueue",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: eth.DefaultConfig.TxPool.GlobalQueue,
+		Value: kusd.DefaultConfig.TxPool.GlobalQueue,
 	}
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: eth.DefaultConfig.TxPool.Lifetime,
+		Value: kusd.DefaultConfig.TxPool.Lifetime,
 	}
+
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
@@ -239,11 +124,6 @@ var (
 		Name:  "mine",
 		Usage: "Enable mining",
 	}
-	MinerThreadsFlag = cli.IntFlag{
-		Name:  "minerthreads",
-		Usage: "Number of CPU threads to use for mining",
-		Value: runtime.NumCPU(),
-	}
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
@@ -257,7 +137,7 @@ var (
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: eth.DefaultConfig.GasPrice,
+		Value: kusd.DefaultConfig.GasPrice,
 	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
@@ -296,71 +176,7 @@ var (
 		Name:  "nocompaction",
 		Usage: "Disables db compaction after import",
 	}
-	// RPC settings
-	RPCEnabledFlag = cli.BoolFlag{
-		Name:  "rpc",
-		Usage: "Enable the HTTP-RPC server",
-	}
-	RPCListenAddrFlag = cli.StringFlag{
-		Name:  "rpcaddr",
-		Usage: "HTTP-RPC server listening interface",
-		Value: node.DefaultHTTPHost,
-	}
-	RPCPortFlag = cli.IntFlag{
-		Name:  "rpcport",
-		Usage: "HTTP-RPC server listening port",
-		Value: node.DefaultHTTPPort,
-	}
-	RPCCORSDomainFlag = cli.StringFlag{
-		Name:  "rpccorsdomain",
-		Usage: "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
-		Value: "",
-	}
-	RPCApiFlag = cli.StringFlag{
-		Name:  "rpcapi",
-		Usage: "API's offered over the HTTP-RPC interface",
-		Value: "",
-	}
-	IPCDisabledFlag = cli.BoolFlag{
-		Name:  "ipcdisable",
-		Usage: "Disable the IPC-RPC server",
-	}
-	IPCPathFlag = DirectoryFlag{
-		Name:  "ipcpath",
-		Usage: "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
-	}
-	WSEnabledFlag = cli.BoolFlag{
-		Name:  "ws",
-		Usage: "Enable the WS-RPC server",
-	}
-	WSListenAddrFlag = cli.StringFlag{
-		Name:  "wsaddr",
-		Usage: "WS-RPC server listening interface",
-		Value: node.DefaultWSHost,
-	}
-	WSPortFlag = cli.IntFlag{
-		Name:  "wsport",
-		Usage: "WS-RPC server listening port",
-		Value: node.DefaultWSPort,
-	}
-	WSApiFlag = cli.StringFlag{
-		Name:  "wsapi",
-		Usage: "API's offered over the WS-RPC interface",
-		Value: "",
-	}
-	WSAllowedOriginsFlag = cli.StringFlag{
-		Name:  "wsorigins",
-		Usage: "Origins from which to accept websockets requests",
-		Value: "",
-	}
-	ExecFlag = cli.StringFlag{
-		Name:  "exec",
-		Usage: "Execute JavaScript statement",
-	}
-	PreloadJSFlag = cli.StringFlag{
-		Name:  "preload",
-		Usage: "Comma separated list of JavaScript files to preload into the console",
-	}
+
 
 	// Network Settings
 	MaxPeersFlag = cli.IntFlag{
@@ -430,12 +246,12 @@ var (
 	GpoBlocksFlag = cli.IntFlag{
 		Name:  "gpoblocks",
 		Usage: "Number of recent blocks to check for gas prices",
-		Value: eth.DefaultConfig.GPO.Blocks,
+		Value: kusd.DefaultConfig.GPO.Blocks,
 	}
 	GpoPercentileFlag = cli.IntFlag{
 		Name:  "gpopercentile",
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: eth.DefaultConfig.GPO.Percentile,
+		Value: kusd.DefaultConfig.GPO.Percentile,
 	}
 )
 
@@ -666,7 +482,7 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 
 // setEtherbase retrieves the etherbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
+func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *kusd.Config) {
 	if ctx.GlobalIsSet(EtherbaseFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(EtherbaseFlag.Name))
 		if err != nil {
@@ -749,8 +565,8 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
-// SetNodeConfig applies node-related command line flags to the config.
-func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
+// SetFlagConfig applies node-related command line flags to the config.
+func SetFlagConfig(cmd *cobra.Command, cfg *node.Config) {
 	SetP2PConfig(ctx, &cfg.P2P)
 	setIPC(ctx, cfg)
 	setHTTP(ctx, cfg)
@@ -764,16 +580,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = filepath.Join(os.TempDir(), "ethereum_dev_mode")
 	case ctx.GlobalBool(TestnetFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
-	}
-
-	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
-		cfg.KeyStoreDir = ctx.GlobalString(KeyStoreDirFlag.Name)
-	}
-	if ctx.GlobalIsSet(LightKDFFlag.Name) {
-		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
-	}
-	if ctx.GlobalIsSet(NoUSBFlag.Name) {
-		cfg.NoUSB = ctx.GlobalBool(NoUSBFlag.Name)
 	}
 }
 
@@ -832,7 +638,7 @@ func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
 }
 
 // SetEthConfig applies eth-related command line flags to the config.
-func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
+func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *kusd.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, DevModeFlag, TestnetFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
@@ -856,9 +662,6 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	if ctx.GlobalIsSet(LightPeersFlag.Name) {
 		cfg.LightPeers = ctx.GlobalInt(LightPeersFlag.Name)
 	}
-	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
-		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
-	}
 
 	// Ethereum needs to know maxPeers to calculate the light server peer ratio.
 	// TODO(fjl): ensure Ethereum can get MaxPeers from node.
@@ -869,9 +672,6 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	}
 	cfg.DatabaseHandles = makeDatabaseHandles()
 
-	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
-		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
-	}
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
@@ -904,45 +704,6 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
 		state.MaxTrieCacheGen = uint16(gen)
-	}
-}
-
-// RegisterKUSDService adds an kusd client to the stack.
-func RegisterKUSDService(stack *node.Node, cfg *kusd.Config) {
-	var err error
-	if cfg.SyncMode == downloader.LightSync {
-		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			return les.New(ctx, cfg)
-		})
-	} else {
-		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			fullNode, err := kusd.New(ctx, cfg)
-			if fullNode != nil && cfg.LightServ > 0 {
-				ls, _ := les.NewLesServer(fullNode, cfg)
-				fullNode.AddLesServer(ls)
-			}
-			return fullNode, err
-		})
-	}
-	if err != nil {
-		Fatalf("Failed to register the Ethereum service: %v", err)
-	}
-}
-
-// RegisterEthStatsService configures the Ethereum Stats daemon and adds it to
-// th egiven node.
-func RegisterEthStatsService(stack *node.Node, url string) {
-	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		// Retrieve both eth and les services
-		var ethServ *eth.Ethereum
-		ctx.Service(&ethServ)
-
-		var lesServ *les.LightEthereum
-		ctx.Service(&lesServ)
-
-		return ethstats.New(url, ethServ, lesServ)
-	}); err != nil {
-		Fatalf("Failed to register the Ethereum Stats service: %v", err)
 	}
 }
 
@@ -1015,26 +776,4 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 	return preloads
 }
 
-// MigrateFlags sets the global flag from a local flag when it's set.
-// This is a temporary function used for migrating old command/flags to the
-// new format.
-//
-// e.g. kusd account new --keystore /tmp/mykeystore --lightkdf
-//
-// is equivalent after calling this method with:
-//
-// kusd --keystore /tmp/mykeystore --lightkdf account new
-//
-// This allows the use of the existing configuration functionality.
-// When all flags are migrated this function can be removed and the existing
-// configuration functionality must be changed that is uses local flags
-func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error {
-	return func(ctx *cli.Context) error {
-		for _, name := range ctx.FlagNames() {
-			if ctx.IsSet(name) {
-				ctx.GlobalSet(name, ctx.String(name))
-			}
-		}
-		return action(ctx)
-	}
-}
+*/

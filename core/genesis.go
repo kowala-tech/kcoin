@@ -1,24 +1,7 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -39,8 +22,12 @@ import (
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
 //go:generate gencodec -type GenesisAccount -field-override genesisAccountMarshaling -out gen_genesis_account.go
+//go:generate gencodec -type GenesisValidator -field-override genesisValidatorMarshaling -out gen_genesis_validator.go
 
-var errGenesisNoConfig = errors.New("genesis has no chain configuration")
+var (
+	errGenesisNoConfig     = errors.New("genesis has no chain configuration")
+	errGenensisBlockNumber = errors.New("can't commit genesis block with number > 0")
+)
 
 // Genesis specifies the header fields, state of a genesis block. It also defines hard
 // fork switch-over blocks through the chain configuration.
@@ -51,20 +38,13 @@ type Genesis struct {
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
-	Validators []GenesisValidator  `json:"validators" gencodec:"required"`
+	Validators GenesisValidators   `json:"validators" gencodec:"required"`
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
 	Number     uint64      `json:"number"`
 	GasUsed    uint64      `json:"gasUsed"`
 	ParentHash common.Hash `json:"parentHash"`
-}
-
-// GenesisValidator is an initial validator.
-type GenesisValidator struct {
-	PubKey *ecdsa.PublicKey `json:"key" gencodec:"required"`
-	Power  int64            `json:"power" gencodec:"required"`
-	Name   string           `json:"name"`
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -91,7 +71,17 @@ type GenesisAccount struct {
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
 }
 
-// field type overrides for gencodec
+// GenesisValidators specifies the initial set of validators.
+type GenesisValidators []GenesisValidator
+
+// GenesisValidator is a validator in the state of a genesis block.
+type GenesisValidator struct {
+	PublicKey []byte `json:"pubkey" gencodec:"required"` // validator public key
+	Power     uint64 `json:"power"  gencoded:"required"` // voting power
+	Name      string `json:"name"   gencoded:"required"` // validator's name
+}
+
+// genesisSpecMarshaling - field type overrides for gencodec.
 type genesisSpecMarshaling struct {
 	Timestamp math.HexOrDecimal64
 	ExtraData hexutil.Bytes
@@ -101,12 +91,19 @@ type genesisSpecMarshaling struct {
 	Alloc     map[common.UnprefixedAddress]GenesisAccount
 }
 
+// genesisAccountMarshaling - field type overrides for gencodec.
 type genesisAccountMarshaling struct {
 	Code       hexutil.Bytes
 	Balance    *math.HexOrDecimal256
 	Nonce      math.HexOrDecimal64
 	Storage    map[storageJSON]storageJSON
 	PrivateKey hexutil.Bytes
+}
+
+// genesisValidorMarshaling - field type overrides for gencodec.
+type genesisValidorMarshaling struct {
+	PublicKey hextutil.Bytes
+	Power     math.HexOrDecimal64
 }
 
 // storageJSON represents a 256 bit byte array, but allows less than 256 bits when
@@ -155,7 +152,8 @@ func (e *GenesisMismatchError) Error() string {
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db kusddb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.AllProtocolChanges, common.Hash{}, errGenesisNoConfig
+		// @TODO(rgeraldes) - analyze the config returned
+		return params.MainnetChainConfig, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no stored genesis block.
@@ -259,7 +257,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 func (g *Genesis) Commit(db kusddb.Database) (*types.Block, error) {
 	block, statedb := g.ToBlock()
 	if block.Number().Sign() != 0 {
-		return nil, fmt.Errorf("can't commit genesis block with number > 0")
+		return nil, errGenensisBlockNumber
 	}
 	if _, err := statedb.CommitTo(db, false); err != nil {
 		return nil, fmt.Errorf("cannot write state: %v", err)

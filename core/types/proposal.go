@@ -28,8 +28,8 @@ type proposaldata struct {
 	BlockNumber   *big.Int       `json:"number"		gencodec:"required"`
 	BlockMetaData *core.Metadata `json:"block" 		gencoded:"required"`
 	Round         int            `json:"round"		gencodec:"required"`
-	POLRound      int            `json:"polround"	gencodec:"required"`
-	POLBlock      common.Hash    `json: polblock	gencodec:"required"`
+	LockedRound   int            `json:"polround"	gencodec:"required"`
+	LockedBlock   common.Hash    `json: polblock	gencodec:"required"`
 	//Timestamp     time.Time      `json:"time"		gencoded:"required"` // @TODO(rgeraldes) confirm if it's necessary
 
 	// signature values
@@ -89,8 +89,8 @@ func (p *Proposal) BlockMetaData() *core.Metadata { return p.data.BlockMetaData 
 func (p *Proposal) Round() int                    { return p.data.Round }
 
 //func (p *Proposal) Timestamp() time.Time          { return p.data.Timestamp }
-func (p *Proposal) POLRound() int         { return p.data.POLRound }
-func (p *Proposal) POLBlock() common.Hash { return p.data.POLBlock }
+func (p *Proposal) LockedRound() int         { return p.data.POLRound }
+func (p *Proposal) LockedBlock() common.Hash { return p.data.POLBlock }
 func (p *Proposal) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
 	return p.data.V, p.data.R, p.data.S
 }

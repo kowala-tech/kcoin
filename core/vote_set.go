@@ -36,5 +36,6 @@ func NewVoteSet(blockNumber *big.Int, round int, voteType types.VoteType, valida
 
 
 func (set *VoteSet) Add(vote *Vote) (bool, error) {
-	
+
 }
+

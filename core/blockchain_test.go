@@ -1,19 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
@@ -39,7 +23,6 @@ func newTestBlockChain(fake bool) *BlockChain {
 	db, _ := ethdb.NewMemDatabase()
 	gspec := &Genesis{
 		Config:     params.TestChainConfig,
-		Difficulty: big.NewInt(1),
 	}
 	gspec.MustCommit(db)
 	engine := ethash.NewFullFaker()
@@ -112,7 +95,7 @@ func testFork(t *testing.T, blockchain *BlockChain, i, n int, full bool, compara
 func printChain(bc *BlockChain) {
 	for i := bc.CurrentBlock().Number().Uint64(); i > 0; i-- {
 		b := bc.GetBlockByNumber(uint64(i))
-		fmt.Printf("\t%x %v\n", b.Hash(), b.Difficulty())
+		fmt.Printf("\t%x\n", b.Hash())
 	}
 }
 
@@ -146,7 +129,8 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 			return err
 		}
 		blockchain.mu.Lock()
-		WriteTd(blockchain.chainDb, block.Hash(), block.NumberU64(), new(big.Int).Add(block.Difficulty(), blockchain.GetTdByHash(block.ParentHash())))
+		// @TODO (rgeraldes) - review
+		// WriteTd(blockchain.chainDb, block.Hash(), block.NumberU64(), new(big.Int).Add(block.Difficulty(), blockchain.GetTdByHash(block.ParentHash())))
 		WriteBlock(blockchain.chainDb, block)
 		statedb.CommitTo(blockchain.chainDb, false)
 		blockchain.mu.Unlock()
@@ -164,7 +148,9 @@ func testHeaderChainImport(chain []*types.Header, blockchain *BlockChain) error 
 		}
 		// Manually insert the header into the database, but don't reorganise (allows subsequent testing)
 		blockchain.mu.Lock()
-		WriteTd(blockchain.chainDb, header.Hash(), header.Number.Uint64(), new(big.Int).Add(header.Difficulty, blockchain.GetTdByHash(header.ParentHash)))
+		
+		// @TODO (rgeraldes) - review
+		//WriteTd(blockchain.chainDb, header.Hash(), header.Number.Uint64(), new(big.Int).Add(header.Difficulty, blockchain.GetTdByHash(header.ParentHash)))
 		WriteHeader(blockchain.chainDb, header)
 		blockchain.mu.Unlock()
 	}
@@ -349,7 +335,6 @@ func makeBlockChainWithDiff(genesis *types.Block, d []int, seed byte) []*types.B
 			Coinbase:    common.Address{seed},
 			Number:      big.NewInt(int64(i + 1)),
 			Difficulty:  big.NewInt(int64(difficulty)),
-			UncleHash:   types.EmptyUncleHash,
 			TxHash:      types.EmptyRootHash,
 			ReceiptHash: types.EmptyRootHash,
 			Time:        big.NewInt(int64(i) + 1),
@@ -580,10 +565,6 @@ func TestFastVsFullChains(t *testing.T) {
 				block.AddTx(tx)
 			}
 		}
-		// If the block number is a multiple of 5, add a few bonus uncles to the block
-		if i%5 == 5 {
-			block.AddUncle(&types.Header{ParentHash: block.PrevBlock(i - 1).Hash(), Number: big.NewInt(int64(i - 1))})
-		}
 	})
 	// Import the chain as an archive node for the comparison baseline
 	archiveDb, _ := ethdb.NewMemDatabase()
@@ -623,9 +604,7 @@ func TestFastVsFullChains(t *testing.T) {
 			t.Errorf("block #%d [%x]: block mismatch: have %v, want %v", num, hash, fblock, ablock)
 		} else if types.DeriveSha(fblock.Transactions()) != types.DeriveSha(ablock.Transactions()) {
 			t.Errorf("block #%d [%x]: transactions mismatch: have %v, want %v", num, hash, fblock.Transactions(), ablock.Transactions())
-		} else if types.CalcUncleHash(fblock.Uncles()) != types.CalcUncleHash(ablock.Uncles()) {
-			t.Errorf("block #%d [%x]: uncles mismatch: have %v, want %v", num, hash, fblock.Uncles(), ablock.Uncles())
-		}
+		
 		if freceipts, areceipts := GetBlockReceipts(fastDb, hash, GetBlockNumber(fastDb, hash)), GetBlockReceipts(archiveDb, hash, GetBlockNumber(archiveDb, hash)); types.DeriveSha(freceipts) != types.DeriveSha(areceipts) {
 			t.Errorf("block #%d [%x]: receipts mismatch: have %v, want %v", num, hash, freceipts, areceipts)
 		}

@@ -1,25 +1,10 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -47,7 +32,6 @@ type BlockGen struct {
 	gasPool  *GasPool
 	txs      []*types.Transaction
 	receipts []*types.Receipt
-	uncles   []*types.Header
 
 	config *params.ChainConfig
 }
@@ -114,11 +98,6 @@ func (b *BlockGen) TxNonce(addr common.Address) uint64 {
 	return b.statedb.GetNonce(addr)
 }
 
-// AddUncle adds an uncle header to the generated block.
-func (b *BlockGen) AddUncle(h *types.Header) {
-	b.uncles = append(b.uncles, h)
-}
-
 // PrevBlock returns a previously generated block by number. It panics if
 // num is greater or equal to the number of the block being generated.
 // For index -1, PrevBlock returns the parent block given to GenerateChain.
@@ -132,17 +111,13 @@ func (b *BlockGen) PrevBlock(index int) *types.Block {
 	return b.chain[index]
 }
 
-// OffsetTime modifies the time instance of a block, implicitly changing its
-// associated difficulty. It's useful to test scenarios where forking is not
-// tied to chain length directly.
+// OffsetTime modifies the time instance of a block. It's useful
+// to test scenarios where forking is not tied to chain length directly.
 func (b *BlockGen) OffsetTime(seconds int64) {
 	b.header.Time.Add(b.header.Time, new(big.Int).SetInt64(seconds))
 	if b.header.Time.Cmp(b.parent.Header().Time) <= 0 {
 		panic("block time out of range")
 	}
-
-	// @TODO(rgeraldes) - analyze
-	//b.header.Difficulty = ethash.CalcDifficulty(b.config, b.header.Time.Uint64(), b.parent.Header())
 }
 
 // GenerateChain creates a chain of n blocks. The first block's
@@ -150,7 +125,7 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 // intermediate states and should contain the parent's state trie.
 //
 // The generator function is called with a new block generator for
-// every block. Any transactions and uncles added to the generator
+// every block. Any transactions added to the generator
 // become part of the block. If gen is nil, the blocks will be empty
 // and their coinbase will be the zero address.
 //
@@ -183,13 +158,13 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db kusddb.Da
 		}
 
 		// TODO(rgeraldes) analyze
-		//ethash.AccumulateRewards(statedb, h, b.uncles)
-		root, err := statedb.CommitTo(db /*config.IsEIP158(h.Number)*/, false)
+		ethash.AccumulateRewards(statedb, h)
+		root, err := statedb.CommitTo(db, true)
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))
 		}
 		h.Root = root
-		return types.NewBlock(h, b.txs, b.uncles, b.receipts), b.receipts
+		return types.NewBlock(h, b.txs, b.receipts), b.receipts
 	}
 	for i := 0; i < n; i++ {
 		statedb, err := state.New(parent.Root(), state.NewDatabase(db))
@@ -214,7 +189,7 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 	}
 
 	return &types.Header{
-		Root:       state.IntermediateRoot( /*config.IsEIP158(parent.Number())*/ false),
+		Root:       state.IntermediateRoot(true)),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
 		GasLimit:   CalcGasLimit(parent),

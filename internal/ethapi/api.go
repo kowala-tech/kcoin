@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package ethapi
 
 import (
@@ -336,14 +320,8 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
 
-	var chainID *big.Int
+	chainID := config.ChainId
 
-	// @TODO(rgeraldes)
-	/*
-		if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-			chainID = config.ChainId
-		}
-	*/
 	signed, err := wallet.SignTxWithPassphrase(account, passwd, tx, chainID)
 	if err != nil {
 		return common.Hash{}, err
@@ -477,56 +455,6 @@ func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash comm
 		return s.rpcOutputBlock(block, true, fullTx)
 	}
 	return nil, err
-}
-
-// GetUncleByBlockNumberAndIndex returns the uncle block for the given block hash and index. When fullTx is true
-// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
-func (s *PublicBlockChainAPI) GetUncleByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (map[string]interface{}, error) {
-	block, err := s.b.BlockByNumber(ctx, blockNr)
-	if block != nil {
-		uncles := block.Uncles()
-		if index >= hexutil.Uint(len(uncles)) {
-			log.Debug("Requested uncle not found", "number", blockNr, "hash", block.Hash(), "index", index)
-			return nil, nil
-		}
-		block = types.NewBlockWithHeader(uncles[index])
-		return s.rpcOutputBlock(block, false, false)
-	}
-	return nil, err
-}
-
-// GetUncleByBlockHashAndIndex returns the uncle block for the given block hash and index. When fullTx is true
-// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
-func (s *PublicBlockChainAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (map[string]interface{}, error) {
-	block, err := s.b.GetBlock(ctx, blockHash)
-	if block != nil {
-		uncles := block.Uncles()
-		if index >= hexutil.Uint(len(uncles)) {
-			log.Debug("Requested uncle not found", "number", block.Number(), "hash", blockHash, "index", index)
-			return nil, nil
-		}
-		block = types.NewBlockWithHeader(uncles[index])
-		return s.rpcOutputBlock(block, false, false)
-	}
-	return nil, err
-}
-
-// GetUncleCountByBlockNumber returns number of uncles in the block for the given block number
-func (s *PublicBlockChainAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
-		n := hexutil.Uint(len(block.Uncles()))
-		return &n
-	}
-	return nil
-}
-
-// GetUncleCountByBlockHash returns number of uncles in the block for the given block hash
-func (s *PublicBlockChainAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	if block, _ := s.b.GetBlock(ctx, blockHash); block != nil {
-		n := hexutil.Uint(len(block.Uncles()))
-		return &n
-	}
-	return nil
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
@@ -781,13 +709,6 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		fields["transactions"] = transactions
 	}
 
-	uncles := b.Uncles()
-	uncleHashes := make([]common.Hash, len(uncles))
-	for i, uncle := range uncles {
-		uncleHashes[i] = uncle.Hash()
-	}
-	fields["uncles"] = uncleHashes
-
 	return fields, nil
 }
 
@@ -812,10 +733,8 @@ type RPCTransaction struct {
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
-	var signer types.Signer = types.FrontierSigner{}
-	if tx.Protected() {
-		signer = types.NewEIP155Signer(tx.ChainId())
-	}
+	signer := types.NewEIP155Signer(tx.ChainId())
+
 	from, _ := types.Sender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
 
@@ -982,10 +901,8 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(hash common.Hash) (map[
 	}
 	receipt, _, _, _ := core.GetReceipt(s.b.ChainDb(), hash) // Old receipts don't have the lookup data available
 
-	var signer types.Signer = types.FrontierSigner{}
-	if tx.Protected() {
-		signer = types.NewEIP155Signer(tx.ChainId())
-	}
+	signer := types.NewEIP155Signer(tx.ChainId())
+
 	from, _ := types.Sender(signer, tx)
 
 	fields := map[string]interface{}{
@@ -1022,14 +939,8 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 		return nil, err
 	}
 	// Request the wallet to sign the transaction
-	var chainID *big.Int
+	chainID := config.ChainId
 
-	// @TODO(rgeraldes)
-	/*
-		if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-			chainID = config.ChainId
-		}
-	*/
 	return wallet.SignTx(account, tx, chainID)
 }
 
@@ -1118,13 +1029,8 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
 
-	var chainID *big.Int
-	// TODO(rgeraldes)
-	/*
-		if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-			chainID = config.ChainId
-		}
-	*/
+	chainID := config.ChainId
+
 	signed, err := wallet.SignTx(account, tx, chainID)
 	if err != nil {
 		return common.Hash{}, err

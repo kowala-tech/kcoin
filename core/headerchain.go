@@ -25,9 +25,9 @@ import (
 	mrand "math/rand"
 	"time"
 
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
@@ -55,7 +55,6 @@ type HeaderChain struct {
 	currentHeaderHash common.Hash   // Hash of the current head of the header chain (prevent recomputing all the time)
 
 	headerCache *lru.Cache // Cache for the most recent block headers
-	tdCache     *lru.Cache // Cache for the most recent block total difficulties
 	numberCache *lru.Cache // Cache for the most recent block numbers
 
 	procInterrupt func() bool
@@ -243,10 +242,7 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 			log.Debug("Premature abort during headers verification")
 			return 0, errors.New("aborted")
 		}
-		// If the header is a banned one, straight out abort
-		if BadHashes[header.Hash()] {
-			return i, ErrBlacklistedHash
-		}
+
 		// Otherwise wait for headers checks and ensure they pass
 		if err := <-results; err != nil {
 			return i, err
