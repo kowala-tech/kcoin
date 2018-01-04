@@ -15,28 +15,29 @@ import (
 )
 
 var (
-	EmptyRootHash  = DeriveSha(Transactions{})
+	EmptyRootHash = DeriveSha(Transactions{})
 )
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
-// Header represents a block header in the KUSD blockchain.
+// Header represents a block header in the Kowala blockchain.
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	Coinbase    common.Address `json:"validator"        gencodec:"required"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Height      *big.Int       `json:"height"           gencodec:"required"`
-	GasLimit    *big.Int       `json:"gasLimit"         gencodec:"required"`
-	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"`
-	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
+	Number         *big.Int    `json:"number"           gencodec:"required"`
+	Time           *big.Int    `json:"timestamp"        gencodec:"required"`
+	GasLimit       *big.Int    `json:"gasLimit"         gencodec:"required"`
+	GasUsed        *big.Int    `json:"gasUsed"          gencodec:"required"`
+	ParentHash     common.Hash `json:"parentHash"       gencodec:"required"`
+	Root           common.Hash `json:"stateRoot"        gencodec:"required"`
+	TxHash         common.Hash `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash    common.Hash `json:"receiptsRoot"     gencodec:"required"`
+	LastCommitHash common.Hash `json:"lastCommit"		gencodec:"required"`
+	ValidatorsHash common.Hash `json:"validators"   	gencodec:"required"`
+	Bloom          Bloom       `json:"logsBloom"        gencodec:"required"`
 }
 
-// field type overrides for gencodec
+// headerMarshaling - field type overrides for gencodec.
 type headerMarshaling struct {
-	Height   *hexutil.Big
+	Number   *hexutil.Big
 	GasLimit *hexutil.Big
 	GasUsed  *hexutil.Big
 	Time     *hexutil.Big
@@ -56,6 +57,18 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
+//go:generate gencodec -type Commit -out gen_commit_json.go
+
+// Commit contains the evidence that a block was committed by a set of validators
+type Commit struct {
+	// @NOTE (rgeraldes) - pre-commits are in order of address
+	PreCommits Votes `json:"votes"	gencodec:"required"`
+}
+
+func (c *Commit) Hash() common.Hash {
+	return rlpHash(c)
+}
+
 // Body is a simple (mutable, non-safe) data container for storing and moving
 // a block's data contents (transactions) together.
 type Body struct {
@@ -66,6 +79,7 @@ type Body struct {
 type Block struct {
 	header       *Header
 	transactions Transactions
+	lastCommit   *Commit
 
 	// caches
 	hash atomic.Value
@@ -89,7 +103,7 @@ type extblock struct {
 //
 // The values of TxHash, ReceiptHash and Bloom in header
 // are ignored and set to values derived from the given txs and receipts.
-func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
+func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt, commit *Commit) *Block {
 	b := &Block{header: CopyHeader(header)}
 
 	// TODO: panic if len(txs) != len(receipts)
@@ -106,6 +120,11 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	} else {
 		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
 		b.header.Bloom = CreateBloom(receipts)
+	}
+
+	if commit != nil {
+		b.header.LastCommitHash = commit.Hash()
+		copy(b.lastCommit, commit)
 	}
 
 	return b
@@ -125,8 +144,8 @@ func CopyHeader(h *Header) *Header {
 	if cpy.Time = new(big.Int); h.Time != nil {
 		cpy.Time.Set(h.Time)
 	}
-	if cpy.Height = new(big.Int); h.Height != nil {
-		cpy.Height.Set(h.Height)
+	if cpy.Number = new(big.Int); h.Number != nil {
+		cpy.Number.Set(h.Number)
 	}
 	if cpy.GasLimit = new(big.Int); h.GasLimit != nil {
 		cpy.GasLimit.Set(h.GasLimit)
@@ -170,18 +189,19 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 	return nil
 }
 
-func (b *Block) Height() *big.Int   { return new(big.Int).Set(b.header.Height) }
+func (b *Block) Number() *big.Int   { return new(big.Int).Set(b.header.Number) }
 func (b *Block) GasLimit() *big.Int { return new(big.Int).Set(b.header.GasLimit) }
 func (b *Block) GasUsed() *big.Int  { return new(big.Int).Set(b.header.GasUsed) }
 func (b *Block) Time() *big.Int     { return new(big.Int).Set(b.header.Time) }
 
-func (b *Block) HeightU64() uint64        { return b.header.Height.Uint64() }
-func (b *Block) Bloom() Bloom             { return b.header.Bloom }
-func (b *Block) Coinbase() common.Address { return b.header.Coinbase }
-func (b *Block) Root() common.Hash        { return b.header.Root }
-func (b *Block) ParentHash() common.Hash  { return b.header.ParentHash }
-func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
-func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
+func (b *Block) NumberU64() uint64          { return b.header.Number.Uint64() }
+func (b *Block) Bloom() Bloom               { return b.header.Bloom }
+func (b *Block) Coinbase() common.Address   { return b.header.Coinbase }
+func (b *Block) Root() common.Hash          { return b.header.Root }
+func (b *Block) ParentHash() common.Hash    { return b.header.ParentHash }
+func (b *Block) TxHash() common.Hash        { return b.header.TxHash }
+func (b *Block) ReceiptHash() common.Hash   { return b.header.ReceiptHash }
+func (b *Block) ValidatorHash() common.Hash { return b.header.ValidatorHash }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
@@ -217,7 +237,7 @@ func (b *Block) WithSeal(header *Header) *Block {
 }
 
 // WithBody returns a new block with the given transactions.
-func (b *Block) WithBody(transactions []*Transaction, uncles []*Header) *Block {
+func (b *Block) WithBody(transactions []*Transaction) *Block {
 	block := &Block{
 		header:       CopyHeader(b.header),
 		transactions: make([]*Transaction, len(transactions)),
@@ -237,13 +257,21 @@ func (b *Block) Hash() common.Hash {
 	return v
 }
 
+func (b *Block) AsDataChunks(chunkSize int) (BlockChunks, error) {
+	raw, err := rlp.EncodeToBytes(b)
+	if err != nil {
+		return nil, err
+	}
+	return NewDataSetFromData(raw, chunkSize), nil
+}
+
 func (b *Block) String() string {
 	str := fmt.Sprintf(`Block(#%v): Size: %v {
 %v
 Transactions:
 %v
 }
-`, b.Height(), b.Size(), b.header, b.transactions)
+`, b.Number(), b.Size(), b.header, b.transactions)
 	return str
 }
 
@@ -251,17 +279,20 @@ func (h *Header) String() string {
 	return fmt.Sprintf(`Header(%x):
 [
 	ParentHash:	    %x
-	Coinbase:	    %x
 	Root:		    %x
 	TxSha		    %x
 	ReceiptSha:	    %x
+	ValidatorSha:	%x
+	LastCommitHash: %x
 	Bloom:		    %x
-	Height:		    %v
+	Number:		    %v
 	GasLimit:	    %v
 	GasUsed:	    %v
 	Time:		    %v
-]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Height, h.GasLimit, h.GasUsed, h.Time)
+]`, h.Hash(), h.ParentHash, h.Root, h.TxHash, h.ReceiptHash, h.ValidatorHash, h.LastCommitHash, h.Bloom, h.Number, h.GasLimit, h.GasUsed, h.Time)
 }
+
+type BlockChunks *DataSet
 
 type Blocks []*Block
 
