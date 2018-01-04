@@ -1,19 +1,4 @@
 // Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package abi
 
 import (
@@ -322,12 +307,12 @@ func TestPack(t *testing.T) {
 	} {
 		typ, err := NewType(test.typ)
 		if err != nil {
-			t.Fatal("unexpected parse error:", err)
+			t.Fatalf("%v failed. Unexpected parse error: %v", i, err)
 		}
 
 		output, err := typ.pack(reflect.ValueOf(test.input))
 		if err != nil {
-			t.Fatal("unexpected pack error:", err)
+			t.Fatalf("%v failed. Unexpected pack error: %v", i, err)
 		}
 
 		if !bytes.Equal(output, test.output) {
@@ -434,8 +419,5 @@ func TestPackNumber(t *testing.T) {
 		if !bytes.Equal(packed, tt.packed) {
 			t.Errorf("test %d: pack mismatch: have %x, want %x", i, packed, tt.packed)
 		}
-	}
-	if packed := packNum(reflect.ValueOf("string")); packed != nil {
-		t.Errorf("expected 'string' to pack to nil. got %x instead", packed)
 	}
 }

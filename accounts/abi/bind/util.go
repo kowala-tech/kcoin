@@ -10,8 +10,6 @@ import (
 	"github.com/kowala-tech/kUSD/log"
 )
 
-// @TODO(rgeraldes) - modify name ? waitMined
-
 // WaitMined waits for tx to be mined on the blockchain.
 // It stops waiting when the context is canceled.
 func WaitMined(ctx context.Context, b DeployBackend, tx *types.Transaction) (*types.Receipt, error) {

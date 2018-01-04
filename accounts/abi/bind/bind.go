@@ -1,10 +1,7 @@
-// Package bind generates KUSD contract Go bindings.
+// Package bind generates Kowala contract Go bindings.
 //
 // Detailed usage document and tutorial available on the go-ethereum Wiki page:
 // https://github.com/ethereum/go-ethereum/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts
-
-// @TODO (rgeraldes) - document info in our knowledge base
-
 package bind
 
 import (
@@ -291,8 +288,15 @@ var methodNormalizer = map[Lang]func(string) string{
 	LangJava: decapitalise,
 }
 
-// capitalise makes the first character of a string upper case.
+// capitalise makes the first character of a string upper case, also removing any
+// prefixing underscores from the variable names.
 func capitalise(input string) string {
+	for len(input) > 0 && input[0] == '_' {
+		input = input[1:]
+	}
+	if len(input) == 0 {
+		return ""
+	}
 	return strings.ToUpper(input[:1]) + input[1:]
 }
 
@@ -302,15 +306,24 @@ func decapitalise(input string) string {
 }
 
 // structured checks whether a method has enough information to return a proper
-// Go struct ot if flat returns are needed.
+// Go struct or if flat returns are needed.
 func structured(method abi.Method) bool {
 	if len(method.Outputs) < 2 {
 		return false
 	}
+	exists := make(map[string]bool)
 	for _, out := range method.Outputs {
+		// If the name is anonymous, we can't organize into a struct
 		if out.Name == "" {
 			return false
 		}
+		// If the field name is empty when normalized or collides (var, Var, _var, _Var),
+		// we can't organize into a struct
+		field := capitalise(out.Name)
+		if field == "" || exists[field] {
+			return false
+		}
+		exists[field] = true
 	}
 	return true
 }
