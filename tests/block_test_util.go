@@ -24,18 +24,17 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
-	"github.com/kowala-tech/kUSD/common/math"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/ethdb"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/params"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // A BlockTest checks handling of entire blocks.
@@ -53,6 +52,7 @@ type btJSON struct {
 	Pre       core.GenesisAlloc     `json:"pre"`
 	Post      core.GenesisAlloc     `json:"postState"`
 	BestBlock common.UnprefixedHash `json:"lastblockhash"`
+	Network   string                `json:"network"`
 }
 
 type btBlock struct {
@@ -91,7 +91,12 @@ type btHeaderMarshaling struct {
 	Timestamp  *math.HexOrDecimal256
 }
 
-func (t *BlockTest) Run(config *params.ChainConfig) error {
+func (t *BlockTest) Run() error {
+	config, ok := Forks[t.json.Network]
+	if !ok {
+		return UnsupportedForkError{t.json.Network}
+	}
+
 	// import pre accounts & construct test genesis block & state root
 	db, _ := ethdb.NewMemDatabase()
 	gblock, err := t.genesis(config).Commit(db)
@@ -105,7 +110,7 @@ func (t *BlockTest) Run(config *params.ChainConfig) error {
 		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", gblock.Root().Bytes()[:6], t.json.Genesis.StateRoot[:6])
 	}
 
-	chain, err := core.NewBlockChain(db, config, ethash.NewShared(), new(event.TypeMux), vm.Config{})
+	chain, err := core.NewBlockChain(db, config, ethash.NewShared(), vm.Config{})
 	if err != nil {
 		return err
 	}

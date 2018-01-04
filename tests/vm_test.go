@@ -19,13 +19,16 @@ package tests
 import (
 	"testing"
 
-	"github.com/kowala-tech/kUSD/core/vm"
+	"github.com/ethereum/go-ethereum/core/vm"
 )
 
 func TestVM(t *testing.T) {
 	t.Parallel()
 	vmt := new(testMatcher)
 	vmt.fails("^vmSystemOperationsTest.json/createNameRegistrator$", "fails without parallel execution")
+
+	vmt.skipLoad(`^vmInputLimits(Light)?.json`) // log format broken
+
 	vmt.skipShortMode("^vmPerformanceTest.json")
 	vmt.skipShortMode("^vmInputLimits(Light)?.json")
 
