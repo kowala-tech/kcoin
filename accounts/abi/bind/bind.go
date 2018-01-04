@@ -1,20 +1,4 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-// Package bind generates Ethereum contract Go bindings.
+// Package bind generates Kowala contract Go bindings.
 //
 // Detailed usage document and tutorial available on the go-ethereum Wiki page:
 // https://github.com/ethereum/go-ethereum/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts
@@ -122,14 +106,14 @@ func Bind(types []string, abis []string, bytecodes []string, pkg string, lang La
 	}
 	// For Go bindings pass the code through goimports to clean it up and double check
 	if lang == LangGo {
-		code, err := imports.Process("", buffer.Bytes(), nil)
+		code, err := imports.Process(".", buffer.Bytes(), nil)
 		if err != nil {
 			return "", fmt.Errorf("%v\n%s", err, buffer)
 		}
 		return string(code), nil
 	}
 	// For all others just return as is for now
-	return string(buffer.Bytes()), nil
+	return buffer.String(), nil
 }
 
 // bindType is a set of type binders that convert Solidity types to some supported
@@ -304,8 +288,15 @@ var methodNormalizer = map[Lang]func(string) string{
 	LangJava: decapitalise,
 }
 
-// capitalise makes the first character of a string upper case.
+// capitalise makes the first character of a string upper case, also removing any
+// prefixing underscores from the variable names.
 func capitalise(input string) string {
+	for len(input) > 0 && input[0] == '_' {
+		input = input[1:]
+	}
+	if len(input) == 0 {
+		return ""
+	}
 	return strings.ToUpper(input[:1]) + input[1:]
 }
 
@@ -315,15 +306,24 @@ func decapitalise(input string) string {
 }
 
 // structured checks whether a method has enough information to return a proper
-// Go struct ot if flat returns are needed.
+// Go struct or if flat returns are needed.
 func structured(method abi.Method) bool {
 	if len(method.Outputs) < 2 {
 		return false
 	}
+	exists := make(map[string]bool)
 	for _, out := range method.Outputs {
+		// If the name is anonymous, we can't organize into a struct
 		if out.Name == "" {
 			return false
 		}
+		// If the field name is empty when normalized or collides (var, Var, _var, _Var),
+		// we can't organize into a struct
+		field := capitalise(out.Name)
+		if field == "" || exists[field] {
+			return false
+		}
+		exists[field] = true
 	}
 	return true
 }

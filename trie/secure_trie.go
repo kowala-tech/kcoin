@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package trie
 
 import (
@@ -199,10 +183,10 @@ func (t *SecureTrie) secKey(key []byte) []byte {
 // invalid on the next call to hashKey or secKey.
 func (t *SecureTrie) hashKey(key []byte) []byte {
 	h := newHasher(0, 0)
-	h.sha.Reset()
-	h.sha.Write(key)
-	buf := h.sha.Sum(t.hashKeyBuf[:0])
-	returnHasherToPool(h)
+	calculator := h.newCalculator()
+	calculator.sha.Write(key)
+	buf := calculator.sha.Sum(t.hashKeyBuf[:0])
+	h.returnCalculator(calculator)
 	return buf
 }
 

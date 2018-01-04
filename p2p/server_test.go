@@ -1,24 +1,9 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package p2p
 
 import (
 	"crypto/ecdsa"
 	"errors"
+	"log"
 	"math/rand"
 	"net"
 	"reflect"
@@ -206,6 +191,7 @@ func TestServerTaskScheduling(t *testing.T) {
 		quit:    make(chan struct{}),
 		ntab:    fakeTable{},
 		running: true,
+		log:     log.New(),
 	}
 	srv.loopWG.Add(1)
 	go func() {
@@ -246,7 +232,12 @@ func TestServerManyTasks(t *testing.T) {
 	}
 
 	var (
-		srv        = &Server{quit: make(chan struct{}), ntab: fakeTable{}, running: true}
+		srv = &Server{
+			quit:    make(chan struct{}),
+			ntab:    fakeTable{},
+			running: true,
+			log:     log.New(),
+		}
 		done       = make(chan *testTask)
 		start, end = 0, 0
 	)
@@ -428,6 +419,7 @@ func TestServerSetupConn(t *testing.T) {
 				Protocols:  []Protocol{discard},
 			},
 			newTransport: func(fd net.Conn) transport { return test.tt },
+			log:          log.New(),
 		}
 		if !test.dontstart {
 			if err := srv.Start(); err != nil {

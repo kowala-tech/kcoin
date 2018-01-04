@@ -24,6 +24,18 @@ import (
 // TxPreEvent is posted when a transaction enters the transaction pool.
 type TxPreEvent struct{ Tx *types.Transaction }
 
+// VoteEvent is posted when a vote enters the vote set.
+type VoteEvent struct{ Vote *types.Vote }
+
+// ConsensusMsg represents a consensus message
+type ConsensusMsg interface{}
+
+// ConsensusEvent is posted when the message handler receives a consensus message.
+type ConsensusEvent struct{ Msg ConsensusMsg }
+
+// TimerExpiredEvent is posted when the consensus timeout expires
+type TimerExpiredEvent struct{}
+
 // PendingLogsEvent is posted pre mining and notifies of pending logs.
 type PendingLogsEvent struct {
 	Logs []*types.Log
@@ -35,6 +47,8 @@ type PendingStateEvent struct{}
 // NewMinedBlockEvent is posted when a block has been imported.
 type NewMinedBlockEvent struct{ Block *types.Block }
 
+type NewProposalEvent struct{}
+
 // RemovedTransactionEvent is posted when a reorg happens
 type RemovedTransactionEvent struct{ Txs types.Transactions }
 
@@ -45,10 +59,6 @@ type ChainEvent struct {
 	Block *types.Block
 	Hash  common.Hash
 	Logs  []*types.Log
-}
-
-type ChainSideEvent struct {
-	Block *types.Block
 }
 
 type ChainHeadEvent struct{ Block *types.Block }

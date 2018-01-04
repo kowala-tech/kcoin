@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // +build darwin,!ios freebsd linux,!arm64 netbsd solaris
 
 package keystore
@@ -70,7 +54,6 @@ func (w *watcher) loop() {
 		return
 	}
 	defer notify.Stop(w.ev)
-
 	logger.Trace("Started watching keystore folder")
 	defer logger.Trace("Stopped watching keystore folder")
 
@@ -82,32 +65,28 @@ func (w *watcher) loop() {
 	// When an event occurs, the reload call is delayed a bit so that
 	// multiple events arriving quickly only cause a single reload.
 	var (
-		debounce          = time.NewTimer(0)
-		debounceDuration  = 500 * time.Millisecond
-		inCycle, hadEvent bool
+		debounceDuration = 500 * time.Millisecond
+		rescanTriggered  = false
+		debounce         = time.NewTimer(0)
 	)
+	// Ignore initial trigger
+	if !debounce.Stop() {
+		<-debounce.C
+	}
 	defer debounce.Stop()
 	for {
 		select {
 		case <-w.quit:
 			return
 		case <-w.ev:
-			if !inCycle {
+			// Trigger the scan (with delay), if not already triggered
+			if !rescanTriggered {
 				debounce.Reset(debounceDuration)
-				inCycle = true
-			} else {
-				hadEvent = true
+				rescanTriggered = true
 			}
 		case <-debounce.C:
-			w.ac.mu.Lock()
-			w.ac.reload()
-			w.ac.mu.Unlock()
-			if hadEvent {
-				debounce.Reset(debounceDuration)
-				inCycle, hadEvent = true, false
-			} else {
-				inCycle, hadEvent = false, false
-			}
+			w.ac.scanAccounts()
+			rescanTriggered = false
 		}
 	}
 }

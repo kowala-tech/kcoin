@@ -2,9 +2,9 @@ Source: {{.Name}}
 Section: science
 Priority: extra
 Maintainer: {{.Author}}
-Build-Depends: debhelper (>= 8.0.0), golang-1.8
+Build-Depends: debhelper (>= 8.0.0), golang-1.9
 Standards-Version: 3.9.5
-Homepage: https://ethereum.org
+Homepage: https://kowala.tech/
 Vcs-Git: git://github.com/kowala-tech/kUSD.git
 Vcs-Browser: https://github.com/kowala-tech/kUSD
 

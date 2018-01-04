@@ -1,19 +1,3 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package asm
 
 import (
@@ -145,7 +129,7 @@ func (l *lexer) ignore() {
 
 // Accepts checks whether the given input matches the next rune
 func (l *lexer) accept(valid string) bool {
-	if strings.IndexRune(valid, l.next()) >= 0 {
+	if strings.ContainsRune(valid, l.next()) {
 		return true
 	}
 
@@ -157,7 +141,7 @@ func (l *lexer) accept(valid string) bool {
 // acceptRun will continue to advance the seeker until valid
 // can no longer be met.
 func (l *lexer) acceptRun(valid string) {
-	for strings.IndexRune(valid, l.next()) >= 0 {
+	for strings.ContainsRune(valid, l.next()) {
 	}
 	l.backup()
 }
@@ -166,7 +150,7 @@ func (l *lexer) acceptRun(valid string) {
 // to advance the seeker until the rune has been found.
 func (l *lexer) acceptRunUntil(until rune) bool {
 	// Continues running until a rune is found
-	for i := l.next(); strings.IndexRune(string(until), i) == -1; i = l.next() {
+	for i := l.next(); !strings.ContainsRune(string(until), i); i = l.next() {
 		if i == 0 {
 			return false
 		}
@@ -254,7 +238,7 @@ func lexInsideString(l *lexer) stateFn {
 
 func lexNumber(l *lexer) stateFn {
 	acceptance := Numbers
-	if l.accept("0") && l.accept("xX") {
+	if l.accept("0") || l.accept("xX") {
 		acceptance = HexadecimalNumbers
 	}
 	l.acceptRun(acceptance)

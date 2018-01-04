@@ -2,7 +2,7 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: kusd android ios kusd-cross swarm evm all test clean
+.PHONY: kusd kusd-cross evm all test clean
 .PHONY: kusd-linux kusd-linux-386 kusd-linux-amd64 kusd-linux-mips64 kusd-linux-mips64le
 .PHONY: kusd-linux-arm kusd-linux-arm-5 kusd-linux-arm-6 kusd-linux-arm-7 kusd-linux-arm64
 .PHONY: kusd-darwin kusd-darwin-386 kusd-darwin-amd64
@@ -16,11 +16,6 @@ kusd:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kusd\" to launch kusd."
 
-swarm:
-	build/env.sh go run build/ci.go install ./cmd/swarm
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/swarm\" to launch swarm."
-
 evm:
 	build/env.sh go run build/ci.go install ./cmd/evm
 	@echo "Done building."
@@ -28,16 +23,6 @@ evm:
 
 all:
 	build/env.sh go run build/ci.go install
-
-android:
-	build/env.sh go run build/ci.go aar --local
-	@echo "Done building."
-	@echo "Import \"$(GOBIN)/kusd.aar\" to use the library."
-
-ios:
-	build/env.sh go run build/ci.go xcode --local
-	@echo "Done building."
-	@echo "Import \"$(GOBIN)/Kusd.framework\" to use the library."
 
 test: all
 	build/env.sh go run build/ci.go test

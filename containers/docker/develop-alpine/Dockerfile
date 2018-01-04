@@ -1,4 +1,4 @@
-FROM alpine:3.5
+FROM alpine:3.7
 
 RUN \
   apk add --update go git make gcc musl-dev linux-headers ca-certificates && \
@@ -8,7 +8,7 @@ RUN \
   apk del go git make gcc musl-dev linux-headers && \
   rm -rf /kUSD && rm -rf /var/cache/apk/*
 
-EXPOSE 11223
-EXPOSE 22334
+EXPOSE 8545
+EXPOSE 30303
 
 ENTRYPOINT ["/kusd"]

@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package p2p
 
 import (
@@ -46,6 +30,24 @@ const (
 	initialResolveDelay = 60 * time.Second
 	maxResolveDelay     = time.Hour
 )
+
+// NodeDialer is used to connect to nodes in the network, typically by using
+// an underlying net.Dialer but also using net.Pipe in tests
+type NodeDialer interface {
+	Dial(*discover.Node) (net.Conn, error)
+}
+
+// TCPDialer implements the NodeDialer interface by using a net.Dialer to
+// create TCP connections to nodes in the network
+type TCPDialer struct {
+	*net.Dialer
+}
+
+// Dial creates a TCP connection to the node
+func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
+	addr := &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}
+	return t.Dialer.Dial("tcp", addr.String())
+}
 
 // dialstate schedules dials and discovery lookups.
 // it get's a chance to compute new tasks on every iteration
@@ -139,7 +141,7 @@ func (s *dialstate) removeStatic(n *discover.Node) {
 }
 
 func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now time.Time) []task {
-	if s.start == (time.Time{}) {
+	if s.start.IsZero() {
 		s.start = now
 	}
 
@@ -273,11 +275,14 @@ func (t *dialTask) Do(srv *Server) {
 			return
 		}
 	}
-	success := t.dial(srv, t.dest)
-	// Try resolving the ID of static nodes if dialing failed.
-	if !success && t.flags&staticDialedConn != 0 {
-		if t.resolve(srv) {
-			t.dial(srv, t.dest)
+	err := t.dial(srv, t.dest)
+	if err != nil {
+		log.Trace("Dial error", "task", t, "err", err)
+		// Try resolving the ID of static nodes if dialing failed.
+		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
+			if t.resolve(srv) {
+				t.dial(srv, t.dest)
+			}
 		}
 	}
 }
@@ -316,17 +321,18 @@ func (t *dialTask) resolve(srv *Server) bool {
 	return true
 }
 
+type dialError struct {
+	error
+}
+
 // dial performs the actual connection attempt.
-func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
-	addr := &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}
-	fd, err := srv.Dialer.Dial("tcp", addr.String())
+func (t *dialTask) dial(srv *Server, dest *discover.Node) error {
+	fd, err := srv.Dialer.Dial(dest)
 	if err != nil {
-		log.Trace("Dial error", "task", t, "err", err)
-		return false
+		return &dialError{err}
 	}
 	mfd := newMeteredConn(fd, false)
-	srv.setupConn(mfd, t.flags, dest)
-	return true
+	return srv.SetupConn(mfd, t.flags, dest)
 }
 
 func (t *dialTask) String() string {

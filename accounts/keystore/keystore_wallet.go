@@ -1,25 +1,9 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package keystore
 
 import (
 	"math/big"
 
-	ethereum "github.com/kowala-tech/kUSD"
+	kowala "github.com/kowala-tech/kUSD"
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/core/types"
 )
@@ -36,16 +20,16 @@ func (w *keystoreWallet) URL() accounts.URL {
 	return w.account.URL
 }
 
-// Status implements accounts.Wallet, always returning "open", since there is no
-// concept of open/close for plain keystore accounts.
-func (w *keystoreWallet) Status() string {
+// Status implements accounts.Wallet, returning whether the account held by the
+// keystore wallet is unlocked or not.
+func (w *keystoreWallet) Status() (string, error) {
 	w.keystore.mu.RLock()
 	defer w.keystore.mu.RUnlock()
 
 	if _, ok := w.keystore.unlocked[w.account.Address]; ok {
-		return "Unlocked"
+		return "Unlocked", nil
 	}
-	return "Locked"
+	return "Locked", nil
 }
 
 // Open implements accounts.Wallet, but is a noop for plain wallets since there
@@ -76,7 +60,7 @@ func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (account
 
 // SelfDerive implements accounts.Wallet, but is a noop for plain wallets since
 // there is no notion of hierarchical account derivation for plain keystore accounts.
-func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain ethereum.ChainStateReader) {}
+func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain kowala.ChainStateReader) {}
 
 // SignHash implements accounts.Wallet, attempting to sign the given hash with
 // the given account. If the wallet does not wrap this particular account, an

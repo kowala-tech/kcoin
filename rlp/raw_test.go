@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package rlp
 
 import (
@@ -96,6 +80,7 @@ func TestSplit(t *testing.T) {
 		{input: "F90055", err: ErrCanonSize, rest: "F90055"},
 		{input: "FA0002FFFF", err: ErrCanonSize, rest: "FA0002FFFF"},
 
+		{input: "81", err: ErrValueTooLarge, rest: "81"},
 		{input: "8501010101", err: ErrValueTooLarge, rest: "8501010101"},
 		{input: "C60607080902", err: ErrValueTooLarge, rest: "C60607080902"},
 

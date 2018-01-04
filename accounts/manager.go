@@ -1,19 +1,3 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package accounts
 
 import (
@@ -41,17 +25,17 @@ type Manager struct {
 // NewManager creates a generic account manager to sign transaction via various
 // supported backends.
 func NewManager(backends ...Backend) *Manager {
+	// Retrieve the initial list of wallets from the backends and sort by URL
+	var wallets []Wallet
+	for _, backend := range backends {
+		wallets = merge(wallets, backend.Wallets()...)
+	}
 	// Subscribe to wallet notifications from all backends
 	updates := make(chan WalletEvent, 4*len(backends))
 
 	subs := make([]event.Subscription, len(backends))
 	for i, backend := range backends {
 		subs[i] = backend.Subscribe(updates)
-	}
-	// Retrieve the initial list of wallets from the backends and sort by URL
-	var wallets []Wallet
-	for _, backend := range backends {
-		wallets = merge(wallets, backend.Wallets()...)
 	}
 	// Assemble the account manager and return
 	am := &Manager{
@@ -96,9 +80,10 @@ func (am *Manager) update() {
 		case event := <-am.updates:
 			// Wallet event arrived, update local cache
 			am.lock.Lock()
-			if event.Arrive {
+			switch event.Kind {
+			case WalletArrived:
 				am.wallets = merge(am.wallets, event.Wallet)
-			} else {
+			case WalletDropped:
 				am.wallets = drop(am.wallets, event.Wallet)
 			}
 			am.lock.Unlock()

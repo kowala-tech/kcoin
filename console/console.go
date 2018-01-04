@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package console
 
 import (
@@ -30,7 +14,6 @@ import (
 	"github.com/kowala-tech/kUSD/internal/jsre"
 	"github.com/kowala-tech/kUSD/internal/web3ext"
 	"github.com/kowala-tech/kUSD/rpc"
-	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"
 )
@@ -47,12 +30,12 @@ const HistoryFile = "history"
 // DefaultPrompt is the default prompt line prefix to use for user input querying.
 const DefaultPrompt = "> "
 
-// Config is te collection of configurations to fine tune the behavior of the
+// Config is the collection of configurations to fine tune the behavior of the
 // JavaScript console.
 type Config struct {
 	DataDir  string       // Data directory to store the console history at
 	DocRoot  string       // Filesystem path from where to load JavaScript files from
-	Client   *rpc.Client  // RPC client to execute Ethereum requests through
+	Client   *rpc.Client  // RPC client to execute KUSD requests through
 	Prompt   string       // Input prompt prefix string (defaults to DefaultPrompt)
 	Prompter UserPrompter // Input prompter to allow interactive user feedback (defaults to TerminalPrompter)
 	Printer  io.Writer    // Output writer to serialize any display strings to (defaults to os.Stdout)
@@ -63,7 +46,7 @@ type Config struct {
 // JavaScript console attached to a running node via an external or in-process RPC
 // client.
 type Console struct {
-	client   *rpc.Client  // RPC client to execute Ethereum requests through
+	client   *rpc.Client  // RPC client to execute KUSD requests through
 	jsre     *jsre.JSRE   // JavaScript runtime environment running the interpreter
 	prompt   string       // Input prompt prefix string
 	prompter UserPrompter // Input prompter to allow interactive user feedback
@@ -91,6 +74,9 @@ func New(config Config) (*Console, error) {
 		prompter: config.Prompter,
 		printer:  config.Printer,
 		histPath: filepath.Join(config.DataDir, HistoryFile),
+	}
+	if err := os.MkdirAll(config.DataDir, 0700); err != nil {
+		return nil, err
 	}
 	if err := console.init(config.Preload); err != nil {
 		return nil, err
@@ -160,10 +146,15 @@ func (c *Console) init(preload []string) error {
 		if err != nil {
 			return err
 		}
-		// Override the unlockAccount, newAccount and sign methods since these require user interaction.
-		// Assign these method in the Console the original web3 callbacks. These will be called by the jeth.*
-		// methods after they got the password from the user and send the original web3 request to the backend.
+		// Override the openWallet, unlockAccount, newAccount and sign methods since
+		// these require user interaction. Assign these method in the Console the
+		// original web3 callbacks. These will be called by the jeth.* methods after
+		// they got the password from the user and send the original web3 request to
+		// the backend.
 		if obj := personal.Object(); obj != nil { // make sure the personal api is enabled over the interface
+			if _, err = c.jsre.Run(`jeth.openWallet = personal.openWallet;`); err != nil {
+				return fmt.Errorf("personal.openWallet: %v", err)
+			}
 			if _, err = c.jsre.Run(`jeth.unlockAccount = personal.unlockAccount;`); err != nil {
 				return fmt.Errorf("personal.unlockAccount: %v", err)
 			}
@@ -173,6 +164,7 @@ func (c *Console) init(preload []string) error {
 			if _, err = c.jsre.Run(`jeth.sign = personal.sign;`); err != nil {
 				return fmt.Errorf("personal.sign: %v", err)
 			}
+			obj.Set("openWallet", bridge.OpenWallet)
 			obj.Set("unlockAccount", bridge.UnlockAccount)
 			obj.Set("newAccount", bridge.NewAccount)
 			obj.Set("sign", bridge.Sign)
@@ -186,6 +178,7 @@ func (c *Console) init(preload []string) error {
 	if obj := admin.Object(); obj != nil { // make sure the admin api is enabled over the interface
 		obj.Set("sleepBlocks", bridge.SleepBlocks)
 		obj.Set("sleep", bridge.Sleep)
+		obj.Set("clearHistory", c.clearHistory)
 	}
 	// Preload any JavaScript files before starting the console
 	for _, path := range preload {
@@ -210,6 +203,16 @@ func (c *Console) init(preload []string) error {
 	return nil
 }
 
+func (c *Console) clearHistory() {
+	c.history = nil
+	c.prompter.ClearHistory()
+	if err := os.Remove(c.histPath); err != nil {
+		fmt.Fprintln(c.printer, "can't delete history file:", err)
+	} else {
+		fmt.Fprintln(c.printer, "history file deleted")
+	}
+}
+
 // consoleOutput is an override for the console.log and console.error methods to
 // stream the output into the configured output stream instead of stdout.
 func (c *Console) consoleOutput(call otto.FunctionCall) otto.Value {
@@ -232,7 +235,7 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 	// E.g. in case of nested lines eth.getBalance(eth.coinb<tab><tab>
 	start := pos - 1
 	for ; start > 0; start-- {
-		// Skip all methods and namespaces (i.e. including te dot)
+		// Skip all methods and namespaces (i.e. including the dot)
 		if line[start] == '.' || (line[start] >= 'a' && line[start] <= 'z') || (line[start] >= 'A' && line[start] <= 'Z') {
 			continue
 		}
@@ -406,7 +409,7 @@ func (c *Console) Execute(path string) error {
 	return c.jsre.Exec(path)
 }
 
-// Stop cleans up the console and terminates the runtime envorinment.
+// Stop cleans up the console and terminates the runtime environment.
 func (c *Console) Stop(graceful bool) error {
 	if err := ioutil.WriteFile(c.histPath, []byte(strings.Join(c.history, "\n")), 0600); err != nil {
 		return err

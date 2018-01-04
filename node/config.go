@@ -1,19 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package node
 
 import (
@@ -35,7 +19,7 @@ import (
 	"github.com/kowala-tech/kUSD/p2p/discover"
 )
 
-var (
+const (
 	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
 	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
 	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
@@ -50,24 +34,24 @@ type Config struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
 	// used in the devp2p node identifier. The instance name of kusd is "kusd". If no
 	// value is specified, the basename of the current executable is used.
-	Name string `toml:"-"`
+	Name string `mapstructure:"node_name"`
 
 	// UserIdent, if set, is used as an additional component in the devp2p node identifier.
-	UserIdent string `toml:",omitempty"`
+	UserIdent string `mapstructure:"node_userident"`
 
 	// Version should be set to the version number of the program. It is used
 	// in the devp2p node identifier.
-	Version string `toml:"-"`
+	Version string `mapstructure:"node_version"`
 
 	// DataDir is the file system folder the node should use for any data storage
 	// requirements. The configured data directory will not be directly shared with
 	// registered services, instead those can use utility methods to create/access
 	// databases or flat files. This enables ephemeral nodes which can fully reside
 	// in memory.
-	DataDir string
+	DataDir string `mapstructure:"node_datadir"`
 
 	// Configuration of peer-to-peer networking.
-	P2P p2p.Config
+	P2P p2p.Config `mapstructure:"node_p2p"`
 
 	// KeyStoreDir is the file system folder that contains private keys. The directory can
 	// be specified as a relative path, in which case it is resolved relative to the
@@ -76,83 +60,17 @@ type Config struct {
 	// If KeyStoreDir is empty, the default location is the "keystore" subdirectory of
 	// DataDir. If DataDir is unspecified and KeyStoreDir is empty, an ephemeral directory
 	// is created by New and destroyed when the node is stopped.
-	KeyStoreDir string `toml:",omitempty"`
+	KeyStoreDir string `mapstructure:"node_keystoredir"`
 
 	// UseLightweightKDF lowers the memory and CPU requirements of the key store
 	// scrypt KDF at the expense of security.
-	UseLightweightKDF bool `toml:",omitempty"`
+	UseLightweightKDF bool `mapstructure:"node_lightkdf"`
 
 	// NoUSB disables hardware wallet monitoring and connectivity.
-	NoUSB bool `toml:",omitempty"`
+	NoUSB bool `mapstructure:"node_nousb"`
 
-	// IPCPath is the requested location to place the IPC endpoint. If the path is
-	// a simple file name, it is placed inside the data directory (or on the root
-	// pipe path on Windows), whereas if it's a resolvable path name (absolute or
-	// relative), then that specific path is enforced. An empty path disables IPC.
-	IPCPath string `toml:",omitempty"`
-
-	// HTTPHost is the host interface on which to start the HTTP RPC server. If this
-	// field is empty, no HTTP API endpoint will be started.
-	HTTPHost string `toml:",omitempty"`
-
-	// HTTPPort is the TCP port number on which to start the HTTP RPC server. The
-	// default zero value is/ valid and will pick a port number randomly (useful
-	// for ephemeral nodes).
-	HTTPPort int `toml:",omitempty"`
-
-	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
-	// clients. Please be aware that CORS is a browser enforced security, it's fully
-	// useless for custom HTTP clients.
-	HTTPCors []string `toml:",omitempty"`
-
-	// HTTPModules is a list of API modules to expose via the HTTP RPC interface.
-	// If the module list is empty, all RPC API endpoints designated public will be
-	// exposed.
-	HTTPModules []string `toml:",omitempty"`
-
-	// WSHost is the host interface on which to start the websocket RPC server. If
-	// this field is empty, no websocket API endpoint will be started.
-	WSHost string `toml:",omitempty"`
-
-	// WSPort is the TCP port number on which to start the websocket RPC server. The
-	// default zero value is/ valid and will pick a port number randomly (useful for
-	// ephemeral nodes).
-	WSPort int `toml:",omitempty"`
-
-	// WSOrigins is the list of domain to accept websocket requests from. Please be
-	// aware that the server can only act upon the HTTP request the client sends and
-	// cannot verify the validity of the request header.
-	WSOrigins []string `toml:",omitempty"`
-
-	// WSModules is a list of API modules to expose via the websocket RPC interface.
-	// If the module list is empty, all RPC API endpoints designated public will be
-	// exposed.
-	WSModules []string `toml:",omitempty"`
-}
-
-// IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
-// account the set data folders as well as the designated platform we're currently
-// running on.
-func (c *Config) IPCEndpoint() string {
-	// Short circuit if IPC has not been enabled
-	if c.IPCPath == "" {
-		return ""
-	}
-	// On windows we can only use plain top-level pipes
-	if runtime.GOOS == "windows" {
-		if strings.HasPrefix(c.IPCPath, `\\.\pipe\`) {
-			return c.IPCPath
-		}
-		return `\\.\pipe\` + c.IPCPath
-	}
-	// Resolve names into the data directory full paths otherwise
-	if filepath.Base(c.IPCPath) == c.IPCPath {
-		if c.DataDir == "" {
-			return filepath.Join(os.TempDir(), c.IPCPath)
-		}
-		return filepath.Join(c.DataDir, c.IPCPath)
-	}
-	return c.IPCPath
+	// Logger is a custom logger to use with the p2p.Server.
+	Logger log.Logger `mapstructure:"node_logger"`
 }
 
 // NodeDB returns the path to the discovery node database.
@@ -160,58 +78,13 @@ func (c *Config) NodeDB() string {
 	if c.DataDir == "" {
 		return "" // ephemeral
 	}
-	return c.resolvePath("nodes")
-}
-
-// DefaultIPCEndpoint returns the IPC path used by default.
-func DefaultIPCEndpoint(clientIdentifier string) string {
-	if clientIdentifier == "" {
-		clientIdentifier = strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
-		if clientIdentifier == "" {
-			panic("empty executable name")
-		}
-	}
-	config := &Config{DataDir: DefaultDataDir(), IPCPath: clientIdentifier + ".ipc"}
-	return config.IPCEndpoint()
-}
-
-// HTTPEndpoint resolves an HTTP endpoint based on the configured host interface
-// and port parameters.
-func (c *Config) HTTPEndpoint() string {
-	if c.HTTPHost == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s:%d", c.HTTPHost, c.HTTPPort)
-}
-
-// DefaultHTTPEndpoint returns the HTTP endpoint used by default.
-func DefaultHTTPEndpoint() string {
-	config := &Config{HTTPHost: DefaultHTTPHost, HTTPPort: DefaultHTTPPort}
-	return config.HTTPEndpoint()
-}
-
-// WSEndpoint resolves an websocket endpoint based on the configured host interface
-// and port parameters.
-func (c *Config) WSEndpoint() string {
-	if c.WSHost == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s:%d", c.WSHost, c.WSPort)
-}
-
-// DefaultWSEndpoint returns the websocket endpoint used by default.
-func DefaultWSEndpoint() string {
-	config := &Config{WSHost: DefaultWSHost, WSPort: DefaultWSPort}
-	return config.WSEndpoint()
+	return c.resolvePath(datadirNodeDatabase)
 }
 
 // NodeName returns the devp2p node identifier.
 func (c *Config) NodeName() string {
 	name := c.name()
-	// Backwards compatibility: previous versions used title-cased "Kusd", keep that.
-	if name == "kusd" || name == "kusd-testnet" {
-		name = "Kusd"
-	}
+
 	if c.UserIdent != "" {
 		name += "/" + c.UserIdent
 	}
@@ -234,15 +107,6 @@ func (c *Config) name() string {
 	return c.Name
 }
 
-// These resources are resolved differently for "kusd" instances.
-var isOldKusdResource = map[string]bool{
-	"chaindata":          true,
-	"nodes":              true,
-	"nodekey":            true,
-	"static-nodes.json":  true,
-	"trusted-nodes.json": true,
-}
-
 // resolvePath resolves path in the instance directory.
 func (c *Config) resolvePath(path string) string {
 	if filepath.IsAbs(path) {
@@ -251,18 +115,7 @@ func (c *Config) resolvePath(path string) string {
 	if c.DataDir == "" {
 		return ""
 	}
-	// Backwards-compatibility: ensure that data directory files created
-	// by kusd 1.4 are used if they exist.
-	if c.name() == "kusd" && isOldKusdResource[path] {
-		oldpath := ""
-		if c.Name == "kusd" {
-			oldpath = filepath.Join(c.DataDir, path)
-		}
-		if oldpath != "" && common.FileExist(oldpath) {
-			// TODO: print warning
-			return oldpath
-		}
-	}
+	
 	return filepath.Join(c.instanceDir(), path)
 }
 
@@ -353,35 +206,43 @@ func (c *Config) parsePersistentNodes(path string) []*discover.Node {
 	return nodes
 }
 
-func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
+// AccountConfig determines the settings for scrypt and keydirectory
+func (c *Config) AccountConfig() (int, int, string, error) {
 	scryptN := keystore.StandardScryptN
 	scryptP := keystore.StandardScryptP
-	if conf.UseLightweightKDF {
+	if c.UseLightweightKDF {
 		scryptN = keystore.LightScryptN
 		scryptP = keystore.LightScryptP
 	}
 
 	var (
-		keydir    string
-		ephemeral string
-		err       error
+		keydir string
+		err    error
 	)
 	switch {
-	case filepath.IsAbs(conf.KeyStoreDir):
-		keydir = conf.KeyStoreDir
-	case conf.DataDir != "":
-		if conf.KeyStoreDir == "" {
-			keydir = filepath.Join(conf.DataDir, datadirDefaultKeyStore)
+	case filepath.IsAbs(c.KeyStoreDir):
+		keydir = c.KeyStoreDir
+	case c.DataDir != "":
+		if c.KeyStoreDir == "" {
+			keydir = filepath.Join(c.DataDir, datadirDefaultKeyStore)
 		} else {
-			keydir, err = filepath.Abs(conf.KeyStoreDir)
+			keydir, err = filepath.Abs(c.KeyStoreDir)
 		}
-	case conf.KeyStoreDir != "":
-		keydir, err = filepath.Abs(conf.KeyStoreDir)
-	default:
+	case c.KeyStoreDir != "":
+		keydir, err = filepath.Abs(c.KeyStoreDir)
+	}
+	return scryptN, scryptP, keydir, err
+}
+
+func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
+	scryptN, scryptP, keydir, err := conf.AccountConfig()
+	var ephemeral string
+	if keydir == "" {
 		// There is no datadir.
-		keydir, err = ioutil.TempDir("", "kUSD-keystore")
+		keydir, err = ioutil.TempDir("", "kusd-keystore")
 		ephemeral = keydir
 	}
+
 	if err != nil {
 		return nil, "", err
 	}
@@ -393,11 +254,17 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 		keystore.NewKeyStore(keydir, scryptN, scryptP),
 	}
 	if !conf.NoUSB {
+		// Start a USB hub for Ledger hardware wallets
 		if ledgerhub, err := usbwallet.NewLedgerHub(); err != nil {
 			log.Warn(fmt.Sprintf("Failed to start Ledger hub, disabling: %v", err))
 		} else {
 			backends = append(backends, ledgerhub)
 		}
+		// Start a USB hub for Trezor hardware wallets
+		if trezorhub, err := usbwallet.NewTrezorHub(); err != nil {
+			log.Warn(fmt.Sprintf("Failed to start Trezor hub, disabling: %v", err))
+		} else {
+			backends = append(backends, trezorhub)
+		}
 	}
 	return accounts.NewManager(backends...), ephemeral, nil
-}
