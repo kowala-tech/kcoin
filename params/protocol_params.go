@@ -44,25 +44,29 @@ const (
 	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
 	TxDataNonZeroGas uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
 
-	// POS timeouts (milliseconds)
+	// Proof of stake
+	MinStake uint64 = 2000
+
 	ProposeDuration        uint64 = 3000
 	ProposeDeltaDuration   uint64 = 500
 	PreVoteDuration        uint64 = 1000
 	PreVoteDeltaDuration   uint64 = 500
 	PreCommitDuration      uint64 = 1000
 	PreCommitDeltaDuration uint64 = 500
-	CommitDuration         uint64 = 1000
+	SyncDuration           uint64 = 1000
 
 	MaxCodeSize = 24576
 )
 
 var (
-	GasLimitBoundDivisor   = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit            = big.NewInt(5000)                  // Minimum the gas limit may ever be.
-	GenesisGasLimit        = big.NewInt(4712388)               // Gas limit of the Genesis block.
-	TargetGasLimit         = new(big.Int).Set(GenesisGasLimit) // The artificial target
-	DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
-	GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
-	MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
-	DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	GasLimitBoundDivisor = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit          = big.NewInt(5000)                  // Minimum the gas limit may ever be.
+	GenesisGasLimit      = big.NewInt(4712388)               // Gas limit of the Genesis block.
+	TargetGasLimit       = new(big.Int).Set(GenesisGasLimit) // The artificial target
+
+	// POW Related
+	//DifficultyBoundDivisor = big.NewInt(2048)                  // The bound divisor of the difficulty, used in the update calculations.
+	//GenesisDifficulty      = big.NewInt(131072)                // Difficulty of the Genesis block.
+	//MinimumDifficulty      = big.NewInt(131072)                // The minimum that the difficulty may ever be.
+	//DurationLimit          = big.NewInt(13)                    // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 )

@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package params
 
 import (
@@ -21,6 +5,10 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
+)
+
+const (
+	unknownEngine = "unknwon"
 )
 
 var (
@@ -32,28 +20,17 @@ var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
 		ChainId: big.NewInt(1),
-
-		//Ethash: new(EthashConfig),
+		//Validators: []*Validator{},
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Kowala test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainId: big.NewInt(3),
-
-		//Ethash: new(EthashConfig),
+		ChainId: big.NewInt(999),
+		//Validators: []*Validator{},
 	}
 
-	// AllProtocolChanges contains every protocol change (EIPs)
-	// introduced and accepted by the Ethereum core developers.
-	//
-	// This configuration is intentionally not using keyed fields.
-	// This configuration must *always* have all forks enabled, which
-	// means that all fields must be set at all times. This forces
-	// anyone adding flags to the config to also have to set these
-	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337)}
-	TestChainConfig    = &ChainConfig{big.NewInt(1)}
-	TestRules          = TestChainConfig.Rules(new(big.Int))
+	TestChainConfig = &ChainConfig{big.NewInt(1)}
+	TestRules       = TestChainConfig.Rules(new(big.Int))
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -63,45 +40,23 @@ var (
 // set of configuration options.
 type ChainConfig struct {
 	ChainId *big.Int `json:"chainId"` // Chain id identifies the current chain and is used for replay protection
-
-	// Various consensus engines
-	//Tendermint *TendermintConfig `json:"tendermint,omitempty"`
+	//Validators []*Validator `json:"validators"` // genesis validators
 }
-
-// EthashConfig is the consensus engine configs for proof-of-work based sealing.
-type EthashConfig struct{}
-
-// String implements the stringer interface, returning the consensus engine details.
-func (c *EthashConfig) String() string {
-	return "ethash"
-}
-
-// CliqueConfig is the consensus engine configs for proof-of-authority based sealing.
-type CliqueConfig struct {
-	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
-	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-}
-
-// String implements the stringer interface, returning the consensus engine details.
-func (c *CliqueConfig) String() string {
-	return "clique"
-}
-
-// TendermintConfig is the config for tendermint consensus engine
-type TendermintConfig struct{}
-
-func (c *TendermintConfig) String() string { return "tendermint" }
 
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
-	return fmt.Sprintf("{ChainID: %v}", c.ChainId)
+	return fmt.Sprintf("{ChainID: %v Validators: %v}",
+		c.ChainId,
+		//c.Validators,
+	)
 }
 
 // GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
 //
 // The returned GasTable's fields shouldn't, under any circumstances, be changed.
 func (c *ChainConfig) GasTable(num *big.Int) GasTable {
-	return GasTableHomestead
+	// @NOTE(rgeraldes) - num will be necessary in the future to specify a specific gas table
+	return GasTableAndromeda
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
