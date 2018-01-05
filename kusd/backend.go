@@ -13,8 +13,7 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
 	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/consensus/clique"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
+	"github.com/kowala-tech/kUSD/consensus/tendermint"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
@@ -196,27 +195,9 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kusddb.Dat
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Kowala service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kusddb.Database) consensus.Engine {
-	// If proof-of-authority is requested, set it up
-	if chainConfig.Clique != nil {
-		return clique.New(chainConfig.Clique, db)
-	}
-	// Otherwise assume proof-of-work
-	switch {
-	case config.PowFake:
-		log.Warn("Ethash used in fake mode")
-		return ethash.NewFaker()
-	case config.PowTest:
-		log.Warn("Ethash used in test mode")
-		return ethash.NewTester()
-	case config.PowShared:
-		log.Warn("Ethash used in shared mode")
-		return ethash.NewShared()
-	default:
-		engine := ethash.New(ctx.ResolvePath(config.EthashCacheDir), config.EthashCachesInMem, config.EthashCachesOnDisk,
-			config.EthashDatasetDir, config.EthashDatasetsInMem, config.EthashDatasetsOnDisk)
-		engine.SetThreads(-1) // Disable CPU mining
-		return engine
-	}
+	// @TODO (rgeraldes) - complete with tendermint config if necessary
+	engine := tendermint.New()
+	return engine
 }
 
 // APIs returns the collection of RPC services the kowala package offers.
@@ -310,14 +291,6 @@ func (s *Kowala) StartMining(local bool) error {
 	if err != nil {
 		log.Error("Cannot start mining without etherbase", "err", err)
 		return fmt.Errorf("etherbase missing: %v", err)
-	}
-	if clique, ok := s.engine.(*clique.Clique); ok {
-		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-		if wallet == nil || err != nil {
-			log.Error("Etherbase account unavailable locally", "err", err)
-			return fmt.Errorf("singer missing: %v", err)
-		}
-		clique.Authorize(eb, wallet.SignHash)
 	}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection

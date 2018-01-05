@@ -236,7 +236,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 	if g.Difficulty == nil {
 		head.Difficulty = params.GenesisDifficulty
 	}
-	return types.NewBlock(head, nil, nil, nil), statedb
+	return types.NewBlock(head, nil, nil), statedb
 }
 
 // Commit writes the block and state of a genesis specification to the database.

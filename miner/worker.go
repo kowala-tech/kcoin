@@ -151,7 +151,6 @@ func (self *worker) pending() (*types.Block, *state.StateDB) {
 		return types.NewBlock(
 			self.current.header,
 			self.current.txs,
-			nil,
 			self.current.receipts,
 		), self.current.state.Copy()
 	}
@@ -166,7 +165,6 @@ func (self *worker) pendingBlock() *types.Block {
 		return types.NewBlock(
 			self.current.header,
 			self.current.txs,
-			nil,
 			self.current.receipts,
 		)
 	}
@@ -338,14 +336,16 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		createdAt: time.Now(),
 	}
 
-	// when 08 is processed ancestors contain 07 (quick block)
-	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
-		for _, uncle := range ancestor.Uncles() {
-			work.family.Add(uncle.Hash())
+	/*
+		// when 08 is processed ancestors contain 07 (quick block)
+		for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
+			for _, uncle := range ancestor.Uncles() {
+				work.family.Add(uncle.Hash())
+			}
+			work.family.Add(ancestor.Hash())
+			work.ancestors.Add(ancestor.Hash())
 		}
-		work.family.Add(ancestor.Hash())
-		work.ancestors.Add(ancestor.Hash())
-	}
+	*/
 	wallets := self.eth.AccountManager().Wallets()
 	accounts := make([]accounts.Account, 0, len(wallets))
 	for _, wallet := range wallets {
@@ -453,7 +453,7 @@ func (self *worker) commitNewWork() {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}

@@ -5,8 +5,8 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
 	"github.com/kowala-tech/kUSD/consensus/misc"
+	"github.com/kowala-tech/kUSD/consensus/tendermint"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
@@ -33,7 +33,6 @@ type BlockGen struct {
 	gasPool  *GasPool
 	txs      []*types.Transaction
 	receipts []*types.Receipt
-	uncles   []*types.Header
 
 	config *params.ChainConfig
 }
@@ -100,11 +99,6 @@ func (b *BlockGen) TxNonce(addr common.Address) uint64 {
 	return b.statedb.GetNonce(addr)
 }
 
-// AddUncle adds an uncle header to the generated block.
-func (b *BlockGen) AddUncle(h *types.Header) {
-	b.uncles = append(b.uncles, h)
-}
-
 // PrevBlock returns a previously generated block by number. It panics if
 // num is greater or equal to the number of the block being generated.
 // For index -1, PrevBlock returns the parent block given to GenerateChain.
@@ -126,7 +120,8 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 	if b.header.Time.Cmp(b.parent.Header().Time) <= 0 {
 		panic("block time out of range")
 	}
-	b.header.Difficulty = ethash.CalcDifficulty(b.config, b.header.Time.Uint64(), b.parent.Header())
+	// @TODO (rgeraldes) - review
+	//b.header.Difficulty = ethash.CalcDifficulty(b.config, b.header.Time.Uint64(), b.parent.Header())
 }
 
 // GenerateChain creates a chain of n blocks. The first block's
@@ -134,7 +129,7 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 // intermediate states and should contain the parent's state trie.
 //
 // The generator function is called with a new block generator for
-// every block. Any transactions and uncles added to the generator
+// every block. Any transactions added to the generator
 // become part of the block. If gen is nil, the blocks will be empty
 // and their coinbase will be the zero address.
 //
@@ -164,13 +159,15 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db kusddb.Da
 		if gen != nil {
 			gen(i, b)
 		}
-		ethash.AccumulateRewards(statedb, h, b.uncles)
+
+		// @TODO(rgeraldes) - review
+		tendermint.AccumulateRewards(statedb, h)
 		root, err := statedb.CommitTo(db, config.IsEIP158(h.Number))
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))
 		}
 		h.Root = root
-		return types.NewBlock(h, b.txs, b.uncles, b.receipts), b.receipts
+		return types.NewBlock(h, b.txs, b.receipts), b.receipts
 	}
 	for i := 0; i < n; i++ {
 		statedb, err := state.New(parent.Root(), state.NewDatabase(db))
@@ -198,12 +195,15 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 		Root:       state.IntermediateRoot(config.IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
-		Difficulty: ethash.CalcDifficulty(config, time.Uint64(), &types.Header{
-			Number:     parent.Number(),
-			Time:       new(big.Int).Sub(time, big.NewInt(10)),
-			Difficulty: parent.Difficulty(),
-			UncleHash:  parent.UncleHash(),
-		}),
+
+		// @TODO (review) - rgeraldes
+		/*
+			Difficulty: ethash.CalcDifficulty(config, time.Uint64(), &types.Header{
+				Number:     parent.Number(),
+				Time:       new(big.Int).Sub(time, big.NewInt(10)),
+				Difficulty: parent.Difficulty(),
+			}),
+		*/
 		GasLimit: CalcGasLimit(parent),
 		GasUsed:  new(big.Int),
 		Number:   new(big.Int).Add(parent.Number(), common.Big1),
@@ -220,7 +220,7 @@ func newCanonical(n int, full bool) (kusddb.Database, *BlockChain, error) {
 	db, _ := kusddb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, params.AllProtocolChanges, ethash.NewFaker(), new(event.TypeMux), vm.Config{})
+	blockchain, _ := NewBlockChain(db, params.AllProtocolChanges, tendermint.NewFaker(), new(event.TypeMux), vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil

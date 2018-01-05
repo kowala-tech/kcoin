@@ -3,7 +3,6 @@ package kusdstats
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -427,23 +426,11 @@ type blockStats struct {
 	Txs        []txStats      `json:"transactions"`
 	TxHash     common.Hash    `json:"transactionsRoot"`
 	Root       common.Hash    `json:"stateRoot"`
-	Uncles     uncleStats     `json:"uncles"`
 }
 
 // txStats is the information to report about individual transactions.
 type txStats struct {
 	Hash common.Hash `json:"hash"`
-}
-
-// uncleStats is a custom wrapper around an uncle array to force serializing
-// empty arrays instead of returning null for them.
-type uncleStats []*types.Header
-
-func (s uncleStats) MarshalJSON() ([]byte, error) {
-	if uncles := ([]*types.Header)(s); len(uncles) > 0 {
-		return json.Marshal(uncles)
-	}
-	return []byte("[]"), nil
 }
 
 // reportBlock retrieves the current chain head and repors it to the stats server.
@@ -472,7 +459,6 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		header *types.Header
 		td     *big.Int
 		txs    []txStats
-		uncles []*types.Header
 	)
 
 	// Full nodes have all needed information available
@@ -486,7 +472,6 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 	for i, tx := range block.Transactions() {
 		txs[i].Hash = tx.Hash()
 	}
-	uncles = block.Uncles()
 
 	// Assemble and return the block stats
 	author, _ := s.engine.Author(header)
@@ -504,7 +489,6 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		Txs:        txs,
 		TxHash:     header.TxHash,
 		Root:       header.Root,
-		Uncles:     uncles,
 	}
 }
 

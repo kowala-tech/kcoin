@@ -18,14 +18,12 @@ package miner
 
 import (
 	"errors"
-	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/log"
 )
@@ -111,23 +109,25 @@ func (a *RemoteAgent) GetWork() ([3]string, error) {
 	defer a.mu.Unlock()
 
 	var res [3]string
+	/*
+		if a.currentWork != nil {
+			block := a.currentWork.Block
 
-	if a.currentWork != nil {
-		block := a.currentWork.Block
+			res[0] = block.HashNoNonce().Hex()
 
-		res[0] = block.HashNoNonce().Hex()
-		seedHash := ethash.SeedHash(block.NumberU64())
-		res[1] = common.BytesToHash(seedHash).Hex()
-		// Calculate the "target" to be returned to the external miner
-		n := big.NewInt(1)
-		n.Lsh(n, 255)
-		n.Div(n, block.Difficulty())
-		n.Lsh(n, 1)
-		res[2] = common.BytesToHash(n.Bytes()).Hex()
+			seedHash := ethash.SeedHash(block.NumberU64())
+			res[1] = common.BytesToHash(seedHash).Hex()
+			// Calculate the "target" to be returned to the external miner
+			n := big.NewInt(1)
+			n.Lsh(n, 255)
+			n.Div(n, block.Difficulty())
+			n.Lsh(n, 1)
+			res[2] = common.BytesToHash(n.Bytes()).Hex()
 
-		a.work[block.HashNoNonce()] = a.currentWork
-		return res, nil
-	}
+			a.work[block.HashNoNonce()] = a.currentWork
+			return res, nil
+		}
+	*/
 	return res, errors.New("No work available yet, don't panic.")
 }
 

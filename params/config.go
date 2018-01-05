@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package params
 
 import (
@@ -42,7 +26,6 @@ var (
 		EIP158Block:     big.NewInt(2675000),
 		MetropolisBlock: big.NewInt(math.MaxInt64), // Don't enable yet
 
-		Ethash: new(EthashConfig),
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
@@ -57,7 +40,6 @@ var (
 		EIP158Block:     big.NewInt(10),
 		MetropolisBlock: big.NewInt(math.MaxInt64), // Don't enable yet
 
-		Ethash: new(EthashConfig),
 	}
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
@@ -71,11 +53,6 @@ var (
 		EIP155Block:     big.NewInt(3),
 		EIP158Block:     big.NewInt(3),
 		MetropolisBlock: big.NewInt(math.MaxInt64), // Don't enable yet
-
-		Clique: &CliqueConfig{
-			Period: 15,
-			Epoch:  30000,
-		},
 	}
 
 	// AllProtocolChanges contains every protocol change (EIPs)
@@ -86,8 +63,9 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(math.MaxInt64) /*disabled*/, new(EthashConfig), nil}
-	TestChainConfig    = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil}
+	// @TODO(rgeraldes) - review AllProtocolChanges, TestChainConfig
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(math.MaxInt64) /*disabled*/, nil /*new(EthashConfig)*/}
+	TestChainConfig    = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), nil, nil /*new(EthashConfig)*/}
 	TestRules          = TestChainConfig.Rules(new(big.Int))
 )
 
@@ -113,37 +91,23 @@ type ChainConfig struct {
 	MetropolisBlock *big.Int `json:"metropolisBlock,omitempty"` // Metropolis switch block (nil = no fork, 0 = alraedy on homestead)
 
 	// Various consensus engines
-	Ethash *EthashConfig `json:"ethash,omitempty"`
-	Clique *CliqueConfig `json:"clique,omitempty"`
+	Tendermint *TendermintConfig `json:"tendermint,omitempty"`
 }
 
-// EthashConfig is the consensus engine configs for proof-of-work based sealing.
-type EthashConfig struct{}
+// TendermintConfig is the consensus engine configs for proof-of-stake based sealing.
+type TendermintConfig struct{}
 
 // String implements the stringer interface, returning the consensus engine details.
-func (c *EthashConfig) String() string {
-	return "ethash"
-}
-
-// CliqueConfig is the consensus engine configs for proof-of-authority based sealing.
-type CliqueConfig struct {
-	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
-	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-}
-
-// String implements the stringer interface, returning the consensus engine details.
-func (c *CliqueConfig) String() string {
-	return "clique"
+func (c *TendermintConfig) String() string {
+	return "tendermint"
 }
 
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
 	switch {
-	case c.Ethash != nil:
-		engine = c.Ethash
-	case c.Clique != nil:
-		engine = c.Clique
+	case c.Tendermint != nil:
+		engine = c.Tendermint
 	default:
 		engine = "unknown"
 	}
