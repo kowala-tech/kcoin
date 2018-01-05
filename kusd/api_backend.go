@@ -19,7 +19,7 @@ import (
 	"github.com/kowala-tech/kUSD/rpc"
 )
 
-// KowalaApiBackend implements ethapi.Backend for full nodes
+// KowalaApiBackend implements kusdapi.Backend for full nodes
 type KowalaApiBackend struct {
 	kusd *Kowala
 	gpo  *gasprice.Oracle
