@@ -676,8 +676,6 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"number":           (*hexutil.Big)(head.Number),
 		"hash":             b.Hash(),
 		"parentHash":       head.ParentHash,
-		"nonce":            head.Nonce,
-		"mixHash":          head.MixDigest,
 		"logsBloom":        head.Bloom,
 		"stateRoot":        head.Root,
 		"miner":            head.Coinbase,

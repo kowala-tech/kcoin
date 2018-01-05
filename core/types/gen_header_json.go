@@ -27,8 +27,6 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		GasUsed     *hexutil.Big   `json:"gasUsed"          gencodec:"required"`
 		Time        *hexutil.Big   `json:"timestamp"        gencodec:"required"`
 		Extra       hexutil.Bytes  `json:"extraData"        gencodec:"required"`
-		MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-		Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 		Hash        common.Hash    `json:"hash"`
 	}
 	var enc Header
@@ -44,8 +42,6 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.GasUsed = (*hexutil.Big)(h.GasUsed)
 	enc.Time = (*hexutil.Big)(h.Time)
 	enc.Extra = h.Extra
-	enc.MixDigest = h.MixDigest
-	enc.Nonce = h.Nonce
 	enc.Hash = h.Hash()
 	return json.Marshal(&enc)
 }
@@ -64,8 +60,6 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		GasUsed     *hexutil.Big    `json:"gasUsed"          gencodec:"required"`
 		Time        *hexutil.Big    `json:"timestamp"        gencodec:"required"`
 		Extra       hexutil.Bytes   `json:"extraData"        gencodec:"required"`
-		MixDigest   *common.Hash    `json:"mixHash"          gencodec:"required"`
-		Nonce       *BlockNonce     `json:"nonce"            gencodec:"required"`
 	}
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -119,13 +113,5 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'extraData' for Header")
 	}
 	h.Extra = dec.Extra
-	if dec.MixDigest == nil {
-		return errors.New("missing required field 'mixHash' for Header")
-	}
-	h.MixDigest = *dec.MixDigest
-	if dec.Nonce == nil {
-		return errors.New("missing required field 'nonce' for Header")
-	}
-	h.Nonce = *dec.Nonce
 	return nil
 }

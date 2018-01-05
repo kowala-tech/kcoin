@@ -9,7 +9,7 @@ import (
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/math"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
+	"github.com/kowala-tech/kUSD/consensus/tendermint"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/crypto"
@@ -160,7 +160,7 @@ func benchInsertChain(b *testing.B, disk bool, gen func(int, *BlockGen)) {
 	// Time the insertion of the new chain.
 	// State and blocks are stored in the same DB.
 	evmux := new(event.TypeMux)
-	chainman, _ := NewBlockChain(db, gspec.Config, ethash.NewFaker(), evmux, vm.Config{})
+	chainman, _ := NewBlockChain(db, gspec.Config, tendermint.NewFaker(), evmux, vm.Config{})
 	defer chainman.Stop()
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -270,7 +270,7 @@ func benchReadChain(b *testing.B, full bool, count uint64) {
 		if err != nil {
 			b.Fatalf("error opening database at %v: %v", dir, err)
 		}
-		chain, err := NewBlockChain(db, params.TestChainConfig, ethash.NewFaker(), new(event.TypeMux), vm.Config{})
+		chain, err := NewBlockChain(db, params.TestChainConfig, tendermint.NewFaker(), new(event.TypeMux), vm.Config{})
 		if err != nil {
 			b.Fatalf("error creating chain: %v", err)
 		}

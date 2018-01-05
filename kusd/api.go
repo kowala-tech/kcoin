@@ -75,11 +75,14 @@ func (api *PublicMinerAPI) Mining() bool {
 	return api.kusd.IsMining()
 }
 
+// @TODO(rgeraldes) - I think that external validation does not make sense because of the latencies
+/*
 // SubmitWork can be used by external miner to submit their POW solution. It returns an indication if the work was
 // accepted. Note, this is not an indication if the provided work was valid!
 func (api *PublicMinerAPI) SubmitWork(nonce types.BlockNonce, solution, digest common.Hash) bool {
-	return api.agent.SubmitWork(nonce, digest, solution)
+	return api.agent.SubmitWork(/*nonce, digest, solution)
 }
+*/
 
 // GetWork returns a work package for external miner. The work package consists of 3 strings
 // result[0], 32 bytes hex encoded current block header pow-hash

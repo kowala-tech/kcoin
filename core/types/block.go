@@ -2,7 +2,6 @@
 package types
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 	"math/big"
@@ -20,33 +19,6 @@ var (
 	EmptyRootHash = DeriveSha(Transactions{})
 )
 
-// A BlockNonce is a 64-bit hash which proves (combined with the
-// mix-hash) that a sufficient amount of computation has been carried
-// out on a block.
-type BlockNonce [8]byte
-
-// EncodeNonce converts the given integer to a block nonce.
-func EncodeNonce(i uint64) BlockNonce {
-	var n BlockNonce
-	binary.BigEndian.PutUint64(n[:], i)
-	return n
-}
-
-// Uint64 returns the integer value of a block nonce.
-func (n BlockNonce) Uint64() uint64 {
-	return binary.BigEndian.Uint64(n[:])
-}
-
-// MarshalText encodes n as a hex string with 0x prefix.
-func (n BlockNonce) MarshalText() ([]byte, error) {
-	return hexutil.Bytes(n[:]).MarshalText()
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (n *BlockNonce) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedText("BlockNonce", input, n[:])
-}
-
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
 // Header represents a block header in the Ethereum blockchain.
@@ -63,8 +35,6 @@ type Header struct {
 	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"`
 	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -273,8 +243,6 @@ func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficu
 func (b *Block) Time() *big.Int       { return new(big.Int).Set(b.header.Time) }
 
 func (b *Block) NumberU64() uint64        { return b.header.Number.Uint64() }
-func (b *Block) MixDigest() common.Hash   { return b.header.MixDigest }
-func (b *Block) Nonce() uint64            { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
 func (b *Block) Bloom() Bloom             { return b.header.Bloom }
 func (b *Block) Coinbase() common.Address { return b.header.Coinbase }
 func (b *Block) Root() common.Hash        { return b.header.Root }
@@ -367,9 +335,7 @@ func (h *Header) String() string {
 	GasUsed:	    %v
 	Time:		    %v
 	Extra:		    %s
-	MixDigest:      %x
-	Nonce:		    %x
-]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce)
+]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra)
 }
 
 type Blocks []*Block

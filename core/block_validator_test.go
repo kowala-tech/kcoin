@@ -1,18 +1,8 @@
 package core
 
-import (
-	"runtime"
-	"testing"
-	"time"
+// @TODO(rgeraldes) - review
 
-	"github.com/kowala-tech/kUSD/consensus/ethash"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/params"
-)
-
+/*
 // Tests that simple header verification works, for both good and bad blocks.
 func TestHeaderVerification(t *testing.T) {
 	// Create a simple chain to verify
@@ -27,14 +17,14 @@ func TestHeaderVerification(t *testing.T) {
 		headers[i] = block.Header()
 	}
 	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
-	chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFaker(), new(event.TypeMux), vm.Config{})
+	chain, _ := NewBlockChain(testdb, params.TestChainConfig, tendermint.NewFaker(), new(event.TypeMux), vm.Config{})
 
 	for i := 0; i < len(blocks); i++ {
 		for j, valid := range []bool{true, false} {
 			var results <-chan error
 
 			if valid {
-				engine := ethash.NewFaker()
+				engine := tendermint.NewFaker()
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
 			} else {
 				engine := ethash.NewFakeFailer(headers[i].Number.Uint64())
@@ -177,3 +167,4 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 		t.Errorf("verification count too large: have %d, want below %d", verified, 2*threads)
 	}
 }
+*/

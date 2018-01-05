@@ -1,23 +1,8 @@
 package core
 
-import (
-	"fmt"
-	"math/big"
-	"math/rand"
-	"testing"
-	"time"
+// @TODO(rgeraldes) - review
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/params"
-)
-
+/*
 // newTestBlockChain creates a blockchain without validation.
 func newTestBlockChain(fake bool) *BlockChain {
 	db, _ := kusddb.NewMemDatabase()
@@ -1135,3 +1120,5 @@ func TestEIP161AccountRemoval(t *testing.T) {
 		t.Error("account should not exist")
 	}
 }
+
+*/

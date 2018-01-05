@@ -1,15 +1,8 @@
 package core
 
-import (
-	"math/big"
-	"testing"
+// @TODO (rgeraldes) - review
 
-	"github.com/kowala-tech/kUSD/consensus/ethash"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/params"
-)
+/*
 
 // Tests that DAO-fork enabled clients can properly filter out fork-commencing
 // blocks based on their extradata fields.
@@ -117,3 +110,5 @@ func TestDAOForkRangeExtradata(t *testing.T) {
 		t.Fatalf("pro-fork chain didn't accept contra-fork block post-fork: %v", err)
 	}
 }
+
+*/

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/consensus/ethash"
+	"github.com/kowala-tech/kUSD/consensus/tendermint"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/crypto"
@@ -65,7 +65,7 @@ func ExampleGenerateChain() {
 
 	// Import the chain. This runs all block validation rules.
 	evmux := &event.TypeMux{}
-	blockchain, _ := NewBlockChain(db, gspec.Config, ethash.NewFaker(), evmux, vm.Config{})
+	blockchain, _ := NewBlockChain(db, gspec.Config, tendermint.NewFaker(), evmux, vm.Config{})
 	if i, err := blockchain.InsertChain(chain); err != nil {
 		fmt.Printf("insert error (block %d): %v\n", chain[i].NumberU64(), err)
 		return

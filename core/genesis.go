@@ -34,7 +34,6 @@ type Genesis struct {
 	ExtraData  []byte              `json:"extraData"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
-	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
@@ -219,14 +218,12 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
-		Nonce:      types.EncodeNonce(g.Nonce),
 		Time:       new(big.Int).SetUint64(g.Timestamp),
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
 		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
 		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
 		Difficulty: g.Difficulty,
-		MixDigest:  g.Mixhash,
 		Coinbase:   g.Coinbase,
 		Root:       root,
 	}
@@ -294,7 +291,6 @@ func GenesisBlockForTesting(db kusddb.Database, addr common.Address, balance *bi
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
-		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000,
 		Difficulty: big.NewInt(17179869184),
@@ -306,7 +302,6 @@ func DefaultGenesisBlock() *Genesis {
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.TestnetChainConfig,
-		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   16777216,
 		Difficulty: big.NewInt(1048576),
@@ -330,7 +325,6 @@ func DefaultRinkebyGenesisBlock() *Genesis {
 func DevGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.AllProtocolChanges,
-		Nonce:      42,
 		GasLimit:   4712388,
 		Difficulty: big.NewInt(131072),
 		Alloc:      decodePrealloc(devAllocData),
