@@ -1,19 +1,13 @@
 package network_test
 
-//go:generate solc --abi --bin --overwrite -o build contracts/mUSD.sol
-//go:generate abigen -abi build/mUSD.abi -bin build/mUSD.bin -pkg network -type MusdContract -out mUSD_generated.go
-//go:generate solc --abi --bin --overwrite -o build contracts/network-stats.sol
-//go:generate abigen -abi build/NetworkStats.abi -bin build/NetworkStats.bin -pkg network -type NetworkStatsContract -out network_stats_generated.go
-//go:generate solc --abi --bin --overwrite -o build contracts/network-contracts-map.sol
-//go:generate abigen -abi build/NetworkContractsMap.abi -bin build/NetworkContractsMap.bin -pkg network -type NetworkContractsMapContract -out network_contracts_map_generated.go
-//go:generate solc --abi --bin --overwrite -o build contracts/price-oracle.sol
-//go:generate abigen -abi build/PriceOracle.abi -bin build/PriceOracle.bin -pkg network -type PriceOracleContract -out price_oracle_generated.go
-
 import (
+	"context"
 	"crypto/ecdsa"
 	"math/big"
 	"testing"
 
+	"github.com/kowala-tech/contracts"
+	"github.com/kowala-tech/kUSD"
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kUSD/common"
@@ -361,159 +355,165 @@ func TestMaxTokens(t *testing.T) {
 	}
 }
 
+func bigExp(b int, e int) *big.Int {
+	return new(big.Int).Exp(big.NewInt(int64(b)), big.NewInt(int64(e)), nil)
+}
+
 func TestPriceOracle(t *testing.T) {
+	// create contract(s) owner key
 	owner, err := newKey()
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	// create a simulated backend
 	sim := backends.NewSimulatedBackend(core.GenesisAlloc{
 		owner.addr: core.GenesisAccount{
 			Balance: new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.Ether)),
 		},
 	})
-	ca := new(big.Int).SetUint64(params.Ether)
-	fa := big.NewInt(1 * 10000)
-	addr, _, priceOracle, err := nc.DeployPriceOracleContract(owner.auth, sim, "kUSD", "kUSD", 18, ca, "US Dollar", "USD", 4, fa)
+	// deploy mUSD contract
+	mtAddr, _, _, err := contracts.DeployMusdContract(owner.auth, sim)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	sim.Commit()
-	cPrice, err := priceOracle.PriceForFiat(nil, common.Big1)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	poData := &nc.PriceOracle{}
-	if err = unmarshalState(sim, addr, poData); err != nil {
-		t.Error(err)
-		return
-	}
-	if ca.Cmp(poData.CryptoAmount) != 0 {
-		t.Errorf("the contract state has a value different than the initialized: %s %s", ca, poData.CryptoAmount)
-		return
-	}
-	if fa.Cmp(poData.FiatAmount) != 0 {
-		t.Errorf("the contract state has a value different than the initialized: %s %s", fa, poData.FiatAmount)
-		return
-	}
-	if lsPrice := poData.PriceForFiat(common.Big1); lsPrice.Cmp(cPrice) != 0 {
-		t.Errorf("got different prices for fiat: %s %s", cPrice, lsPrice)
-		return
-	}
-	p := new(big.Int).SetUint64(params.Ether)
-	if cPrice, err = priceOracle.PriceForCrypto(nil, p); err != nil {
-		t.Error(err)
-		return
-	}
-	if lsPrice := poData.PriceForCrypto(p); lsPrice.Cmp(cPrice) != 0 {
-		t.Errorf("got different prices for crypto: %s %s", cPrice, lsPrice)
-		return
-	}
-}
-
-func TestDataLayouts(t *testing.T) {
-	// create a new test
-	mt, err := newMusdTest(t)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	// create holders keys and mint some tokens
-	const N_HOLDERS = 1024
-	holders := make([]*key, 0, N_HOLDERS)
-	var (
-		k          *key
-		tokenCount int64
+	// deploy PriceOracle contract
+	_, _, priceOracle, err := contracts.DeployPriceOracleContract(
+		owner.auth, sim,
+		"kUSD", "kUSD", 18,
+		"US Dollar", "USD", 4,
+		mtAddr,
 	)
-	for i := 0; i < N_HOLDERS; i++ {
-		if k, err = newKey(); err != nil {
-			t.Error(err)
-			return
-		}
-		holders = append(holders, k)
-		n := int64(i + 1)
-		tokenCount += n
-		if _, err := mt.musd.MintTokens(mt.owner.auth, k.addr, big.NewInt(n)); err != nil {
-			t.Error(err)
-			return
-		}
-		mt.sim.Commit()
-	}
-	// verify data layout
-	mToken := &nc.MToken{}
-	statedb, err := mt.sim.State()
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	if err = statedb.UnmarshalState(mt.addr, mToken); err != nil {
+	sim.Commit()
+	// create exchange key
+	exchange, err := newKey()
+	if err != nil {
 		t.Error(err)
 		return
 	}
-	// contract owner
-	if mToken.ContractOwner != mt.owner.addr {
-		t.Errorf("got a different contract owner than expected. got: %s, exp: %s", mToken.ContractOwner.Hex(), mt.owner.addr.Hex())
+	exchange2, err := newKey()
+	if err != nil {
+		t.Error(err)
 		return
 	}
-	// token name
-	if mToken.Name != "mUSD" {
-		t.Errorf("got a bad token name: %s", mToken.Name)
+	// allow exchanges addresses
+	if _, err = priceOracle.AllowAddress(
+		owner.auth,
+		exchange.addr,
+		"Test Exchange (good)",
+	); err != nil {
+		t.Error(err)
 		return
 	}
-	// token symbol
-	if mToken.Symbol != "mUSD" {
-		t.Errorf("got a bad symbol: %s", mToken.Symbol)
+	if _, err = priceOracle.AllowAddress(
+		owner.auth,
+		exchange2.addr,
+		"Test Exchange (to be disallowed)",
+	); err != nil {
+		t.Error(err)
 		return
 	}
-	// maximum tokens
-	maxTokens := big.NewInt(1073741824)
-	if mToken.MaximumTokens.Cmp(maxTokens) != 0 {
-		t.Errorf("got a different maximum of tokens: %s", mToken.MaximumTokens)
+	// get nonce
+	nonce, err := sim.PendingNonceAt(context.TODO(), owner.addr)
+	if err != nil {
+		t.Error(err)
 		return
 	}
-	// owned tokens
-	for i, h := range holders {
-		bal, err := mt.musd.BalanceOf(nil, h.addr)
+	// send some coins to the exchanges
+	addrs := []common.Address{exchange.addr, exchange2.addr}
+	for _, a := range addrs {
+		val := new(big.Int).Mul(big.NewInt(10), new(big.Int).SetUint64(params.Ether))
+		gasLimit, err := sim.EstimateGas(context.TODO(), ethereum.CallMsg{
+			From:     owner.addr,
+			To:       &a,
+			Value:    val,
+			GasPrice: gasPrice,
+		})
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		expBal := big.NewInt(int64(i + 1))
-		if expBal.Cmp(bal) != 0 {
-			t.Errorf("got a different balance than the expected for address %s. got: %s, exp: %s", h.addr.Hex(), bal, expBal)
+		tx, err := types.SignTx(
+			types.NewTransaction(
+				nonce,
+				a,
+				val,
+				gasLimit,
+				gasPrice,
+				[]byte{},
+			),
+			types.HomesteadSigner{},
+			owner.key,
+		)
+		if err != nil {
+			t.Error(err)
 			return
 		}
+		if err = sim.SendTransaction(nil, tx); err != nil {
+			t.Error(err)
+			return
+		}
+		nonce++
+		sim.Commit()
 	}
-	noOwned, err := newKey()
+	// disallow second exchange
+	if _, err = priceOracle.DisallowAddress(
+		owner.auth,
+		exchange2.addr,
+	); err != nil {
+		t.Error(err)
+		return
+	}
+	sim.Commit()
+	// register transactions
+	oneCrypto := bigExp(10, 18)
+	oneFiat := bigExp(10, 4)
+	blk := new(big.Int).Add(sim.CurrentBlock().Number(), common.Big1)
+	if _, err = priceOracle.RegisterTransaction(
+		exchange.auth,
+		oneCrypto,
+		oneFiat,
+		blk,
+	); err != nil {
+		t.Error(err)
+		return
+	}
+	sim.Commit()
+	// this transaction shouldn't be considered
+	if _, err = priceOracle.RegisterTransaction(
+		exchange2.auth,
+		common.Big1,
+		common.Big2,
+		blk,
+	); err != nil {
+		t.Error(err)
+		return
+	}
+	sim.Commit()
+	// check price for 1 crypto
+	fiat, err := priceOracle.PriceForOneCrypto(nil)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	// mint new tokens for the owner
-	if _, err = mt.musd.MintTokens(mt.owner.auth, mt.owner.addr, big.NewInt(N_HOLDERS*100)); err != nil {
+	if fiat.Cmp(oneFiat) != 0 {
+		t.Errorf("got a bad value for the price of 1 crypto coin: exp: %s, got: %s", oneFiat, fiat)
+		return
+	}
+	// check price for 1 fiat
+	crypto, err := priceOracle.PriceForOneFiat(nil)
+	if err != nil {
 		t.Error(err)
 		return
 	}
-
-	_ = noOwned
-	// // delegate some tokens
-	// delegatedTokens := make(map[common.Address]*big.Int, N_HOLDERS)
-	// delegatesTokens := make(map[common.Address]*big.Int, N_HOLDERS+1)
-	// delegations := make(map[common.Address]map[common.Address]*big.Int, N_HOLDERS+1)
-	// delegatesTokens[noOwned.addr] = big.NewInt(0)
-	// delegations[noOwned.addr] = make(map[common.Address]*big.Int, N_HOLDERS)
-	// for i, h := range holders {
-	// 	n := big.NewInt(int64(i + 1))
-	// 	if _, err = mt.musd.Delegate(h.auth, noOwned.addr, common.Big1); err != nil {
-	// 		t.Error(err)
-	// 		return
-	// 	}
-	// 	mt.sim.Commit()
-	// 	tk := delegatesTokens[noOwned.addr]
-	// 	tk.Add(tk, common.Big1)
-	// 	delegatedTokens[h.addr] = common.Big1
-	// 	delegations[noOwned.addr][h.addr] = common.Big1
-	// }
+	if crypto.Cmp(oneCrypto) != 0 {
+		t.Errorf("got a bad value: exp: %s, got: %s", oneCrypto, crypto)
+		return
+	}
 }

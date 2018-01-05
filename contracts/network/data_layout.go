@@ -1,5 +1,14 @@
 package network
 
+//go:generate solc --abi --bin --bin-runtime --overwrite -o build contracts/mUSD.sol
+//go:generate abigen -abi build/mUSD.abi -bin build/mUSD.bin -pkg network -type MusdContract -out mUSD_generated.go
+//go:generate solc --abi --bin --bin-runtime --overwrite -o build contracts/network-stats.sol
+//go:generate abigen -abi build/NetworkStats.abi -bin build/NetworkStats.bin -pkg network -type NetworkStatsContract -out network_stats_generated.go
+//go:generate solc --abi --bin --bin-runtime --overwrite -o build contracts/network-contracts-map.sol
+//go:generate abigen -abi build/NetworkContractsMap.abi -bin build/NetworkContractsMap.bin -pkg network -type NetworkContractsMapContract -out network_contracts_map_generated.go
+//go:generate solc --abi --bin --bin-runtime --overwrite -o build contracts/price-oracle.sol
+//go:generate abigen -abi build/PriceOracle.abi -bin build/PriceOracle.bin -pkg network -type PriceOracleContract -out price_oracle_generated.go
+
 import (
 	"math/big"
 
@@ -121,8 +130,15 @@ func (cm *NetworkContractsMap) GetNetworkStats(sdb *state.StateDB) (*NetworkStat
 	return r, nil
 }
 
-// PriceOracle data layout
+// OracleAllowedAddress data layout.
+type OracleAllowedAddress struct {
+	Allowed bool
+	Name    string
+}
+
+// PriceOracle data layout.
 type PriceOracle struct {
+	// Ownable fields.
 	Ownable
 	// Cryptocurrency name.
 	CryptoName string
@@ -136,21 +152,48 @@ type PriceOracle struct {
 	FiatSymbol string
 	// Fiat decimal places.
 	FiatDecimals uint8
-	// Amounts of both currencies used to establish a relationship.
-	CryptoAmount *big.Int
-	FiatAmount   *big.Int
+	// Last block where a transaction can be found
+	LastBlock *big.Int
+	// Volume for fiat.
+	VolFiat *big.Int
+	// Volume for crypto.
+	VolCypto *big.Int
+	// mToken address.
+	MTokenAddress common.Address
+	// Allowed addresses
+	AllowedAddresses *state.Mapping
 }
 
-// PriceForFiat returns the amount of crypto that fiatAmount corresponds to.
-func (po *PriceOracle) PriceForFiat(fiatAmount *big.Int) *big.Int {
-	t := new(big.Int).Mul(fiatAmount, po.CryptoAmount)
-	return t.Div(t, po.FiatAmount)
-}
-
-// PriceForCrypto returns the amount of fiat that cryptoAmount corresponds to.
+// PriceForCrypto returns the price in fiat for cryptoAmount.
 func (po *PriceOracle) PriceForCrypto(cryptoAmount *big.Int) *big.Int {
-	t := new(big.Int).Mul(cryptoAmount, po.FiatAmount)
-	return t.Div(t, po.CryptoAmount)
+	r := new(big.Int).Mul(po.VolFiat, cryptoAmount)
+	return r.Div(r, po.VolCypto)
+}
+
+var big10 = big.NewInt(10)
+
+func (po *PriceOracle) oneCrypto() *big.Int {
+	return new(big.Int).Exp(big10, big.NewInt(int64(po.CryptoDecimals)), nil)
+}
+
+// PriceForOneCrypto returns the price in fiat for 1 crypto.
+func (po *PriceOracle) PriceForOneCrypto() *big.Int {
+	return po.PriceForCrypto(po.oneCrypto())
+}
+
+// PriceForFiat returns the price in crypto for fiatAmount.
+func (po *PriceOracle) PriceForFiat(fiatAmount *big.Int) *big.Int {
+	r := new(big.Int).Mul(po.VolCypto, fiatAmount)
+	return r.Div(r, po.VolFiat)
+}
+
+func (po *PriceOracle) oneFiat() *big.Int {
+	return new(big.Int).Exp(big10, big.NewInt(int64(po.FiatDecimals)), nil)
+}
+
+// PriceForOneFiat returns the price in crypto for 1 fiat.
+func (po *PriceOracle) PriceForOneFiat() *big.Int {
+	return po.PriceForFiat(po.oneFiat())
 }
 
 // NetworkStats data layout.
