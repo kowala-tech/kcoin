@@ -13,9 +13,9 @@ import (
 	"github.com/kowala-tech/kUSD/cmd/utils"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/console"
-	"github.com/kowala-tech/kUSD/ethclient"
 	"github.com/kowala-tech/kUSD/internal/debug"
 	"github.com/kowala-tech/kUSD/kusd"
+	"github.com/kowala-tech/kUSD/kusdclient"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
@@ -32,7 +32,7 @@ var (
 	// Ethereum address of the kusd release oracle.
 	relOracle = common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
 	// The app that holds all commands and flags.
-	app = utils.NewApp(gitCommit, "the go-ethereum command line interface")
+	app = utils.NewApp(gitCommit, "the kowala command line interface")
 	// flags that configure the node
 	nodeFlags = []cli.Flag{
 		utils.IdentityFlag,
@@ -211,7 +211,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err != nil {
 			utils.Fatalf("Failed to attach to self: %v", err)
 		}
-		stateReader := ethclient.NewClient(rpcClient)
+		stateReader := kusdclient.NewClient(rpcClient)
 
 		// Open and self derive any wallets already attached
 		for _, wallet := range stack.AccountManager().Wallets() {

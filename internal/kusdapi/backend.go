@@ -1,5 +1,5 @@
-// Package ethapi implements the general Ethereum API functions.
-package ethapi
+// Package kusdapi implements the general Ethereum API functions.
+package kusdapi
 
 import (
 	"context"
@@ -57,7 +57,7 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 		{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   NewPublicEthereumAPI(apiBackend),
+			Service:   NewPublicKowalaAPI(apiBackend),
 			Public:    true,
 		}, {
 			Namespace: "eth",

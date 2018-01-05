@@ -19,7 +19,7 @@ import (
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/internal/ethapi"
+	"github.com/kowala-tech/kUSD/internal/kusdapi"
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusd/filters"
 	"github.com/kowala-tech/kUSD/kusd/gasprice"
@@ -64,7 +64,7 @@ type Kowala struct {
 	etherbase common.Address
 
 	networkId     uint64
-	netRPCService *ethapi.PublicNetAPI
+	netRPCService *kusdapi.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
 }
@@ -222,7 +222,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the kowala package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Kowala) APIs() []rpc.API {
-	apis := ethapi.GetAPIs(s.ApiBackend)
+	apis := kusdapi.GetAPIs(s.ApiBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
@@ -358,7 +358,7 @@ func (s *Kowala) Protocols() []p2p.Protocol {
 // Start implements node.Service, starting all internal goroutines needed by the
 // Kowala protocol implementation.
 func (s *Kowala) Start(srvr *p2p.Server) error {
-	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.NetVersion())
+	s.netRPCService = kusdapi.NewPublicNetAPI(srvr, s.NetVersion())
 
 	s.protocolManager.Start()
 	if s.lesServer != nil {

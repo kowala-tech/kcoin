@@ -8,31 +8,31 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/internal/ethapi"
+	"github.com/kowala-tech/kUSD/internal/kusdapi"
 	"github.com/kowala-tech/kUSD/rlp"
 	"github.com/kowala-tech/kUSD/rpc"
 )
 
-// ContractBackend implements bind.ContractBackend with direct calls to Ethereum
-// internals to support operating on contracts within subprotocols like eth and
+// ContractBackend implements bind.ContractBackend with direct calls to Kowala
+// internals to support operating on contracts within subprotocols like kusd and
 // swarm.
 //
-// Internally this backend uses the already exposed API endpoints of the Ethereum
+// Internally this backend uses the already exposed API endpoints of the Kowala
 // object. These should be rewritten to internal Go method calls when the Go API
 // is refactored to support a clean library use.
 type ContractBackend struct {
-	eapi  *ethapi.PublicEthereumAPI        // Wrapper around the Ethereum object to access metadata
-	bcapi *ethapi.PublicBlockChainAPI      // Wrapper around the blockchain to access chain data
-	txapi *ethapi.PublicTransactionPoolAPI // Wrapper around the transaction pool to access transaction data
+	eapi  *kusdapi.PublicKowalaAPI          // Wrapper around the Kowala object to access metadata
+	bcapi *kusdapi.PublicBlockChainAPI      // Wrapper around the blockchain to access chain data
+	txapi *kusdapi.PublicTransactionPoolAPI // Wrapper around the transaction pool to access transaction data
 }
 
 // NewContractBackend creates a new native contract backend using an existing
-// Etheruem object.
-func NewContractBackend(apiBackend ethapi.Backend) *ContractBackend {
+// Kowala object.
+func NewContractBackend(apiBackend kusdapi.Backend) *ContractBackend {
 	return &ContractBackend{
-		eapi:  ethapi.NewPublicEthereumAPI(apiBackend),
-		bcapi: ethapi.NewPublicBlockChainAPI(apiBackend),
-		txapi: ethapi.NewPublicTransactionPoolAPI(apiBackend, new(ethapi.AddrLocker)),
+		eapi:  kusdapi.NewPublicKowalaAPI(apiBackend),
+		bcapi: kusdapi.NewPublicBlockChainAPI(apiBackend),
+		txapi: kusdapi.NewPublicTransactionPoolAPI(apiBackend, new(kusdapi.AddrLocker)),
 	}
 }
 
@@ -46,24 +46,24 @@ func (b *ContractBackend) PendingCodeAt(ctx context.Context, contract common.Add
 	return b.bcapi.GetCode(ctx, contract, rpc.PendingBlockNumber)
 }
 
-// ContractCall implements bind.ContractCaller executing an Ethereum contract
+// ContractCall implements bind.ContractCaller executing an Kowala contract
 // call with the specified data as the input. The pending flag requests execution
 // against the pending block, not the stable head of the chain.
-func (b *ContractBackend) CallContract(ctx context.Context, msg ethereum.CallMsg, blockNum *big.Int) ([]byte, error) {
+func (b *ContractBackend) CallContract(ctx context.Context, msg kowala.CallMsg, blockNum *big.Int) ([]byte, error) {
 	out, err := b.bcapi.Call(ctx, toCallArgs(msg), toBlockNumber(blockNum))
 	return out, err
 }
 
-// ContractCall implements bind.ContractCaller executing an Ethereum contract
+// ContractCall implements bind.ContractCaller executing an Kowala contract
 // call with the specified data as the input. The pending flag requests execution
 // against the pending block, not the stable head of the chain.
-func (b *ContractBackend) PendingCallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {
+func (b *ContractBackend) PendingCallContract(ctx context.Context, msg kowala.CallMsg) ([]byte, error) {
 	out, err := b.bcapi.Call(ctx, toCallArgs(msg), rpc.PendingBlockNumber)
 	return out, err
 }
 
-func toCallArgs(msg ethereum.CallMsg) ethapi.CallArgs {
-	args := ethapi.CallArgs{
+func toCallArgs(msg kowala.CallMsg) kusdapi.CallArgs {
+	args := kusdapi.CallArgs{
 		To:   msg.To,
 		From: msg.From,
 		Data: msg.Data,
@@ -108,7 +108,7 @@ func (b *ContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error)
 // the backend blockchain. There is no guarantee that this is the true gas limit
 // requirement as other transactions may be added or removed by miners, but it
 // should provide a basis for setting a reasonable default.
-func (b *ContractBackend) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (*big.Int, error) {
+func (b *ContractBackend) EstimateGas(ctx context.Context, msg kowala.CallMsg) (*big.Int, error) {
 	out, err := b.bcapi.EstimateGas(ctx, toCallArgs(msg))
 	return out.ToInt(), err
 }

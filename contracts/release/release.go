@@ -11,7 +11,7 @@ import (
 
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/internal/ethapi"
+	"github.com/kowala-tech/kUSD/internal/kusdapi"
 	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/node"
@@ -44,7 +44,7 @@ type ReleaseService struct {
 // releases and notify the user of such.
 func NewReleaseService(ctx *node.ServiceContext, config Config) (node.Service, error) {
 	// Retrieve the Kowala service dependency to access the blockchain
-	var apiBackend ethapi.Backend
+	var apiBackend kusdapi.Backend
 	var kowala *kusd.Kowala
 	if err := ctx.Service(&kowala); err == nil {
 		apiBackend = kowala.ApiBackend
