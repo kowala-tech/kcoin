@@ -191,10 +191,6 @@ var AppHelpFlagGroups = []flagGroup{
 		}, debug.Flags...),
 	},
 	{
-		Name:  "WHISPER (EXPERIMENTAL)",
-		Flags: whisperFlags,
-	},
-	{
 		Name: "DEPRECATED",
 		Flags: []cli.Flag{
 			utils.FastSyncFlag,
