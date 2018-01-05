@@ -11,8 +11,8 @@ import (
 
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/eth"
 	"github.com/kowala-tech/kUSD/internal/ethapi"
+	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/p2p"
@@ -24,7 +24,7 @@ const releaseRecheckInterval = time.Hour
 
 // Config contains the configurations of the release service.
 type Config struct {
-	Oracle common.Address // Ethereum address of the release oracle
+	Oracle common.Address // Kowala address of the release oracle
 	Major  uint32         // Major version component of the release
 	Minor  uint32         // Minor version component of the release
 	Patch  uint32         // Patch version component of the release
@@ -43,16 +43,16 @@ type ReleaseService struct {
 // NewReleaseService creates a new service to periodically check for new client
 // releases and notify the user of such.
 func NewReleaseService(ctx *node.ServiceContext, config Config) (node.Service, error) {
-	// Retrieve the Ethereum service dependency to access the blockchain
+	// Retrieve the Kowala service dependency to access the blockchain
 	var apiBackend ethapi.Backend
-	var ethereum *eth.Ethereum
-	if err := ctx.Service(&ethereum); err == nil {
-		apiBackend = ethereum.ApiBackend
+	var kowala *kusd.Kowala
+	if err := ctx.Service(&kowala); err == nil {
+		apiBackend = kowala.ApiBackend
 	} else {
 		return nil, err
 	}
 	// Construct the release service
-	contract, err := NewReleaseOracle(config.Oracle, eth.NewContractBackend(apiBackend))
+	contract, err := NewReleaseOracle(config.Oracle, kusd.NewContractBackend(apiBackend))
 	if err != nil {
 		return nil, err
 	}

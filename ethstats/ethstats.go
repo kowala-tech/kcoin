@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // Package ethstats implements the network stats reporting service.
 package ethstats
 
@@ -35,7 +19,7 @@ import (
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/eth"
+	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/p2p"
@@ -53,7 +37,7 @@ type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
 	server *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	eth    *eth.Ethereum    // Full Ethereum service if monitoring a full node
+	kusd   *kusd.Kowala     // Full Ethereum service if monitoring a full node
 	engine consensus.Engine // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
@@ -65,7 +49,7 @@ type Service struct {
 }
 
 // New returns a monitoring service ready for stats reporting.
-func New(url string, ethServ *eth.Ethereum) (*Service, error) {
+func New(url string, kowalaServ *kusd.Kowala) (*Service, error) {
 	// Parse the netstats connection url
 	re := regexp.MustCompile("([^:@]*)(:([^@]*))?@(.+)")
 	parts := re.FindStringSubmatch(url)
@@ -73,10 +57,10 @@ func New(url string, ethServ *eth.Ethereum) (*Service, error) {
 		return nil, fmt.Errorf("invalid netstats url: \"%s\", should be nodename:secret@host:port", url)
 	}
 	// Assemble and return the stats service
-	engine := ethServ.Engine()
+	engine := kowalaServ.Engine()
 
 	return &Service{
-		eth:    ethServ,
+		kusd:   kowalaServ,
 		engine: engine,
 		node:   parts[1],
 		pass:   parts[3],
@@ -113,7 +97,7 @@ func (s *Service) Stop() error {
 // until termination.
 func (s *Service) loop() {
 	// Subscribe to chain events to execute updates on
-	emux := s.eth.EventMux()
+	emux := s.kusd.EventMux()
 
 	headSub := emux.Subscribe(core.ChainHeadEvent{})
 	defer headSub.Unsubscribe()
@@ -340,8 +324,8 @@ func (s *Service) login(conn *websocket.Conn) error {
 	infos := s.server.NodeInfo()
 
 	info := infos.Protocols["eth"]
-	network := fmt.Sprintf("%d", info.(*eth.EthNodeInfo).Network)
-	protocol := fmt.Sprintf("eth/%d", eth.ProtocolVersions[0])
+	network := fmt.Sprintf("%d", info.(*kusd.EthNodeInfo).Network)
+	protocol := fmt.Sprintf("eth/%d", kusd.ProtocolVersions[0])
 
 	auth := &authMsg{
 		Id: s.node,
@@ -493,10 +477,10 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 
 	// Full nodes have all needed information available
 	if block == nil {
-		block = s.eth.BlockChain().CurrentBlock()
+		block = s.kusd.BlockChain().CurrentBlock()
 	}
 	header = block.Header()
-	td = s.eth.BlockChain().GetTd(header.Hash(), header.Number.Uint64())
+	td = s.kusd.BlockChain().GetTd(header.Hash(), header.Number.Uint64())
 
 	txs = make([]txStats, len(block.Transactions()))
 	for i, tx := range block.Transactions() {
@@ -534,7 +518,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 		indexes = append(indexes, list...)
 	} else {
 		// No indexes requested, send back the top ones
-		head := s.eth.BlockChain().CurrentHeader().Number.Int64()
+		head := s.kusd.BlockChain().CurrentHeader().Number.Int64()
 
 		start := head - historyUpdateRange + 1
 		if start < 0 {
@@ -548,7 +532,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 	history := make([]*blockStats, len(indexes))
 	for i, number := range indexes {
 		// Retrieve the next block if it's known to us
-		block := s.eth.BlockChain().GetBlockByNumber(number)
+		block := s.kusd.BlockChain().GetBlockByNumber(number)
 
 		// If we do have the block, add to the history and continue
 		if block != nil {
@@ -583,7 +567,7 @@ type pendStats struct {
 // it to the stats server.
 func (s *Service) reportPending(conn *websocket.Conn) error {
 	// Retrieve the pending count from the local blockchain
-	pending, _ := s.eth.TxPool().Stats()
+	pending, _ := s.kusd.TxPool().Stats()
 
 	// Assemble the transaction stats and send it to the server
 	log.Trace("Sending pending transactions to ethstats", "count", pending)
@@ -622,13 +606,13 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 		gasprice int
 	)
 
-	mining = s.eth.Miner().Mining()
-	hashrate = int(s.eth.Miner().HashRate())
+	mining = s.kusd.Miner().Mining()
+	hashrate = int(s.kusd.Miner().HashRate())
 
-	sync := s.eth.Downloader().Progress()
-	syncing = s.eth.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
+	sync := s.kusd.Downloader().Progress()
+	syncing = s.kusd.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
 
-	price, _ := s.eth.ApiBackend.SuggestPrice(context.Background())
+	price, _ := s.kusd.ApiBackend.SuggestPrice(context.Background())
 	gasprice = int(price.Uint64())
 
 	// Assemble the node stats and send it to the server

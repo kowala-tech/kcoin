@@ -1,20 +1,4 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
-// kusd is the official command-line client for Ethereum.
+// kusd is the official command-line client for Kowala.
 package main
 
 import (
@@ -29,9 +13,9 @@ import (
 	"github.com/kowala-tech/kUSD/cmd/utils"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/console"
-	"github.com/kowala-tech/kUSD/eth"
 	"github.com/kowala-tech/kUSD/ethclient"
 	"github.com/kowala-tech/kUSD/internal/debug"
+	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
@@ -131,7 +115,7 @@ var (
 
 func init() {
 	// Initialize the CLI app and start kusd
-	app.Action = kusd
+	app.Action = kowala
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2017 The go-ethereum Authors"
 	app.Commands = []cli.Command{
@@ -190,10 +174,10 @@ func main() {
 	}
 }
 
-// kusd is the main entry point into the system if no special subcommand is ran.
+// kowala is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
-func kusd(ctx *cli.Context) error {
+func kowala(ctx *cli.Context) error {
 	node := makeFullNode(ctx)
 	startNode(ctx, node)
 	node.Wait()
@@ -254,23 +238,23 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}()
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
-		// Mining only makes sense if a full Ethereum node is running
-		var ethereum *eth.Ethereum
-		if err := stack.Service(&ethereum); err != nil {
-			utils.Fatalf("ethereum service not running: %v", err)
+		// Mining only makes sense if a full Kowala node is running
+		var kowala *kusd.Kowala
+		if err := stack.Service(&kowala); err != nil {
+			utils.Fatalf("kowala service not running: %v", err)
 		}
 		// Use a reduced number of threads if requested
 		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {
 			type threaded interface {
 				SetThreads(threads int)
 			}
-			if th, ok := ethereum.Engine().(threaded); ok {
+			if th, ok := kowala.Engine().(threaded); ok {
 				th.SetThreads(threads)
 			}
 		}
 		// Set the gas price to the limits from the CLI and start mining
-		ethereum.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
-		if err := ethereum.StartMining(true); err != nil {
+		kowala.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
+		if err := kowala.StartMining(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}

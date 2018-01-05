@@ -36,12 +36,12 @@ import (
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/eth"
-	"github.com/kowala-tech/kUSD/eth/downloader"
-	"github.com/kowala-tech/kUSD/eth/gasprice"
 	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/ethstats"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusd"
+	"github.com/kowala-tech/kUSD/kusd/downloader"
+	"github.com/kowala-tech/kUSD/kusd/gasprice"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
@@ -124,7 +124,7 @@ var (
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
-		Value: eth.DefaultConfig.NetworkId,
+		Value: kusd.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
@@ -155,7 +155,7 @@ var (
 		Name:  "light",
 		Usage: "Enable light client mode",
 	}
-	defaultSyncMode = eth.DefaultConfig.SyncMode
+	defaultSyncMode = kusd.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
@@ -184,27 +184,27 @@ var (
 	EthashCachesInMemoryFlag = cli.IntFlag{
 		Name:  "ethash.cachesinmem",
 		Usage: "Number of recent ethash caches to keep in memory (16MB each)",
-		Value: eth.DefaultConfig.EthashCachesInMem,
+		Value: kusd.DefaultConfig.EthashCachesInMem,
 	}
 	EthashCachesOnDiskFlag = cli.IntFlag{
 		Name:  "ethash.cachesondisk",
 		Usage: "Number of recent ethash caches to keep on disk (16MB each)",
-		Value: eth.DefaultConfig.EthashCachesOnDisk,
+		Value: kusd.DefaultConfig.EthashCachesOnDisk,
 	}
 	EthashDatasetDirFlag = DirectoryFlag{
 		Name:  "ethash.dagdir",
 		Usage: "Directory to store the ethash mining DAGs (default = inside home folder)",
-		Value: DirectoryString{eth.DefaultConfig.EthashDatasetDir},
+		Value: DirectoryString{kusd.DefaultConfig.EthashDatasetDir},
 	}
 	EthashDatasetsInMemoryFlag = cli.IntFlag{
 		Name:  "ethash.dagsinmem",
 		Usage: "Number of recent ethash mining DAGs to keep in memory (1+GB each)",
-		Value: eth.DefaultConfig.EthashDatasetsInMem,
+		Value: kusd.DefaultConfig.EthashDatasetsInMem,
 	}
 	EthashDatasetsOnDiskFlag = cli.IntFlag{
 		Name:  "ethash.dagsondisk",
 		Usage: "Number of recent ethash mining DAGs to keep on disk (1+GB each)",
-		Value: eth.DefaultConfig.EthashDatasetsOnDisk,
+		Value: kusd.DefaultConfig.EthashDatasetsOnDisk,
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
@@ -224,37 +224,37 @@ var (
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: eth.DefaultConfig.TxPool.PriceLimit,
+		Value: kusd.DefaultConfig.TxPool.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: eth.DefaultConfig.TxPool.PriceBump,
+		Value: kusd.DefaultConfig.TxPool.PriceBump,
 	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
 		Usage: "Minimum number of executable transaction slots guaranteed per account",
-		Value: eth.DefaultConfig.TxPool.AccountSlots,
+		Value: kusd.DefaultConfig.TxPool.AccountSlots,
 	}
 	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.globalslots",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: eth.DefaultConfig.TxPool.GlobalSlots,
+		Value: kusd.DefaultConfig.TxPool.GlobalSlots,
 	}
 	TxPoolAccountQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.accountqueue",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: eth.DefaultConfig.TxPool.AccountQueue,
+		Value: kusd.DefaultConfig.TxPool.AccountQueue,
 	}
 	TxPoolGlobalQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.globalqueue",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: eth.DefaultConfig.TxPool.GlobalQueue,
+		Value: kusd.DefaultConfig.TxPool.GlobalQueue,
 	}
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: eth.DefaultConfig.TxPool.Lifetime,
+		Value: kusd.DefaultConfig.TxPool.Lifetime,
 	}
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
@@ -290,7 +290,7 @@ var (
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: eth.DefaultConfig.GasPrice,
+		Value: kusd.DefaultConfig.GasPrice,
 	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
@@ -463,12 +463,12 @@ var (
 	GpoBlocksFlag = cli.IntFlag{
 		Name:  "gpoblocks",
 		Usage: "Number of recent blocks to check for gas prices",
-		Value: eth.DefaultConfig.GPO.Blocks,
+		Value: kusd.DefaultConfig.GPO.Blocks,
 	}
 	GpoPercentileFlag = cli.IntFlag{
 		Name:  "gpopercentile",
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: eth.DefaultConfig.GPO.Percentile,
+		Value: kusd.DefaultConfig.GPO.Percentile,
 	}
 )
 
@@ -706,7 +706,7 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 
 // setEtherbase retrieves the etherbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
+func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *kusd.Config) {
 	if ctx.GlobalIsSet(EtherbaseFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(EtherbaseFlag.Name))
 		if err != nil {
@@ -861,7 +861,7 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
-func setEthash(ctx *cli.Context, cfg *eth.Config) {
+func setEthash(ctx *cli.Context, cfg *kusd.Config) {
 	if ctx.GlobalIsSet(EthashCacheDirFlag.Name) {
 		cfg.EthashCacheDir = ctx.GlobalString(EthashCacheDirFlag.Name)
 	}
@@ -894,8 +894,8 @@ func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
 	}
 }
 
-// SetEthConfig applies eth-related command line flags to the config.
-func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
+// SetKowalaConfig applies kowala-related command line flags to the config.
+func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kusd.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, DevModeFlag, TestnetFlag, RinkebyFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
@@ -976,31 +976,31 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	}
 }
 
-// RegisterEthService adds an Ethereum client to the stack.
-func RegisterEthService(stack *node.Node, cfg *eth.Config) {
+// RegisterKowalaService adds a Kowala client to the stack.
+func RegisterKowalaService(stack *node.Node, cfg *kusd.Config) {
 	var err error
 
 	err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		fullNode, err := eth.New(ctx, cfg)
+		fullNode, err := kusd.New(ctx, cfg)
 		return fullNode, err
 	})
 
 	if err != nil {
-		Fatalf("Failed to register the Ethereum service: %v", err)
+		Fatalf("Failed to register the Kowala service: %v", err)
 	}
 }
 
-// RegisterEthStatsService configures the Ethereum Stats daemon and adds it to
-// th egiven node.
-func RegisterEthStatsService(stack *node.Node, url string) {
+// RegisterKowalaStatsService configures the Kowala Stats daemon and adds it to
+// the given node.
+func RegisterKowalaStatsService(stack *node.Node, url string) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		// Retrieve both eth and les services
-		var ethServ *eth.Ethereum
-		ctx.Service(&ethServ)
+		var kowalaServ *kusd.Kowala
+		ctx.Service(&kowalaServ)
 
-		return ethstats.New(url, ethServ)
+		return ethstats.New(url, kowalaServ)
 	}); err != nil {
-		Fatalf("Failed to register the Ethereum Stats service: %v", err)
+		Fatalf("Failed to register the Kowala Stats service: %v", err)
 	}
 }
 
