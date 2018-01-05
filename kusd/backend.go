@@ -18,12 +18,12 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/internal/ethapi"
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusd/filters"
 	"github.com/kowala-tech/kUSD/kusd/gasprice"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/miner"
 	"github.com/kowala-tech/kUSD/node"
@@ -51,7 +51,7 @@ type Kowala struct {
 	protocolManager *ProtocolManager
 	lesServer       LesServer
 	// DB interfaces
-	chainDb ethdb.Database // Block chain database
+	chainDb kusddb.Database // Block chain database
 
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
@@ -183,19 +183,19 @@ func makeExtraData(extra []byte) []byte {
 }
 
 // CreateDB creates the chain database.
-func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Database, error) {
+func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kusddb.Database, error) {
 	db, err := ctx.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
 	if err != nil {
 		return nil, err
 	}
-	if db, ok := db.(*ethdb.LDBDatabase); ok {
+	if db, ok := db.(*kusddb.LDBDatabase); ok {
 		db.Meter("kusd/db/chaindata/")
 	}
 	return db, nil
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Kowala service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kusddb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
@@ -339,7 +339,7 @@ func (s *Kowala) BlockChain() *core.BlockChain       { return s.blockchain }
 func (s *Kowala) TxPool() *core.TxPool               { return s.txPool }
 func (s *Kowala) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Kowala) Engine() consensus.Engine           { return s.engine }
-func (s *Kowala) ChainDb() ethdb.Database            { return s.chainDb }
+func (s *Kowala) ChainDb() kusddb.Database           { return s.chainDb }
 func (s *Kowala) IsListening() bool                  { return true } // Always listening
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkId }

@@ -9,13 +9,13 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/rpc"
 )
 
 type Backend interface {
-	ChainDb() ethdb.Database
+	ChainDb() kusddb.Database
 	EventMux() *event.TypeMux
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
 	GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error)
@@ -28,7 +28,7 @@ type Filter struct {
 
 	created time.Time
 
-	db         ethdb.Database
+	db         kusddb.Database
 	begin, end int64
 	addresses  []common.Address
 	topics     [][]common.Hash

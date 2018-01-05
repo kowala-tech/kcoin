@@ -10,18 +10,18 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rpc"
 )
 
 type testBackend struct {
 	mux *event.TypeMux
-	db  ethdb.Database
+	db  kusddb.Database
 }
 
-func (b *testBackend) ChainDb() ethdb.Database {
+func (b *testBackend) ChainDb() kusddb.Database {
 	return b.db
 }
 
@@ -57,7 +57,7 @@ func TestBlockSubscription(t *testing.T) {
 
 	var (
 		mux         = new(event.TypeMux)
-		db, _       = ethdb.NewMemDatabase()
+		db, _       = kusddb.NewMemDatabase()
 		backend     = &testBackend{mux, db}
 		api         = NewPublicFilterAPI(backend, false)
 		genesis     = new(core.Genesis).MustCommit(db)
@@ -110,7 +110,7 @@ func TestPendingTxFilter(t *testing.T) {
 
 	var (
 		mux     = new(event.TypeMux)
-		db, _   = ethdb.NewMemDatabase()
+		db, _   = kusddb.NewMemDatabase()
 		backend = &testBackend{mux, db}
 		api     = NewPublicFilterAPI(backend, false)
 
@@ -160,7 +160,7 @@ func TestPendingTxFilter(t *testing.T) {
 func TestLogFilterCreation(t *testing.T) {
 	var (
 		mux     = new(event.TypeMux)
-		db, _   = ethdb.NewMemDatabase()
+		db, _   = kusddb.NewMemDatabase()
 		backend = &testBackend{mux, db}
 		api     = NewPublicFilterAPI(backend, false)
 
@@ -205,7 +205,7 @@ func TestInvalidLogFilterCreation(t *testing.T) {
 
 	var (
 		mux     = new(event.TypeMux)
-		db, _   = ethdb.NewMemDatabase()
+		db, _   = kusddb.NewMemDatabase()
 		backend = &testBackend{mux, db}
 		api     = NewPublicFilterAPI(backend, false)
 	)
@@ -231,7 +231,7 @@ func TestLogFilter(t *testing.T) {
 
 	var (
 		mux     = new(event.TypeMux)
-		db, _   = ethdb.NewMemDatabase()
+		db, _   = kusddb.NewMemDatabase()
 		backend = &testBackend{mux, db}
 		api     = NewPublicFilterAPI(backend, false)
 
@@ -339,7 +339,7 @@ func TestPendingLogsSubscription(t *testing.T) {
 
 	var (
 		mux     = new(event.TypeMux)
-		db, _   = ethdb.NewMemDatabase()
+		db, _   = kusddb.NewMemDatabase()
 		backend = &testBackend{mux, db}
 		api     = NewPublicFilterAPI(backend, false)
 
