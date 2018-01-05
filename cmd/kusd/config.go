@@ -110,8 +110,8 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kusdConfig) {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
 	utils.SetKowalaConfig(ctx, stack, &cfg.Kowala)
-	if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
-		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
+	if ctx.GlobalIsSet(utils.KowalaStatsURLFlag.Name) {
+		cfg.Ethstats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
 	}
 
 	return stack, cfg

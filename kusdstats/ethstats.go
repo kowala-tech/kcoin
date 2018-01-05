@@ -1,5 +1,5 @@
-// Package ethstats implements the network stats reporting service.
-package ethstats
+// Package kusdstats implements the network stats reporting service.
+package kusdstats
 
 import (
 	"context"
@@ -31,13 +31,13 @@ import (
 // history request.
 const historyUpdateRange = 50
 
-// Service implements an Ethereum netstats reporting daemon that pushes local
+// Service implements an Kowala netstats reporting daemon that pushes local
 // chain statistics up to a monitoring server.
 type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
 	server *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	kusd   *kusd.Kowala     // Full Ethereum service if monitoring a full node
+	kusd   *kusd.Kowala     // Full Kowala service if monitoring a full node
 	engine consensus.Engine // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
@@ -268,7 +268,7 @@ func (s *Service) readLoop(conn *websocket.Conn) {
 			if !ok {
 				log.Warn("Invalid stats history request", "msg", msg["emit"][1])
 				s.histCh <- nil
-				continue // Ethstats sometime sends invalid history requests, ignore those
+				continue // Kowalastats sometime sends invalid history requests, ignore those
 			}
 			list, ok := request["list"].([]interface{})
 			if !ok {
@@ -323,9 +323,9 @@ func (s *Service) login(conn *websocket.Conn) error {
 	// Construct and send the login authentication
 	infos := s.server.NodeInfo()
 
-	info := infos.Protocols["eth"]
-	network := fmt.Sprintf("%d", info.(*kusd.EthNodeInfo).Network)
-	protocol := fmt.Sprintf("eth/%d", kusd.ProtocolVersions[0])
+	info := infos.Protocols["kusd"]
+	network := fmt.Sprintf("%d", info.(*kusd.KowalaNodeInfo).Network)
+	protocol := fmt.Sprintf("kusd/%d", kusd.ProtocolVersions[0])
 
 	auth := &authMsg{
 		Id: s.node,
@@ -379,7 +379,7 @@ func (s *Service) report(conn *websocket.Conn) error {
 // reportLatency sends a ping request to the server, measures the RTT time and
 // finally sends a latency update.
 func (s *Service) reportLatency(conn *websocket.Conn) error {
-	// Send the current time to the ethstats server
+	// Send the current time to the kusdstats server
 	start := time.Now()
 
 	ping := map[string][]interface{}{
@@ -402,7 +402,7 @@ func (s *Service) reportLatency(conn *websocket.Conn) error {
 	latency := strconv.Itoa(int((time.Since(start) / time.Duration(2)).Nanoseconds() / 1000000))
 
 	// Send back the measured latency
-	log.Trace("Sending measured latency to ethstats", "latency", latency)
+	log.Trace("Sending measured latency to kusdstats", "latency", latency)
 
 	stats := map[string][]interface{}{
 		"emit": {"latency", map[string]string{
@@ -452,7 +452,7 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	details := s.assembleBlockStats(block)
 
 	// Assemble the block report and send it to the server
-	log.Trace("Sending new block to ethstats", "number", details.Number, "hash", details.Hash)
+	log.Trace("Sending new block to kusdstats", "number", details.Number, "hash", details.Hash)
 
 	stats := map[string]interface{}{
 		"id":    s.node,
@@ -544,7 +544,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 	}
 	// Assemble the history report and send it to the server
 	if len(history) > 0 {
-		log.Trace("Sending historical blocks to ethstats", "first", history[0].Number, "last", history[len(history)-1].Number)
+		log.Trace("Sending historical blocks to kusdstats", "first", history[0].Number, "last", history[len(history)-1].Number)
 	} else {
 		log.Trace("No history to send to stats server")
 	}
@@ -570,7 +570,7 @@ func (s *Service) reportPending(conn *websocket.Conn) error {
 	pending, _ := s.kusd.TxPool().Stats()
 
 	// Assemble the transaction stats and send it to the server
-	log.Trace("Sending pending transactions to ethstats", "count", pending)
+	log.Trace("Sending pending transactions to kusdstats", "count", pending)
 
 	stats := map[string]interface{}{
 		"id": s.node,
@@ -616,7 +616,7 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	gasprice = int(price.Uint64())
 
 	// Assemble the node stats and send it to the server
-	log.Trace("Sending node details to ethstats")
+	log.Trace("Sending node details to kusdstats")
 
 	stats := map[string]interface{}{
 		"id": s.node,

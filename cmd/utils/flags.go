@@ -19,12 +19,12 @@ import (
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/ethstats"
 	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusd/gasprice"
 	"github.com/kowala-tech/kUSD/kusddb"
+	"github.com/kowala-tech/kUSD/kusdstats"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
@@ -296,9 +296,9 @@ var (
 		Usage: "Record information useful for VM and contract debugging",
 	}
 	// Logging and debug settings
-	EthStatsURLFlag = cli.StringFlag{
-		Name:  "ethstats",
-		Usage: "Reporting URL of a ethstats service (nodename:secret@host:port)",
+	KowalaStatsURLFlag = cli.StringFlag{
+		Name:  "kusdstats",
+		Usage: "Reporting URL of a kusdstats service (nodename:secret@host:port)",
 	}
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  metrics.MetricsEnabledFlag,
@@ -981,7 +981,7 @@ func RegisterKowalaStatsService(stack *node.Node, url string) {
 		var kowalaServ *kusd.Kowala
 		ctx.Service(&kowalaServ)
 
-		return ethstats.New(url, kowalaServ)
+		return kusdstats.New(url, kowalaServ)
 	}); err != nil {
 		Fatalf("Failed to register the Kowala Stats service: %v", err)
 	}

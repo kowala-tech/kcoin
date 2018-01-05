@@ -714,19 +714,20 @@ func (self *ProtocolManager) txBroadcastLoop() {
 	}
 }
 
-// EthNodeInfo represents a short summary of the Ethereum sub-protocol metadata known
+// KowalaNodeInfo represents a short summary of the Kowala sub-protocol metadata known
 // about the host peer.
-type EthNodeInfo struct {
-	Network    uint64      `json:"network"`    // Ethereum network ID (1=Frontier, 2=Morden, Ropsten=3)
+type KowalaNodeInfo struct {
+	// @TODO (rgeraldes) - review comment
+	Network    uint64      `json:"network"`    // Kowala network ID (1=Frontier, 2=Morden, Ropsten=3)
 	Difficulty *big.Int    `json:"difficulty"` // Total difficulty of the host's blockchain
 	Genesis    common.Hash `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Head       common.Hash `json:"head"`       // SHA3 hash of the host's best owned block
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
-func (self *ProtocolManager) NodeInfo() *EthNodeInfo {
+func (self *ProtocolManager) NodeInfo() *KowalaNodeInfo {
 	currentBlock := self.blockchain.CurrentBlock()
-	return &EthNodeInfo{
+	return &KowalaNodeInfo{
 		Network:    self.networkId,
 		Difficulty: self.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
 		Genesis:    self.blockchain.Genesis().Hash(),
