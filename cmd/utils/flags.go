@@ -42,7 +42,6 @@ import (
 	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/ethstats"
 	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/les"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
@@ -980,20 +979,12 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 // RegisterEthService adds an Ethereum client to the stack.
 func RegisterEthService(stack *node.Node, cfg *eth.Config) {
 	var err error
-	if cfg.SyncMode == downloader.LightSync {
-		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			return les.New(ctx, cfg)
-		})
-	} else {
-		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			fullNode, err := eth.New(ctx, cfg)
-			if fullNode != nil && cfg.LightServ > 0 {
-				ls, _ := les.NewLesServer(fullNode, cfg)
-				fullNode.AddLesServer(ls)
-			}
-			return fullNode, err
-		})
-	}
+
+	err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		fullNode, err := eth.New(ctx, cfg)
+		return fullNode, err
+	})
+
 	if err != nil {
 		Fatalf("Failed to register the Ethereum service: %v", err)
 	}
@@ -1007,10 +998,7 @@ func RegisterEthStatsService(stack *node.Node, url string) {
 		var ethServ *eth.Ethereum
 		ctx.Service(&ethServ)
 
-		var lesServ *les.LightEthereum
-		ctx.Service(&lesServ)
-
-		return ethstats.New(url, ethServ, lesServ)
+		return ethstats.New(url, ethServ)
 	}); err != nil {
 		Fatalf("Failed to register the Ethereum Stats service: %v", err)
 	}
