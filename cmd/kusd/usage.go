@@ -151,6 +151,7 @@ var AppHelpFlagGroups = []flagGroup{
 		Name: "VALIDATOR",
 		Flags: []cli.Flag{
 			utils.ValidationEnabledFlag,
+			utils.ValidatorDepositFlag,
 			utils.CoinbaseFlag,
 			utils.TargetGasLimitFlag,
 			utils.GasPriceFlag,

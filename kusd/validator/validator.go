@@ -12,6 +12,7 @@ import (
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/kusddb"
+	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
 )
 
@@ -23,17 +24,14 @@ type Backend interface {
 	ChainDb() kusddb.Database
 }
 
-// election encapsulates the consensus election round state
-type election struct {
-}
-
+// Validator represents a consensus validator
 type Validator struct {
 	electionMu sync.Mutex
 	election   // consensus state
 
 	validating int32
 	coinbase   common.Address
-	deposit    int
+	deposit    uint64
 
 	kusd Backend
 
@@ -48,16 +46,39 @@ func New(kusd Backend, config *params.ChainConfig, mux *event.TypeMux, engine co
 	}
 }
 
-func (self *Validator) Start(coinbase common.Address) {}
-func (self *Validator) Stop()                         {}
+func (val *Validator) Start(coinbase common.Address, deposit uint64) {
+	atomic.StoreInt32(&val.shouldStart, 1)
+	val.coinbase = coinbase
+	val.deposit = deposit
 
-func (self *Validator) SetExtra(extra []byte) error { return nil }
-func (self *Validator) Validating() bool {
-	return atomic.LoadInt32(&self.validating) > 0
+	if atomic.LoadInt32(&val.canStart) == 0 {
+		log.Info("Network syncing, will start validator afterwards")
+		return
+	}
+	atomic.StoreInt32(&val.validating, 1)
+
+	// go val.handle()
+	// go val.run()
 }
 
-func (self *Validator) SetCoinbase(addr common.Address) {
-	self.coinbase = addr
+func (val *Validator) Stop() {
+	//val.worker.stop()
+	atomic.StoreInt32(&val.validating, 0)
+	atomic.StoreInt32(&val.shouldStart, 0)
+}
+
+func (val *Validator) SetExtra(extra []byte) error { return nil }
+
+func (val *Validator) Validating() bool {
+	return atomic.LoadInt32(&val.validating) > 0
+}
+
+func (val *Validator) SetCoinbase(addr common.Address) {
+	val.coinbase = addr
+}
+
+func (val *Validator) SetDeposit(deposit uint64) {
+	val.deposit = deposit
 }
 
 // @TODO (rgeraldes) - not sure if pending makes much sense in pos context with low network latencies. review

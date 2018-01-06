@@ -62,6 +62,7 @@ type Kowala struct {
 	validator *validator.Validator // consensus validator
 	gasPrice  *big.Int
 	coinbase  common.Address
+	deposit   uint64
 
 	networkId     uint64
 	netRPCService *kusdapi.PublicNetAPI
@@ -105,6 +106,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Coinbase,
+		deposit:        config.Deposit,
 	}
 
 	if err := addMipmapBloomBins(chainDb); err != nil {
@@ -282,23 +284,51 @@ func (s *Kowala) Coinbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("coinbase address must be explicitly specified")
 }
 
-// set in js console via admin interface or wrapper from cli flags
-func (self *Kowala) SetCoinbase(coinbase common.Address) {
-	self.lock.Lock()
-	self.coinbase = coinbase
-	self.lock.Unlock()
+func (s *Kowala) Deposit() (uint64, error) {
+	s.lock.RLock()
+	deposit := s.deposit
+	s.lock.RUnlock()
 
-	self.validator.SetCoinbase(coinbase)
+	// @TODO(rgeraldes) - as soon as we have the dynamic validator set contract
+	// if there are spots available for validators & value > min value
+	// else if there are no spots available check if deposit is bigger than the the
+	// smallest one
+
+	return deposit, fmt.Errorf("coinbase address must be explicitly specified")
+}
+
+// set in js console via admin interface or wrapper from cli flags
+func (s *Kowala) SetCoinbase(coinbase common.Address) {
+	s.lock.Lock()
+	s.coinbase = coinbase
+	s.lock.Unlock()
+
+	s.validator.SetCoinbase(coinbase)
+}
+
+// set in js console via admin interface or wrapper from cli flags
+func (s *Kowala) SetDeposit(deposit uint64) {
+	s.lock.Lock()
+	s.deposit = deposit
+	s.lock.Unlock()
+
+	s.validator.SetDeposit(deposit)
 }
 
 func (s *Kowala) StartValidating() error {
-	eb, err := s.Coinbase()
+	cb, err := s.Coinbase()
 	if err != nil {
 		log.Error("Cannot start consensus validation without coinbase", "err", err)
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
-	go s.validator.Start(eb)
+	dep, err := s.Deposit()
+	if err != nil {
+		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
+		return fmt.Errorf("insufficient funds: %v", err)
+	}
+
+	go s.validator.Start(cb, dep)
 	return nil
 }
 

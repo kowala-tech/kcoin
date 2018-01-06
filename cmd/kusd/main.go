@@ -230,7 +230,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}()
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.ValidationEnabledFlag.Name) {
-		// Mining only makes sense if a full Kowala node is running
+		// Validation only makes sense if a full Kowala node is running
 		var kowala *kusd.Kowala
 		if err := stack.Service(&kowala); err != nil {
 			utils.Fatalf("kowala service not running: %v", err)

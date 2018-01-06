@@ -222,9 +222,16 @@ var (
 	}
 	// Consensus Validator settings
 	ValidationEnabledFlag = cli.BoolFlag{
-		Name:  "consensus",
+		Name:  "validate",
 		Usage: "Enable consensus validation",
 	}
+
+	ValidatorDepositFlag = cli.Uint64Flag{
+		Name:  "deposit",
+		Usage: "Deposit at stake",
+		// @TODO (rgeraldes) - default could be set to the minimum required
+	}
+
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to be proposed",
@@ -235,6 +242,8 @@ var (
 		Usage: "Public address for block validation rewards (default = first account created)",
 		Value: "0",
 	}
+
+	// @TODO(rgeraldes) - review
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
@@ -673,6 +682,12 @@ func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *kusd.Config) {
 	}
 }
 
+func setDeposit(ctx *cli.Context, cfg *kusd.Config) {
+	if ctx.GlobalIsSet(ValidatorDepositFlag.Name) {
+		cfg.Deposit = ctx.GlobalUint64(ValidatorDepositFlag.Name)
+	}
+}
+
 // MakePasswordList reads password lines from the file specified by the global --password flag.
 func MakePasswordList(ctx *cli.Context) []string {
 	path := ctx.GlobalString(PasswordFileFlag.Name)
@@ -829,6 +844,7 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kusd.Config) {
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setCoinbase(ctx, ks, cfg)
+	setDeposit(ctx, cfg)
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 
