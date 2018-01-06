@@ -89,6 +89,7 @@ func (t *BlockTest) Run(config *params.ChainConfig) error {
 		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", gblock.Root().Bytes()[:6], t.json.Genesis.StateRoot[:6])
 	}
 
+	// @TODO (rgeraldes) - review ethash
 	chain, err := core.NewBlockChain(db, config, ethash.NewShared(), new(event.TypeMux), vm.Config{})
 	if err != nil {
 		return err
