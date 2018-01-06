@@ -47,11 +47,10 @@ type Config struct {
 	DatabaseHandles    int  `toml:"-"`
 	DatabaseCache      int
 
-	// Mining-related options
-	Etherbase    common.Address `toml:",omitempty"`
-	MinerThreads int            `toml:",omitempty"`
-	ExtraData    []byte         `toml:",omitempty"`
-	GasPrice     *big.Int
+	// consensus validation-related options
+	Coinbase  common.Address `toml:",omitempty"`
+	ExtraData []byte         `toml:",omitempty"`
+	GasPrice  *big.Int
 
 	// Transaction pool options
 	TxPool core.TxPoolConfig

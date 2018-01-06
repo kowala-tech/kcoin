@@ -19,8 +19,6 @@ import (
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/internal/kusdapi"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/miner"
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rlp"
 	"github.com/kowala-tech/kUSD/rpc"
@@ -40,21 +38,13 @@ func NewPublicKowalaAPI(kusd *Kowala) *PublicKowalaAPI {
 	return &PublicKowalaAPI{kusd}
 }
 
-// Etherbase is the address that mining rewards will be send to
-func (api *PublicKowalaAPI) Etherbase() (common.Address, error) {
-	return api.kusd.Etherbase()
-}
-
-// Coinbase is the address that mining rewards will be send to (alias for Etherbase)
+// Coinbase is the address that consensus rewards will be send to
 func (api *PublicKowalaAPI) Coinbase() (common.Address, error) {
-	return api.Etherbase()
+	return api.kusd.Coinbase()
 }
 
-// Hashrate returns the POW hashrate
-func (api *PublicKowalaAPI) Hashrate() hexutil.Uint64 {
-	return hexutil.Uint64(api.kusd.Miner().HashRate())
-}
-
+// @TODO(rgeraldes) - most of these methods will not be necessary
+/*
 // PublicMinerAPI provides an API to control the miner.
 // It offers only methods that operate on data that pose no security risk when it is publicly accessible.
 type PublicMinerAPI struct {
@@ -76,13 +66,15 @@ func (api *PublicMinerAPI) Mining() bool {
 }
 
 // @TODO(rgeraldes) - I think that external validation does not make sense because of the latencies
-/*
+
 // SubmitWork can be used by external miner to submit their POW solution. It returns an indication if the work was
 // accepted. Note, this is not an indication if the provided work was valid!
 func (api *PublicMinerAPI) SubmitWork(nonce types.BlockNonce, solution, digest common.Hash) bool {
 	return api.agent.SubmitWork(/*nonce, digest, solution)
 }
-*/
+
+
+// @TODO (rgeraldes) - not necessary.
 
 // GetWork returns a work package for external miner. The work package consists of 3 strings
 // result[0], 32 bytes hex encoded current block header pow-hash
@@ -101,6 +93,7 @@ func (api *PublicMinerAPI) GetWork() ([3]string, error) {
 	return work, nil
 }
 
+
 // SubmitHashrate can be used for remote miners to submit their hash rate. This enables the node to report the combined
 // hash rate of all miners which submit work through this node. It accepts the miner hash rate and an identifier which
 // must be unique between nodes.
@@ -108,71 +101,50 @@ func (api *PublicMinerAPI) SubmitHashrate(hashrate hexutil.Uint64, id common.Has
 	api.agent.SubmitHashrate(id, uint64(hashrate))
 	return true
 }
+*/
 
-// PrivateMinerAPI provides private RPC methods to control the miner.
+// PrivateValidatorAPI provides private RPC methods to control the miner.
 // These methods can be abused by external users and must be considered insecure for use by untrusted users.
-type PrivateMinerAPI struct {
+type PrivateValidatorAPI struct {
 	kusd *Kowala
 }
 
-// NewPrivateMinerAPI create a new RPC service which controls the miner of this node.
-func NewPrivateMinerAPI(kusd *Kowala) *PrivateMinerAPI {
-	return &PrivateMinerAPI{kusd: kusd}
+// NewPrivateValidatorAPI create a new RPC service which controls the validator of this node.
+func NewPrivateValidatorAPI(kusd *Kowala) *PrivateValidatorAPI {
+	return &PrivateValidatorAPI{kusd: kusd}
 }
 
-// Start the miner with the given number of threads. If threads is nil the number
-// of workers started is equal to the number of logical CPUs that are usable by
-// this process. If mining is already running, this method adjust the number of
-// threads allowed to use.
-func (api *PrivateMinerAPI) Start(threads *int) error {
-	// Set the number of threads if the seal engine supports it
-	if threads == nil {
-		threads = new(int)
-	} else if *threads == 0 {
-		*threads = -1 // Disable the miner from within
-	}
-	type threaded interface {
-		SetThreads(threads int)
-	}
-	if th, ok := api.kusd.engine.(threaded); ok {
-		log.Info("Updated mining threads", "threads", *threads)
-		th.SetThreads(*threads)
-	}
-	// Start the miner and return
-	if !api.kusd.IsMining() {
+// Start the validator.
+func (api *PrivateValidatorAPI) Start() error {
+	// Start the validator and return
+	if !api.kusd.IsValidating() {
 		// Propagate the initial price point to the transaction pool
 		api.kusd.lock.RLock()
 		price := api.kusd.gasPrice
 		api.kusd.lock.RUnlock()
 
 		api.kusd.txPool.SetGasPrice(price)
-		return api.kusd.StartMining(true)
+		return api.kusd.StartValidating(true)
 	}
 	return nil
 }
 
-// Stop the miner
-func (api *PrivateMinerAPI) Stop() bool {
-	type threaded interface {
-		SetThreads(threads int)
-	}
-	if th, ok := api.kusd.engine.(threaded); ok {
-		th.SetThreads(-1)
-	}
-	api.kusd.StopMining()
+// Stop the validator
+func (api *PrivateValidatorAPI) Stop() bool {
+	api.kusd.StopValidating()
 	return true
 }
 
-// SetExtra sets the extra data string that is included when this miner mines a block.
-func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
-	if err := api.kusd.Miner().SetExtra([]byte(extra)); err != nil {
+// SetExtra sets the extra data string that is included when this validator proposes a block.
+func (api *PrivateValidatorAPI) SetExtra(extra string) (bool, error) {
+	if err := api.kusd.Validator().SetExtra([]byte(extra)); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-// SetGasPrice sets the minimum accepted gas price for the miner.
-func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
+// SetGasPrice sets the minimum accepted gas price for the validator.
+func (api *PrivateValidatorAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	api.kusd.lock.Lock()
 	api.kusd.gasPrice = (*big.Int)(&gasPrice)
 	api.kusd.lock.Unlock()
@@ -181,15 +153,10 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	return true
 }
 
-// SetEtherbase sets the etherbase of the miner
-func (api *PrivateMinerAPI) SetEtherbase(etherbase common.Address) bool {
-	api.kusd.SetEtherbase(etherbase)
+// SetCoinbase sets the coinbase of the validator
+func (api *PrivateValidatorAPI) SetCoinbase(coinbase common.Address) bool {
+	api.kusd.SetCoinbase(coinbase)
 	return true
-}
-
-// GetHashrate returns the current hashrate of the miner.
-func (api *PrivateMinerAPI) GetHashrate() uint64 {
-	return uint64(api.kusd.miner.HashRate())
 }
 
 // PrivateAdminAPI is the collection of Kowala full node-related APIs
@@ -303,7 +270,7 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 		// If we're dumping the pending state, we need to request
 		// both the pending block as well as the pending state from
 		// the miner and operate on those
-		_, stateDb := api.kusd.miner.Pending()
+		_, stateDb := api.kusd.validator.Pending()
 		return stateDb.RawDump(), nil
 	}
 	var block *types.Block
@@ -384,7 +351,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(blockNr rpc.BlockNumber, config *
 	switch blockNr {
 	case rpc.PendingBlockNumber:
 		// Pending block is only known by the miner
-		block = api.kusd.miner.PendingBlock()
+		block = api.kusd.validator.PendingBlock()
 	case rpc.LatestBlockNumber:
 		block = api.kusd.blockchain.CurrentBlock()
 	default:

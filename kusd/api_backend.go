@@ -39,9 +39,9 @@ func (b *KowalaApiBackend) SetHead(number uint64) {
 }
 
 func (b *KowalaApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
-	// Pending block is only known by the miner
+	// Pending block is only known by the validator
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.kusd.miner.PendingBlock()
+		block := b.kusd.validator.PendingBlock()
 		return block.Header(), nil
 	}
 	// Otherwise resolve and return the block
@@ -52,9 +52,9 @@ func (b *KowalaApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.Block
 }
 
 func (b *KowalaApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
-	// Pending block is only known by the miner
+	// Pending block is only known by the validator
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.kusd.miner.PendingBlock()
+		block := b.kusd.validator.PendingBlock()
 		return block, nil
 	}
 	// Otherwise resolve and return the block
@@ -65,9 +65,9 @@ func (b *KowalaApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockN
 }
 
 func (b *KowalaApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
-	// Pending state is only known by the miner
+	// Pending state is only known by the validator
 	if blockNr == rpc.PendingBlockNumber {
-		block, state := b.kusd.miner.Pending()
+		block, state := b.kusd.validator.Pending()
 		return state, block.Header(), nil
 	}
 	// Otherwise resolve the block number and return its state

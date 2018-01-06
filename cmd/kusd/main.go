@@ -65,10 +65,9 @@ var (
 		utils.ListenPortFlag,
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,
-		utils.EtherbaseFlag,
+		utils.CoinbaseFlag,
 		utils.GasPriceFlag,
-		utils.MinerThreadsFlag,
-		utils.MiningEnabledFlag,
+		utils.ValidationEnabledFlag,
 		utils.TargetGasLimitFlag,
 		utils.NATFlag,
 		utils.NoDiscoverFlag,
@@ -230,24 +229,16 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}()
 	// Start auxiliary services if enabled
-	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
+	if ctx.GlobalBool(utils.ValidationEnabledFlag.Name) {
 		// Mining only makes sense if a full Kowala node is running
 		var kowala *kusd.Kowala
 		if err := stack.Service(&kowala); err != nil {
 			utils.Fatalf("kowala service not running: %v", err)
 		}
-		// Use a reduced number of threads if requested
-		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {
-			type threaded interface {
-				SetThreads(threads int)
-			}
-			if th, ok := kowala.Engine().(threaded); ok {
-				th.SetThreads(threads)
-			}
-		}
+
 		// Set the gas price to the limits from the CLI and start mining
 		kowala.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
-		if err := kowala.StartMining(true); err != nil {
+		if err := kowala.StartValidating(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}

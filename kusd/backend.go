@@ -22,9 +22,9 @@ import (
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusd/filters"
 	"github.com/kowala-tech/kUSD/kusd/gasprice"
+	"github.com/kowala-tech/kUSD/kusd/validator"
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/miner"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/p2p"
 	"github.com/kowala-tech/kUSD/params"
@@ -58,9 +58,9 @@ type Kowala struct {
 
 	ApiBackend *KowalaApiBackend
 
-	miner     *miner.Miner
+	validator *validator.Validator // consensus validator
 	gasPrice  *big.Int
-	etherbase common.Address
+	coinbase  common.Address
 
 	networkId     uint64
 	netRPCService *kusdapi.PublicNetAPI
@@ -103,7 +103,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		stopDbUpgrade:  stopDbUpgrade,
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
-		etherbase:      config.Etherbase,
+		coinbase:       config.Coinbase,
 	}
 
 	if err := addMipmapBloomBins(chainDb); err != nil {
@@ -151,8 +151,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		return nil, err
 	}
 
-	kusd.miner = miner.New(kusd, kusd.chainConfig, kusd.EventMux(), kusd.engine)
-	kusd.miner.SetExtra(makeExtraData(config.ExtraData))
+	kusd.validator = validator.New(kusd, kusd.chainConfig, kusd.EventMux(), kusd.engine)
+	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	kusd.ApiBackend = &KowalaApiBackend{kusd, nil}
 	gpoParams := config.GPO
@@ -175,7 +175,7 @@ func makeExtraData(extra []byte) []byte {
 		})
 	}
 	if uint64(len(extra)) > params.MaximumExtraDataSize {
-		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
+		log.Warn("Validator extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
 		extra = nil
 	}
 	return extra
@@ -215,20 +215,24 @@ func (s *Kowala) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPublicKowalaAPI(s),
 			Public:    true,
-		}, {
+		},
+		// @NOTE(rgeraldes) - most of the methods are related to external mining.
+		// External validation does not make much sense in order to control latencies.
+		// We need to review to check if there are possible use cases.
+		/*{
 			Namespace: "kusd",
 			Version:   "1.0",
 			Service:   NewPublicMinerAPI(s),
 			Public:    true,
-		}, {
+		},*/{
 			Namespace: "kusd",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
 		}, {
-			Namespace: "miner",
+			Namespace: "validator",
 			Version:   "1.0",
-			Service:   NewPrivateMinerAPI(s),
+			Service:   NewPrivateValidatorAPI(s),
 			Public:    false,
 		}, {
 			Namespace: "kusd",
@@ -261,36 +265,36 @@ func (s *Kowala) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *Kowala) Etherbase() (eb common.Address, err error) {
+func (s *Kowala) Coinbase() (eb common.Address, err error) {
 	s.lock.RLock()
-	etherbase := s.etherbase
+	coinbase := s.coinbase
 	s.lock.RUnlock()
 
-	if etherbase != (common.Address{}) {
-		return etherbase, nil
+	if coinbase != (common.Address{}) {
+		return coinbase, nil
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
 			return accounts[0].Address, nil
 		}
 	}
-	return common.Address{}, fmt.Errorf("etherbase address must be explicitly specified")
+	return common.Address{}, fmt.Errorf("coinbase address must be explicitly specified")
 }
 
 // set in js console via admin interface or wrapper from cli flags
-func (self *Kowala) SetEtherbase(etherbase common.Address) {
+func (self *Kowala) SetCoinbase(coinbase common.Address) {
 	self.lock.Lock()
-	self.etherbase = etherbase
+	self.coinbase = coinbase
 	self.lock.Unlock()
 
-	self.miner.SetEtherbase(etherbase)
+	self.validator.SetCoinbase(coinbase)
 }
 
-func (s *Kowala) StartMining(local bool) error {
-	eb, err := s.Etherbase()
+func (s *Kowala) StartValidating(local bool) error {
+	eb, err := s.Coinbase()
 	if err != nil {
-		log.Error("Cannot start mining without etherbase", "err", err)
-		return fmt.Errorf("etherbase missing: %v", err)
+		log.Error("Cannot start consensus validation without coinbase", "err", err)
+		return fmt.Errorf("coinbase missing: %v", err)
 	}
 	if local {
 		// If local (CPU) mining is started, we can disable the transaction rejection
@@ -299,13 +303,13 @@ func (s *Kowala) StartMining(local bool) error {
 		// will ensure that private networks work in single miner mode too.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 	}
-	go s.miner.Start(eb)
+	go s.validator.Start(eb)
 	return nil
 }
 
-func (s *Kowala) StopMining()         { s.miner.Stop() }
-func (s *Kowala) IsMining() bool      { return s.miner.Mining() }
-func (s *Kowala) Miner() *miner.Miner { return s.miner }
+func (s *Kowala) StopValidating()                 { s.validator.Stop() }
+func (s *Kowala) IsValidating() bool              { return s.validator.Validating() }
+func (s *Kowala) Validator() *validator.Validator { return s.validator }
 
 func (s *Kowala) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Kowala) BlockChain() *core.BlockChain       { return s.blockchain }
@@ -352,7 +356,7 @@ func (s *Kowala) Stop() error {
 		s.lesServer.Stop()
 	}
 	s.txPool.Stop()
-	s.miner.Stop()
+	s.validator.Stop()
 	s.eventMux.Stop()
 
 	s.chainDb.Close()
