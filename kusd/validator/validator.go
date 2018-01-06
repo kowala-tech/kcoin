@@ -23,15 +23,29 @@ type Backend interface {
 	ChainDb() kusddb.Database
 }
 
+// election encapsulates the consensus election round state
+type election struct {
+}
+
 type Validator struct {
-	consensusMu sync.Mutex
+	electionMu sync.Mutex
+	election   // consensus state
 
 	validating int32
 	coinbase   common.Address
+	deposit    int
+
+	kusd Backend
+
+	// sync
+	canStart    int32 // can start indicates whether we can start the validation operation
+	shouldStart int32 // should start indicates whether we should start after sync
 }
 
 func New(kusd Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Validator {
-	return &Validator{}
+	return &Validator{
+		kusd: kusd,
+	}
 }
 
 func (self *Validator) Start(coinbase common.Address) {}
@@ -57,8 +71,8 @@ func (self *Validator) Pending() (*types.Block, *state.StateDB) { return nil, ni
 // simultaneously, please use Pending(), as the pending state can
 // change between multiple method calls
 func (self *Validator) PendingBlock() *types.Block {
-	self.consensusMu.Lock()
-	defer self.consensusMu.Unlock()
+	self.electionMu.Lock()
+	defer self.electionMu.Unlock()
 
 	/*
 		if atomic.LoadInt32(&self.validating) == 0 {
