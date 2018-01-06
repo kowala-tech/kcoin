@@ -421,8 +421,6 @@ type blockStats struct {
 	Miner      common.Address `json:"miner"`
 	GasUsed    *big.Int       `json:"gasUsed"`
 	GasLimit   *big.Int       `json:"gasLimit"`
-	Diff       string         `json:"difficulty"`
-	TotalDiff  string         `json:"totalDifficulty"`
 	Txs        []txStats      `json:"transactions"`
 	TxHash     common.Hash    `json:"transactionsRoot"`
 	Root       common.Hash    `json:"stateRoot"`
@@ -457,7 +455,6 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 	// Gather the block infos from the local blockchain
 	var (
 		header *types.Header
-		td     *big.Int
 		txs    []txStats
 	)
 
@@ -466,7 +463,6 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		block = s.kusd.BlockChain().CurrentBlock()
 	}
 	header = block.Header()
-	td = s.kusd.BlockChain().GetTd(header.Hash(), header.Number.Uint64())
 
 	txs = make([]txStats, len(block.Transactions()))
 	for i, tx := range block.Transactions() {
@@ -484,8 +480,6 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		Miner:      author,
 		GasUsed:    new(big.Int).Set(header.GasUsed),
 		GasLimit:   new(big.Int).Set(header.GasLimit),
-		Diff:       header.Difficulty.String(),
-		TotalDiff:  td.String(),
 		Txs:        txs,
 		TxHash:     header.TxHash,
 		Root:       header.Root,

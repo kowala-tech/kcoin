@@ -223,15 +223,11 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		Extra:      g.ExtraData,
 		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
 		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
-		Difficulty: g.Difficulty,
 		Coinbase:   g.Coinbase,
 		Root:       root,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
-	}
-	if g.Difficulty == nil {
-		head.Difficulty = params.GenesisDifficulty
 	}
 	return types.NewBlock(head, nil, nil), statedb
 }
