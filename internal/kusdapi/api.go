@@ -440,6 +440,7 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 		response, err := s.rpcOutputBlock(block, true, fullTx)
 		if err == nil && blockNr == rpc.PendingBlockNumber {
 			// Pending blocks need to nil out a few fields
+			// @TODO(rgeraldes) - review
 			for _, field := range []string{"hash", "nonce", "miner"} {
 				response[field] = nil
 			}

@@ -106,7 +106,7 @@ func (b *ContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error)
 // EstimateGasLimit implements bind.ContractTransactor triing to estimate the gas
 // needed to execute a specific transaction based on the current pending state of
 // the backend blockchain. There is no guarantee that this is the true gas limit
-// requirement as other transactions may be added or removed by miners, but it
+// requirement as other transactions may be added or removed by validators, but it
 // should provide a basis for setting a reasonable default.
 func (b *ContractBackend) EstimateGas(ctx context.Context, msg kowala.CallMsg) (*big.Int, error) {
 	out, err := b.bcapi.EstimateGas(ctx, toCallArgs(msg))

@@ -103,7 +103,7 @@ func (api *PublicMinerAPI) SubmitHashrate(hashrate hexutil.Uint64, id common.Has
 }
 */
 
-// PrivateValidatorAPI provides private RPC methods to control the miner.
+// PrivateValidatorAPI provides private RPC methods to control the validator.
 // These methods can be abused by external users and must be considered insecure for use by untrusted users.
 type PrivateValidatorAPI struct {
 	kusd *Kowala
@@ -124,7 +124,7 @@ func (api *PrivateValidatorAPI) Start() error {
 		api.kusd.lock.RUnlock()
 
 		api.kusd.txPool.SetGasPrice(price)
-		return api.kusd.StartValidating(true)
+		return api.kusd.StartValidating()
 	}
 	return nil
 }
@@ -269,7 +269,7 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 	if blockNr == rpc.PendingBlockNumber {
 		// If we're dumping the pending state, we need to request
 		// both the pending block as well as the pending state from
-		// the miner and operate on those
+		// the validator and operate on those
 		_, stateDb := api.kusd.validator.Pending()
 		return stateDb.RawDump(), nil
 	}
@@ -350,7 +350,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(blockNr rpc.BlockNumber, config *
 	var block *types.Block
 	switch blockNr {
 	case rpc.PendingBlockNumber:
-		// Pending block is only known by the miner
+		// Pending block is only known by the validator
 		block = api.kusd.validator.PendingBlock()
 	case rpc.LatestBlockNumber:
 		block = api.kusd.blockchain.CurrentBlock()

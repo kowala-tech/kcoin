@@ -418,7 +418,7 @@ type blockStats struct {
 	Hash       common.Hash    `json:"hash"`
 	ParentHash common.Hash    `json:"parentHash"`
 	Timestamp  *big.Int       `json:"timestamp"`
-	Miner      common.Address `json:"miner"`
+	Validator  common.Address `json:"validator"`
 	GasUsed    *big.Int       `json:"gasUsed"`
 	GasLimit   *big.Int       `json:"gasLimit"`
 	Txs        []txStats      `json:"transactions"`
@@ -477,7 +477,7 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		Hash:       header.Hash(),
 		ParentHash: header.ParentHash,
 		Timestamp:  header.Time,
-		Miner:      author,
+		Validator:  author,
 		GasUsed:    new(big.Int).Set(header.GasUsed),
 		GasLimit:   new(big.Int).Set(header.GasLimit),
 		Txs:        txs,

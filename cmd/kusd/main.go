@@ -178,7 +178,7 @@ func kowala(ctx *cli.Context) error {
 
 // startNode boots up the system node and all registered protocols, after which
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
-// miner.
+// validator.
 func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start up the node itself
 	utils.StartNode(stack)
@@ -238,7 +238,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 		// Set the gas price to the limits from the CLI and start mining
 		kowala.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
-		if err := kowala.StartValidating(true); err != nil {
+		if err := kowala.StartValidating(); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}

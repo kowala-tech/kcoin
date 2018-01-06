@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"runtime"
 	"sync"
-	"sync/atomic"
 
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
@@ -37,6 +36,8 @@ type LesServer interface {
 	Stop()
 	Protocols() []p2p.Protocol
 }
+
+// @TODO(rgeraldes) - we may need to enable transaction syncing right from the beggining (in StartValidating - check previous version)
 
 // Kowala implements the Kowala full node service.
 type Kowala struct {
@@ -290,19 +291,13 @@ func (self *Kowala) SetCoinbase(coinbase common.Address) {
 	self.validator.SetCoinbase(coinbase)
 }
 
-func (s *Kowala) StartValidating(local bool) error {
+func (s *Kowala) StartValidating() error {
 	eb, err := s.Coinbase()
 	if err != nil {
 		log.Error("Cannot start consensus validation without coinbase", "err", err)
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
-	if local {
-		// If local (CPU) mining is started, we can disable the transaction rejection
-		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
-		// so noone will ever hit this path, whereas marking sync done on CPU mining
-		// will ensure that private networks work in single miner mode too.
-		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
-	}
+
 	go s.validator.Start(eb)
 	return nil
 }
