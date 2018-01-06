@@ -26,23 +26,37 @@ type Backend interface {
 
 // Validator represents a consensus validator
 type Validator struct {
-	electionMu sync.Mutex
-	election   // consensus state
+	// state machine
+	electionMu     sync.Mutex
+	election           // consensus state
+	maxTransitions int // max number of state transitions (tests) 0 - unlimited
 
 	validating int32
 	coinbase   common.Address
 	deposit    uint64
 
-	kusd Backend
+	// blockchain
+	kusd   Backend
+	chain  *core.BlockChain
+	config *params.ChainConfig
+	engine consensus.Engine
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
 	shouldStart int32 // should start indicates whether we should start after sync
+
+	// events
+	eventMux *event.TypeMux
 }
 
-func New(kusd Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Validator {
+// New returns a new consensus validator
+func New(kusd Backend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine) *Validator {
 	return &Validator{
-		kusd: kusd,
+		kusd:     kusd,
+		chain:    kusd.BlockChain(),
+		config:   config,
+		eventMux: eventMux,
+		engine:   engine,
 	}
 }
 
@@ -57,8 +71,19 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	}
 	atomic.StoreInt32(&val.validating, 1)
 
+	go val.run()
 	// go val.handle()
-	// go val.run()
+}
+
+func (val *Validator) run() {
+	log.Info("Starting the consensus state machine")
+	for state, numTransitions := val.initialState, 0; state != nil; numTransitions++ {
+		// @TODO(rgeraldes) - publish old/new state if necessary - need to review sync process
+		state = state()
+		if val.maxTransitions > 0 && numTransitions == val.maxTransitions {
+			break
+		}
+	}
 }
 
 func (val *Validator) Stop() {
@@ -107,4 +132,58 @@ func (self *Validator) PendingBlock() *types.Block {
 		return self.current.Block
 	*/
 	return nil
+}
+
+func (val *Validator) restoreLastCommit() {
+	/*
+		currentBlock := val.chain.CurrentBlock()
+		if currentBlock.Number().Cmp(big.NewInt(0)) == 0 {
+			return
+		}
+
+		lastCommit := currentBlock.Commit()
+		lastPreCommits := core.NewVoteSet(currentBlock.Number(), lastCommit.Round(), types.PreCommit, state.lastValidators)
+		for _, preCommit := range lastCommit.PreCommits() {
+			if preCommit == nil {
+				continue
+			}
+			added, err := lastPreCommits.Add(preCommit)
+			if !added || error != nil {
+				// @TODO (rgeraldes) - this should not happen > complete
+				log.Error("Failed to restore the latest commit")
+			}
+		}
+		self.lastCommit = lastPrecommits
+	*/
+}
+
+func (val *Validator) init() {
+	/*
+		// @TODO (rgeraldes) - call pos contract in order to get the latest set of validators
+		// for now it's an hardcoded value the set of validators will be the same as the last round
+		// self.validators =
+		// self.prevValidators =
+		prevPreCommits := new(*core.VoteSet)
+		if self.commitRound > -1 && self.votes != nil {
+			prevPreCommits = self.votes.PreCommits(self.commitRound)
+		}
+		parent := self.chain.CurrentBlock()
+
+		self.blockNumber = parent.BlockNumber().Add(1)
+		self.round = 0
+		self.start = self.end.Add(SyncDuration * time.Millisecond)
+		self.proposal = nil
+		self.proposalBlock = nil
+		self.proposalBlockChunks = nil
+		self.lockedRound = 0
+		self.lockedBlock = nil
+		self.commitRound = -1
+		self.prevCommit = prevPreCommits
+
+	*/
+}
+
+func (val *Validator) isProposer() bool {
+	//return val.coinbase ==
+	return false
 }

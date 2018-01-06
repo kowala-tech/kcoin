@@ -45,6 +45,18 @@ const (
 	TxDataNonZeroGas uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
 
 	MaxCodeSize = 24576
+
+	// Proof of Stake - timeouts
+	ProposeDuration        uint64 = 10000
+	ProposeDeltaDuration   uint64 = 5000
+	PreVoteDuration        uint64 = 10000
+	PreVoteDeltaDuration   uint64 = 5000
+	PreCommitDuration      uint64 = 10000
+	PreCommitDeltaDuration uint64 = 5000
+
+	// @NOTE (rgeraldes) - this duration can be used to change the times
+	// between blocks
+	SyncDuration uint64 = 10000
 )
 
 var (
