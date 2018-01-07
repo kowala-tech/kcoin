@@ -12,24 +12,22 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
-	eth62 = 62
-	eth63 = 63
+	kusd1 = 1
 )
 
 // Official short name of the protocol used during capability negotiation.
-var ProtocolName = "eth"
+var ProtocolName = "kusd"
 
-// Supported versions of the eth protocol (first is primary).
-var ProtocolVersions = []uint{eth63, eth62}
+// Supported versions of the kusd protocol (first is primary).
+var ProtocolVersions = []uint{kusd1}
 
 // Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+var ProtocolLengths = []uint64{17}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
-// eth protocol message codes
+// kusd protocol message codes
 const (
-	// Protocol messages belonging to eth/62
 	StatusMsg          = 0x00
 	NewBlockHashesMsg  = 0x01
 	TxMsg              = 0x02
@@ -38,12 +36,17 @@ const (
 	GetBlockBodiesMsg  = 0x05
 	BlockBodiesMsg     = 0x06
 	NewBlockMsg        = 0x07
+	GetNodeDataMsg     = 0x0d
+	NodeDataMsg        = 0x0e
+	GetReceiptsMsg     = 0x0f
+	ReceiptsMsg        = 0x10
 
-	// Protocol messages belonging to eth/63
-	GetNodeDataMsg = 0x0d
-	NodeDataMsg    = 0x0e
-	GetReceiptsMsg = 0x0f
-	ReceiptsMsg    = 0x10
+	// consensus
+	ProposalMsg      = 0x11
+	ProposalPOLMsg   = 0x12
+	VoteMsg          = 0x13
+	ElectionMsg      = 0x14
+	BlockFragmentMsg = 0x15
 )
 
 type errCode int
@@ -157,3 +160,27 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
+
+// @TODO (rgeraldes) - modify name from POL to Locked
+// proposalPOLData is the network packet for the re-proposed proposal message
+type proposalPOLData struct {
+	BlockNumber *big.Int
+	POLRound    int
+	POL         *common.BitArray
+}
+
+// electionData is the network packet that is sent to indicate that a given candidate (block) has seen +2/3 votes
+type electionData struct {
+	Type        types.VoteType
+	BlockNumber *big.Int
+	BlockHash   common.Hash
+	Round       int
+}
+
+// @TODO (rgeraldes) - review name
+// blockFragmentData is the network packet that is sent to let the other validators have a part of the proposed block
+type blockFragmentData struct {
+	BlockNumber *big.Int
+	Round       int
+	//Data        *types.Chunk
+}

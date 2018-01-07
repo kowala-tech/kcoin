@@ -30,15 +30,16 @@ func (val *Validator) initialState() stateFn {
 
 	/*
 		// one shot type of confirmation loop
-		headSub := self.eventMux.Subscribe(ChainHeadEvent{})
+		headSub := val.eventMux.Subscribe(ChainHeadEvent{})
 		defer headSub.Unsubscribe()
 		// @NOTE (rgeraldes) - calls pos contract
-		self.deposit()
+		val.deposit()
+
 		for {
 			select {
 				ev := <- latestBlock.Chan():
 				// if transaction was committed
-					// if successful return self.newBlockState
+					// if successful return val.newBlockState
 					// if not successful (ex: not enough funds) return nil
 					// log.Error()
 			}
@@ -79,13 +80,12 @@ func (val *Validator) newRoundState() stateFn {
 	log.Info("Starting a new election round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
 	/*
-		if self.round != 0 {
-			self.proposal = nil
-			self.proposalBlock = nil
-			self.proposalBlockFragments = nil
+		if val.round != 0 {
+			val.proposal = nil
+			val.proposalBlock = nil
+			//val.proposalBlockFragments = nil
 		}
-		self.votes.SetRound(self.round + 1) // also track next round (round+1) to allow round-skipping
-
+		//val.votes.SetRound(val.round + 1) // also track next round (round+1) to allow round-skipping
 	*/
 
 	return val.newProposalState
@@ -99,11 +99,11 @@ func (val *Validator) newProposalState() stateFn {
 	/*
 		if val.isProposer() {
 			log.Info("Proposing a new block", "hash", val.proposal.Hash())
-			self.propose()
+			val.propose()
 		} else {
 			select {
-			case self.proposalSub.Chan():
-				log.Info("Received a new proposal", "block number", self.proposal.BlockNumber(), "hash", self.proposal.Hash())
+			case val.proposalSub.Chan():
+				log.Info("Received a new proposal", "block number", val.proposal.BlockNumber(), "hash", val.proposal.Hash())
 			case <-time.After(timeout):
 				log.Info("Timeout expired", "duration", timeout)
 			}
@@ -116,7 +116,7 @@ func (val *Validator) newProposalState() stateFn {
 func (val *Validator) preVoteState() stateFn {
 	log.Info("Starting the pre vote election")
 
-	//self.prevote()
+	//val.prevote()
 
 	return val.preVoteWaitState
 }
@@ -142,7 +142,7 @@ func (val *Validator) preVoteWaitState() stateFn {
 func (val *Validator) preCommitState() stateFn {
 	log.Info("Starting the pre commit election")
 
-	//self.precommit()
+	//val.precommit()
 
 	return val.preCommitWaitState
 }
@@ -154,18 +154,18 @@ func (val *Validator) preCommitWaitState() stateFn {
 
 	/*
 		select {
-		case self.preCommitMajSub.Chan():
+		case val.preCommitMajSub.Chan():
 			log.Info("There's a majority")
 
-			if self.proposalBlock == nil {
-				return self.newRoundState
+			if val.proposalBlock == nil {
+				return val.newRoundState
 			} else {
-				return self.commitState
+				return val.commitState
 			}
 
 		case time.After(timeout):
 			log.Info("Timeout expired", "duration", timeout)
-			return self.newRoundState
+			return val.newRoundState
 		}
 	*/
 
@@ -181,7 +181,7 @@ func (val *Validator) commitState() stateFn {
 		val.state.commitTime = time.Now()
 
 		// Write block using a batch.
-		batch := self.chain.chainDb.NewBatch()
+		batch := val.chain.chainDb.NewBatch()
 		if err := core.WriteBlock(batch, block); err != nil {
 			log.Crit("Failed writing block to chain", "err", err)
 		}
