@@ -5,25 +5,38 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kUSD/core"
+	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kUSD/params"
 )
 
 // election encapsulates the consensus state for a specific block election
 type election struct {
 	blockNumber *big.Int
-	round       uint64
+	round       int
+
+	proposal      *types.Proposal
+	proposalBlock *types.Block
+
+	lockedRound int
+	lockedBlock *types.Block
 
 	start time.Time
 	end   time.Time
+
+	commitRound int
+
+	lastCommit *core.VoteSet // Last precommits at Height-1
+
+	// proposer
+	txs []*types.Transaction
+	receipts []*types.Receipt
 }
 
 // stateFn represents a state function
 type stateFn func() stateFn
 
-// @TODO if the validator is not part of the validator state anymore, return nil
-// if not part of the voters return nil
-
-func (val *Validator) initialState() stateFn {
+func (val *Validator) notYetVoterState() stateFn {
 	log.Info("Initial state")
 
 	// @TODO (rgeraldes) - to do as soon as the contract for the dynamic validator is up
@@ -79,14 +92,12 @@ func (val *Validator) newElectionState() stateFn {
 func (val *Validator) newRoundState() stateFn {
 	log.Info("Starting a new election round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
-	/*
-		if val.round != 0 {
-			val.proposal = nil
-			val.proposalBlock = nil
-			//val.proposalBlockFragments = nil
-		}
-		//val.votes.SetRound(val.round + 1) // also track next round (round+1) to allow round-skipping
-	*/
+	if val.round != 0 {
+		val.proposal = nil
+		val.proposalBlock = nil
+		val.proposalBlockFragments = nil
+	}
+	val.votes.SetRound(val.round + 1) // also track next round (round+1) to allow round-skipping
 
 	return val.newProposalState
 }
@@ -94,21 +105,19 @@ func (val *Validator) newRoundState() stateFn {
 func (val *Validator) newProposalState() stateFn {
 	log.Info("Starting a new proposal")
 
-	//timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
 
-	/*
-		if val.isProposer() {
-			log.Info("Proposing a new block", "hash", val.proposal.Hash())
-			val.propose()
-		} else {
-			select {
-			case val.proposalSub.Chan():
-				log.Info("Received a new proposal", "block number", val.proposal.BlockNumber(), "hash", val.proposal.Hash())
-			case <-time.After(timeout):
-				log.Info("Timeout expired", "duration", timeout)
-			}
+	if val.isProposer() {
+		log.Info("Proposing a new block", "hash", val.proposal.Hash())
+		val.propose()
+	} else {
+		select {
+		case val.proposalSub.Chan():
+			log.Info("Received a new proposal", "block number", val.proposal.BlockNumber(), "hash", val.proposal.Hash())
+		case <-time.After(timeout):
+			log.Info("Timeout expired", "duration", timeout)
 		}
-	*/
+	}
 
 	return val.preVoteState
 }
@@ -116,7 +125,7 @@ func (val *Validator) newProposalState() stateFn {
 func (val *Validator) preVoteState() stateFn {
 	log.Info("Starting the pre vote election")
 
-	//val.prevote()
+	val.prevote()
 
 	return val.preVoteWaitState
 }
@@ -124,17 +133,15 @@ func (val *Validator) preVoteState() stateFn {
 func (val *Validator) preVoteWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-vote election")
 
-	//timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
 
-	/*
-		select {
-		case val.preVoteMajSub.Chan():
-			log.Info("There's a majority")
+	select {
+	case val.preVoteMajSub.Chan():
+		log.Info("There's a majority")
 
-		case time.After(timeout):
-			log.Info("Timeout expired", "duratiom", timeout)
-		}
-	*/
+	case time.After(timeout):
+		log.Info("Timeout expired", "duratiom", timeout)
+	}
 
 	return val.preCommitState
 }
@@ -142,7 +149,7 @@ func (val *Validator) preVoteWaitState() stateFn {
 func (val *Validator) preCommitState() stateFn {
 	log.Info("Starting the pre commit election")
 
-	//val.precommit()
+	val.precommit()
 
 	return val.preCommitWaitState
 }
@@ -150,47 +157,51 @@ func (val *Validator) preCommitState() stateFn {
 func (val *Validator) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit election")
 
-	//timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
 
-	/*
-		select {
-		case val.preCommitMajSub.Chan():
-			log.Info("There's a majority")
+	select {
+	case val.preCommitMajSub.Chan():
+		log.Info("There's a majority")
 
-			if val.proposalBlock == nil {
-				return val.newRoundState
-			} else {
-				return val.commitState
-			}
-
-		case time.After(timeout):
-			log.Info("Timeout expired", "duration", timeout)
+		if val.proposalBlock == nil {
 			return val.newRoundState
 		}
-	*/
+		return val.commitState
 
-	return val.commitState
+	case time.After(timeout):
+		log.Info("Timeout expired", "duration", timeout)
+		return val.newRoundState
+	}
 }
 
 func (val *Validator) commitState() stateFn {
 	log.Info("Committing the election result")
 
+	// state updates
+	val.commitRound = v.state.Round
+	val.commitTime = time.Now()
+
+	// Write block using a batch.
+	batch := val.chain.chainDb.NewBatch()
+	if err := core.WriteBlock(batch, block); err != nil {
+		log.Crit("Failed writing block to chain", "err", err)
+	}
+
+	// @TODO(rgeraldes)
 	/*
-		// state updates
-		val.state.CommitRound = v.state.Round
-		val.state.commitTime = time.Now()
-
-		// Write block using a batch.
-		batch := val.chain.chainDb.NewBatch()
-		if err := core.WriteBlock(batch, block); err != nil {
-			log.Crit("Failed writing block to chain", "err", err)
-		}
-
-		// @TODO(rgeraldes)
-		/*
-		// leaves only when it has all the pre commits
-		select {}
+	// leaves only when it has all the pre commits
+	select {}
 	*/
 
+	// @TODO if the validator is not part of the validator state anymore, return nil
+	// if not part of the voters jump to left election
+	// return val.leftElectionsState
+	// return val.newElectionState
+
 	return val.newElectionState
+}
+
+// @NOTE (rgeraldes) - end state
+func (val *Validator) leftElectionsState() stateFn {
+	val.wg.Done()
 }

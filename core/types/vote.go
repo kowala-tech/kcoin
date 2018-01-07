@@ -140,3 +140,5 @@ func (vote *Vote) String() string {
 		enc,
 	)
 }
+
+type Votes []*Vote

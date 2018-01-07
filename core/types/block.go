@@ -23,17 +23,19 @@ var (
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    *big.Int       `json:"gasLimit"         gencodec:"required"`
-	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"`
-	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
+	ParentHash     common.Hash    `json:"parentHash"       gencodec:"required"`
+	Coinbase       common.Address `json:"miner"            gencodec:"required"`
+	Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
+	TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
+	ValidatorsHash common.Hash    `json:"validators"   	   gencodec:"required"`
+	LastCommitHash common.Hash    `json:"lastCommit"	   gencodec:"required"`
+	Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
+	Number         *big.Int       `json:"number"           gencodec:"required"`
+	GasLimit       *big.Int       `json:"gasLimit"         gencodec:"required"`
+	GasUsed        *big.Int       `json:"gasUsed"          gencodec:"required"`
+	Time           *big.Int       `json:"timestamp"        gencodec:"required"`
+	Extra          []byte         `json:"extraData"        gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -60,6 +62,8 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.Root,
 		h.TxHash,
 		h.ReceiptHash,
+		h.ValidatorsHash,
+		h.LastCommitHash,
 		h.Bloom,
 		h.Number,
 		h.GasLimit,
@@ -76,16 +80,44 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
+// Commit contains the evidence that a block was committed by a set of validators
+type Commit struct {
+	// @NOTE (rgeraldes) - pre-commits are in order of address
+	preCommits     Votes `json:"votes"		gencodec:"required"`
+	firstPrecommit *Vote `json:"vote" 		gencodec:"required"`
+}
+
+func (cmt *Commit) PreCommits() Votes {
+	return cmt.preCommits
+}
+
+func (cmt *Commit) FirstPreCommit() *Vote {
+	return cmt.firstPrecommit
+}
+
+func (cmt *Commit) Hash() common.Hash {
+	return rlpHash(cmt)
+}
+
+func (cmt *Commit) Round() int {
+	if len(cmt.preCommits) == 0 {
+		return 0
+	}
+	return cmt.FirstPreCommit().Round()
+}
+
 // Body is a simple (mutable, non-safe) data container for storing and moving
 // a block's data contents (transactions) together.
 type Body struct {
 	Transactions []*Transaction
+	// @TODO (rgeraldes) - add last commit info?
 }
 
 // Block represents an entire block in the Ethereum blockchain.
 type Block struct {
 	header       *Header
 	transactions Transactions
+	lastCommit   *Commit
 
 	// caches
 	hash atomic.Value
@@ -110,7 +142,7 @@ type extblock struct {
 // The values of TxHash, ReceiptHash and Bloom in header
 // are ignored and set to values derived from the given txs
 // and receipts.
-func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
+func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt, commit *Commit) *Block {
 	b := &Block{header: CopyHeader(header)}
 
 	// TODO: panic if len(txs) != len(receipts)
@@ -127,6 +159,12 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	} else {
 		b.header.ReceiptHash = DeriveSha(Receipts(receipts))
 		b.header.Bloom = CreateBloom(receipts)
+	}
+
+	if commit != nil {
+		lastCommit := *commit
+		b.header.LastCommitHash = commit.Hash()
+		b.lastCommit = &lastCommit
 	}
 
 	return b
@@ -195,19 +233,23 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 	return nil
 }
 
+func (b *Block) LastCommit() *Commit { return b.lastCommit }
+
 func (b *Block) Number() *big.Int   { return new(big.Int).Set(b.header.Number) }
 func (b *Block) GasLimit() *big.Int { return new(big.Int).Set(b.header.GasLimit) }
 func (b *Block) GasUsed() *big.Int  { return new(big.Int).Set(b.header.GasUsed) }
 func (b *Block) Time() *big.Int     { return new(big.Int).Set(b.header.Time) }
 
-func (b *Block) NumberU64() uint64        { return b.header.Number.Uint64() }
-func (b *Block) Bloom() Bloom             { return b.header.Bloom }
-func (b *Block) Coinbase() common.Address { return b.header.Coinbase }
-func (b *Block) Root() common.Hash        { return b.header.Root }
-func (b *Block) ParentHash() common.Hash  { return b.header.ParentHash }
-func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
-func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
-func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
+func (b *Block) NumberU64() uint64           { return b.header.Number.Uint64() }
+func (b *Block) Bloom() Bloom                { return b.header.Bloom }
+func (b *Block) Coinbase() common.Address    { return b.header.Coinbase }
+func (b *Block) Root() common.Hash           { return b.header.Root }
+func (b *Block) ParentHash() common.Hash     { return b.header.ParentHash }
+func (b *Block) TxHash() common.Hash         { return b.header.TxHash }
+func (b *Block) ReceiptHash() common.Hash    { return b.header.ReceiptHash }
+func (b *Block) LastCommitHash() common.Hash { return b.header.LastCommitHash }
+func (b *Block) ValidatorsHash() common.Hash { return b.header.ValidatorsHash }
+func (b *Block) Extra() []byte               { return common.CopyBytes(b.header.Extra) }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
@@ -286,13 +328,15 @@ func (h *Header) String() string {
 	Root:		    %x
 	TxSha		    %x
 	ReceiptSha:	    %x
+	ValidatorsHash: %x
+	LastCommitHash: %x
 	Bloom:		    %x
 	Number:		    %v
 	GasLimit:	    %v
 	GasUsed:	    %v
 	Time:		    %v
 	Extra:		    %s
-]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra)
+]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.ValidatorsHash, h.LastCommitHash, h.Bloom, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra)
 }
 
 type Blocks []*Block

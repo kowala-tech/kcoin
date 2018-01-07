@@ -229,7 +229,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
 	}
-	return types.NewBlock(head, nil, nil), statedb
+	return types.NewBlock(head, nil, nil, nil), statedb
 }
 
 // Commit writes the block and state of a genesis specification to the database.
@@ -241,9 +241,6 @@ func (g *Genesis) Commit(db kusddb.Database) (*types.Block, error) {
 	}
 	if _, err := statedb.CommitTo(db, false); err != nil {
 		return nil, fmt.Errorf("cannot write state: %v", err)
-	}
-	if err := WriteTd(db, block.Hash(), block.NumberU64(), g.Difficulty); err != nil {
-		return nil, err
 	}
 	if err := WriteBlock(db, block); err != nil {
 		return nil, err

@@ -29,9 +29,10 @@ type BlockGen struct {
 	header  *types.Header
 	statedb *state.StateDB
 
-	gasPool  *GasPool
-	txs      []*types.Transaction
-	receipts []*types.Receipt
+	gasPool    *GasPool
+	txs        []*types.Transaction
+	receipts   []*types.Receipt
+	lastCommit *types.Commit
 
 	config *params.ChainConfig
 }
@@ -163,7 +164,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db kusddb.Da
 			panic(fmt.Sprintf("state write error: %v", err))
 		}
 		h.Root = root
-		return types.NewBlock(h, b.txs, b.receipts), b.receipts
+		return types.NewBlock(h, b.txs, b.receipts, b.lastCommit), b.receipts
 	}
 	for i := 0; i < n; i++ {
 		statedb, err := state.New(parent.Root(), state.NewDatabase(db))

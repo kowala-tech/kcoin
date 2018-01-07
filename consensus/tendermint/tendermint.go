@@ -57,7 +57,7 @@ func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *type
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
 	// Header seems complete, assemble into a block and return
-	return types.NewBlock(header, txs, receipts), nil
+	return types.NewBlock(header, txs, receipts, nil), nil
 }
 
 func (tendermint *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {

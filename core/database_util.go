@@ -368,19 +368,6 @@ func WriteBodyRLP(db kusddb.Database, hash common.Hash, number uint64, rlp rlp.R
 	return nil
 }
 
-// WriteTd serializes the total difficulty of a block into the database.
-func WriteTd(db kusddb.Database, hash common.Hash, number uint64, td *big.Int) error {
-	data, err := rlp.EncodeToBytes(td)
-	if err != nil {
-		return err
-	}
-	key := append(append(append(headerPrefix, encodeBlockNumber(number)...), hash.Bytes()...), tdSuffix...)
-	if err := db.Put(key, data); err != nil {
-		log.Crit("Failed to store block total difficulty", "err", err)
-	}
-	return nil
-}
-
 // WriteBlock serializes a block into the database, header and body separately.
 func WriteBlock(db kusddb.Database, block *types.Block) error {
 	// Store the body first to retain database consistency
