@@ -13,6 +13,7 @@ import (
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
@@ -58,15 +59,51 @@ type Validator struct {
 
 // New returns a new consensus validator
 func New(kusd Backend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine) *Validator {
-	return &Validator{
+	validator := &Validator{
 		kusd:     kusd,
 		chain:    kusd.BlockChain(),
 		config:   config,
 		eventMux: eventMux,
 		engine:   engine,
 	}
+
+	go validator.sync()
+
+	return validator
 }
 
+// sync keeps track of the downloader events. Please be aware that this is a one shot type of update loop.
+// It's entered once and as soon as `Done` or `Failed` has been broadcasted the events are unregistered and
+// the loop is exited. This to prevent a major security vuln where external parties can DOS you with blocks
+// and halt your validation operation for as long as the DOS continues.
+func (val *Validator) sync() {
+	events := val.eventMux.Subscribe(downloader.StartEvent{}, downloader.DoneEvent{}, downloader.FailedEvent{})
+out:
+	for ev := range events.Chan() {
+		switch ev.Data.(type) {
+		case downloader.StartEvent:
+			atomic.StoreInt32(&val.canStart, 0)
+			if val.Validating() {
+				val.Stop()
+				atomic.StoreInt32(&val.shouldStart, 1)
+				log.Info("Validation aborted due to sync")
+			}
+		case downloader.DoneEvent, downloader.FailedEvent:
+			shouldStart := atomic.LoadInt32(&val.shouldStart) == 1
+			atomic.StoreInt32(&val.canStart, 1)
+			atomic.StoreInt32(&val.shouldStart, 0)
+			if shouldStart {
+				val.Start(val.account.Address, val.deposit)
+			}
+			// unsubscribe. we're only interested in this event once
+			events.Unsubscribe()
+			// stop immediately and ignore all further pending events
+			break out
+		}
+	}
+}
+
+// @TODO (rgeraldes) - review logic (start is called by sync later on if the node is syncing)
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	account := accounts.Account{Address: coinbase}
 	wallet, err := val.kusd.AccountManager().Find(account)
