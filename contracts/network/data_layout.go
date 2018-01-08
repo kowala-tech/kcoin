@@ -192,6 +192,7 @@ func (po *PriceOracle) PriceForOneFiat() *big.Int {
 
 // NetworkStats data layout.
 type NetworkStats struct {
+	Ownable
 	// Total supply of wei. Must be updated every block.
 	TotalSupplyWei *big.Int
 	// Reward calculated for the last block. Must be updated every block.

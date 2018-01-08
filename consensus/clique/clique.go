@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
@@ -614,7 +615,6 @@ func (c *Clique) accumulateRewards(sdb *state.StateDB, header *types.Header, add
 	}
 	// TODO(hrosa): remove. on the mainnet, tokens already exist
 	if totalTokens == 0 {
-		fmt.Println(">>>> no tokens")
 		return nil
 	}
 	// calculate the block reward.
@@ -622,7 +622,9 @@ func (c *Clique) accumulateRewards(sdb *state.StateDB, header *types.Header, add
 	if err != nil {
 		return err
 	}
-	fmt.Println(">>>> reward:", reward)
+	coins, coinsRem := new(big.Int).DivMod(reward, big.NewInt(1000000000000000000), new(big.Int))
+	coinsRemStr := coinsRem.String()
+	fmt.Printf(">>>> reward(%s): %s.%s\n", header.Number, coins.String(), strings.Repeat("0", len(coinsRemStr))+coinsRemStr)
 	// calculate the reward per token.
 	rewardPerToken, remReward := new(big.Int).DivMod(
 		reward,

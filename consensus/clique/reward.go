@@ -1,6 +1,7 @@
 package clique
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
@@ -30,7 +31,7 @@ func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, e
 	}
 	// block 1
 	if blockNumber.Cmp(common.Big1) == 0 {
-		sdb.SetState(cMap.NetworkStats, common.HexToHash("0x01"), common.BigToHash(big42kUSD))
+		sdb.SetState(cMap.NetworkStats, common.HexToHash("0x02"), common.BigToHash(big42kUSD))
 		return big42kUSD, nil
 	}
 	// get network stats (last price)
@@ -46,15 +47,17 @@ func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, e
 	// get current price
 	curPrice := po.PriceForOneCrypto()
 	// update last price
-	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x02"), common.BigToHash(curPrice))
+	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x03"), common.BigToHash(curPrice))
 	// check price
 	oneFiat := po.OneFiat()
 	cmpRes := nStats.LastPrice.Cmp(oneFiat)
 	var r *big.Int
 	// p(b-1) > 1
+	// if curPrice.Cmp(nStats.LastPrice) >= 0 &&
 	if cmpRes > 0 {
 		// p(b) >= p(b - 1)
 		if curPrice.Cmp(nStats.LastPrice) >= 0 {
+			fmt.Println(">>>> p(b) >= p(b - 1) > 1 => min(1.01 * reward(b - 1), cap(b))", curPrice, nStats.LastPrice, nStats.LastBlockReward, blockRewardCap(nStats.TotalSupplyWei))
 			// min(1.01 * reward(b - 1), cap(b))
 			r = bigMin(
 				new(big.Int).Add(
@@ -66,6 +69,7 @@ func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, e
 	} else if cmpRes < 0 {
 		// p(b) < p(b-1) < 1
 		if curPrice.Cmp(nStats.LastPrice) < 0 {
+			fmt.Println(">>>> p(b) < p(b-1) < 1 => max(1/1.01 * reward(b - 1), 0.0001)", curPrice, nStats.LastPrice, nStats.LastBlockReward)
 			// max(1/1.01 * reward(b - 1), 0.0001)
 			r = bigMax(
 				new(big.Int).Mul(
@@ -81,10 +85,11 @@ func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, e
 	}
 	// otherwise => reward(b - 1)
 	if r == nil {
+		fmt.Println(">>>> otherwise => reward(b - 1)", nStats.LastBlockReward)
 		r = nStats.LastBlockReward // reward(b - 1)
 	}
 	//  update last block reward
-	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x01"), common.BigToHash(r))
+	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x02"), common.BigToHash(r))
 	return r, nil
 }
 

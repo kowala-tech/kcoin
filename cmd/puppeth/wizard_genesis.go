@@ -199,6 +199,7 @@ func (w *wizard) makeGenesis() {
 	fmt.Println(" 2. Clique - proof-of-authority")
 
 	choice := w.read()
+	var ownerAddr *common.Address
 	switch {
 	case choice == "1":
 		// In case of ethash, we're pretty much done
@@ -249,7 +250,6 @@ func (w *wizard) makeGenesis() {
 			fmt.Println()
 			fmt.Println("Vanila or Rewarded clique ? [v/R]")
 			choice := strings.TrimSpace(strings.ToLower(w.read()))
-			var ownerAddr *common.Address
 			switch choice {
 			case "vanila", "v":
 				break Outer
@@ -284,24 +284,29 @@ func (w *wizard) makeGenesis() {
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
 	}
-	// Consensus all set, just ask for initial funds and go
-	fmt.Println()
-	fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
-	for {
-		// Read the address of the account to fund
-		if address := w.readAddress(); address != nil {
-			genesis.Alloc[*address] = core.GenesisAccount{
-				Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
+	if genesis.Config.Clique.Rewarded {
+		fmt.Println("the owner account will be pre-funded with 1 coin")
+		genesis.Alloc[*ownerAddr] = core.GenesisAccount{Balance: new(big.Int).SetUint64(1000000000000000000)}
+	} else {
+		// Consensus all set, just ask for initial funds and go
+		fmt.Println()
+		fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
+		for {
+			// Read the address of the account to fund
+			if address := w.readAddress(); address != nil {
+				genesis.Alloc[*address] = core.GenesisAccount{
+					Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
+				}
+				continue
 			}
-			continue
+			break
 		}
-		break
+		fmt.Println()
 	}
 	// // Add a batch of precompile balances to avoid them getting deleted
 	// for i := int64(0); i < 256; i++ {
 	// 	genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
 	// }
-	fmt.Println()
 
 	// Query the user for some custom extras
 	fmt.Println()
