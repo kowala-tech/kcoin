@@ -18,16 +18,164 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"math/rand"
+	"os"
+	"strings"
 	"time"
 
+	"github.com/kowala-tech/kUSD/accounts/abi"
 	"github.com/kowala-tech/kUSD/common"
+	nc "github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core"
+	"github.com/kowala-tech/kUSD/core/state"
+	"github.com/kowala-tech/kUSD/core/vm"
+	"github.com/kowala-tech/kUSD/core/vm/runtime"
+	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
 )
+
+type vmTracer struct {
+	data map[common.Address]map[common.Hash]common.Hash
+}
+
+func newVmTracer() *vmTracer {
+	return &vmTracer{
+		data: make(map[common.Address]map[common.Hash]common.Hash, 1024),
+	}
+}
+
+func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+	if err != nil {
+		return err
+	}
+	if op == vm.SSTORE {
+		s := stack.Data()
+		addrStorage, ok := vmt.data[contract.Address()]
+		if !ok {
+			addrStorage = make(map[common.Hash]common.Hash, 1024)
+			vmt.data[contract.Address()] = addrStorage
+		}
+		addrStorage[common.BigToHash(s[len(s)-1])] = common.BigToHash(s[len(s)-2])
+	}
+	return nil
+}
+
+func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration) error {
+	return nil
+}
+
+type contractType byte
+
+const (
+	ctNetworkMap contractType = iota
+	ctMToken
+	ctPriceOracle
+	ctNetworkStats
+)
+
+type contractData struct {
+	addr    common.Address
+	code    []byte
+	storage map[common.Hash]common.Hash
+}
+
+func createContract(cfg *runtime.Config, code []byte) (*contractData, error) {
+	out, addr, _, err := runtime.Create(code, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &contractData{
+		addr:    addr,
+		code:    out,
+		storage: cfg.EVMConfig.Tracer.(*vmTracer).data[addr],
+	}, nil
+}
+
+func createContracts(owner common.Address, contractsCode map[contractType][]byte) ([]*contractData, error) {
+	// memdb
+	memDb, err := ethdb.NewMemDatabase()
+	if err != nil {
+		return nil, err
+	}
+	// statedb
+	sdb, err := state.New(common.Hash{}, state.NewDatabase(memDb))
+	if err != nil {
+		return nil, err
+	}
+	// tracer
+	tracer := newVmTracer()
+	// evm runtime config
+	runtimeConfig := &runtime.Config{
+		Origin: owner,
+		State:  sdb,
+		EVMConfig: vm.Config{
+			Debug:  true,
+			Tracer: tracer,
+		},
+	}
+	// run contracts
+	r := make([]*contractData, 0, len(contractsCode))
+	// first the network stats contract
+	c, err := createContract(runtimeConfig, contractsCode[ctNetworkStats])
+	if err != nil {
+		fmt.Println("can't create network stats contract:", err)
+		os.Exit(-5)
+	}
+	r = append(r, c)
+	// create mToken contract
+	if c, err = createContract(runtimeConfig, contractsCode[ctMToken]); err != nil {
+		fmt.Println("can't create mToken contract:", err)
+		os.Exit(-6)
+	}
+	r = append(r, c)
+	// create price oracle contract
+	priceOracleAbi, err := abi.JSON(strings.NewReader(nc.PriceOracleContractABI))
+	if err != nil {
+		fmt.Println("can't parse price oracle contract ABI:", err)
+		os.Exit(-7)
+	}
+	priceOracleParams, err := priceOracleAbi.Pack("",
+		"kUSD", "kUSD", uint8(4), big.NewInt(10000),
+		"US Dollar", "USD", uint8(18), big.NewInt(1000000000000000000),
+	)
+	if err != nil {
+		fmt.Println("can't pack price oracle contract params:", err)
+		os.Exit(-8)
+	}
+	if c, err = createContract(runtimeConfig, append(contractsCode[ctPriceOracle], priceOracleParams...)); err != nil {
+		fmt.Println("can't create price oracle contract:", err)
+		os.Exit(-9)
+	}
+	r = append(r, c)
+	// create network map contract
+	netMapAbi, err := abi.JSON(strings.NewReader(nc.NetworkContractsMapContractABI))
+	if err != nil {
+		fmt.Println("can't parse network stats abi:", err)
+		os.Exit(-10)
+	}
+	netMapParams, err := netMapAbi.Pack("", r[1].addr, r[2].addr, r[0].addr)
+	if err != nil {
+		fmt.Println("can't pack network map contract params:", err)
+		os.Exit(-11)
+	}
+	if c, err = createContract(runtimeConfig, append(contractsCode[ctNetworkMap], netMapParams...)); err != nil {
+		fmt.Println("can't create network map contract:", err)
+		os.Exit(-12)
+	}
+	return append(r, c), nil
+}
+
+func fromHex(s string) []byte {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
 
 // makeGenesis creates a new genesis struct based on some user input.
 func (w *wizard) makeGenesis() {
@@ -95,6 +243,44 @@ func (w *wizard) makeGenesis() {
 			copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 		}
 
+		// Run as rewarded clique ?
+	Outer:
+		for {
+			fmt.Println()
+			fmt.Println("Vanila or Rewarded clique ? [v/R]")
+			choice := strings.TrimSpace(strings.ToLower(w.read()))
+			var ownerAddr *common.Address
+			switch choice {
+			case "vanila", "v":
+				break Outer
+			case "rewarded", "r", "":
+				genesis.Config.Clique.Rewarded = true
+				for ownerAddr == nil {
+					fmt.Println("the network contracts need an address to be set as owner")
+					ownerAddr = w.readAddress()
+				}
+				contractsData, err := createContracts(*ownerAddr, map[contractType][]byte{
+					ctNetworkMap:   fromHex(nc.NetworkContractsMapContractBin),
+					ctMToken:       fromHex(nc.MusdContractBin),
+					ctNetworkStats: fromHex(nc.NetworkStatsContractBin),
+					ctPriceOracle:  fromHex(nc.PriceOracleContractBin),
+				})
+				if err != nil {
+					fmt.Println("can't create contracts:", err)
+					os.Exit(-1)
+				}
+				for _, cd := range contractsData {
+					genesis.Alloc[cd.addr] = core.GenesisAccount{
+						Code:    cd.code,
+						Storage: cd.storage,
+						Balance: common.Big0,
+					}
+				}
+				break Outer
+			default:
+			}
+		}
+
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
 	}
@@ -111,10 +297,10 @@ func (w *wizard) makeGenesis() {
 		}
 		break
 	}
-	// Add a batch of precompile balances to avoid them getting deleted
-	for i := int64(0); i < 256; i++ {
-		genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
-	}
+	// // Add a batch of precompile balances to avoid them getting deleted
+	// for i := int64(0); i < 256; i++ {
+	// 	genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
+	// }
 	fmt.Println()
 
 	// Query the user for some custom extras

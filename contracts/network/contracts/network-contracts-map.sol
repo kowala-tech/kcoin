@@ -11,6 +11,12 @@ contract NetworkContractsMap is Ownable {
     // Network stats and info.
     address public networkStats;
 
+    function NetworkContractsMap(address _mToken, address _priceOracle, address _networkStats) public {
+        mToken = _mToken;
+        priceOracle = _priceOracle;
+        networkStats = _networkStats;
+    }
+
     // Set mToken contract address.
     function setMToken(address addr) onlyOwner public {
         mToken = addr;
