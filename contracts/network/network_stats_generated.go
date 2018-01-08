@@ -14,10 +14,10 @@ import (
 )
 
 // NetworkStatsContractABI is the input ABI used to generate the binding from.
-const NetworkStatsContractABI = `[{"constant":true,"inputs":[],"name":"lastBlockReward","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupplyWei","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"lastBlockPrice","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"oldAddr","type":"address"},{"indexed":false,"name":"newAddr","type":"address"}],"name":"OwnershipTransfer","type":"event"}]`
+const NetworkStatsContractABI = `[{"constant":true,"inputs":[],"name":"lastPrice","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"lastBlockReward","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupplyWei","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"}]`
 
 // NetworkStatsContractBin is the compiled bytecode used for deploying new contracts.
-const NetworkStatsContractBin = `6060604052600060015560006002556000600355336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506102af806100626000396000f300606060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680635798a6d51461006757806370a8f25b14610090578063cf689d01146100b9578063f2fde38b146100e2575b600080fd5b341561007257600080fd5b61007a61011b565b6040518082815260200191505060405180910390f35b341561009b57600080fd5b6100a3610121565b6040518082815260200191505060405180910390f35b34156100c457600080fd5b6100cc610127565b6040518082815260200191505060405180910390f35b34156100ed57600080fd5b610119600480803573ffffffffffffffffffffffffffffffffffffffff1690602001909190505061012d565b005b60025481565b60015481565b60035481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614151561018857600080fd5b806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055507f22500af037c600dd7b720644ab6e358635085601d9ac508ad83eb2d6b2d729ca6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1682604051808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019250505060405180910390a1505600a165627a7a72305820a51ea406359d47754d9fc6f1f07488841ec0c23449991594fc35cdc00c789ddd0029`
+const NetworkStatsContractBin = `60606040526000805560006001556000600255341561001d57600080fd5b6101088061002c6000396000f3006060604052600436106053576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063053f14da1460585780635798a6d514607e57806370a8f25b1460a4575b600080fd5b3415606257600080fd5b606860ca565b6040518082815260200191505060405180910390f35b3415608857600080fd5b608e60d0565b6040518082815260200191505060405180910390f35b341560ae57600080fd5b60b460d6565b6040518082815260200191505060405180910390f35b60025481565b60015481565b600054815600a165627a7a7230582092305fdcffddbc74a54c6b0f8816287f2956f15f9bf3b7af49c1b6f7b917a1c10029`
 
 // DeployNetworkStatsContract deploys a new Ethereum contract, binding an instance of NetworkStatsContract to it.
 func DeployNetworkStatsContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *NetworkStatsContract, error) {
@@ -159,32 +159,6 @@ func (_NetworkStatsContract *NetworkStatsContractTransactorRaw) Transact(opts *b
 	return _NetworkStatsContract.Contract.contract.Transact(opts, method, params...)
 }
 
-// LastBlockPrice is a free data retrieval call binding the contract method 0xcf689d01.
-//
-// Solidity: function lastBlockPrice() constant returns(uint256)
-func (_NetworkStatsContract *NetworkStatsContractCaller) LastBlockPrice(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _NetworkStatsContract.contract.Call(opts, out, "lastBlockPrice")
-	return *ret0, err
-}
-
-// LastBlockPrice is a free data retrieval call binding the contract method 0xcf689d01.
-//
-// Solidity: function lastBlockPrice() constant returns(uint256)
-func (_NetworkStatsContract *NetworkStatsContractSession) LastBlockPrice() (*big.Int, error) {
-	return _NetworkStatsContract.Contract.LastBlockPrice(&_NetworkStatsContract.CallOpts)
-}
-
-// LastBlockPrice is a free data retrieval call binding the contract method 0xcf689d01.
-//
-// Solidity: function lastBlockPrice() constant returns(uint256)
-func (_NetworkStatsContract *NetworkStatsContractCallerSession) LastBlockPrice() (*big.Int, error) {
-	return _NetworkStatsContract.Contract.LastBlockPrice(&_NetworkStatsContract.CallOpts)
-}
-
 // LastBlockReward is a free data retrieval call binding the contract method 0x5798a6d5.
 //
 // Solidity: function lastBlockReward() constant returns(uint256)
@@ -211,6 +185,32 @@ func (_NetworkStatsContract *NetworkStatsContractCallerSession) LastBlockReward(
 	return _NetworkStatsContract.Contract.LastBlockReward(&_NetworkStatsContract.CallOpts)
 }
 
+// LastPrice is a free data retrieval call binding the contract method 0x053f14da.
+//
+// Solidity: function lastPrice() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractCaller) LastPrice(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _NetworkStatsContract.contract.Call(opts, out, "lastPrice")
+	return *ret0, err
+}
+
+// LastPrice is a free data retrieval call binding the contract method 0x053f14da.
+//
+// Solidity: function lastPrice() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractSession) LastPrice() (*big.Int, error) {
+	return _NetworkStatsContract.Contract.LastPrice(&_NetworkStatsContract.CallOpts)
+}
+
+// LastPrice is a free data retrieval call binding the contract method 0x053f14da.
+//
+// Solidity: function lastPrice() constant returns(uint256)
+func (_NetworkStatsContract *NetworkStatsContractCallerSession) LastPrice() (*big.Int, error) {
+	return _NetworkStatsContract.Contract.LastPrice(&_NetworkStatsContract.CallOpts)
+}
+
 // TotalSupplyWei is a free data retrieval call binding the contract method 0x70a8f25b.
 //
 // Solidity: function totalSupplyWei() constant returns(uint256)
@@ -235,25 +235,4 @@ func (_NetworkStatsContract *NetworkStatsContractSession) TotalSupplyWei() (*big
 // Solidity: function totalSupplyWei() constant returns(uint256)
 func (_NetworkStatsContract *NetworkStatsContractCallerSession) TotalSupplyWei() (*big.Int, error) {
 	return _NetworkStatsContract.Contract.TotalSupplyWei(&_NetworkStatsContract.CallOpts)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(addr address) returns()
-func (_NetworkStatsContract *NetworkStatsContractTransactor) TransferOwnership(opts *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
-	return _NetworkStatsContract.contract.Transact(opts, "transferOwnership", addr)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(addr address) returns()
-func (_NetworkStatsContract *NetworkStatsContractSession) TransferOwnership(addr common.Address) (*types.Transaction, error) {
-	return _NetworkStatsContract.Contract.TransferOwnership(&_NetworkStatsContract.TransactOpts, addr)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(addr address) returns()
-func (_NetworkStatsContract *NetworkStatsContractTransactorSession) TransferOwnership(addr common.Address) (*types.Transaction, error) {
-	return _NetworkStatsContract.Contract.TransferOwnership(&_NetworkStatsContract.TransactOpts, addr)
 }

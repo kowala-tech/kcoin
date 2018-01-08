@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
+	nc "github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/params"
 )
@@ -11,7 +12,10 @@ import (
 var (
 	big42kUSD = new(big.Int).Mul(big.NewInt(42), new(big.Int).SetUint64(params.Ether))
 	big82kUSD = new(big.Int).Mul(big.NewInt(82), new(big.Int).SetUint64(params.Ether))
+	big10e14  = big.NewInt(100000000000000)
 	big1k     = big.NewInt(1000)
+	big100    = big.NewInt(100)
+	big101    = big.NewInt(101)
 )
 
 func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, error) {
@@ -19,42 +23,69 @@ func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, e
 	if blockNumber.Cmp(common.Big0) == 0 {
 		return common.Big0, nil
 	}
+	// open contracts map
+	cMap, err := nc.GetContractsMap(sdb)
+	if err != nil {
+		return nil, err
+	}
 	// block 1
 	if blockNumber.Cmp(common.Big1) == 0 {
+		sdb.SetState(cMap.NetworkStats, common.HexToHash("0x01"), common.BigToHash(big42kUSD))
 		return big42kUSD, nil
 	}
-	return calculateReward(sdb)
-}
-
-func calculateReward(sdb *state.StateDB) (*big.Int, error) {
-
-	return new(big.Int).Mul(big.NewInt(1), new(big.Int).SetUint64(params.Ether)), nil
-
-	// // open contracts map
-	// cMap, err := nc.GetContractsMap(sdb)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// // get network stats
-	// nStats, err := cMap.GetNetworkStats(sdb)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// // get price oracle
-	// po, err := cMap.GetPriceOracle(sdb)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// // total coin supply
-	// // nStats.TotalMinedWei
-	// // block reward cap
-	// // blockCap := blockRewardCap(nStats.TotalSupplyWei)
-	// // kUSD price == USD * 10000
-	// // kUSDPrice := po.PriceForCrypto(new(big.Int).SetUint64(params.Ether)) // kUSD price
-	// // nStats.LastBlockReward // last block reward
-	// // _, _ = blockCap, kUSDPrice
-	// _, _ = nStats, po
-	// return nil, nil
+	// get network stats (last price)
+	nStats, err := cMap.GetNetworkStats(sdb)
+	if err != nil {
+		return nil, err
+	}
+	// get price oracle
+	po, err := cMap.GetPriceOracle(sdb)
+	if err != nil {
+		return nil, err
+	}
+	// get current price
+	curPrice := po.PriceForOneCrypto()
+	// update last price
+	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x02"), common.BigToHash(curPrice))
+	// check price
+	oneFiat := po.OneFiat()
+	cmpRes := nStats.LastPrice.Cmp(oneFiat)
+	var r *big.Int
+	// p(b-1) > 1
+	if cmpRes > 0 {
+		// p(b) >= p(b - 1)
+		if curPrice.Cmp(nStats.LastPrice) >= 0 {
+			// min(1.01 * reward(b - 1), cap(b))
+			r = bigMin(
+				new(big.Int).Add(
+					nStats.LastBlockReward,
+					new(big.Int).Div(nStats.LastBlockReward, big100),
+				),
+				blockRewardCap(nStats.TotalSupplyWei))
+		}
+	} else if cmpRes < 0 {
+		// p(b) < p(b-1) < 1
+		if curPrice.Cmp(nStats.LastPrice) < 0 {
+			// max(1/1.01 * reward(b - 1), 0.0001)
+			r = bigMax(
+				new(big.Int).Mul(
+					new(big.Int).Mul(
+						new(big.Int).Div(nStats.LastBlockReward, big101),
+						big100,
+					),
+					nStats.LastBlockReward,
+				),
+				big10e14,
+			)
+		}
+	}
+	// otherwise => reward(b - 1)
+	if r == nil {
+		r = nStats.LastBlockReward // reward(b - 1)
+	}
+	//  update last block reward
+	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x01"), common.BigToHash(r))
+	return r, nil
 }
 
 func bigMax(b1, b2 *big.Int) *big.Int {

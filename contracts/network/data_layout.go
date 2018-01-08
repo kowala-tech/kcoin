@@ -1,12 +1,12 @@
 package network
 
-//go:generate solc --abi --bin --bin-runtime --overwrite -o build contracts/mUSD.sol
+//go:generate solc --abi --bin --overwrite -o build contracts/mUSD.sol
 //go:generate abigen -abi build/mUSD.abi -bin build/mUSD.bin -pkg network -type MusdContract -out mUSD_generated.go
-//go:generate solc --abi --bin --bin-runtime --overwrite -o build contracts/network-stats.sol
+//go:generate solc --abi --bin --overwrite -o build contracts/network-stats.sol
 //go:generate abigen -abi build/NetworkStats.abi -bin build/NetworkStats.bin -pkg network -type NetworkStatsContract -out network_stats_generated.go
-//go:generate solc --abi --bin --bin-runtime --overwrite -o build contracts/network-contracts-map.sol
+//go:generate solc --abi --bin --overwrite -o build contracts/network-contracts-map.sol
 //go:generate abigen -abi build/NetworkContractsMap.abi -bin build/NetworkContractsMap.bin -pkg network -type NetworkContractsMapContract -out network_contracts_map_generated.go
-//go:generate solc --abi --bin --bin-runtime --overwrite -o build contracts/price-oracle.sol
+//go:generate solc --abi --bin --overwrite -o build contracts/price-oracle.sol
 //go:generate abigen -abi build/PriceOracle.abi -bin build/PriceOracle.bin -pkg network -type PriceOracleContract -out price_oracle_generated.go
 
 import (
@@ -93,7 +93,7 @@ type NetworkContractsMap struct {
 	NetworkStats common.Address
 }
 
-var mapAddress = common.HexToAddress("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+var mapAddress = common.HexToAddress("0x0c6e12469d65f6135f4b6b32148abbb25bed7349")
 
 func GetContractsMap(sdb *state.StateDB) (*NetworkContractsMap, error) {
 	r := &NetworkContractsMap{}
@@ -145,64 +145,57 @@ type PriceOracle struct {
 	// Cryptocurrency symbol.
 	CryptoSymbol string
 	// Cryptocurrency decimal places.
-	CryptoDecimals uint8
+	CryptoDecimals uint8 // 3
 	// Fiat name.
 	FiatName string
 	// Fiat symbol.
 	FiatSymbol string
 	// Fiat decimal places.
-	FiatDecimals uint8
-	// Last block where a transaction can be found
-	LastBlock *big.Int
+	FiatDecimals uint8 // 6
+	// Volume for crypto.
+	VolCrypto *big.Int
 	// Volume for fiat.
 	VolFiat *big.Int
-	// Volume for crypto.
-	VolCypto *big.Int
-	// mToken address.
-	MTokenAddress common.Address
-	// Allowed addresses
-	AllowedAddresses *state.Mapping
 }
 
 // PriceForCrypto returns the price in fiat for cryptoAmount.
 func (po *PriceOracle) PriceForCrypto(cryptoAmount *big.Int) *big.Int {
 	r := new(big.Int).Mul(po.VolFiat, cryptoAmount)
-	return r.Div(r, po.VolCypto)
+	return r.Div(r, po.VolCrypto)
 }
 
 var big10 = big.NewInt(10)
 
-func (po *PriceOracle) oneCrypto() *big.Int {
+func (po *PriceOracle) OneCrypto() *big.Int {
 	return new(big.Int).Exp(big10, big.NewInt(int64(po.CryptoDecimals)), nil)
 }
 
 // PriceForOneCrypto returns the price in fiat for 1 crypto.
 func (po *PriceOracle) PriceForOneCrypto() *big.Int {
-	return po.PriceForCrypto(po.oneCrypto())
+	return po.PriceForCrypto(po.OneCrypto())
 }
 
 // PriceForFiat returns the price in crypto for fiatAmount.
 func (po *PriceOracle) PriceForFiat(fiatAmount *big.Int) *big.Int {
-	r := new(big.Int).Mul(po.VolCypto, fiatAmount)
+	r := new(big.Int).Mul(po.VolCrypto, fiatAmount)
 	return r.Div(r, po.VolFiat)
 }
 
-func (po *PriceOracle) oneFiat() *big.Int {
+func (po *PriceOracle) OneFiat() *big.Int {
 	return new(big.Int).Exp(big10, big.NewInt(int64(po.FiatDecimals)), nil)
 }
 
 // PriceForOneFiat returns the price in crypto for 1 fiat.
 func (po *PriceOracle) PriceForOneFiat() *big.Int {
-	return po.PriceForFiat(po.oneFiat())
+	return po.PriceForFiat(po.OneFiat())
 }
 
 // NetworkStats data layout.
 type NetworkStats struct {
-	Ownable
 	// Total supply of wei. Must be updated every block.
 	TotalSupplyWei *big.Int
 	// Reward calculated for the last block. Must be updated every block.
 	LastBlockReward *big.Int
 	// Price established by the price oracle for the last block. Must be updated every block.
-	LastBlockPrice *big.Int
+	LastPrice *big.Int
 }

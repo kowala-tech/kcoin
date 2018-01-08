@@ -139,8 +139,8 @@ func createContracts(owner common.Address, contractsCode map[contractType][]byte
 		os.Exit(-7)
 	}
 	priceOracleParams, err := priceOracleAbi.Pack("",
-		"kUSD", "kUSD", uint8(4), big.NewInt(10000),
-		"US Dollar", "USD", uint8(18), big.NewInt(1000000000000000000),
+		"kUSD", "kUSD", uint8(18), big.NewInt(1000000000000000000),
+		"US Dollar", "USD", uint8(4), big.NewInt(10000),
 	)
 	if err != nil {
 		fmt.Println("can't pack price oracle contract params:", err)

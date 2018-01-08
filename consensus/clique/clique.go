@@ -568,15 +568,17 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sdb *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	// get signers addresses.
-	// TODO: this should be tendermint active participants
-	snap, err := c.snapshot(chain, header.Number.Uint64()-1, header.ParentHash, nil)
-	if err != nil {
-		return nil, err
-	}
-	// distribute block reward
-	if err := c.accumulateRewards(sdb, header, snap.signers()); err != nil {
-		return nil, err
+	if c.config.Rewarded {
+		// get signers addresses.
+		// TODO: this should be tendermint active participants
+		snap, err := c.snapshot(chain, header.Number.Uint64()-1, header.ParentHash, nil)
+		if err != nil {
+			return nil, err
+		}
+		// distribute block reward
+		if err := c.accumulateRewards(sdb, header, snap.signers()); err != nil {
+			return nil, err
+		}
 	}
 	// uncles are dropped
 	header.Root = sdb.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -612,6 +614,7 @@ func (c *Clique) accumulateRewards(sdb *state.StateDB, header *types.Header, add
 	}
 	// TODO(hrosa): remove. on the mainnet, tokens already exist
 	if totalTokens == 0 {
+		fmt.Println(">>>> no tokens")
 		return nil
 	}
 	// calculate the block reward.

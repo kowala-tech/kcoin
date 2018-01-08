@@ -36,8 +36,8 @@ contract PriceOracleInterface {
 // Simple implementation.
 contract PriceOracle is Ownable, PriceOracleInterface {
     // Amounts of each currency to store the relationship.
-    uint256 cryptoAmount = 0;
-    uint256 fiatAmount = 0;
+    uint256 cryptoAmount;
+    uint256 fiatAmount;
 
     // Initialize.
     function PriceOracle(
@@ -60,7 +60,7 @@ contract PriceOracle is Ownable, PriceOracleInterface {
         fiatAmount = _fiatAmount;
     }
 
-    // Return the amount of the crytocurrency corresponding to fiatAmount.
+    // Return the amount of the cryptocurrency corresponding to fiatAmount.
     function priceForFiat(uint256 _fiatAmount) public view returns (uint256 _cryptoAmount) {
         return _fiatAmount * cryptoAmount / fiatAmount;
     }
