@@ -163,8 +163,6 @@ type TxPool struct {
 	priced  *txPricedList                      // All transactions sorted by price
 
 	wg sync.WaitGroup // for shutdown sync
-
-	homestead bool
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -177,7 +175,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, eventMux *e
 	pool := &TxPool{
 		config:       config,
 		chainconfig:  chainconfig,
-		signer:       types.NewEIP155Signer(chainconfig.ChainId),
+		signer:       types.NewAndromedaSigner(chainconfig.ChainID),
 		pending:      make(map[common.Address]*txList),
 		queue:        make(map[common.Address]*txList),
 		beats:        make(map[common.Address]time.Time),
@@ -240,11 +238,6 @@ func (pool *TxPool) loop() {
 			switch ev := ev.Data.(type) {
 			case ChainHeadEvent:
 				pool.mu.Lock()
-				if ev.Block != nil {
-					if pool.chainconfig.IsHomestead(ev.Block.Number()) {
-						pool.homestead = true
-					}
-				}
 				pool.resetState()
 				pool.mu.Unlock()
 
@@ -465,7 +458,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
-	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
+	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, true)
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}

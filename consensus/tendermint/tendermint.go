@@ -54,7 +54,7 @@ func (tendermint *Tendermint) Prepare(chain consensus.ChainReader, header *types
 func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block and uncle rewards and commit the final state root
 	AccumulateRewards(state, header)
-	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	header.Root = state.IntermediateRoot(true)
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, receipts, nil), nil

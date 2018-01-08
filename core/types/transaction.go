@@ -39,11 +39,7 @@ var (
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
-	if V.Sign() != 0 && isProtectedV(V) {
-		return NewEIP155Signer(deriveChainId(V))
-	} else {
-		return HomesteadSigner{}
-	}
+	return NewAndromedaSigner(deriveChainId(V))
 }
 
 type Transaction struct {
@@ -123,20 +119,6 @@ func (tx *Transaction) ChainId() *big.Int {
 	return deriveChainId(tx.data.V)
 }
 
-// Protected returns whether the transaction is protected from replay protection.
-func (tx *Transaction) Protected() bool {
-	return isProtectedV(tx.data.V)
-}
-
-func isProtectedV(V *big.Int) bool {
-	if V.BitLen() <= 8 {
-		v := V.Uint64()
-		return v != 27 && v != 28
-	}
-	// anything not 27 or 28 are considered unprotected
-	return true
-}
-
 // DecodeRLP implements rlp.Encoder
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, &tx.data)
@@ -167,12 +149,9 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	var V byte
-	if isProtectedV(dec.V) {
-		chainId := deriveChainId(dec.V).Uint64()
-		V = byte(dec.V.Uint64() - 35 - 2*chainId)
-	} else {
-		V = byte(dec.V.Uint64() - 27)
-	}
+	chainID := deriveChainId(dec.V).Uint64()
+	V = byte(dec.V.Uint64() - 35 - 2*chainID)
+
 	if !crypto.ValidateSignatureValues(V, dec.R, dec.S, false) {
 		return ErrInvalidSig
 	}

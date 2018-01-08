@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -13,7 +12,6 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
@@ -97,15 +95,17 @@ func (val *Validator) run() {
 }
 
 func (val *Validator) handle() {
-	for _, ev := range val.consensusEventSub.Chan() {
-		switch data := ev.Data.(type) {
-		case core.ConsensusEvent:
-			switch msg := data.Msg.(type) {
-			case *types.Proposal:
-				val.setProposal(msg)
+	/*
+		for _, ev := range val.consensusEventSub.Chan() {
+			switch data := ev.Data.(type) {
+			case core.ConsensusEvent:
+				switch msg := data.Msg.(type) {
+				case *types.Proposal:
+					val.setProposal(msg)
+				}
 			}
 		}
-	}
+	*/
 }
 
 func (val *Validator) Stop() {
@@ -115,7 +115,7 @@ func (val *Validator) Stop() {
 	val.wg.Wait()
 
 	// quits handle
-	val.consensusEventSub.Unsubscribe()
+	//val.consensusEventSub.Unsubscribe()
 
 	//val.worker.stop()
 	atomic.StoreInt32(&val.validating, 0)
@@ -195,26 +195,28 @@ func (val *Validator) restoreLastCommit() {
 }
 
 func (val *Validator) init() {
-	// @TODO (rgeraldes) - call pos contract in order to get the latest set of validators
-	// for now it's an hardcoded value the set of validators will be the same as the last round
-	// val.validators =
-	// val.prevValidators =
-	prevPreCommits := new(*core.VoteSet)
-	if val.commitRound > -1 && val.votes != nil {
-		prevPreCommits = val.votes.PreCommits(val.commitRound)
-	}
-	parent := val.chain.CurrentBlock()
+	/*
+		// @TODO (rgeraldes) - call pos contract in order to get the latest set of validators
+		// for now it's an hardcoded value the set of validators will be the same as the last round
+		// val.validators =
+		// val.prevValidators =
+		prevPreCommits := new(*core.VoteSet)
+		if val.commitRound > -1 && val.votes != nil {
+			prevPreCommits = val.votes.PreCommits(val.commitRound)
+		}
+		parent := val.chain.CurrentBlock()
 
-	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
-	val.round = 0
-	val.start = val.end.Add(time.Duration(params.SyncDuration) * time.Millisecond)
-	val.proposal = nil
-	val.proposalBlock = nil
-	//val.proposalBlockChunks = nil
-	val.lockedRound = 0
-	val.lockedBlock = nil
-	val.commitRound = -1
-	val.prevCommit = prevPreCommits
+		val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
+		val.round = 0
+		val.start = val.end.Add(time.Duration(params.SyncDuration) * time.Millisecond)
+		val.proposal = nil
+		val.proposalBlock = nil
+		//val.proposalBlockChunks = nil
+		val.lockedRound = 0
+		val.lockedBlock = nil
+		val.commitRound = -1
+		val.prevCommit = prevPreCommits
+	*/
 }
 
 func (val *Validator) isProposer() bool {
@@ -223,107 +225,121 @@ func (val *Validator) isProposer() bool {
 }
 
 func (val *Validator) setProposal(proposal *types.Proposal) {
-	// not relevant
-	if proposal.Height != val.Height && proposal.Round != val.Round {
+	/*
+		// not relevant
+		if proposal.BlockNumber != val.blockNumber && proposal.Round != val.Round {
+			return
+		}
+
+		// proposer sent two proposals
+		if val.proposal != nil {
+			// @TODO (rgeraldes) - punish the proposer ?
+			return
+		}
+
+		// if the proposal is already known, discard it
+		hash := proposal.Hash()
+		if val.all[hash] != nil {
+			log.Trace("Discarding already known proposal", "hash", hash)
+			return false, fmt.Errorf("known transaction: %x", hash)
+		}
+
+		// if the proposal fails validation, discard it
+		if err := val.validateProposal(proposal); err != nil {
+			log.Trace("Discarding invalid proposal", "hash", hash, "err", err)
+		}
+		val.proposal = proposal
+
 		return
-	}
-
-	// proposer sent two proposals
-	if val.proposal != nil {
-		// @TODO (rgeraldes) - punish the proposer ?
-		return
-	}
-
-	// if the proposal is already known, discard it
-	hash := proposal.Hash()
-	if val.all[hash] != nil {
-		log.Trace("Discarding already known proposal", "hash", hash)
-		return false, fmt.Errorf("known transaction: %x", hash)
-	}
-
-	// if the proposal fails validation, discard it
-	if err := val.validateProposal(proposal); err != nil {
-		log.Trace("Discarding invalid proposal", "hash", hash, "err", err)
-	}
-	val.proposal = proposal
-
-	return
+	*/
 }
 
 func (val *Validator) processBlockChunk() {}
 
 func (val *Validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
-	gp := new(core.GasPool).AddGas(val.header.GasLimit)
-	var coalescedLogs []*types.Log
-	for {
-		// Retrieve the next transaction and abort if all done
-		tx := txs.Peek()
-		if tx == nil {
-			break
-		}
-		// Error may be ignored here. The error has already been checked
-		// during transaction acceptance is the transaction pool.
-		//
-		// We use the eip155 signer regardless of the current hf.
-		from, _ := types.Sender(val.signer, tx)
-		// Start executing the transaction
-		val.state.Prepare(tx.Hash(), common.Hash{}, val.tcount)
-		err, logs := val.commitTransaction(tx, bc, coinbase, gp)
-		switch err {
-		case core.ErrGasLimitReached:
-			// Pop the current out-of-gas transaction without shifting in the next from the account
-			log.Trace("Gas limit exceeded for current block", "sender", from)
-			txs.Pop()
-		case core.ErrNonceTooLow:
-			// New head notification data race between the transaction pool and miner, shift
-			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
-			txs.Shift()
-		case core.ErrNonceTooHigh:
-			// Reorg notification data race between the transaction pool and miner, skip account =
-			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
-			txs.Pop()
-		case nil:
-			// Everything ok, collect the logs and shift in the next transaction from the same account
-			coalescedLogs = append(coalescedLogs, logs...)
-			val.tcount++
-			txs.Shift()
-		default:
-			// Strange error, discard the transaction and get the next in line (note, the
-			// nonce-too-high clause will prevent us from executing in vain).
-			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
-			txs.Shift()
-		}
-	}
-	if len(coalescedLogs) > 0 || val.tcount > 0 {
-		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
-		// logs by filling in the block hash when the block was mined by the local miner. This can
-		// cause a race condition if a log was "upgraded" before the PendingLogsEvent is processed.
-		cpy := make([]*types.Log, len(coalescedLogs))
-		for i, l := range coalescedLogs {
-			cpy[i] = new(types.Log)
-			*cpy[i] = *l
-		}
-		go func(logs []*types.Log, tcount int) {
-			if len(logs) > 0 {
-				mux.Post(core.PendingLogsEvent{Logs: logs})
+	/*
+		gp := new(core.GasPool).AddGas(env.header.GasLimit)
+
+		var coalescedLogs []*types.Log
+
+		for {
+			// Retrieve the next transaction and abort if all done
+			tx := txs.Peek()
+			if tx == nil {
+				break
 			}
-			if tcount > 0 {
-				mux.Post(core.PendingStateEvent{})
+			// Error may be ignored here. The error has already been checked
+			// during transaction acceptance is the transaction pool.
+			//
+			// We use the eip155 signer regardless of the current hf.
+			from, _ := types.Sender(env.signer, tx)
+			// Check whether the tx is replay protected. If we're not in the EIP155 hf
+			// phase, start ignoring the sender until we do.
+			if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
+				log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
+
+				txs.Pop()
+				continue
 			}
-		}(cpy, env.tcount)
-	}
+			// Start executing the transaction
+			env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
+
+			err, logs := env.commitTransaction(tx, bc, coinbase, gp)
+			switch err {
+			case core.ErrGasLimitReached:
+				// Pop the current out-of-gas transaction without shifting in the next from the account
+				log.Trace("Gas limit exceeded for current block", "sender", from)
+				txs.Pop()
+
+			case nil:
+				// Everything ok, collect the logs and shift in the next transaction from the same account
+				coalescedLogs = append(coalescedLogs, logs...)
+				env.tcount++
+				txs.Shift()
+
+			default:
+				// Pop the current failed transaction without shifting in the next from the account
+				log.Trace("Transaction failed, will be removed", "hash", tx.Hash(), "err", err)
+				env.failedTxs = append(env.failedTxs, tx)
+				txs.Pop()
+			}
+		}
+
+		if len(coalescedLogs) > 0 || env.tcount > 0 {
+			// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
+			// logs by filling in the block hash when the block was mined by the local miner. This can
+			// cause a race condition if a log was "upgraded" before the PendingLogsEvent is processed.
+			cpy := make([]*types.Log, len(coalescedLogs))
+			for i, l := range coalescedLogs {
+				cpy[i] = new(types.Log)
+				*cpy[i] = *l
+			}
+			go func(logs []*types.Log, tcount int) {
+				if len(logs) > 0 {
+					mux.Post(core.PendingLogsEvent{Logs: logs})
+				}
+				if tcount > 0 {
+					mux.Post(core.PendingStateEvent{})
+				}
+			}(cpy, env.tcount)
+		}
+	*/
 }
 
 func (val *Validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
-	snap := val.state.Snapshot()
-	receipt, _, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, val.header.GasUsed, vm.Config{})
-	if err != nil {
-		val.state.RevertToSnapshot(snap)
-		return err, nil
-	}
-	val.txs = append(val.txs, tx)
-	val.receipts = append(val.receipts, receipt)
-	return nil, receipt.Logs
+	/*
+		snap := env.state.Snapshot()
+
+		receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed, vm.Config{})
+		if err != nil {
+			env.state.RevertToSnapshot(snap)
+			return err, nil
+		}
+		env.txs = append(env.txs, tx)
+		env.receipts = append(env.receipts, receipt)
+	*/
+	//	return nil, receipt.Logs
+	return nil, nil
 }
 
 func (val *Validator) joinElections() {
@@ -343,33 +359,36 @@ func (val *Validator) withdrawDeposit() {
 }
 
 func (val *Validator) propose() {
-	var block *types.Block
-	if val.lockedBlock != nil {
-		block = val.block
-	} else {
-		block = val.newBlock()
-	}
-	
-	// new proposal
-	lockedRound, lockedBlock := val.votes.LockingInfo()
-	proposal := types.NewProposal(val.height, val.round, block.Fragment().Metadata(), lockedRound, lockedBlock)
-	//if types.SignProposal(proposal, val.signer, )
-	
-	// sign proposal
-	if err := ; err != nil {
-		log.Error("proposal: error signing proposal")
-		return
-	}
+	/*
+		var block *types.Block
+		if val.lockedBlock != nil {
+			// @TODO (rgeraldes) - confirm
+			block = val.lockedBlock
+		} else {
+			block = val.newBlock()
+		}
 
-	// update state
-	val.proposal = proposal
-	val.block = block
-	// post proposal event
-	val.events.Post(core.NewProposalEvent{Proposal: proposal})
-	// post block segments events
-	for i := 0; i < SegmentedBlock.NumSegments(); i ++ {
-		val.events.Post(core.NewBlockSegmentEvent{val.Height, val.Round, SegmentedBlock.GetSegment(i)})
-	}
+		// new proposal
+		//lockedRound, lockedBlock := val.votes.LockingInfo()
+		//proposal := types.NewProposal(val.height, val.round, block.Fragment().Metadata(), lockedRound, lockedBlock)
+		//if types.SignProposal(proposal, val.signer, )
+
+			// sign proposal
+			//if err := ; err != nil {
+			//	log.Error("proposal: error signing proposal")
+			//	return
+			}
+
+			// update state
+			val.proposal = proposal
+			val.block = block
+			// post proposal event
+			val.events.Post(core.NewProposalEvent{Proposal: proposal})
+			// post block segments events
+			for i := 0; i < SegmentedBlock.NumSegments(); i ++ {
+				val.events.Post(core.NewBlockSegmentEvent{val.Height, val.Round, SegmentedBlock.GetSegment(i)})
+			}
+	*/
 }
 
 func (val *Validator) newBlock() *types.Block {
@@ -377,8 +396,7 @@ func (val *Validator) newBlock() *types.Block {
 	parent := val.chain.CurrentBlock()
 	state, err := val.chain.StateAt(parent.Root())
 	if err != nil {
-		log.Error("Failed to fetch the current state", "err", err)
-		return
+		log.Crit("Failed to fetch the current state", "err", err)
 	}
 	blockNumber := parent.Number()
 	tstart := time.Now()
@@ -386,73 +404,83 @@ func (val *Validator) newBlock() *types.Block {
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
 		tstamp = parent.Time().Int64() + 1
 	}
-	header = &types.Header{
+	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     blockNumber.Add(blockNumber, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent),
 		GasUsed:    new(big.Int),
 		Time:       big.NewInt(tstamp),
 	}
-	var commit *Commit
-	if blockNumber.Cmp(big.NewInt(1)) == 0 {
-		commit = &types.Commit{}
-	} else {
-		commit = val.lastCommit.Proof()
+	/*
+			var commit *types.Commit
+			if blockNumber.Cmp(big.NewInt(1)) == 0 {
+				commit = &types.Commit{}
+			} else {
+				//commit = val.lastCommit.Proof()
+			}
+
+		pending, err := val.kusd.TxPool().Pending()
+		if err != nil {
+			log.Crit("Failed to fetch pending transactions", "err", err)
+			return nil
+		}
+	*/
+
+	//txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
+	//val.commitTransactions(val.eventMux, txs, val.chain, val.coinbase)
+
+	// Create the new block to seal with the consensus engine
+	var block *types.Block
+	if block, err = val.engine.Finalize(val.chain, header, state, val.txs, val.receipts); err != nil {
+		log.Crit("Failed to finalize block for sealing", "err", err)
+		return nil
 	}
-	pending, err := val.kusd.TxPool().Pending()
-	if err != nil {
-		log.Error("Failed to fetch pending transactions", "err", err)
-		return
-	}
-	txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
-	val.commitTransactions(val.eventMux, txs, val.chain, val.coinbase)
-	// accumulate any block rewards and commit the final state root
-	accumulateRewards(val.config, state, header)
-	header.Root = state.IntermediateRoot(true)
-	// create proposal block
-	block := types.NewBlock(header, txs, receipts, commit)
-	// Update the block hash in all logs since it is now available and not when the
-	// receipt/log of individual transactions were created.
-	for _, r := range work.receipts {
+
+	for _, r := range val.receipts {
 		for _, l := range r.Logs {
 			l.BlockHash = block.Hash()
 		}
 	}
-	for _, log := range work.state.Logs() {
+	for _, log := range state.Logs() {
 		log.BlockHash = block.Hash()
 	}
 	return block
 }
 
-func (val *Validator) vote(typ types.VoteType, block common.Hash) {
-	val.eventMuxPost(core.NewVoteEvent{Vote: val.newSignedVote(typ, block)})
+func (val *Validator) vote(vote *types.Vote) {
+	//val.eventMux.Post(core.NewVoteEvent{Vote: val.newSignedVote(typ, block)})
 }
 
 func (val *Validator) prevote() {
-	var vote common.Hash
-	switch {
-	// prevote locked block
-	case val.lockedBlock != nil:
-		log.Debug("")
-		vote = val.lockedBlock.Hash()
-	// proposal's block is nil, prevote nil
-	case val.block == nil:
-		log.Debug("")
-		vote = nil
-	// pre vote the proposal's block
-	default:
-		log.Debug("")
-		vote = val.block.Hash()
-	}
-	val.vote(types.PreVote, v.block.Hash())
+	/*
+		var vote *types.Vote
+		switch {
+		// prevote locked block
+		case val.lockedBlock != nil:
+			log.Debug("")
+			vote = val.lockedBlock.Hash()
+		// proposal's block is nil, prevote nil
+		case val.block == nil:
+			log.Debug("")
+			vote = nil
+		// pre vote the proposal's block
+		default:
+			log.Debug("")
+			vote = val.block.Hash()
+		}
+		vote.voteType = types.PreCommit
+
+		val.vote(v.block.Hash())
+	*/
 }
 
 // preCommit votes on a candidate for the pre commit election
-func (val *Validator) precommit() stateFn {
-	var vote common.Hash // nil by default
-	// access prevotes
-	winner := common.Hash{}
-	switch {
+func (val *Validator) precommit() {
+	/*
+		var vote common.Hash // nil by default
+		// access prevotes
+		winner := common.Hash{}
+		switch {
 		// no majority
 		case !val.hasPolka():
 		// majority pre-voted nil
@@ -491,5 +519,23 @@ func (val *Validator) precommit() stateFn {
 				cs.ProposalBlockParts = types.NewPartSetFromHeader(blockID.PartsHeader)
 			}
 		}
-	val.vote(PreCommit, vote)
+		vote.voteType = types.PreCommit
+		val.vote(vote)
+	*/
 }
+
+/*
+
+// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: addr}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return nil, err
+	}
+	// Request the wallet to sign the transaction
+	chainID := s.b.ChainConfig().ChainID
+
+	return wallet.SignTx(account, tx, chainID)
+
+*/

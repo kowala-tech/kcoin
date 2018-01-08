@@ -930,7 +930,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 			return i, err
 		}
 		// Write state changes to database
-		if _, err = state.CommitTo(bc.chainDb, bc.config.IsEIP158(block.Number())); err != nil {
+		if _, err = state.CommitTo(bc.chainDb, true); err != nil {
 			return i, err
 		}
 

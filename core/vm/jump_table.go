@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package vm
 
 import (
@@ -56,27 +40,12 @@ type operation struct {
 }
 
 var (
-	frontierInstructionSet  = NewFrontierInstructionSet()
-	homesteadInstructionSet = NewHomesteadInstructionSet()
+	andromedaInstructionSet = NewAndromedaInstructionSet()
 )
 
-// NewHomesteadInstructionSet returns the frontier and homestead
-// instructions that can be executed during the homestead phase.
-func NewHomesteadInstructionSet() [256]operation {
-	instructionSet := NewFrontierInstructionSet()
-	instructionSet[DELEGATECALL] = operation{
-		execute:       opDelegateCall,
-		gasCost:       gasDelegateCall,
-		validateStack: makeStackFunc(6, 1),
-		memorySize:    memoryDelegateCall,
-		valid:         true,
-	}
-	return instructionSet
-}
-
-// NewFrontierInstructionSet returns the frontier instructions
-// that can be executed during the frontier phase.
-func NewFrontierInstructionSet() [256]operation {
+// NewAndromedaInstructionSet returns the andromeda instructions
+// that can be executed during the andromeda phase.
+func NewAndromedaInstructionSet() [256]operation {
 	return [256]operation{
 		STOP: {
 			execute:       opStop,
@@ -876,6 +845,13 @@ func NewFrontierInstructionSet() [256]operation {
 			halts:         true,
 			valid:         true,
 			writes:        true,
+		},
+		DELEGATECALL: {
+			execute:       opDelegateCall,
+			gasCost:       gasDelegateCall,
+			validateStack: makeStackFunc(6, 1),
+			memorySize:    memoryDelegateCall,
+			valid:         true,
 		},
 	}
 }

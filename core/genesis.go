@@ -183,10 +183,12 @@ func SetupGenesisBlock(db kusddb.Database, genesis *Genesis) (*params.ChainConfi
 	if height == missingNumber {
 		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
 	}
-	compatErr := storedcfg.CheckCompatible(newcfg, height)
-	if compatErr != nil && height != 0 && compatErr.RewindTo != 0 {
-		return newcfg, stored, compatErr
-	}
+
+	// @NOTE (rgeraldes) - not necessary for now
+	//compatErr := storedcfg.CheckCompatible(newcfg, height)
+	//if compatErr != nil && height != 0 && compatErr.RewindTo != 0 {
+	//	return newcfg, stored, compatErr
+	//}
 	return newcfg, stored, WriteChainConfig(db, stored, newcfg)
 }
 
