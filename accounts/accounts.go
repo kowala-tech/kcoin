@@ -112,6 +112,12 @@ type Wallet interface {
 	// the account in a keystore).
 	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 
+	// SignProposal requests the wallet to sign the given proposal.
+	SignProposal(account Account, proposal *types.Proposal, chainID *big.Int) (*types.Proposal, error)
+
+	// SignVote requests the wallet to sign the given proposal.
+	SignVote(account Account, proposal *types.Vote, chainID *big.Int) (*types.Vote, error)
+
 	// SignHashWithPassphrase requests the wallet to sign the given hash with the
 	// given passphrase as extra authentication information.
 	//

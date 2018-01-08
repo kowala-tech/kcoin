@@ -281,6 +281,34 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return types.SignTx(tx, types.NewAndromedaSigner(chainID), unlockedKey.PrivateKey)
 }
 
+// SignVote signs the given vote with the requested account.
+func (ks *KeyStore) SignVote(a accounts.Account, vote *types.Vote, chainID *big.Int) (*types.Vote, error) {
+	// Look up the key to sign with and abort if it cannot be found
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return nil, ErrLocked
+	}
+
+	return types.SignVote(vote, types.NewAndromedaSigner(chainID), unlockedKey.PrivateKey)
+}
+
+// SignProposal signs the given proposal with the requested account.
+func (ks *KeyStore) SignProposal(a accounts.Account, proposal *types.Proposal, chainID *big.Int) (*types.Proposal, error) {
+	// Look up the key to sign with and abort if it cannot be found
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return nil, ErrLocked
+	}
+
+	return types.SignProposal(proposal, types.NewAndromedaSigner(chainID), unlockedKey.PrivateKey)
+}
+
 // SignHashWithPassphrase signs hash if the private key matching the given address
 // can be decrypted with the given passphrase. The produced signature is in the
 // [R || S || V] format where V is 0 or 1.

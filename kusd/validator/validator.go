@@ -34,7 +34,6 @@ type Validator struct {
 	maxTransitions int // max number of state transitions (tests) 0 - unlimited
 
 	validating int32
-	coinbase   common.Address
 	deposit    uint64
 
 	// blockchain
@@ -42,6 +41,10 @@ type Validator struct {
 	chain  *core.BlockChain
 	config *params.ChainConfig
 	engine consensus.Engine
+
+	// wallet (signer)
+	account accounts.Account
+	wallet  accounts.Wallet
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
@@ -65,8 +68,15 @@ func New(kusd Backend, config *params.ChainConfig, eventMux *event.TypeMux, engi
 }
 
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
+	account := accounts.Account{Address: coinbase}
+	wallet, err := val.kusd.AccountManager().Find(account)
+	if err != nil {
+	}
+
 	atomic.StoreInt32(&val.shouldStart, 1)
-	val.coinbase = coinbase
+
+	val.wallet = wallet
+	val.account = account
 	val.deposit = deposit
 
 	if atomic.LoadInt32(&val.canStart) == 0 {
@@ -85,7 +95,7 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 
 func (val *Validator) run() {
 	log.Info("Starting the consensus state machine")
-	for state, numTransitions := val.notYetVoterState, 0; state != nil; numTransitions++ {
+	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
 		// @TODO(rgeraldes) - publish old/new state if necessary - need to review sync process
 		state = state()
 		if val.maxTransitions > 0 && numTransitions == val.maxTransitions {
@@ -131,7 +141,7 @@ func (val *Validator) Validating() bool {
 }
 
 func (val *Validator) SetCoinbase(addr common.Address) {
-	val.coinbase = addr
+	val.account.Address = addr
 }
 
 func (val *Validator) SetDeposit(deposit uint64) {
@@ -523,19 +533,3 @@ func (val *Validator) precommit() {
 		val.vote(vote)
 	*/
 }
-
-/*
-
-// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: addr}
-
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return nil, err
-	}
-	// Request the wallet to sign the transaction
-	chainID := s.b.ChainConfig().ChainID
-
-	return wallet.SignTx(account, tx, chainID)
-
-*/

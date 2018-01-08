@@ -575,6 +575,14 @@ func (w *ledgerWallet) SignTx(account accounts.Account, tx *types.Transaction, c
 	return w.ledgerSign(path, account.Address, tx, chainID)
 }
 
+func (w *ledgerWallet) SignProposal(account accounts.Account, proposal *types.Proposal, chainID *big.Int) (*types.Proposal, error) {
+	return nil, nil
+}
+
+func (w *ledgerWallet) SignVote(account accounts.Account, vote *types.Vote, chainID *big.Int) (*types.Vote, error) {
+	return nil, nil
+}
+
 // SignHashWithPassphrase implements accounts.Wallet, however signing arbitrary
 // data is not supported for Ledger wallets, so this method will always return
 // an error.

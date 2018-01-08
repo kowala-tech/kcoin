@@ -37,7 +37,8 @@ type election struct {
 // stateFn represents a state function
 type stateFn func() stateFn
 
-func (val *Validator) notYetVoterState() stateFn {
+// @NOTE (rgeraldes) - initial state
+func (val *Validator) notLoggedInState() stateFn {
 	log.Info("Initial state")
 
 	// @TODO (rgeraldes) - to do as soon as the contract for the dynamic validator is up
@@ -207,7 +208,7 @@ func (val *Validator) commitState() stateFn {
 }
 
 // @NOTE (rgeraldes) - end state
-func (val *Validator) leftElectionsState() stateFn {
+func (val *Validator) loggedOutState() stateFn {
 	val.wg.Done()
 	return nil
 }
