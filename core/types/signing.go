@@ -46,6 +46,29 @@ func SignTx(tx *Transaction, signer Signer, prv *ecdsa.PrivateKey) (*Transaction
 	return tx.WithSignature(signer, sig)
 }
 
+// SignProposal signs the proposal using the given signer and private key
+func SignProposal(proposal *Proposal, signer Signer, prv *ecdsa.PrivateKey) (*Proposal, error) {
+	h := proposal.ProtectedHash(signer.ChainID())
+	sig, err := crypto.Sign(h[:], prv)
+	if err != nil {
+		return nil, err
+	}
+
+	return proposal.WithSignature(signer, sig)
+
+}
+
+// SignVote signs the vote using the given signer and private key
+func SignVote(vote *Vote, signer Signer, prv *ecdsa.PrivateKey) (*Vote, error) {
+	h := vote.ProtectedHash(signer.ChainID())
+	sig, err := crypto.Sign(h[:], prv)
+	if err != nil {
+		return nil, err
+	}
+
+	return vote.WithSignature(signer, sig)
+}
+
 func TxSender(signer Signer, tx *Transaction) (common.Address, error) {
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCache)

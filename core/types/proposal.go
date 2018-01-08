@@ -104,6 +104,18 @@ func (prop *Proposal) Hash() common.Hash {
 	return v
 }
 
+// ProtectedHash returns the hash to be signed by the sender.
+// It does not uniquely identify the transaction.
+func (prop *Proposal) ProtectedHash(chainID *big.Int) common.Hash {
+	return rlpHash([]interface{}{
+		prop.data.BlockNumber,
+		prop.data.Round,
+		prop.data.LockedRound,
+		prop.data.LockedBlock,
+		chainID, uint(0), uint(0),
+	})
+}
+
 // Size returns the proposal size
 func (prop *Proposal) Size() common.StorageSize {
 	if size := prop.size.Load(); size != nil {
@@ -113,6 +125,21 @@ func (prop *Proposal) Size() common.StorageSize {
 	rlp.Encode(&c, &prop.data)
 	prop.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
+}
+
+// WithSignature returns a new proposal with the given signature.
+// This signature needs to be formatted as described in the yellow paper (v+27).
+func (proposal *Proposal) WithSignature(signer Signer, sig []byte) (*Proposal, error) {
+	cpy := &Proposal{data: proposal.data}
+	V, R, S, err := signer.NewSignature(sig)
+	if err != nil {
+		return nil, err
+	}
+	cpy.data.V = V
+	cpy.data.R = R
+	cpy.data.S = S
+
+	return cpy, nil
 }
 
 // @TODO (rgeraldes) - add metadata & timestamp
