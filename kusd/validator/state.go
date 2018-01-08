@@ -30,9 +30,10 @@ type election struct {
 	lastValidators *types.Validators
 
 	// proposer
-	tcount   int
-	txs      []*types.Transaction
-	receipts []*types.Receipt
+	tcount    int
+	failedTxs types.Transactions
+	txs       []*types.Transaction
+	receipts  []*types.Receipt
 }
 
 // stateFn represents a state function
@@ -68,7 +69,6 @@ func (val *Validator) notLoggedInState() stateFn {
 
 func (val *Validator) newElectionState() stateFn {
 	log.Info("Starting the election for a new block", "block number", val)
-
 	// update state machine based on current state
 	val.init()
 
@@ -93,7 +93,6 @@ func (val *Validator) newElectionState() stateFn {
 
 func (val *Validator) newRoundState() stateFn {
 	log.Info("Starting a new election round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
-
 	if val.round != 0 {
 		val.proposal = nil
 		val.proposalBlock = nil
@@ -106,7 +105,6 @@ func (val *Validator) newRoundState() stateFn {
 
 func (val *Validator) newProposalState() stateFn {
 	log.Info("Starting a new proposal")
-
 	timeout := time.Duration(params.ProposeDuration+uint64(val.round)*params.ProposeDeltaDuration) * time.Millisecond
 
 	if val.isProposer() {
@@ -126,21 +124,18 @@ func (val *Validator) newProposalState() stateFn {
 
 func (val *Validator) preVoteState() stateFn {
 	log.Info("Starting the pre vote election")
-
-	val.prevote()
+	val.preVote()
 
 	return val.preVoteWaitState
 }
 
 func (val *Validator) preVoteWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-vote election")
-
 	timeout := time.Duration(params.PreVoteDuration+uint64(val.round)*params.PreVoteDeltaDuration) * time.Millisecond
 
 	select {
 	//case val.preVoteMajSub.Chan():
 	//	log.Info("There's a majority")
-
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duratiom", timeout)
 	}
@@ -150,15 +145,13 @@ func (val *Validator) preVoteWaitState() stateFn {
 
 func (val *Validator) preCommitState() stateFn {
 	log.Info("Starting the pre commit election")
-
-	val.precommit()
+	val.preCommit()
 
 	return val.preCommitWaitState
 }
 
 func (val *Validator) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit election")
-
 	timeout := time.Duration(params.PreCommitDuration+uint64(val.round)+params.PreCommitDeltaDuration) * time.Millisecond
 
 	select {
@@ -178,12 +171,48 @@ func (val *Validator) preCommitWaitState() stateFn {
 }
 
 func (val *Validator) commitState() stateFn {
-	log.Info("Committing the election result")
+	log.Info("Commit state")
 
-	stat, err := val.chain.WriteBlock(val.proposalBlock)
+	val.state.CommitTo(self.chainDb, self.config.IsEIP158(block.Number()))
+	stat, err := self.chain.WriteBlock(block)
 	if err != nil {
-		log.Crit("Failed writing block to chain", "err", err)
+		log.Error("Failed writing block to chain", "err", err)
+		continue
 	}
+
+	// update block hash since it is now available and not when the receipt/log of individual transactions were created
+	for _, r := range val.receipts {
+		for _, l := range r.Logs {
+			l.BlockHash = block.Hash()
+		}
+	}
+	for _, log := range val.state.Logs() {
+		log.BlockHash = block.Hash()
+	}
+
+	// check if canon block and write transactions
+	if stat == core.CanonStatTy {
+		// This puts transactions in a extra db for rpc
+		core.WriteTxLookupEntries(self.chainDb, block)
+		// Write map map bloom filters
+		core.WriteMipmapBloom(self.chainDb, block.NumberU64(), work.receipts)
+		// implicit by posting ChainHeadEvent
+		mustCommitNewWork = false
+	}
+
+	// broadcast before waiting for validation
+	go func(block *types.Block, logs []*types.Log, receipts []*types.Receipt) {
+		self.mux.Post(core.NewMinedBlockEvent{Block: block})
+		self.mux.Post(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+
+		if stat == core.CanonStatTy {
+			self.mux.Post(core.ChainHeadEvent{Block: block})
+			self.mux.Post(logs)
+		}
+		if err := core.WriteBlockReceipts(self.chainDb, block.Hash(), block.NumberU64(), receipts); err != nil {
+			log.Warn("Failed writing block receipts", "err", err)
+		}
+	}(block, work.state.Logs(), work.receipts)
 
 	// @TODO (rgeraldes) - review type
 	// state updates

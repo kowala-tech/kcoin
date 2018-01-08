@@ -61,15 +61,16 @@ type votedataMarshalling struct {
 }
 
 // NewVote returns a new consensus vote
-func NewVote(blockNumber *big.Int, blockHash common.Hash, round int, voteType *VoteType) *Vote {
+func NewVote(blockNumber *big.Int, blockHash common.Hash, round int, voteType VoteType) *Vote {
 	return newVote(blockNumber, blockHash, round, voteType)
 }
 
-func newVote(blockNumber *big.Int, blockHash common.Hash, round int, voteType *VoteType) *Vote {
+func newVote(blockNumber *big.Int, blockHash common.Hash, round int, voteType VoteType) *Vote {
 	d := votedata{
 		BlockNumber: new(big.Int),
 		BlockHash:   blockHash,
 		Round:       round,
+		Type:        voteType,
 		V:           new(big.Int),
 		R:           new(big.Int),
 		S:           new(big.Int),

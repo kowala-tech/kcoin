@@ -410,7 +410,7 @@ func (val *Validator) withdrawDeposit() {
 	// @TODO (rgeraldes) - to complete as soon as the dynamic validator set contract is ready
 }
 
-func (val *Validator) getProposalBlock() *types.Block {
+func (val *Validator) createProposalBlock() *types.Block {
 	if val.lockedBlock != nil {
 		return val.lockedBlock
 	}
@@ -432,28 +432,31 @@ func (val *Validator) createBlock() *types.Block {
 	}
 	header := &types.Header{
 		ParentHash: parent.Hash(),
+		Coinbase:   val.account.Address,
 		Number:     blockNumber.Add(blockNumber, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent),
 		GasUsed:    new(big.Int),
 		Time:       big.NewInt(tstamp),
 	}
-	/*
-			var commit *types.Commit
-			if blockNumber.Cmp(big.NewInt(1)) == 0 {
-				commit = &types.Commit{}
-			} else {
-				//commit = val.lastCommit.Proof()
-			}
 
-		pending, err := val.kusd.TxPool().Pending()
-		if err != nil {
-			log.Crit("Failed to fetch pending transactions", "err", err)
-			return nil
-		}
-	*/
+	var commit *types.Commit
+	if blockNumber.Cmp(big.NewInt(1)) == 0 {
+		commit = &types.Commit{}
+	} else {
+		commit = nil
+		//commit = val.lastCommit.Proof()
+	}
 
-	//txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
-	//val.commitTransactions(val.eventMux, txs, val.chain, val.coinbase)
+	pending, err := val.kusd.TxPool().Pending()
+	if err != nil {
+		log.Crit("Failed to fetch pending transactions", "err", err)
+		return nil
+	}
+
+	txs := types.NewTransactionsByPriceAndNonce(pending)
+	val.commitTransactions(val.eventMux, txs, val.chain, val.account.Address)
+
+	val.kusd.TxPool().RemoveBatch(val.failedTxs)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
@@ -474,7 +477,7 @@ func (val *Validator) createBlock() *types.Block {
 }
 
 func (val *Validator) propose() {
-	block := val.getProposalBlock()
+	block := val.createProposalBlock()
 
 	//lockedRound, lockedBlock := val.votes.LockingInfo()
 	lockedRound := 1
@@ -489,9 +492,9 @@ func (val *Validator) propose() {
 	}
 
 	val.proposal = signedProposal
-	val.block = block
+	val.proposalBlock = block
 
-	val.events.Post(core.NewProposalEvent{Proposal: proposal})
+	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
 
 	// post block segments events
 	//for i := 0; i < SegmentedBlock.NumSegments(); i++ {
@@ -500,79 +503,76 @@ func (val *Validator) propose() {
 
 }
 
+func (val *Validator) preVote() {
+	var vote common.Hash
+	switch {
+	case val.lockedBlock != nil:
+		log.Debug("prevote locked block")
+		vote = val.lockedBlock.Hash()
+	case val.proposalBlock == nil:
+		log.Debug("proposal's block is nil, prevote nil")
+		vote = common.Hash{}
+	default:
+		log.Debug("pre vote the proposal's block")
+		vote = val.proposalBlock.Hash()
+	}
+
+	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreVote))
+}
+
+func (val *Validator) preCommit() {
+	var vote common.Hash
+	// access prevotes
+	winner := common.Hash{}
+	switch {
+	// no majority
+	//case !val.hasPolka():
+	// majority pre-voted nil
+	case winner == common.Hash{}:
+		log.Debug("majority of validators pre-voted nil")
+		// unlock locked block
+		if val.lockedBlock != nil {
+			val.lockedRound = 0
+			val.lockedBlock = nil
+		}
+	// majority pre-voted the locked block
+	case winner == val.lockedBlock.Hash():
+		log.Debug("majority of validators pre-voted the locked block")
+		// update locked block round
+		val.lockedRound = val.round
+		// vote on the pre-vote election winner
+		vote = winner
+	// majority pre-voted the proposed block
+	case winner == val.proposalBlock.Hash():
+		log.Debug("majority of validators pre-voted the proposed block")
+		// lock block
+		val.lockedRound = val.round
+		val.lockedBlock = val.proposalBlock
+		// vote on the pre-vote election winner
+		vote = winner
+	// we don't have the current block (fetch)
+	// @TODO (tendermint): in the future save the POL prevotes for justification.
+	// fetch block, unlock, precommit
+	default:
+		// unlock locked block
+		val.lockedRound = 0
+		val.lockedBlock = nil
+		//val.lockedBlockParts = nil
+		//if !cs.ProposalBlockParts.HasHeader(blockID.PartsHeader) {
+		val.proposalBlock = nil
+		//val.ProposalBlockParts = types.NewPartSetFromHeader(blockID.PartsHeader)
+		//}
+	}
+
+	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreCommit))
+}
+
 func (val *Validator) vote(vote *types.Vote) {
-	//val.eventMux.Post(core.NewVoteEvent{Vote: val.newSignedVote(typ, block)})
-}
+	signedVote, err := val.wallet.SignVote(val.account, vote, val.config.ChainID)
+	if err != nil {
+		log.Crit("")
+		return
+	}
 
-func (val *Validator) prevote() {
-	/*
-		var vote *types.Vote
-		switch {
-		// prevote locked block
-		case val.lockedBlock != nil:
-			log.Debug("")
-			vote = val.lockedBlock.Hash()
-		// proposal's block is nil, prevote nil
-		case val.block == nil:
-			log.Debug("")
-			vote = nil
-		// pre vote the proposal's block
-		default:
-			log.Debug("")
-			vote = val.block.Hash()
-		}
-		vote.voteType = types.PreCommit
-
-		val.vote(v.block.Hash())
-	*/
-}
-
-// preCommit votes on a candidate for the pre commit election
-func (val *Validator) precommit() {
-	/*
-		var vote common.Hash // nil by default
-		// access prevotes
-		winner := common.Hash{}
-		switch {
-		// no majority
-		case !val.hasPolka():
-		// majority pre-voted nil
-		case winner == nil:
-			log.Debug("majority of validators pre-voted nil")
-			// unlock locked block
-			if val.lockedBlock != nil {
-				val.lockedRound = 0
-				val.lockedBlock = nil
-			}
-		// majority pre-voted the locked block
-		case winner == lockedBlock.Hash():
-			log.Debug("majority of validators pre-voted the locked block")
-			// update locked block round
-			val.lockedRound = val.round
-			// vote on the pre-vote election winner
-			vote = winner
-		// majority pre-voted the proposed block
-		case winner == block.Hash():
-			log.Debug("majority of validators pre-voted the proposed block")
-			// lock block
-			val.lockedRound = round
-			val.lockedBlock = cs.ProposalBlock
-			// vote on the pre-vote election winner
-			vote = winner
-		// we don't have the current block (fetch)
-		// @TODO (tendermint): in the future save the POL prevotes for justification.
-		// fetch block, unlock, precommit
-		default:
-			// unlock locked block
-			cs.LockedRound = 0
-			cs.LockedBlock = nil
-			cs.LockedBlockParts = nil
-			if !cs.ProposalBlockParts.HasHeader(blockID.PartsHeader) {
-				cs.ProposalBlock = nil
-				cs.ProposalBlockParts = types.NewPartSetFromHeader(blockID.PartsHeader)
-			}
-		}
-		vote.voteType = types.PreCommit
-		val.vote(vote)
-	*/
+	val.eventMux.Post(core.NewVoteEvent{Vote: signedVote})
 }
