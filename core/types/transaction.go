@@ -39,7 +39,7 @@ var (
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
-	return NewAndromedaSigner(deriveChainId(V))
+	return NewAndromedaSigner(deriveChainID(V))
 }
 
 type Transaction struct {
@@ -114,9 +114,9 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 	return &Transaction{data: d}
 }
 
-// ChainId returns which chain id this transaction was signed for (if at all)
-func (tx *Transaction) ChainId() *big.Int {
-	return deriveChainId(tx.data.V)
+// ChainID returns which chain id this transaction was signed for (if at all)
+func (tx *Transaction) ChainID() *big.Int {
+	return deriveChainID(tx.data.V)
 }
 
 // DecodeRLP implements rlp.Encoder
@@ -149,7 +149,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	var V byte
-	chainID := deriveChainId(dec.V).Uint64()
+	chainID := deriveChainID(dec.V).Uint64()
 	V = byte(dec.V.Uint64() - 35 - 2*chainID)
 
 	if !crypto.ValidateSignatureValues(V, dec.R, dec.S, false) {

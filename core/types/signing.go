@@ -109,7 +109,7 @@ func (s AndromedaSigner) Equal(s2 Signer) bool {
 }
 
 func (s AndromedaSigner) PublicKey(tx *Transaction) ([]byte, error) {
-	if tx.ChainId().Cmp(s.chainID) != 0 {
+	if tx.ChainID().Cmp(s.chainID) != 0 {
 		return nil, ErrInvalidChainId
 	}
 
@@ -169,7 +169,7 @@ func (s AndromedaSigner) Hash(tx *Transaction) common.Hash {
 }
 
 // deriveChainId derives the chain id from the given v parameter
-func deriveChainId(v *big.Int) *big.Int {
+func deriveChainID(v *big.Int) *big.Int {
 	if v.BitLen() <= 64 {
 		v := v.Uint64()
 		if v == 27 || v == 28 {
