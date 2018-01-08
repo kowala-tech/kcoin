@@ -436,7 +436,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
-	from, err := types.Sender(pool.signer, tx)
+	from, err := types.TxSender(pool.signer, tx)
 	if err != nil {
 		return ErrInvalidSender
 	}
@@ -503,7 +503,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		}
 	}
 	// If the transaction is replacing an already pending one, do directly
-	from, _ := types.Sender(pool.signer, tx) // already validated
+	from, _ := types.TxSender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
 		// Nonce already pending, check if required price bump is met
 		inserted, old := list.Add(tx, pool.config.PriceBump)
@@ -544,7 +544,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 // Note, this method assumes the pool lock is held!
 func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, error) {
 	// Try to insert the transaction into the future queue
-	from, _ := types.Sender(pool.signer, tx) // already validated
+	from, _ := types.TxSender(pool.signer, tx) // already validated
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
 	}
@@ -658,7 +658,7 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 		if err != nil {
 			return err
 		}
-		from, _ := types.Sender(pool.signer, tx) // already validated
+		from, _ := types.TxSender(pool.signer, tx) // already validated
 		pool.promoteExecutables(state, []common.Address{from})
 	}
 	return nil
@@ -674,7 +674,7 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) error {
 	for _, tx := range txs {
 		if replace, err := pool.add(tx, local); err == nil {
 			if !replace {
-				from, _ := types.Sender(pool.signer, tx) // already validated
+				from, _ := types.TxSender(pool.signer, tx) // already validated
 				dirty[from] = struct{}{}
 			}
 		}
@@ -729,7 +729,7 @@ func (pool *TxPool) removeTx(hash common.Hash) {
 	if !ok {
 		return
 	}
-	addr, _ := types.Sender(pool.signer, tx) // already validated during insertion
+	addr, _ := types.TxSender(pool.signer, tx) // already validated during insertion
 
 	// Remove it from the list of known transactions
 	delete(pool.all, hash)
@@ -1009,7 +1009,7 @@ func (as *accountSet) contains(addr common.Address) bool {
 // containsTx checks if the sender of a given tx is within the set. If the sender
 // cannot be derived, this method returns false.
 func (as *accountSet) containsTx(tx *types.Transaction) bool {
-	if addr, err := types.Sender(as.signer, tx); err == nil {
+	if addr, err := types.TxSender(as.signer, tx); err == nil {
 		return as.contains(addr)
 	}
 	return false

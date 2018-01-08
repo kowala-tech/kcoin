@@ -188,10 +188,18 @@ func (tx *Transaction) Hash() common.Hash {
 	return v
 }
 
-// SigHash returns the hash to be signed by the sender.
+// ProtectedHash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
-func (tx *Transaction) SigHash(signer Signer) common.Hash {
-	return signer.Hash(tx)
+func (tx *Transaction) ProtectedHash(chainID *big.Int) common.Hash {
+	return rlpHash([]interface{}{
+		tx.data.AccountNonce,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Payload,
+		chainID, uint(0), uint(0),
+	})
 }
 
 func (tx *Transaction) Size() common.StorageSize {
@@ -221,14 +229,23 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	}
 
 	var err error
-	msg.from, err = Sender(s, tx)
+	msg.from, err = TxSender(s, tx)
 	return msg, err
 }
 
 // WithSignature returns a new transaction with the given signature.
 // This signature needs to be formatted as described in the yellow paper (v+27).
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
-	return signer.WithSignature(tx, sig)
+	cpy := &Transaction{data: tx.data}
+	V, R, S, err := signer.NewSignature(sig)
+	if err != nil {
+		return nil, err
+	}
+	cpy.data.V = V
+	cpy.data.R = R
+	cpy.data.S = S
+
+	return cpy, nil
 }
 
 // Cost returns amount + gasprice * gaslimit.
@@ -248,7 +265,7 @@ func (tx *Transaction) String() string {
 		// make a best guess about the signer and use that to derive
 		// the sender.
 		signer := deriveSigner(tx.data.V)
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
+		if f, err := TxSender(signer, tx); err != nil { // derive but don't cache
 			from = "[invalid sender: invalid sig]"
 		} else {
 			from = fmt.Sprintf("%x", f[:])
@@ -397,7 +414,7 @@ func (t *TransactionsByPriceAndNonce) Peek() *Transaction {
 func (t *TransactionsByPriceAndNonce) Shift() {
 	signer := deriveSigner(t.heads[0].data.V)
 	// derive signer but don't cache.
-	acc, _ := Sender(signer, t.heads[0]) // we only sort valid txs so this cannot fail
+	acc, _ := TxSender(signer, t.heads[0]) // we only sort valid txs so this cannot fail
 	if txs, ok := t.txs[acc]; ok && len(txs) > 0 {
 		t.heads[0], t.txs[acc] = txs[0], txs[1:]
 		heap.Fix(&t.heads, 0)

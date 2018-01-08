@@ -770,7 +770,7 @@ func (w *ledgerWallet) ledgerSign(derivationPath []uint32, address common.Addres
 	if err != nil {
 		return nil, err
 	}
-	sender, err := types.Sender(signer, signed)
+	sender, err := types.TxSender(signer, signed)
 	if err != nil {
 		return nil, err
 	}

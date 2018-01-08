@@ -735,7 +735,7 @@ type RPCTransaction struct {
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
 	signer := types.NewAndromedaSigner(tx.ChainID())
 
-	from, _ := types.Sender(signer, tx)
+	from, _ := types.TxSender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
 
 	result := &RPCTransaction{
@@ -903,7 +903,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(hash common.Hash) (map[
 
 	signer := types.NewAndromedaSigner(tx.ChainID())
 
-	from, _ := types.Sender(signer, tx)
+	from, _ := types.TxSender(signer, tx)
 
 	fields := map[string]interface{}{
 		"root":              hexutil.Bytes(receipt.PostState),
@@ -994,7 +994,7 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 	}
 	if tx.To() == nil {
 		signer := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
-		from, _ := types.Sender(signer, tx)
+		from, _ := types.TxSender(signer, tx)
 		addr := crypto.CreateAddress(from, tx.Nonce())
 		log.Info("Submitted contract creation", "fullhash", tx.Hash().Hex(), "contract", addr.Hex())
 	} else {
@@ -1052,7 +1052,7 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 
 	signer := types.MakeSigner(s.b.ChainConfig(), s.b.CurrentBlock().Number())
 	if tx.To() == nil {
-		from, err := types.Sender(signer, tx)
+		from, err := types.TxSender(signer, tx)
 		if err != nil {
 			return "", err
 		}
@@ -1132,7 +1132,7 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]*RPCTransaction, err
 	for _, tx := range pending {
 		signer := types.NewAndromedaSigner(tx.ChainID())
 
-		from, _ := types.Sender(signer, tx)
+		from, _ := types.TxSender(signer, tx)
 		if _, err := s.b.AccountManager().Find(accounts.Account{Address: from}); err == nil {
 			transactions = append(transactions, newRPCPendingTransaction(tx))
 		}
@@ -1158,9 +1158,10 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	for _, p := range pending {
 		signer := types.NewAndromedaSigner(p.ChainID())
 
-		wantSigHash := signer.Hash(matchTx)
+		wantSigHash := matchTx.ProtectedHash(signer.ChainID())
+		hash := p.ProtectedHash(signer.ChainID())
 
-		if pFrom, err := types.Sender(signer, p); err == nil && pFrom == sendArgs.From && signer.Hash(p) == wantSigHash {
+		if pFrom, err := types.TxSender(signer, p); err == nil && pFrom == sendArgs.From && hash == wantSigHash {
 			// Match. Re-sign and send the transaction.
 			if gasPrice != nil {
 				sendArgs.GasPrice = gasPrice

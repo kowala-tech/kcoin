@@ -36,13 +36,35 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 }
 
 // SignTx signs the transaction using the given signer and private key
-func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
-	h := s.Hash(tx)
+func SignTx(tx *Transaction, signer Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
+	h := tx.ProtectedHash(signer.ChainID())
 	sig, err := crypto.Sign(h[:], prv)
 	if err != nil {
 		return nil, err
 	}
-	return s.WithSignature(tx, sig)
+
+	return tx.WithSignature(signer, sig)
+}
+
+func TxSender(signer Signer, tx *Transaction) (common.Address, error) {
+	if sc := tx.from.Load(); sc != nil {
+		sigCache := sc.(sigCache)
+		// If the signer used to derive from in a previous
+		// call is not the same as used current, invalidate
+		// the cache.
+		if sigCache.signer.Equal(signer) {
+			return sigCache.from, nil
+		}
+	}
+
+	addr, err := Sender(signer, tx.ProtectedHash(signer.ChainID()), signer.ChainID(), tx.data.V, tx.data.R, tx.data.S)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	tx.from.Store(sigCache{signer: signer, from: addr})
+
+	return addr, nil
 }
 
 // Sender derives the sender from the tx using the signer derivation
@@ -55,37 +77,26 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 // Sender may cache the address, allowing it to be used regardless of
 // signing method. The cache is invalidated if the cached signer does
 // not match the signer used in the current call.
-func Sender(signer Signer, tx *Transaction) (common.Address, error) {
-	if sc := tx.from.Load(); sc != nil {
-		sigCache := sc.(sigCache)
-		// If the signer used to derive from in a previous
-		// call is not the same as used current, invalidate
-		// the cache.
-		if sigCache.signer.Equal(signer) {
-			return sigCache.from, nil
-		}
-	}
-
-	pubkey, err := signer.PublicKey(tx)
+func Sender(signer Signer, hash common.Hash, chainID, V, R, S *big.Int) (common.Address, error) {
+	pubkey, err := signer.PublicKey(hash, chainID, V, R, S)
 	if err != nil {
 		return common.Address{}, err
 	}
 	var addr common.Address
 	copy(addr[:], crypto.Keccak256(pubkey[1:])[12:])
-	tx.from.Store(sigCache{signer: signer, from: addr})
 	return addr, nil
 }
 
 type Signer interface {
-	// Hash returns the rlp encoded hash for signatures
-	Hash(tx *Transaction) common.Hash
 	// PubilcKey returns the public key derived from the signature
-	PublicKey(tx *Transaction) ([]byte, error)
-	// WithSignature returns a copy of the transaction with the given signature.
+	PublicKey(hash common.Hash, chainID, V, R, S *big.Int) ([]byte, error)
+	// NewSignature returns a new signature.
 	// The signature must be encoded in [R || S || V] format where V is 0 or 1.
-	WithSignature(tx *Transaction, sig []byte) (*Transaction, error)
+	NewSignature(sig []byte) (V, R, S *big.Int, err error)
 	// Checks for equality on the signers
 	Equal(Signer) bool
+	// Returns the current network ID
+	ChainID() *big.Int
 }
 
 // AndromedaSigner implements the Signer interface using andromeda's rules
@@ -108,24 +119,24 @@ func (s AndromedaSigner) Equal(s2 Signer) bool {
 	return ok && andromeda.chainID.Cmp(s.chainID) == 0
 }
 
-func (s AndromedaSigner) PublicKey(tx *Transaction) ([]byte, error) {
-	if tx.ChainID().Cmp(s.chainID) != 0 {
+func (s AndromedaSigner) PublicKey(hash common.Hash, chainID, V, R, S *big.Int) ([]byte, error) {
+	if chainID.Cmp(s.chainID) != 0 {
 		return nil, ErrInvalidChainId
 	}
 
-	V := byte(new(big.Int).Sub(tx.data.V, s.chainIDMul).Uint64() - 35)
-	if !crypto.ValidateSignatureValues(V, tx.data.R, tx.data.S, true) {
+	rawV := byte(new(big.Int).Sub(V, s.chainIDMul).Uint64() - 35)
+	if !crypto.ValidateSignatureValues(rawV, R, S, true) {
 		return nil, ErrInvalidSig
 	}
+
 	// encode the signature in uncompressed format
-	R, S := tx.data.R.Bytes(), tx.data.S.Bytes()
+	rawR, rawS := R.Bytes(), S.Bytes()
 	sig := make([]byte, 65)
-	copy(sig[32-len(R):32], R)
-	copy(sig[64-len(S):64], S)
-	sig[64] = V
+	copy(sig[32-len(rawR):32], rawR)
+	copy(sig[64-len(rawS):64], rawS)
+	sig[64] = rawV
 
 	// recover the public key from the signature
-	hash := s.Hash(tx)
 	pub, err := crypto.Ecrecover(hash[:], sig)
 	if err != nil {
 		return nil, err
@@ -136,39 +147,28 @@ func (s AndromedaSigner) PublicKey(tx *Transaction) ([]byte, error) {
 	return pub, nil
 }
 
-// WithSignature returns a new transaction with the given signature. This signature
+// NewSignature returns a new signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
-func (s AndromedaSigner) WithSignature(tx *Transaction, sig []byte) (*Transaction, error) {
+func (s AndromedaSigner) NewSignature(sig []byte) (V, R, S *big.Int, err error) {
 	if len(sig) != 65 {
 		panic(fmt.Sprintf("wrong size for signature: got %d, want 65", len(sig)))
 	}
 
-	cpy := &Transaction{data: tx.data}
-	cpy.data.R = new(big.Int).SetBytes(sig[:32])
-	cpy.data.S = new(big.Int).SetBytes(sig[32:64])
-	cpy.data.V = new(big.Int).SetBytes([]byte{sig[64]})
+	R = new(big.Int).SetBytes(sig[:32])
+	S = new(big.Int).SetBytes(sig[32:64])
+	V = new(big.Int).SetBytes([]byte{sig[64]})
 	if s.chainID.Sign() != 0 {
-		cpy.data.V = big.NewInt(int64(sig[64] + 35))
-		cpy.data.V.Add(cpy.data.V, s.chainIDMul)
+		V = big.NewInt(int64(sig[64] + 35))
+		V.Add(V, s.chainIDMul)
 	}
-	return cpy, nil
+	return
 }
 
-// Hash returns the hash to be signed by the sender.
-// It does not uniquely identify the transaction.
-func (s AndromedaSigner) Hash(tx *Transaction) common.Hash {
-	return rlpHash([]interface{}{
-		tx.data.AccountNonce,
-		tx.data.Price,
-		tx.data.GasLimit,
-		tx.data.Recipient,
-		tx.data.Amount,
-		tx.data.Payload,
-		s.chainID, uint(0), uint(0),
-	})
+func (s AndromedaSigner) ChainID() *big.Int {
+	return s.chainID
 }
 
-// deriveChainId derives the chain id from the given v parameter
+// deriveChainID derives the chain id from the given v parameter
 func deriveChainID(v *big.Int) *big.Int {
 	if v.BitLen() <= 64 {
 		v := v.Uint64()
