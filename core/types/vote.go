@@ -35,6 +35,7 @@ type Vote struct {
 	// cache
 	hash atomic.Value
 	size atomic.Value // @TODO (rgeraldes) - confirm if it's necessary
+	from atomic.Value
 }
 
 type votedata struct {

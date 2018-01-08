@@ -13,20 +13,21 @@ import (
 // election encapsulates the consensus state for a specific block election
 type election struct {
 	blockNumber *big.Int
-	round       uint64
+	round       int
 
+	validators    *types.Validators
 	proposal      *types.Proposal
 	proposalBlock *types.Block
 
 	lockedRound int
 	lockedBlock *types.Block
 
-	start time.Time
-	end   time.Time
+	start time.Time // used to sync the validator nodes
 
-	commitRound uint64
+	commitRound int
 
-	lastCommit *core.VoteSet // Last precommits at Height-1
+	lastCommit     *core.VotingTable // Last precommits at Height-1
+	lastValidators *types.Validators
 
 	// proposer
 	tcount   int
@@ -41,9 +42,8 @@ type stateFn func() stateFn
 func (val *Validator) notLoggedInState() stateFn {
 	log.Info("Initial state")
 
-	// @TODO (rgeraldes) - to do as soon as the contract for the dynamic validator is up
-
 	/*
+		// @TODO (rgeraldes) - to do as soon as the contract for the dynamic validator is up
 		// one shot type of confirmation loop
 		headSub := val.eventMux.Subscribe(ChainHeadEvent{})
 		defer headSub.Unsubscribe()
@@ -69,7 +69,7 @@ func (val *Validator) notLoggedInState() stateFn {
 func (val *Validator) newElectionState() stateFn {
 	log.Info("Starting the election for a new block", "block number", val)
 
-	// update state machine based on the latest chain state
+	// update state machine based on current state
 	val.init()
 
 	<-time.NewTimer(val.start.Sub(time.Now())).C
@@ -107,7 +107,7 @@ func (val *Validator) newRoundState() stateFn {
 func (val *Validator) newProposalState() stateFn {
 	log.Info("Starting a new proposal")
 
-	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.ProposeDuration+uint64(val.round)*params.ProposeDeltaDuration) * time.Millisecond
 
 	if val.isProposer() {
 		log.Info("Proposing a new block", "hash", val.proposal.Hash())
@@ -135,7 +135,7 @@ func (val *Validator) preVoteState() stateFn {
 func (val *Validator) preVoteWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-vote election")
 
-	timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.PreVoteDuration+uint64(val.round)*params.PreVoteDeltaDuration) * time.Millisecond
 
 	select {
 	//case val.preVoteMajSub.Chan():
@@ -159,7 +159,7 @@ func (val *Validator) preCommitState() stateFn {
 func (val *Validator) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit election")
 
-	timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.PreCommitDuration+uint64(val.round)+params.PreCommitDeltaDuration) * time.Millisecond
 
 	select {
 	/*
@@ -180,24 +180,22 @@ func (val *Validator) preCommitWaitState() stateFn {
 func (val *Validator) commitState() stateFn {
 	log.Info("Committing the election result")
 
+	stat, err := val.chain.WriteBlock(val.proposalBlock)
+	if err != nil {
+		log.Crit("Failed writing block to chain", "err", err)
+	}
+
+	// @TODO (rgeraldes) - review type
 	// state updates
-	val.commitRound = val.round
-
-	// @TODO (rgeraldes) - end or commit?
-	val.end = time.Now()
-
-	/*
-		stat, err := val.chain.WriteBlock(val.proposalBlock)
-		if err != nil {
-			log.Crit("Failed writing block to chain", "err", err)
-		}
-	*/
+	val.commitRound = int(val.round)
 
 	// @TODO(rgeraldes)
 	/*
 		// leaves only when it has all the pre commits
 		select {}
 	*/
+
+	// @TODO (rgeraldes) - VALIDATOR CONTRACT
 
 	// @TODO if the validator is not part of the validator state anymore, return nil
 	// if not part of the voters jump to left election

@@ -1,11 +1,13 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/log"
 )
 
 /*
@@ -43,13 +45,16 @@ import (
 	NOTE: Assumes that the sum total of voting power does not exceed MaxUInt64.
 */
 
-type VoteSet struct {
+type VotingTable struct {
+	lock sync.Mutex
+
+	all map[common.Hash]*types.Vote // allow lookups
+
 	blockNumber *big.Int
 	round       int
 	voteType    types.VoteType
 
-	mtx           sync.Mutex
-	validators    *ValidatorSet
+	voters        *types.Validators
 	votesBitArray *common.BitArray
 	votes         []*types.Vote // Primary votes to share
 	sum           int64         // Sum of voting power for seen votes, discounting conflicts
@@ -58,13 +63,12 @@ type VoteSet struct {
 	//peerMaj23s map[string]common.Hash // Maj23 for each peer
 }
 
-// VoteSet returns a new set of votes used to accumulate votes for a given block number/round.
-func NewVoteSet(blockNumber *big.Int, round int, voteType types.VoteType, validators *ValidatorSet) *VoteSet {
-	return &VoteSet{
+func NewVotingTable(blockNumber *big.Int, round int, voteType types.VoteType, validators *types.Validators) *VotingTable {
+	return &VotingTable{
 		blockNumber:   blockNumber,
 		round:         round,
 		voteType:      voteType,
-		validators:    validators,
+		voters:        validators,
 		votesBitArray: common.NewBitArray(validators.Size()),
 		votes:         make([]*types.Vote, validators.Size()),
 		sum:           0,
@@ -74,140 +78,93 @@ func NewVoteSet(blockNumber *big.Int, round int, voteType types.VoteType, valida
 	}
 }
 
-/*
-
-func (set *VoteSet) NetworkID() string {
-	return set.NetworkID
+func (table *VotingTable) Add(vote *types.Vote) (added bool, err error) {
+	table.lock.Lock()
+	defer table.lock.Unlock()
+	return table.add(vote)
 }
 
-func (voteSet *VoteSet) Height() int64 {
-	if voteSet == nil {
-		return 0
-	} else {
-		return voteSet.height
-	}
+func (table *VotingTable) validateVote(vote *types.Vote) error {
+
+	/*
+
+		valIndex := vote.ValidatorIndex
+		valAddr := vote.ValidatorAddress
+		blockKey := vote.BlockID.Key()
+
+
+				// Ensure that validator index was set
+				if valIndex < 0 {
+					return false, errors.Wrap(ErrVoteInvalidValidatorIndex, "Index < 0")
+				} else if len(valAddr) == 0 {
+					return false, errors.Wrap(ErrVoteInvalidValidatorAddress, "Empty address")
+				}
+
+				// Make sure the step matches.
+				if (vote.Height != voteSet.height) ||
+					(vote.Round != voteSet.round) ||
+					(vote.Type != voteSet.type_) {
+					return false, errors.Wrapf(ErrVoteUnexpectedStep, "Got %d/%d/%d, expected %d/%d/%d",
+						voteSet.height, voteSet.round, voteSet.type_,
+						vote.Height, vote.Round, vote.Type)
+				}
+
+
+			// Ensure that signer is a validator.
+			lookupAddr, val := voteSet.valSet.GetByIndex(valIndex)
+			if val == nil {
+				return false, errors.Wrapf(ErrVoteInvalidValidatorIndex,
+					"Cannot find validator %d in valSet of size %d", valIndex, voteSet.valSet.Size())
+			}
+
+			// Ensure that the signer has the right address
+			if !bytes.Equal(valAddr, lookupAddr) {
+				return false, errors.Wrapf(ErrVoteInvalidValidatorAddress,
+					"vote.ValidatorAddress (%X) does not match address (%X) for vote.ValidatorIndex (%d)",
+					valAddr, lookupAddr, valIndex)
+			}
+	*/
+
+	return nil
 }
 
-func (voteSet *VoteSet) Round() int {
-	if voteSet == nil {
-		return -1
-	} else {
-		return voteSet.round
+func (table *VotingTable) add(vote *types.Vote) (added bool, err error) {
+	// If the vote is already known, discard it
+	hash := vote.Hash()
+	if table.all[hash] != nil {
+		log.Trace("Discarding already known vote", "hash", hash)
+		return false, fmt.Errorf("known vote: %x", hash)
 	}
-}
-
-func (voteSet *VoteSet) Type() byte {
-	if voteSet == nil {
-		return 0x00
-	} else {
-		return voteSet.type_
-	}
-}
-
-func (voteSet *VoteSet) Size() int {
-	if voteSet == nil {
-		return 0
-	} else {
-		return voteSet.valSet.Size()
-	}
-}
-
-// Returns added=true if vote is valid and new.
-// Otherwise returns err=ErrVote[
-//		UnexpectedStep | InvalidIndex | InvalidAddress |
-//		InvalidSignature | InvalidBlockHash | ConflictingVotes ]
-// Duplicate votes return added=false, err=nil.
-// Conflicting votes return added=*, err=ErrVoteConflictingVotes.
-// NOTE: vote should not be mutated after adding.
-// NOTE: VoteSet must not be nil
-// NOTE: Vote must not be nil
-func (voteSet *VoteSet) AddVote(vote *Vote) (added bool, err error) {
-	if voteSet == nil {
-		cmn.PanicSanity("AddVote() on nil VoteSet")
-	}
-	voteSet.mtx.Lock()
-	defer voteSet.mtx.Unlock()
-
-	return voteSet.addVote(vote)
-}
-
-// NOTE: Validates as much as possible before attempting to verify the signature.
-func (voteSet *VoteSet) addVote(vote *Vote) (added bool, err error) {
-	if vote == nil {
-		return false, ErrVoteNil
-	}
-	valIndex := vote.ValidatorIndex
-	valAddr := vote.ValidatorAddress
-	blockKey := vote.BlockID.Key()
-
-	// Ensure that validator index was set
-	if valIndex < 0 {
-		return false, errors.Wrap(ErrVoteInvalidValidatorIndex, "Index < 0")
-	} else if len(valAddr) == 0 {
-		return false, errors.Wrap(ErrVoteInvalidValidatorAddress, "Empty address")
+	// If the transaction fails basic validation, discard it
+	if err := table.validateVote(vote); err != nil {
+		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
+		invalidTxCounter.Inc(1)
+		return false, err
 	}
 
-	// Make sure the step matches.
-	if (vote.Height != voteSet.height) ||
-		(vote.Round != voteSet.round) ||
-		(vote.Type != voteSet.type_) {
-		return false, errors.Wrapf(ErrVoteUnexpectedStep, "Got %d/%d/%d, expected %d/%d/%d",
-			voteSet.height, voteSet.round, voteSet.type_,
-			vote.Height, vote.Round, vote.Type)
-	}
+	/*
+		// Check signature.
+		if err := vote.Verify(voteSet.chainID, val.PubKey); err != nil {
+			return false, errors.Wrapf(err, "Failed to verify vote with ChainID %s and PubKey %s", voteSet.chainID, val.PubKey)
+		}
+	*/
 
-	// Ensure that signer is a validator.
-	lookupAddr, val := voteSet.valSet.GetByIndex(valIndex)
-	if val == nil {
-		return false, errors.Wrapf(ErrVoteInvalidValidatorIndex,
-			"Cannot find validator %d in valSet of size %d", valIndex, voteSet.valSet.Size())
-	}
-
-	// Ensure that the signer has the right address
-	if !bytes.Equal(valAddr, lookupAddr) {
-		return false, errors.Wrapf(ErrVoteInvalidValidatorAddress,
-			"vote.ValidatorAddress (%X) does not match address (%X) for vote.ValidatorIndex (%d)",
-			valAddr, lookupAddr, valIndex)
-	}
-
-	// If we already know of this vote, return false.
-	if existing, ok := voteSet.getVote(valIndex, blockKey); ok {
-		if existing.Signature.Equals(vote.Signature) {
-			return false, nil // duplicate
+	/*
+		// Add vote and get conflicting vote if any
+		added, conflicting := voteSet.addVerifiedVote(vote, blockKey, val.VotingPower)
+		if conflicting != nil {
+			return added, NewConflictingVoteError(val, conflicting, vote)
 		} else {
-			return false, errors.Wrapf(ErrVoteNonDeterministicSignature, "Existing vote: %v; New vote: %v", existing, vote)
+			if !added {
+				cmn.PanicSanity("Expected to add non-conflicting vote")
+			}
+			return added, nil
 		}
-	}
-
-	// Check signature.
-	if err := vote.Verify(voteSet.chainID, val.PubKey); err != nil {
-		return false, errors.Wrapf(err, "Failed to verify vote with ChainID %s and PubKey %s", voteSet.chainID, val.PubKey)
-	}
-
-	// Add vote and get conflicting vote if any
-	added, conflicting := voteSet.addVerifiedVote(vote, blockKey, val.VotingPower)
-	if conflicting != nil {
-		return added, NewConflictingVoteError(val, conflicting, vote)
-	} else {
-		if !added {
-			cmn.PanicSanity("Expected to add non-conflicting vote")
-		}
-		return added, nil
-	}
-
+	*/
+	return true, nil
 }
 
-// Returns (vote, true) if vote exists for valIndex and blockKey
-func (voteSet *VoteSet) getVote(valIndex int, blockKey string) (vote *Vote, ok bool) {
-	if existing := voteSet.votes[valIndex]; existing != nil && existing.BlockID.Key() == blockKey {
-		return existing, true
-	}
-	if existing := voteSet.votesByBlock[blockKey].getByIndex(valIndex); existing != nil {
-		return existing, true
-	}
-	return nil, false
-}
-
+/*
 // Assumes signature is valid.
 // If conflicting vote exists, returns it.
 func (voteSet *VoteSet) addVerifiedVote(vote *Vote, blockKey string, votingPower int64) (added bool, conflicting *Vote) {
@@ -279,6 +236,61 @@ func (voteSet *VoteSet) addVerifiedVote(vote *Vote, blockKey string, votingPower
 
 	return true, conflicting
 }
+*/
+
+/*
+
+func (set *VoteSet) NetworkID() string {
+	return set.NetworkID
+}
+
+func (voteSet *VoteSet) Height() int64 {
+	if voteSet == nil {
+		return 0
+	} else {
+		return voteSet.height
+	}
+}
+
+func (voteSet *VoteSet) Round() int {
+	if voteSet == nil {
+		return -1
+	} else {
+		return voteSet.round
+	}
+}
+
+func (voteSet *VoteSet) Type() byte {
+	if voteSet == nil {
+		return 0x00
+	} else {
+		return voteSet.type_
+	}
+}
+
+func (voteSet *VoteSet) Size() int {
+	if voteSet == nil {
+		return 0
+	} else {
+		return voteSet.valSet.Size()
+	}
+}
+
+
+
+
+// Returns (vote, true) if vote exists for valIndex and blockKey
+func (voteSet *VoteSet) getVote(valIndex int, blockKey string) (vote *Vote, ok bool) {
+	if existing := voteSet.votes[valIndex]; existing != nil && existing.BlockID.Key() == blockKey {
+		return existing, true
+	}
+	if existing := voteSet.votesByBlock[blockKey].getByIndex(valIndex); existing != nil {
+		return existing, true
+	}
+	return nil, false
+}
+
+
 
 // If a peer claims that it has 2/3 majority for given blockKey, call this.
 // NOTE: if there are too many peers, or too much peer churn,

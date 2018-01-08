@@ -90,6 +90,48 @@ func TxSender(signer Signer, tx *Transaction) (common.Address, error) {
 	return addr, nil
 }
 
+func ProposalSender(signer Signer, proposal *Proposal) (common.Address, error) {
+	if sc := proposal.from.Load(); sc != nil {
+		sigCache := sc.(sigCache)
+		// If the signer used to derive from in a previous
+		// call is not the same as used current, invalidate
+		// the cache.
+		if sigCache.signer.Equal(signer) {
+			return sigCache.from, nil
+		}
+	}
+
+	addr, err := Sender(signer, proposal.ProtectedHash(signer.ChainID()), signer.ChainID(), proposal.data.V, proposal.data.R, proposal.data.S)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	proposal.from.Store(sigCache{signer: signer, from: addr})
+
+	return addr, nil
+}
+
+func VoteSender(signer Signer, proposal *Proposal) (common.Address, error) {
+	if sc := proposal.from.Load(); sc != nil {
+		sigCache := sc.(sigCache)
+		// If the signer used to derive from in a previous
+		// call is not the same as used current, invalidate
+		// the cache.
+		if sigCache.signer.Equal(signer) {
+			return sigCache.from, nil
+		}
+	}
+
+	addr, err := Sender(signer, proposal.ProtectedHash(signer.ChainID()), signer.ChainID(), proposal.data.V, proposal.data.R, proposal.data.S)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	proposal.from.Store(sigCache{signer: signer, from: addr})
+
+	return addr, nil
+}
+
 // Sender derives the sender from the tx using the signer derivation
 // functions.
 

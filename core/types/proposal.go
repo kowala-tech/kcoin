@@ -20,6 +20,7 @@ type Proposal struct {
 	// caches
 	hash atomic.Value
 	size atomic.Value // @TODO (rgeraldes) - confirm if it's necessary
+	from atomic.Value
 }
 
 type proposaldata struct {
@@ -45,11 +46,11 @@ type proposaldataMarshalling struct {
 }
 
 // NewProposal returns a new proposal
-func NewProposal(blockNumber *big.Int, round int /*, blockMetadata *core.Metadata*/, polRound int, polBlock common.Hash) *Proposal {
-	return newProposal(blockNumber, round /*, blockMetadata*/, polRound, polBlock)
+func NewProposal(blockNumber *big.Int, round int /*, blockMetadata *core.Metadata*/, lockedRound int, lockedBlock common.Hash) *Proposal {
+	return newProposal(blockNumber, round /*, blockMetadata*/, lockedRound, lockedBlock)
 }
 
-func newProposal(blockNumber *big.Int, round int /*, blockData *core.Metadata*/, polRound int, polBlock common.Hash) *Proposal {
+func newProposal(blockNumber *big.Int, round int /*, blockData *core.Metadata*/, lockedRound int, lockedBlock common.Hash) *Proposal {
 	d := proposaldata{
 		BlockNumber: new(big.Int),
 		//BlockMetadata:   blockData,

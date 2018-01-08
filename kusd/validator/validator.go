@@ -107,6 +107,8 @@ out:
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	account := accounts.Account{Address: coinbase}
 	wallet, err := val.kusd.AccountManager().Find(account)
+
+	// @TODO (rgeraldes) - there are some validations before this one (cmdline cli) - confirm
 	if err != nil {
 	}
 
@@ -126,7 +128,7 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	val.wg.Add(1)
 	go val.run()
 
-	// launch the consensus events handler
+	// launch the msg handler
 	go val.handle()
 }
 
@@ -219,56 +221,59 @@ func (val *Validator) restoreLastCommit() {
 		return
 	}
 
-	// @TODO (rgeraldes) - call contract to get the validators
-	lastValidators := core.NewValidatorSet([]*core.Validator{})
+	// @TODO (rgeraldes) - VALIDATORS CONTRACT
+	lastValidators := &types.Validators{}
 
 	lastCommit := currentBlock.LastCommit()
-	lastPreCommits := core.NewVoteSet(currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
+	lastPreCommits := core.NewVotingTable(currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
 	for _, preCommit := range lastCommit.PreCommits() {
 		if preCommit == nil {
 			continue
 		}
 
-		/*
-			added, err := lastPreCommits.Add(preCommit)
-			if !added || error != nil {
-				// @TODO (rgeraldes) - this should not happen > complete
-				log.Error("Failed to restore the latest commit")
-			}
-		*/
+		added, err := lastPreCommits.Add(preCommit)
+		if !added || err != nil {
+			// @TODO (rgeraldes) - this should not happen > complete
+			log.Error("Failed to restore the latest commit")
+		}
 	}
 
 	val.lastCommit = lastPreCommits
 }
 
 func (val *Validator) init() {
-	/*
-		// @TODO (rgeraldes) - call pos contract in order to get the latest set of validators
-		// for now it's an hardcoded value the set of validators will be the same as the last round
-		// val.validators =
-		// val.prevValidators =
-		prevPreCommits := new(*core.VoteSet)
-		if val.commitRound > -1 && val.votes != nil {
-			prevPreCommits = val.votes.PreCommits(val.commitRound)
-		}
-		parent := val.chain.CurrentBlock()
+	parent := val.chain.CurrentBlock()
+	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
+	val.round = 0
 
-		val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
-		val.round = 0
-		val.start = val.end.Add(time.Duration(params.SyncDuration) * time.Millisecond)
-		val.proposal = nil
-		val.proposalBlock = nil
-		//val.proposalBlockChunks = nil
-		val.lockedRound = 0
-		val.lockedBlock = nil
-		val.commitRound = -1
-		val.prevCommit = prevPreCommits
-	*/
+	// @NOTE (rgeraldes) - in order to sync the nodes, the start time
+	// must be the timestamp on the block + a sync interval
+	// Tendermint uses a different logic that does not rely on the
+	// previous information, but I think that's something necessary.
+	val.start = time.Unix(parent.Time().Int64(), 0).Add(time.Duration(params.SyncDuration) * time.Millisecond)
+	val.proposal = nil
+	val.proposalBlock = nil
+	val.lockedRound = 0
+	val.lockedBlock = nil
+	val.commitRound = -1
+
+	// val.proposalBlockChunks = nil
+	// val.votes
+	// @TODO (rgeraldes) - VALIDATORS CONTRACT
+	// val.validators =
+	// val.lastValidators
+
+	// val.prevValidators =
+	//prevPreCommits := new(*core.VoteSet)
+	//if val.commitRound > -1 && val.votes != nil {
+	//	prevPreCommits = val.votes.PreCommits(val.commitRound)
+	//}
+	// val.prevCommit = prevPreCommits
+
 }
 
 func (val *Validator) isProposer() bool {
-	//return val.coinbase ==
-	return false
+	return val.validators.Proposer() == val.account.Address
 }
 
 func (val *Validator) setProposal(proposal *types.Proposal) {
@@ -405,40 +410,14 @@ func (val *Validator) withdrawDeposit() {
 	// @TODO (rgeraldes) - to complete as soon as the dynamic validator set contract is ready
 }
 
-func (val *Validator) propose() {
-	/*
-		var block *types.Block
-		if val.lockedBlock != nil {
-			// @TODO (rgeraldes) - confirm
-			block = val.lockedBlock
-		} else {
-			block = val.newBlock()
-		}
-
-		// new proposal
-		//lockedRound, lockedBlock := val.votes.LockingInfo()
-		//proposal := types.NewProposal(val.height, val.round, block.Fragment().Metadata(), lockedRound, lockedBlock)
-		//if types.SignProposal(proposal, val.signer, )
-
-			// sign proposal
-			//if err := ; err != nil {
-			//	log.Error("proposal: error signing proposal")
-			//	return
-			}
-
-			// update state
-			val.proposal = proposal
-			val.block = block
-			// post proposal event
-			val.events.Post(core.NewProposalEvent{Proposal: proposal})
-			// post block segments events
-			for i := 0; i < SegmentedBlock.NumSegments(); i ++ {
-				val.events.Post(core.NewBlockSegmentEvent{val.Height, val.Round, SegmentedBlock.GetSegment(i)})
-			}
-	*/
+func (val *Validator) getProposalBlock() *types.Block {
+	if val.lockedBlock != nil {
+		return val.lockedBlock
+	}
+	return val.createBlock()
 }
 
-func (val *Validator) newBlock() *types.Block {
+func (val *Validator) createBlock() *types.Block {
 	// new block header
 	parent := val.chain.CurrentBlock()
 	state, err := val.chain.StateAt(parent.Root())
@@ -492,6 +471,33 @@ func (val *Validator) newBlock() *types.Block {
 		log.BlockHash = block.Hash()
 	}
 	return block
+}
+
+func (val *Validator) propose() {
+	block := val.getProposalBlock()
+
+	//lockedRound, lockedBlock := val.votes.LockingInfo()
+	lockedRound := 1
+	lockedBlock := common.Hash{}
+
+	proposal := types.NewProposal(val.blockNumber, val.round /*block.Fragment().Metadata(),*/, lockedRound, lockedBlock)
+	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
+	if err != nil {
+		// @TODO (rgeraldes) - complete
+		//log.Crit("")
+		return
+	}
+
+	val.proposal = signedProposal
+	val.block = block
+
+	val.events.Post(core.NewProposalEvent{Proposal: proposal})
+
+	// post block segments events
+	//for i := 0; i < SegmentedBlock.NumSegments(); i++ {
+	//	val.events.Post(core.NewBlockSegmentEvent{val.Height, val.Round, SegmentedBlock.GetSegment(i)})
+	//}
+
 }
 
 func (val *Validator) vote(vote *types.Vote) {

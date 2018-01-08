@@ -24,8 +24,11 @@ import (
 // TxPreEvent is posted when a transaction enters the transaction pool.
 type TxPreEvent struct{ Tx *types.Transaction }
 
-// NewVoteEvent is posted when a consensus validator votes
+// NewVoteEvent is posted when a consensus validator votes.
 type NewVoteEvent struct{ Vote *types.Vote }
+
+// NewProposalEvent is posted when a consensus validator proposes a new block.
+type NewProposalEvent struct{ Proposal *types.Proposal }
 
 // PendingLogsEvent is posted pre mining and notifies of pending logs.
 type PendingLogsEvent struct {
