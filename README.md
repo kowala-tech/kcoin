@@ -1,4 +1,4 @@
-## Kowala
+## [Kowala](kowala.tech)
 
 Official implementation of the Kowala protocol. The **`kusd`** client is the main client for the Kowala network.
 It is the entry point into the Kowala network, and is capable of running a full node(default). The client offers
@@ -38,6 +38,10 @@ docker run -d --name kusd-node -v /Users/alice/kusd:/root \
            kusd/client-go --fast --cache=512
 ```
 
+## Networks
+
+There aren't public networks at the moment.
+
 ## Proof-of-Stake (PoS)
 
 ### Protocol
@@ -58,3 +62,11 @@ To start a kusd instance for block validation, run it with all your usual flags,
 ```
 $ kusd <usual-flags> --validate --deposit=4000 --coinbase=0x0000000000000000000000000000000000000000
 ```
+
+## Core Contributors
+
+[Core Team Members](https://github.com/orgs/kowala-tech/people)
+
+## Contact us
+
+Feel free to email us at support@kowala.tech.
