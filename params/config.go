@@ -7,7 +7,7 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 )
 
-// @TODO (rgeraldes) - generate new hashes in case we modify some element
+// @TODO (rgeraldes) - generate new hashes
 
 var (
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
@@ -17,12 +17,14 @@ var (
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID: big.NewInt(1),
+		ChainID:    big.NewInt(1),
+		Tendermint: new(TendermintConfig),
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID: big.NewInt(3),
+		ChainID:    big.NewInt(3),
+		Tendermint: new(TendermintConfig),
 	}
 
 	// AllProtocolChanges contains every protocol change (EIPs)

@@ -23,7 +23,7 @@ Blocks = 10
 Percentile = 50
 
 [Node]
-DataDir = "/opt/Library/Kowala"
+DataDir = ".kowala"
 
 [Node.P2P]
 MaxPeers = 25
@@ -34,7 +34,6 @@ BootstrapNodesV5 = ["enode://0cc5f5ffb5d9098c8b8c62325f3797f56509bff942704687b65
 StaticNodes = []
 TrustedNodes = []
 ListenAddr = ":30303"
-EnableMsgEvents = false
 
-[Stats]
-URL = "nodename:secret@host:port"
+# [Stats]
+# URL = "nodename:secret@host:port"
