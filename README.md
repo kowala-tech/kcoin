@@ -40,6 +40,10 @@ docker run -d --name kusd-node -v /Users/alice/kusd:/root \
 
 ## Proof-of-Stake (PoS)
 
+## Protocol
+
+[Tendermint](https://github.com/tendermint/tendermint)
+
 ### Running a PoS validator
 
 Make sure that you have an unlocked account available:
