@@ -312,9 +312,9 @@ func (b *Block) Hash() common.Hash {
 func (b *Block) AsFragments(size int) (BlockFragments, error) {
 	rawBlock, err := rlp.EncodeToBytes(b)
 	if err != nil {
-		return nil, nil
+		return BlockFragments{}, err
 	}
-	return NewDataSetFromData(rawBlock, size), nil
+	return BlockFragments(NewDataSetFromData(rawBlock, size)), nil
 }
 
 func (b *Block) String() string {

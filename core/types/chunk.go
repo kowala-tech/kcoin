@@ -51,7 +51,7 @@ type DataSet struct {
 	root       common.Hash      // trie root hash
 }
 
-func NewDataSetFromData(data []byte, size int) *DataSet {
+func NewDataSetFromData(data []byte, size int) DataSet {
 	total := (len(data) + size - 1) / size
 	chunks := make([]*Chunk, total)
 	membership := common.NewBitArray(uint64(total))
@@ -70,7 +70,7 @@ func NewDataSetFromData(data []byte, size int) *DataSet {
 	//trie.Update()
 	//root := trie.Hash()
 
-	return &DataSet{
+	return DataSet{
 		total:      total,
 		root:       common.Hash{},
 		data:       chunks,
