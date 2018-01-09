@@ -29,5 +29,7 @@ func (vals Validators) Size() int {
 }
 
 func (vals Validators) Proposer() common.Address {
-	return vals.proposer.Code()
+	// @TODO (rgeraldes) complete
+	// return the first validator for now
+	return vals.validators[0].Code()
 }

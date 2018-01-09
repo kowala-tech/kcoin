@@ -230,7 +230,6 @@ func (val *Validator) restoreLastCommit() {
 		if preCommit == nil {
 			continue
 		}
-
 		added, err := lastPreCommits.Add(preCommit)
 		if !added || err != nil {
 			// @TODO (rgeraldes) - this should not happen > complete
