@@ -24,6 +24,8 @@ To get an idea how the file should look like you can use the `dumpconfig` subcom
 $ kusd --your-favourite-flags dumpconfig
 ```
 
+or check the [config sample](https://github.com/kowala-tech/kUSD/blob/master/sample-kowala.toml).
+
 ### Client Options
 
 [Client page]()
