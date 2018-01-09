@@ -15,9 +15,10 @@ type election struct {
 	blockNumber *big.Int
 	round       int
 
-	validators    *types.Validators
-	proposal      *types.Proposal
-	proposalBlock *types.Block
+	validators             *types.Validators
+	proposal               *types.Proposal
+	proposalBlock          *types.Block
+	proposalBlockFragments *types.BlockFragments
 
 	lockedRound int
 	lockedBlock *types.Block
@@ -96,7 +97,7 @@ func (val *Validator) newRoundState() stateFn {
 	if val.round != 0 {
 		val.proposal = nil
 		val.proposalBlock = nil
-		//		val.proposalBlockFragments = nil
+		val.proposalBlockFragments = nil
 	}
 	//	val.votes.SetRound(val.round + 1) // also track next round (round+1) to allow round-skipping
 

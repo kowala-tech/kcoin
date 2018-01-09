@@ -24,11 +24,11 @@ type Proposal struct {
 }
 
 type proposaldata struct {
-	BlockNumber *big.Int    `json:"number"			gencodec:"required"`
-	Round       int         `json:"round"			gencodec:"required"`
-	LockedRound int         `json:"lockedRound"		gencodec:"required"`
-	LockedBlock common.Hash `json:"lockedBlock"		gencodec:"required"`
-	//BlockMetaData *core.Metadata `json:"block" 			gencoded:"required"`
+	BlockNumber   *big.Int    `json:"number"			gencodec:"required"`
+	Round         int         `json:"round"			gencodec:"required"`
+	LockedRound   int         `json:"lockedRound"		gencodec:"required"`
+	LockedBlock   common.Hash `json:"lockedBlock"		gencodec:"required"`
+	BlockMetadata Metadata    `json:"block" 			gencoded:"required"`
 	//Timestamp     time.Time      `json:"time"		gencoded:"required"` // @TODO(rgeraldes) confirm if it's necessary
 
 	// signature values
@@ -46,18 +46,18 @@ type proposaldataMarshalling struct {
 }
 
 // NewProposal returns a new proposal
-func NewProposal(blockNumber *big.Int, round int /*, blockMetadata *core.Metadata*/, lockedRound int, lockedBlock common.Hash) *Proposal {
-	return newProposal(blockNumber, round /*, blockMetadata*/, lockedRound, lockedBlock)
+func NewProposal(blockNumber *big.Int, round int, blockMetadata Metadata, lockedRound int, lockedBlock common.Hash) *Proposal {
+	return newProposal(blockNumber, round, blockMetadata, lockedRound, lockedBlock)
 }
 
-func newProposal(blockNumber *big.Int, round int /*, blockData *core.Metadata*/, lockedRound int, lockedBlock common.Hash) *Proposal {
+func newProposal(blockNumber *big.Int, round int, blockMetadata Metadata, lockedRound int, lockedBlock common.Hash) *Proposal {
 	d := proposaldata{
-		BlockNumber: new(big.Int),
-		//BlockMetadata:   blockData,
-		Round: round,
-		V:     new(big.Int),
-		R:     new(big.Int),
-		S:     new(big.Int),
+		BlockNumber:   new(big.Int),
+		BlockMetadata: blockMetadata,
+		Round:         round,
+		V:             new(big.Int),
+		R:             new(big.Int),
+		S:             new(big.Int),
 	}
 
 	if blockNumber != nil {
@@ -111,6 +111,7 @@ func (prop *Proposal) ProtectedHash(chainID *big.Int) common.Hash {
 	return rlpHash([]interface{}{
 		prop.data.BlockNumber,
 		prop.data.Round,
+		prop.data.BlockMetadata,
 		prop.data.LockedRound,
 		prop.data.LockedBlock,
 		chainID, uint(0), uint(0),

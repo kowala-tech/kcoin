@@ -42,13 +42,13 @@ type chunkMarshaling struct {
 
 // DataSet represents content as a set of data chunks
 type DataSet struct {
-	total int // number of data chunks that compose the content
-	count int // number of current data chunks
+	header Metadata
 
+	count      int // number of current data chunks
 	dataMu     sync.Mutex
 	data       []*Chunk         // stores data chunks
 	membership *common.BitArray // indicates whether a data unit is present or not
-	root       common.Hash      // trie root hash
+
 }
 
 func NewDataSetFromData(data []byte, size int) DataSet {
@@ -71,71 +71,22 @@ func NewDataSetFromData(data []byte, size int) DataSet {
 	//root := trie.Hash()
 
 	return DataSet{
-		total:      total,
-		root:       common.Hash{},
+		header: Metadata{
+			nchunks: total,
+			root:    common.Hash{},
+		},
 		data:       chunks,
 		membership: membership,
 		count:      total,
 	}
 }
 
-/*
-func (ds *DataSet) Add(chunk *Chunk) (bool, error) {
-	ds.dataMu.Lock()
-	defer ds.dataMu.Unlock()
-
-	index := chunk.Index
-
-	// invalid index
-	if index >= ds.total || index < 0 {
-		return false, ErrInvalidIndex
-	}
-
-	// if part already exists, return false
-	if ds.data[index] != nil {
-		return false, nil
-	}
-
-	// check hash proof
-
-	// add data chunk
-	ds.data[index] = chunk
-	ds.membership.Set(index)
-	ds.count++
-
-	return true, nil
+// Metadata represents the content specifications
+type Metadata struct {
+	nchunks int         `json:"nchunks"  gencodec:"required"`
+	root    common.Hash `json:"proof"  	 gencodec:"required"` // root hash of the trie
 }
 
-func (ds *DataSet) GetChunk(index int) *Chunk {
-	ds.dataMu.Lock()
-	defer ds.dataMu.Unlock()
-	return ds.data[index]
+func (ds DataSet) Metadata() Metadata {
+	return ds.header
 }
-
-func (ds *DataSet) IsComplete() bool {
-	return ds.total == ds.count
-}
-
-func (set *DataSet) Get(i int) *DataUnit {
-	return set.units[i]
-}
-
-func (set *DataSet) Add(unit *DataUnit) (bool, error) {
-	// index validation
-	if unit.Index >= set.meta.nUnits {
-		return false, ErrDataSetInvalidIndex
-	}
-
-	// has membership
-	if set.units[unit.Index] != nil {
-		return false, nil
-	}
-
-	// verify proof
-
-	// add the unit to the set
-	set.units[unit.Index] = unit
-	set.membership.Set(unit.Index)
-	set.nMembers++
-}
-*/

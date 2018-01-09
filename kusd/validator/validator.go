@@ -483,11 +483,21 @@ func (val *Validator) propose() {
 	lockedRound := 1
 	lockedBlock := common.Hash{}
 
-	proposal := types.NewProposal(val.blockNumber, val.round /*block.Fragment().Metadata(),*/, lockedRound, lockedBlock)
+	// @TODO (rgeraldes) - review int/int64
+	blockFragments, err := block.AsFragments(int(block.Size().Int64()) / val.validators.Size())
+	if err != nil {
+		// @TODO(rgeraldes) - complete
+		log.Crit("")
+		return
+	}
+
+	// @NOTE (rgeraldes) - size of chunks = block size / n validators
+	// @BENCHMARK (rgeraldes) - find sweet spot for the size
+	proposal := types.NewProposal(val.blockNumber, val.round, blockFragments.Metadata(), lockedRound, lockedBlock)
 	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
 	if err != nil {
 		// @TODO (rgeraldes) - complete
-		//log.Crit("")
+		log.Crit("")
 		return
 	}
 

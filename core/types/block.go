@@ -372,8 +372,8 @@ func (self blockSorter) Less(i, j int) bool { return self.by(self.blocks[i], sel
 
 func Number(b1, b2 *Block) bool { return b1.header.Number.Cmp(b2.header.Number) < 0 }
 
-type BlockFragment Chunk
-type BlockFragments DataSet
+type BlockFragment = Chunk
+type BlockFragments = DataSet
 
 func (fragments *BlockFragments) Assemble() (*Block, error) {
 	// @TODO (rgeraldes) - complete
