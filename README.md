@@ -38,7 +38,7 @@ docker run -d --name kusd-node -v /Users/alice/kusd:/root \
            kusd/client-go --fast --cache=512
 ```
 
-## Proof-of-Stale (PoS)
+## Proof-of-Stake (PoS)
 
 ### Running a PoS validator
 
