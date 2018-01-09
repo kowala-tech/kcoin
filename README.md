@@ -26,7 +26,7 @@ $ kusd --your-favourite-flags dumpconfig
 
 ### Client Options
 
-[CLI page](https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options)
+[Client page]()
 
 ### Docker quick start
 
