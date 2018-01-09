@@ -60,7 +60,7 @@ kusd --unlock "0x407d73d8a49eeb85d32cf465507dd71d507100c1"
 To start a kusd instance for block validation, run it with all your usual flags, extended by:
 
 ```
-$ kusd <usual-flags> --validate --deposit=4000 --coinbase=0x0000000000000000000000000000000000000000
+$ kusd <usual-flags> --validate --deposit=4000 --coinbase=0x407d73d8a49eeb85d32cf465507dd71d507100c1
 ```
 
 ## Core Contributors
