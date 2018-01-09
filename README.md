@@ -24,9 +24,9 @@ To get an idea how the file should look like you can use the `dumpconfig` subcom
 $ kusd --your-favourite-flags dumpconfig
 ```
 
-### cmdline Options
+### Client Options
 
-[CLI page](https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options))
+[CLI page](https://github.com/ethereum/go-ethereum/wiki/Command-Line-Options)
 
 ### Docker quick start
 
