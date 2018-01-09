@@ -51,13 +51,13 @@ func (tendermint *Tendermint) Prepare(chain consensus.ChainReader, header *types
 	return nil
 }
 
-func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
+func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt, commit *types.Commit) (*types.Block, error) {
 	// Accumulate any block and uncle rewards and commit the final state root
 	AccumulateRewards(state, header)
 	header.Root = state.IntermediateRoot(true)
 
 	// Header seems complete, assemble into a block and return
-	return types.NewBlock(header, txs, receipts, nil), nil
+	return types.NewBlock(header, txs, receipts, commit), nil
 }
 
 func (tendermint *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {

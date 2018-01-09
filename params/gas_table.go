@@ -19,22 +19,9 @@ type GasTable struct {
 }
 
 var (
-
 	// GasTableAndromeda contain the gas prices for
 	// the andromeda phase.
 	GasTableAndromeda = GasTable{
-		ExtcodeSize: 20,
-		ExtcodeCopy: 20,
-		Balance:     20,
-		SLoad:       50,
-		Calls:       40,
-		Suicide:     0,
-		ExpByte:     10,
-	}
-
-	// GasTableHomestead contain the gas prices for
-	// the homestead phase.
-	GasTableHomestead = GasTable{
 		ExtcodeSize: 20,
 		ExtcodeCopy: 20,
 		Balance:     20,

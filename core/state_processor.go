@@ -31,7 +31,7 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 	}
 }
 
-// Process processes the state changes according to the Ethereum rules by running
+// Process processes the state changes according to the Kowala rules by running
 // the transaction messages using the statedb and applying any rewards to both
 // the processor (coinbase) and any included uncles.
 //
@@ -43,6 +43,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		receipts     types.Receipts
 		totalUsedGas = big.NewInt(0)
 		header       = block.Header()
+		lastCommit   = block.LastCommit()
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
@@ -58,7 +59,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		allLogs = append(allLogs, receipt.Logs...)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), receipts)
+	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), receipts, lastCommit)
 
 	return receipts, allLogs, totalUsedGas, nil
 }
