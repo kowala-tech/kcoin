@@ -17,6 +17,7 @@ import (
 	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kUSD/stats"
 	"github.com/naoina/toml"
 )
 
@@ -54,14 +55,10 @@ var tomlSettings = toml.Config{
 	},
 }
 
-type ethstatsConfig struct {
-	URL string `toml:",omitempty"`
-}
-
 type kusdConfig struct {
-	Kowala   kusd.Config
-	Node     node.Config
-	Ethstats ethstatsConfig
+	Kowala kusd.Config
+	Node   node.Config
+	Stats  stats.Config
 }
 
 func loadConfig(file string, cfg *kusdConfig) error {
@@ -111,7 +108,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kusdConfig) {
 	}
 	utils.SetKowalaConfig(ctx, stack, &cfg.Kowala)
 	if ctx.GlobalIsSet(utils.KowalaStatsURLFlag.Name) {
-		cfg.Ethstats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
+		cfg.Stats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
 	}
 
 	return stack, cfg
@@ -122,9 +119,9 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 
 	utils.RegisterKowalaService(stack, &cfg.Kowala)
 
-	// Add the Ethereum Stats daemon if requested.
-	if cfg.Ethstats.URL != "" {
-		utils.RegisterKowalaStatsService(stack, cfg.Ethstats.URL)
+	// Add the Stats daemon if requested.
+	if cfg.Stats.URL != "" {
+		utils.RegisterKowalaStatsService(stack, cfg.Stats.URL)
 	}
 
 	// Add the release oracle service so it boots along with node.

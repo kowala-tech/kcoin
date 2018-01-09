@@ -1,5 +1,5 @@
-// Package kusdstats implements the network stats reporting service.
-package kusdstats
+// Package stats implements the network stats reporting service.
+package stats
 
 import (
 	"context"

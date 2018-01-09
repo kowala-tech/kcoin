@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/kowala-tech/kUSD/consensus/tendermint"
+	"github.com/kowala-tech/kUSD/stats"
 
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/keystore"
@@ -24,7 +25,6 @@ import (
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusd/gasprice"
 	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/kusdstats"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
@@ -267,8 +267,8 @@ var (
 	}
 	// Logging and debug settings
 	KowalaStatsURLFlag = cli.StringFlag{
-		Name:  "kusdstats",
-		Usage: "Reporting URL of a kusdstats service (nodename:secret@host:port)",
+		Name:  "stats",
+		Usage: "Reporting URL of a stats service (nodename:secret@host:port)",
 	}
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  metrics.MetricsEnabledFlag,
@@ -920,7 +920,7 @@ func RegisterKowalaStatsService(stack *node.Node, url string) {
 		var kowalaServ *kusd.Kowala
 		ctx.Service(&kowalaServ)
 
-		return kusdstats.New(url, kowalaServ)
+		return stats.New(url, kowalaServ)
 	}); err != nil {
 		Fatalf("Failed to register the Kowala Stats service: %v", err)
 	}

@@ -35,3 +35,6 @@ StaticNodes = []
 TrustedNodes = []
 ListenAddr = ":30303"
 EnableMsgEvents = false
+
+[Stats]
+URL = "nodename:secret@host:port"
