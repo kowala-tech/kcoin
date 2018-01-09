@@ -16,12 +16,12 @@ const (
 
 type BitArray struct {
 	bitsMu sync.Mutex
-	nbits  int
+	nbits  uint64
 	bits   []uint64
 }
 
 // NewBitArray returns a new BitArray
-func NewBitArray(nbits int) *BitArray {
+func NewBitArray(nbits uint64) *BitArray {
 	if nbits == 0 {
 		log.Crit("BitArray must have more than 0 bits")
 		return nil
@@ -30,6 +30,12 @@ func NewBitArray(nbits int) *BitArray {
 		nbits: nbits,
 		bits:  make([]uint64, nbits>>div),
 	}
+}
+
+func (array *BitArray) Set(i int) {
+	array.bitsMu.Lock()
+	array.bitsMu.Unlock()
+	array.bits[i>>div] |= uint64(1) << (uint64(i) & mod)
 }
 
 /*
@@ -42,16 +48,7 @@ func (array *BitArray) Get(i int) bool {
 	return array.bits[i>>div] & (uint64(1) << (i & mod))
 }
 
-func (array *BitArray) Set(i int, one bool) {
-	array.bitsMu.Lock()
-	array.bitsMu.Unlock()
 
-	if one {
-		array.bits[i>>div] |= uint64(1) << (i & mod)
-	} else {
-		array.bits[i>>div] &= ^(uint64(1) << (i & mod))
-	}
-}
 
 // @TODO (rgeraldes) - review
 

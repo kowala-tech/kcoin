@@ -309,6 +309,14 @@ func (b *Block) Hash() common.Hash {
 	return v
 }
 
+func (b *Block) AsFragments(size int) (BlockFragments, error) {
+	rawBlock, err := rlp.EncodeToBytes(b)
+	if err != nil {
+		return nil, nil
+	}
+	return NewDataSetFromData(rawBlock, size), nil
+}
+
 func (b *Block) String() string {
 	str := fmt.Sprintf(`Block(#%v): Size: %v {
 MinerHash: %x
@@ -363,3 +371,11 @@ func (self blockSorter) Swap(i, j int) {
 func (self blockSorter) Less(i, j int) bool { return self.by(self.blocks[i], self.blocks[j]) }
 
 func Number(b1, b2 *Block) bool { return b1.header.Number.Cmp(b2.header.Number) < 0 }
+
+type BlockFragment Chunk
+type BlockFragments DataSet
+
+func (fragments *BlockFragments) Assemble() (*Block, error) {
+	// @TODO (rgeraldes) - complete
+	return nil, nil
+}
