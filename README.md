@@ -40,7 +40,7 @@ docker run -d --name kusd-node -v /Users/alice/kusd:/root \
 
 ## Proof-of-Stake (PoS)
 
-## Protocol
+### Protocol
 
 [Tendermint](https://github.com/tendermint/tendermint)
 
