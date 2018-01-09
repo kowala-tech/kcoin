@@ -7,7 +7,6 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/params"
 )
 
 // election encapsulates the consensus state for a specific block election
@@ -65,9 +64,12 @@ func (val *Validator) notLoggedInState() stateFn {
 
 	val.restoreLastCommit()
 
-	return val.newElectionState
+	//
+	//return val.newElectionState
+	return nil
 }
 
+/*
 func (val *Validator) newElectionState() stateFn {
 	log.Info("Starting the election for a new block", "block number", val)
 	// update state machine based on current state
@@ -156,7 +158,7 @@ func (val *Validator) preCommitWaitState() stateFn {
 	timeout := time.Duration(params.PreCommitDuration+uint64(val.round)+params.PreCommitDeltaDuration) * time.Millisecond
 
 	select {
-	/*
+
 		case val.preCommitMajSub.Chan():
 			log.Info("There's a majority")
 
@@ -164,7 +166,7 @@ func (val *Validator) preCommitWaitState() stateFn {
 				return val.newRoundState
 			}
 			return val.commitState
-	*/
+
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
 		return val.newRoundState
@@ -222,10 +224,10 @@ func (val *Validator) commitState() stateFn {
 		val.commitRound = int(val.round)
 
 		// @TODO(rgeraldes)
-		/*
+
 			// leaves only when it has all the pre commits
 			select {}
-	*/
+
 
 	// @TODO (rgeraldes) - VALIDATOR CONTRACT
 
@@ -242,3 +244,5 @@ func (val *Validator) loggedOutState() stateFn {
 	val.wg.Done()
 	return nil
 }
+
+*/

@@ -67,6 +67,7 @@ var (
 		utils.MaxPendingPeersFlag,
 		utils.CoinbaseFlag,
 		utils.GasPriceFlag,
+		utils.ValidatorDepositFlag,
 		utils.ValidationEnabledFlag,
 		utils.TargetGasLimitFlag,
 		utils.NATFlag,
@@ -82,7 +83,6 @@ var (
 		utils.RPCCORSDomainFlag,
 		utils.KowalaStatsURLFlag,
 		utils.MetricsEnabledFlag,
-		utils.FakePoWFlag,
 		utils.NoCompactionFlag,
 		utils.GpoBlocksFlag,
 		utils.GpoPercentileFlag,
@@ -238,7 +238,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		// Set the gas price to the limits from the CLI and start mining
 		kowala.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
 		if err := kowala.StartValidating(); err != nil {
-			utils.Fatalf("Failed to start mining: %v", err)
+			utils.Fatalf("Failed to start validation: %v", err)
 		}
 	}
 }

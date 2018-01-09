@@ -31,25 +31,18 @@ import (
 	"github.com/kowala-tech/kUSD/rpc"
 )
 
-type LesServer interface {
-	Start(srvr *p2p.Server)
-	Stop()
-	Protocols() []p2p.Protocol
-}
-
 // @TODO(rgeraldes) - we may need to enable transaction syncing right from the beggining (in StartValidating - check previous version)
 
 // Kowala implements the Kowala full node service.
 type Kowala struct {
 	chainConfig *params.ChainConfig
 	// Channel for shutting down the service
-	shutdownChan  chan bool    // Channel for shutting down the service
-	stopDbUpgrade func() error // stop chain db sequential key upgrade
+	shutdownChan chan bool // Channel for shutting down the service
+
 	// Handlers
 	txPool          *core.TxPool
 	blockchain      *core.BlockChain
 	protocolManager *ProtocolManager
-	lesServer       LesServer
 	// DB interfaces
 	chainDb kusddb.Database // Block chain database
 
@@ -70,10 +63,6 @@ type Kowala struct {
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
 }
 
-func (s *Kowala) AddLesServer(ls LesServer) {
-	s.lesServer = ls
-}
-
 // New creates a new Kowala object (including the
 // initialisation of the common Kowala object)
 func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
@@ -88,7 +77,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if err != nil {
 		return nil, err
 	}
-	stopDbUpgrade := upgradeDeduplicateData(chainDb)
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
@@ -102,7 +90,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		accountManager: ctx.AccountManager,
 		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
 		shutdownChan:   make(chan bool),
-		stopDbUpgrade:  stopDbUpgrade,
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Coinbase,
@@ -294,7 +281,7 @@ func (s *Kowala) Deposit() (uint64, error) {
 	// else if there are no spots available check if deposit is bigger than the the
 	// smallest one
 
-	return deposit, fmt.Errorf("coinbase address must be explicitly specified")
+	return deposit, nil
 }
 
 // set in js console via admin interface or wrapper from cli flags
@@ -350,11 +337,7 @@ func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
 func (s *Kowala) Protocols() []p2p.Protocol {
-	if s.lesServer == nil {
-		return s.protocolManager.SubProtocols
-	} else {
-		return append(s.protocolManager.SubProtocols, s.lesServer.Protocols()...)
-	}
+	return s.protocolManager.SubProtocols
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
@@ -363,25 +346,20 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 	s.netRPCService = kusdapi.NewPublicNetAPI(srvr, s.NetVersion())
 
 	s.protocolManager.Start()
-	if s.lesServer != nil {
-		s.lesServer.Start(srvr)
-	}
 	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Kowala protocol.
 func (s *Kowala) Stop() error {
-	if s.stopDbUpgrade != nil {
-		s.stopDbUpgrade()
-	}
+	// @NOTE (rgeraldes) - validator needs to be the first process
+	// otherwise it might not be able to finish an election and
+	// could be punished
+	s.validator.Stop()
+
 	s.blockchain.Stop()
 	s.protocolManager.Stop()
-	if s.lesServer != nil {
-		s.lesServer.Stop()
-	}
 	s.txPool.Stop()
-	s.validator.Stop()
 	s.eventMux.Stop()
 
 	s.chainDb.Close()

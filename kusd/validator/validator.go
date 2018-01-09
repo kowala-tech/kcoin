@@ -122,6 +122,8 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 		log.Info("Network syncing, will start validator afterwards")
 		return
 	}
+
+	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
 
 	// launch the state machine
