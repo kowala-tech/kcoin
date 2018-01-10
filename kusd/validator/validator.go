@@ -67,7 +67,7 @@ func New(kusd Backend, config *params.ChainConfig, eventMux *event.TypeMux, engi
 		engine:   engine,
 	}
 
-	go validator.sync()
+	//go validator.sync()
 
 	return validator
 }
@@ -118,10 +118,12 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	val.account = account
 	val.deposit = deposit
 
-	if atomic.LoadInt32(&val.canStart) == 0 {
-		log.Info("Network syncing, will start validator afterwards")
-		return
-	}
+	/*
+		if atomic.LoadInt32(&val.canStart) == 0 {
+			log.Info("Network syncing, will start validator afterwards")
+			return
+		}
+	*/
 
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
@@ -143,6 +145,7 @@ func (val *Validator) run() {
 			break
 		}
 	}
+	log.Info("Stopped Consensus state machine")
 }
 
 func (val *Validator) handle() {
@@ -244,6 +247,7 @@ func (val *Validator) restoreLastCommit() {
 
 func (val *Validator) init() {
 	parent := val.chain.CurrentBlock()
+
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
 
@@ -274,7 +278,9 @@ func (val *Validator) init() {
 }
 
 func (val *Validator) isProposer() bool {
-	return val.validators.Proposer() == val.account.Address
+	// @TODO (rgeraldes) - modify as soon as we access to the validator list
+	//return val.validators.Proposer() == val.account.Address
+	return false
 }
 
 func (val *Validator) setProposal(proposal *types.Proposal) {
