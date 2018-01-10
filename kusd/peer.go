@@ -143,6 +143,11 @@ func (p *peer) SendNewBlock(block *types.Block) error {
 	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block})
 }
 
+// SendNewBlock propagates a proposal to a remote peer.
+func (p *peer) SendNewProposal(proposal *types.Proposal) error {
+	return p2p.Send(p.rw, ProposalMsg, []interface{}{proposal})
+}
+
 // SendBlockHeaders sends a batch of block headers to the remote peer.
 func (p *peer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
@@ -367,6 +372,17 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
 		if !p.knownTxs.Has(hash) {
 			list = append(list, p)
 		}
+	}
+	return list
+}
+
+func (ps *peerSet) Peers() []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		list = append(list, p)
 	}
 	return list
 }

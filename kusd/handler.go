@@ -63,6 +63,7 @@ type ProtocolManager struct {
 	eventMux      *event.TypeMux
 	txSub         *event.TypeMuxSubscription
 	minedBlockSub *event.TypeMuxSubscription
+	proposalSub   *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
@@ -185,6 +186,10 @@ func (pm *ProtocolManager) Start() {
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
+	// broadcast proposals
+	pm.proposalSub = pm.eventMux.Subscribe(core.NewProposalEvent{})
+	go pm.proposalBroadcastLoop()
+
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
@@ -195,6 +200,7 @@ func (pm *ProtocolManager) Stop() {
 
 	pm.txSub.Unsubscribe()         // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
+	pm.proposalSub.Unsubscribe()   // quits proposalBroadcastLoop
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -633,6 +639,18 @@ func (self *ProtocolManager) minedBroadcastLoop() {
 		case core.NewMinedBlockEvent:
 			self.BroadcastBlock(ev.Block, true)  // First propagate block to peers
 			self.BroadcastBlock(ev.Block, false) // Only then announce to the rest
+		}
+	}
+}
+
+// Proposal broadcast loop
+func (self *ProtocolManager) proposalBroadcastLoop() {
+	for obj := range self.proposalSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case core.NewProposalEvent:
+			for _, peer := range self.peers.Peers() {
+				peer.SendNewProposal(ev.Proposal)
+			}
 		}
 	}
 }

@@ -505,18 +505,15 @@ func (val *Validator) propose() {
 	blockFragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
 	if err != nil {
 		// @TODO(rgeraldes) - complete
-		log.Crit("Failed to get the block as a set of fragments of information")
+		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
 		return
 	}
 
 	proposal := types.NewProposal(val.blockNumber, val.round, blockFragments.Metadata(), lockedRound, lockedBlock)
 
-	log.Info("info", "wallet", val.wallet)
-
 	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
 	if err != nil {
-		// @TODO (rgeraldes) - complete
-		log.Crit("Failed to sign the proposal")
+		log.Crit("Failed to sign the proposal", "err", err)
 		return
 	}
 
@@ -599,7 +596,7 @@ func (val *Validator) preCommit() {
 func (val *Validator) vote(vote *types.Vote) {
 	signedVote, err := val.wallet.SignVote(val.account, vote, val.config.ChainID)
 	if err != nil {
-		log.Crit("Failed to sign the vote")
+		log.Crit("Failed to sign the vote", "err", err)
 		return
 	}
 
