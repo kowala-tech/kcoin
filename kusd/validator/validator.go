@@ -301,7 +301,9 @@ func (val *Validator) SetProposal(proposal *types.Proposal) {
 	go func() { val.proposalCh <- proposal }()
 }
 
-func (val *Validator) processBlockChunk() {}
+func (val *Validator) AddVote(vote *types.Vote) {}
+
+func (val *Validator) ProcessBlockFragment() {}
 
 func (val *Validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
 	/*

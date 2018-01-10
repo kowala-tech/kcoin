@@ -44,7 +44,7 @@ func errResp(code errCode, format string, v ...interface{}) error {
 }
 
 type ProtocolManager struct {
-	networkId uint64
+	networkID uint64
 
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
@@ -78,12 +78,12 @@ type ProtocolManager struct {
 	wg sync.WaitGroup
 }
 
-// NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
-// with the ethereum network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, maxPeers int, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator *validator.Validator) (*ProtocolManager, error) {
+// NewProtocolManager returns a new kowala sub protocol manager. The Kowala sub protocol manages peers capable
+// with the kowala network.
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, maxPeers int, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator *validator.Validator) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
-		networkId:   networkId,
+		networkID:   networkID,
 		eventMux:    mux,
 		txpool:      txpool,
 		blockchain:  blockchain,
@@ -168,9 +168,9 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	log.Debug("Removing Ethereum peer", "peer", id)
+	log.Debug("Removing Kowala peer", "peer", id)
 
-	// Unregister the peer from the downloader and Ethereum peer set
+	// Unregister the peer from the downloader and Kowala peer set
 	pm.downloader.UnregisterPeer(id)
 	if err := pm.peers.Unregister(id); err != nil {
 		log.Error("Peer removal failed", "peer", id, "err", err)
@@ -189,13 +189,15 @@ func (pm *ProtocolManager) Start() {
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
-	// broadcast proposals
-	pm.proposalSub = pm.eventMux.Subscribe(core.NewProposalEvent{})
-	go pm.proposalBroadcastLoop()
+	if pm.validator != nil {
+		// broadcast proposals
+		pm.proposalSub = pm.eventMux.Subscribe(core.NewProposalEvent{})
+		go pm.proposalBroadcastLoop()
 
-	// broadcast votes
-	pm.voteSub = pm.eventMux.Subscribe(core.NewVoteEvent{})
-	go pm.voteBroadcastLoop()
+		// broadcast votes
+		pm.voteSub = pm.eventMux.Subscribe(core.NewVoteEvent{})
+		go pm.voteBroadcastLoop()
+	}
 
 	// start sync handlers
 	go pm.syncer()
@@ -203,11 +205,15 @@ func (pm *ProtocolManager) Start() {
 }
 
 func (pm *ProtocolManager) Stop() {
-	log.Info("Stopping Ethereum protocol")
+	log.Info("Stopping Kowala protocol")
 
 	pm.txSub.Unsubscribe()         // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
-	pm.proposalSub.Unsubscribe()   // quits proposalBroadcastLoop
+
+	if pm.validator != nil {
+		pm.proposalSub.Unsubscribe() // quits proposalBroadcastLoop
+		pm.voteSub.Unsubscribe()     // quits voteBroadcastLoop
+	}
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -225,7 +231,7 @@ func (pm *ProtocolManager) Stop() {
 	// Wait for all peer handler goroutines and the loops to come down.
 	pm.wg.Wait()
 
-	log.Info("Ethereum protocol stopped")
+	log.Info("Kowala protocol stopped")
 }
 
 func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -238,12 +244,12 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	if pm.peers.Len() >= pm.maxPeers {
 		return p2p.DiscTooManyPeers
 	}
-	p.Log().Debug("Ethereum peer connected", "name", p.Name())
+	p.Log().Debug("Kowala peer connected", "name", p.Name())
 
-	// Execute the Ethereum handshake
+	// Execute the Kowala handshake
 	blockNumber, head, genesis := pm.blockchain.Status()
-	if err := p.Handshake(pm.networkId, blockNumber, head, genesis); err != nil {
-		p.Log().Debug("Ethereum handshake failed", "err", err)
+	if err := p.Handshake(pm.networkID, blockNumber, head, genesis); err != nil {
+		p.Log().Debug("Kowala handshake failed", "err", err)
 		return err
 	}
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
@@ -251,7 +257,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 	// Register the peer locally
 	if err := pm.peers.Register(p); err != nil {
-		p.Log().Error("Ethereum peer registration failed", "err", err)
+		p.Log().Error("Kowala peer registration failed", "err", err)
 		return err
 	}
 	defer pm.removePeer(p.id)
@@ -290,7 +296,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
-			p.Log().Debug("Ethereum message handling failed", "err", err)
+			p.Log().Debug("Kowala message handling failed", "err", err)
 			return err
 		}
 	}
@@ -606,6 +612,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	case msg.Code == VoteMsg:
 		// Retrieve and decode the propagated vote
+		var vote *types.Vote
+		if err := msg.Decode(&vote); err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+
+		p.MarkVote(vote.Hash())
+		pm.validator.AddVote(vote)
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
@@ -708,7 +721,7 @@ type KowalaNodeInfo struct {
 func (self *ProtocolManager) NodeInfo() *KowalaNodeInfo {
 	currentBlock := self.blockchain.CurrentBlock()
 	return &KowalaNodeInfo{
-		Network:    self.networkId,
+		Network:    self.networkID,
 		Difficulty: self.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
 		Genesis:    self.blockchain.Genesis().Hash(),
 		Head:       currentBlock.Hash(),
