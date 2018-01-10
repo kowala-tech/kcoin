@@ -6,9 +6,12 @@ import (
 
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
 )
+
+// @TODO (rgeraldes) - unsubscribe majority subscriptions
 
 // election encapsulates the consensus state for a specific block election
 type election struct {
@@ -37,7 +40,8 @@ type election struct {
 	receipts  []*types.Receipt
 
 	// inputs
-	proposalCh chan *types.Proposal
+	proposalCh                    chan *types.Proposal
+	firstMajority, secondMajority *event.TypeMuxSubscription
 }
 
 // stateFn represents a state function
@@ -97,11 +101,14 @@ func (val *Validator) newElectionState() stateFn {
 
 func (val *Validator) newRoundState() stateFn {
 	log.Info("Starting a new election round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
-	if val.round != 0 {
+	val.round++
+
+	if val.round != 1 {
 		val.proposal = nil
 		val.proposalBlock = nil
 		val.proposalBlockFragments = nil
 	}
+
 	//	val.votes.SetRound(val.round + 1) // also track next round (round+1) to allow round-skipping
 
 	return val.newProposalState
@@ -139,17 +146,17 @@ func (val *Validator) preVoteWaitState() stateFn {
 	timeout := time.Duration(params.PreVoteDuration+uint64(val.round)*params.PreVoteDeltaDuration) * time.Millisecond
 
 	select {
-	//case val.preVoteMajSub.Chan():
-	//	log.Info("There's a majority")
+
+	case <-val.firstMajority.Chan():
+		log.Info("There's a majority!")
+
 	case <-time.After(timeout):
-		log.Info("Timeout expired", "duratiom", timeout)
+		log.Info("Timeout expired", "duration", timeout)
 	}
 
-	return val.loggedOutState
-	//return val.preCommitState
+	return val.preCommitState
 }
 
-/*
 func (val *Validator) preCommitState() stateFn {
 	log.Info("Starting the pre commit election")
 	val.preCommit()
@@ -163,13 +170,12 @@ func (val *Validator) preCommitWaitState() stateFn {
 
 	select {
 
-		case val.preCommitMajSub.Chan():
-			log.Info("There's a majority")
-
-			if val.proposalBlock == nil {
-				return val.newRoundState
-			}
-			return val.commitState
+	case <-val.secondMajority.Chan():
+		log.Info("There's a majority!")
+		if val.proposalBlock == nil {
+			return val.newRoundState
+		}
+		return val.commitState
 
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
@@ -182,11 +188,11 @@ func (val *Validator) commitState() stateFn {
 
 	/*
 
-		val.state.CommitTo(self.chainDb, self.config.IsEIP158(block.Number()))
+		val.state.CommitTo(val.chainDb, self.config.IsEIP158(block.Number()))
 		stat, err := self.chain.WriteBlock(block)
 		if err != nil {
 			log.Error("Failed writing block to chain", "err", err)
-			continue
+
 		}
 
 		// update block hash since it is now available and not when the receipt/log of individual transactions were created
@@ -229,23 +235,22 @@ func (val *Validator) commitState() stateFn {
 
 		// @TODO(rgeraldes)
 
-			// leaves only when it has all the pre commits
-			select {}
+		// leaves only when it has all the pre commits
+		select {}
+
+		// @TODO (rgeraldes) - VALIDATOR CONTRACT
+
+		// @TODO if the validator is not part of the validator state anymore, return nil
+		// if not part of the voters jump to left election
+		// return val.leftElectionsState
+		// return val.newElectionState
 
 
-	// @TODO (rgeraldes) - VALIDATOR CONTRACT
 
-	// @TODO if the validator is not part of the validator state anymore, return nil
-	// if not part of the voters jump to left election
-	// return val.leftElectionsState
-	// return val.newElectionState
+	*/
 
 	return val.newElectionState
 }
-
-
-
-*/
 
 // @NOTE (rgeraldes) - end state
 func (val *Validator) loggedOutState() stateFn {

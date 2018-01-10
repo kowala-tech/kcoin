@@ -35,5 +35,5 @@ StaticNodes = []
 TrustedNodes = []
 ListenAddr = ":30303"
 
-# [Stats]
-# URL = "testnet:DVagynuHLdn9sK6c@testnet.kowala.io:30303"
+[Stats]
+URL = "testnet:DVagynuHLdn9sK6c@testnet.kowala.io:30303"
