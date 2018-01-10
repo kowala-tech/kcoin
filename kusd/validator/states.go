@@ -131,11 +131,9 @@ func (val *Validator) preVoteState() stateFn {
 	log.Info("Starting the pre vote election")
 	val.preVote()
 
-	return val.loggedOutState
-	//return val.preVoteWaitState
+	return val.preVoteWaitState
 }
 
-/*
 func (val *Validator) preVoteWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-vote election")
 	timeout := time.Duration(params.PreVoteDuration+uint64(val.round)*params.PreVoteDeltaDuration) * time.Millisecond
@@ -147,9 +145,11 @@ func (val *Validator) preVoteWaitState() stateFn {
 		log.Info("Timeout expired", "duratiom", timeout)
 	}
 
-	return val.preCommitState
+	return val.loggedOutState
+	//return val.preCommitState
 }
 
+/*
 func (val *Validator) preCommitState() stateFn {
 	log.Info("Starting the pre commit election")
 	val.preCommit()

@@ -422,6 +422,7 @@ func (val *Validator) createBlock() *types.Block {
 	state, err := val.chain.StateAt(parent.Root())
 	if err != nil {
 		log.Crit("Failed to fetch the current state", "err", err)
+		return nil
 	}
 	blockNumber := parent.Number()
 	tstart := time.Now()
