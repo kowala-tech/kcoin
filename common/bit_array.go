@@ -26,9 +26,10 @@ func NewBitArray(nbits uint64) *BitArray {
 		log.Crit("BitArray must have more than 0 bits")
 		return nil
 	}
+
 	return &BitArray{
 		nbits: nbits,
-		bits:  make([]uint64, nbits>>div),
+		bits:  make([]uint64, (nbits>>div)+1),
 	}
 }
 
