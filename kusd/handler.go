@@ -17,6 +17,7 @@ import (
 	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusd/fetcher"
+	"github.com/kowala-tech/kUSD/kusd/validator"
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/p2p"
@@ -56,6 +57,7 @@ type ProtocolManager struct {
 
 	downloader *downloader.Downloader
 	fetcher    *fetcher.Fetcher
+	validator  *validator.Validator
 	peers      *peerSet
 
 	SubProtocols []p2p.Protocol
@@ -78,7 +80,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, maxPeers int, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, maxPeers int, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator *validator.Validator) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
@@ -86,6 +88,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		txpool:      txpool,
 		blockchain:  blockchain,
 		chaindb:     chaindb,
+		validator:   validator,
 		chainconfig: config,
 		maxPeers:    maxPeers,
 		peers:       newPeerSet(),
@@ -139,7 +142,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	// Construct the different synchronisation mechanisms
 	manager.downloader = downloader.New(mode, chaindb, manager.eventMux, blockchain, nil, manager.removePeer)
 
-	validator := func(header *types.Header) error {
+	verifyHeader := func(header *types.Header) error {
 		return engine.VerifyHeader(blockchain, header, true)
 	}
 	heighter := func() uint64 {
@@ -154,7 +157,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
 		return manager.blockchain.InsertChain(blocks)
 	}
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
+	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, verifyHeader, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 
 	return manager, nil
 }
@@ -589,6 +592,14 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
+	case msg.Code == ProposalMsg:
+		// Retrive and decode the propagated proposal
+		var proposal *types.Proposal
+		if err := msg.Decode(&proposal); err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		pm.validator.SetProposal(proposal)
+
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -632,34 +643,34 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 }
 
 // Mined broadcast loop
-func (self *ProtocolManager) minedBroadcastLoop() {
+func (pm *ProtocolManager) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
-	for obj := range self.minedBlockSub.Chan() {
+	for obj := range pm.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case core.NewMinedBlockEvent:
-			self.BroadcastBlock(ev.Block, true)  // First propagate block to peers
-			self.BroadcastBlock(ev.Block, false) // Only then announce to the rest
+			pm.BroadcastBlock(ev.Block, true)  // First propagate block to peers
+			pm.BroadcastBlock(ev.Block, false) // Only then announce to the rest
 		}
 	}
 }
 
 // Proposal broadcast loop
-func (self *ProtocolManager) proposalBroadcastLoop() {
-	for obj := range self.proposalSub.Chan() {
+func (pm *ProtocolManager) proposalBroadcastLoop() {
+	for obj := range pm.proposalSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case core.NewProposalEvent:
-			for _, peer := range self.peers.Peers() {
+			for _, peer := range pm.peers.Peers() {
 				peer.SendNewProposal(ev.Proposal)
 			}
 		}
 	}
 }
 
-func (self *ProtocolManager) txBroadcastLoop() {
+func (pm *ProtocolManager) txBroadcastLoop() {
 	// automatically stops if unsubscribe
-	for obj := range self.txSub.Chan() {
+	for obj := range pm.txSub.Chan() {
 		event := obj.Data.(core.TxPreEvent)
-		self.BroadcastTx(event.Tx.Hash(), event.Tx)
+		pm.BroadcastTx(event.Tx.Hash(), event.Tx)
 	}
 }
 

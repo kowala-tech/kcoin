@@ -19,6 +19,8 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 )
 
+// @TODO (rgeraldes) - protect concurrent accesses
+
 // Backend wraps all methods required for mining.
 type Backend interface {
 	AccountManager() *accounts.Manager
@@ -131,9 +133,6 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	// launch the state machine
 	val.wg.Add(1)
 	go val.run()
-
-	// launch the msg handler
-	go val.handle()
 }
 
 func (val *Validator) run() {
@@ -148,28 +147,11 @@ func (val *Validator) run() {
 	log.Info("Stopped Consensus state machine")
 }
 
-func (val *Validator) handle() {
-	/*
-		for _, ev := range val.consensusEventSub.Chan() {
-			switch data := ev.Data.(type) {
-			case core.ConsensusEvent:
-				switch msg := data.Msg.(type) {
-				case *types.Proposal:
-					val.setProposal(msg)
-				}
-			}
-		}
-	*/
-}
-
 func (val *Validator) Stop() {
 	log.Info("Stopping consensus validator")
 
 	val.leaveElections()
 	val.wg.Wait()
-
-	// quits handle
-	//val.consensusEventSub.Unsubscribe()
 
 	//val.worker.stop()
 	atomic.StoreInt32(&val.validating, 0)
@@ -285,7 +267,9 @@ func (val *Validator) isProposer() bool {
 	return true
 }
 
-func (val *Validator) setProposal(proposal *types.Proposal) {
+func (val *Validator) SetProposal(proposal *types.Proposal) {
+	// @TODO (rgeraldes) - Complete
+
 	/*
 		// not relevant
 		if proposal.BlockNumber != val.blockNumber && proposal.Round != val.Round {
@@ -309,10 +293,12 @@ func (val *Validator) setProposal(proposal *types.Proposal) {
 		if err := val.validateProposal(proposal); err != nil {
 			log.Trace("Discarding invalid proposal", "hash", hash, "err", err)
 		}
-		val.proposal = proposal
+
 
 		return
 	*/
+
+	go func() { val.proposalCh <- proposal }()
 }
 
 func (val *Validator) processBlockChunk() {}
@@ -533,13 +519,13 @@ func (val *Validator) preVote() {
 	var vote common.Hash
 	switch {
 	case val.lockedBlock != nil:
-		log.Debug("prevote locked block")
+		log.Debug("Locked Block is not nil, voting for the locked block")
 		vote = val.lockedBlock.Hash()
 	case val.proposalBlock == nil:
-		log.Debug("proposal's block is nil, prevote nil")
+		log.Debug("Proposal's block is nil, voting nil")
 		vote = common.Hash{}
 	default:
-		log.Debug("pre vote the proposal's block")
+		log.Debug("Voting for the proposal's block")
 		vote = val.proposalBlock.Hash()
 	}
 
@@ -599,6 +585,5 @@ func (val *Validator) vote(vote *types.Vote) {
 		log.Crit("Failed to sign the vote", "err", err)
 		return
 	}
-
 	val.eventMux.Post(core.NewVoteEvent{Vote: signedVote})
 }

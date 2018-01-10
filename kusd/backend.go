@@ -137,12 +137,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		}
 	}
 
-	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, maxPeers, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb); err != nil {
-		return nil, err
-	}
-
 	kusd.validator = validator.New(kusd, kusd.chainConfig, kusd.EventMux(), kusd.engine)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
+
+	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, maxPeers, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
+		return nil, err
+	}
 
 	kusd.ApiBackend = &KowalaApiBackend{kusd, nil}
 	gpoParams := config.GPO

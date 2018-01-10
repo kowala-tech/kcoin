@@ -35,6 +35,9 @@ type election struct {
 	failedTxs types.Transactions
 	txs       []*types.Transaction
 	receipts  []*types.Receipt
+
+	// inputs
+	proposalCh chan *types.Proposal
 }
 
 // stateFn represents a state function
@@ -113,26 +116,26 @@ func (val *Validator) newProposalState() stateFn {
 	} else {
 		log.Info("Waiting for the proposal", "proposer", nil)
 		select {
-		//case val.proposalSub.Chan():
-		//	log.Info("Received a new proposal", "block number", val.proposal.BlockNumber(), "hash", val.proposal.Hash())
+		case proposal := <-val.proposalCh:
+			val.proposal = proposal
+			log.Info("Received a new proposal", "hash", val.proposal.Hash())
 		case <-time.After(timeout):
 			log.Info("Timeout expired", "duration", timeout)
 		}
 	}
 
-	return val.loggedOutState
-	//return val.preVoteState
+	return val.preVoteState
 }
-
-/*
 
 func (val *Validator) preVoteState() stateFn {
 	log.Info("Starting the pre vote election")
 	val.preVote()
 
-	return val.preVoteWaitState
+	return val.loggedOutState
+	//return val.preVoteWaitState
 }
 
+/*
 func (val *Validator) preVoteWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-vote election")
 	timeout := time.Duration(params.PreVoteDuration+uint64(val.round)*params.PreVoteDeltaDuration) * time.Millisecond
