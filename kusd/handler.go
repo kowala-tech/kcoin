@@ -62,10 +62,10 @@ type ProtocolManager struct {
 
 	SubProtocols []p2p.Protocol
 
-	eventMux      *event.TypeMux
-	txSub         *event.TypeMuxSubscription
-	minedBlockSub *event.TypeMuxSubscription
-	proposalSub   *event.TypeMuxSubscription
+	eventMux             *event.TypeMux
+	txSub                *event.TypeMuxSubscription
+	minedBlockSub        *event.TypeMuxSubscription
+	proposalSub, voteSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
@@ -192,6 +192,10 @@ func (pm *ProtocolManager) Start() {
 	// broadcast proposals
 	pm.proposalSub = pm.eventMux.Subscribe(core.NewProposalEvent{})
 	go pm.proposalBroadcastLoop()
+
+	// broadcast votes
+	pm.voteSub = pm.eventMux.Subscribe(core.NewVoteEvent{})
+	go pm.voteBroadcastLoop()
 
 	// start sync handlers
 	go pm.syncer()
@@ -593,12 +597,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == ProposalMsg:
-		// Retrive and decode the propagated proposal
+		// Retrieve and decode the propagated proposal
 		var proposal *types.Proposal
 		if err := msg.Decode(&proposal); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		pm.validator.SetProposal(proposal)
+
+	case msg.Code == VoteMsg:
+		// Retrieve and decode the propagated vote
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
@@ -661,6 +668,19 @@ func (pm *ProtocolManager) proposalBroadcastLoop() {
 		case core.NewProposalEvent:
 			for _, peer := range pm.peers.Peers() {
 				peer.SendNewProposal(ev.Proposal)
+			}
+		}
+	}
+}
+
+// Vote broadcast loop
+func (pm *ProtocolManager) voteBroadcastLoop() {
+	for obj := range pm.voteSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case core.NewVoteEvent:
+			peers := pm.peers.PeersWithoutVote(ev.Vote.Hash())
+			for _, peer := range peers {
+				peer.SendVote(ev.Vote)
 			}
 		}
 	}
