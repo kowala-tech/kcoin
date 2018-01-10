@@ -231,7 +231,7 @@ func (val *Validator) restoreLastCommit() {
 
 	lastCommit := currentBlock.LastCommit()
 	lastPreCommits := core.NewVotingTable(currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
-	for _, preCommit := range lastCommit.PreCommits() {
+	for _, preCommit := range lastCommit.Commits() {
 		if preCommit == nil {
 			continue
 		}
@@ -262,10 +262,12 @@ func (val *Validator) init() {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
+	val.validators = &types.Validators{}
+
 	// val.proposalBlockChunks = nil
 	// val.votes
 	// @TODO (rgeraldes) - VALIDATORS CONTRACT
-	// val.validators =
+
 	// val.lastValidators
 
 	// val.prevValidators =
@@ -280,7 +282,7 @@ func (val *Validator) init() {
 func (val *Validator) isProposer() bool {
 	// @TODO (rgeraldes) - modify as soon as we access to the validator list
 	//return val.validators.Proposer() == val.account.Address
-	return false
+	return true
 }
 
 func (val *Validator) setProposal(proposal *types.Proposal) {
@@ -419,12 +421,14 @@ func (val *Validator) withdrawDeposit() {
 
 func (val *Validator) createProposalBlock() *types.Block {
 	if val.lockedBlock != nil {
+		log.Info("Picking a locked block")
 		return val.lockedBlock
 	}
 	return val.createBlock()
 }
 
 func (val *Validator) createBlock() *types.Block {
+	log.Info("Creating a new block")
 	// new block header
 	parent := val.chain.CurrentBlock()
 	state, err := val.chain.StateAt(parent.Root())
@@ -448,9 +452,15 @@ func (val *Validator) createBlock() *types.Block {
 
 	var commit *types.Commit
 	if blockNumber.Cmp(big.NewInt(1)) == 0 {
-		commit = &types.Commit{}
+		commit = &types.Commit{
+			PreCommits:     types.Votes{},
+			FirstPreCommit: &types.Vote{},
+		}
 	} else {
-		commit = nil
+		commit = &types.Commit{
+			PreCommits:     types.Votes{},
+			FirstPreCommit: &types.Vote{},
+		}
 		//commit = val.lastCommit.Proof()
 	}
 
@@ -490,8 +500,9 @@ func (val *Validator) propose() {
 	lockedRound := 1
 	lockedBlock := common.Hash{}
 
-	// @TODO (rgeraldes) - review int/int64
-	blockFragments, err := block.AsFragments(int(block.Size().Int64()) / val.validators.Size())
+	// @TODO (rgeraldes) - review int/int64; address situation where validators size might be zero (no peers)
+	// @NOTE (rgeraldes) - number of block fragments = number of validators - self
+	blockFragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
 	if err != nil {
 		// @TODO(rgeraldes) - complete
 		log.Crit("")

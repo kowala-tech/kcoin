@@ -111,7 +111,7 @@ func (val *Validator) newProposalState() stateFn {
 		log.Info("Proposing a new block")
 		val.propose()
 	} else {
-		log.Info("Waiting for the proposal")
+		log.Info("Waiting for the proposal", "proposer", nil)
 		select {
 		//case val.proposalSub.Chan():
 		//	log.Info("Received a new proposal", "block number", val.proposal.BlockNumber(), "hash", val.proposal.Hash())
