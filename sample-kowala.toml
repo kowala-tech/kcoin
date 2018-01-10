@@ -36,4 +36,4 @@ TrustedNodes = []
 ListenAddr = ":30303"
 
 # [Stats]
-# URL = "nodename:secret@host:port"
+# URL = "testnet:DVagynuHLdn9sK6c@testnet.kowala.io:30303"
