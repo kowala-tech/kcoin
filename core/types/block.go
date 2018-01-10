@@ -20,6 +20,7 @@ var (
 )
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
+//go:generate gencodec -type Commit -out gen_commit_json.go
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
@@ -54,7 +55,7 @@ func (h *Header) Hash() common.Hash {
 	return rlpHash(h)
 }
 
-// HashNoNonce returns the hash which is used as input for the proof-of-work search.
+// HashNoNonce returns the hash which is used as input for the proof-of-stake search.
 func (h *Header) HashNoNonce() common.Hash {
 	return rlpHash([]interface{}{
 		h.ParentHash,
@@ -83,16 +84,16 @@ func rlpHash(x interface{}) (h common.Hash) {
 // Commit contains the evidence that a block was committed by a set of validators
 type Commit struct {
 	// @NOTE (rgeraldes) - pre-commits are in order of address
-	preCommits     Votes `json:"votes"		gencodec:"required"`
-	firstPrecommit *Vote `json:"vote" 		gencodec:"required"`
+	PreCommits     Votes `json:"votes"		gencodec:"required"`
+	FirstPreCommit *Vote `json:"vote" 		gencodec:"required"`
 }
 
-func (cmt *Commit) PreCommits() Votes {
-	return cmt.preCommits
+func (cmt *Commit) Commits() Votes {
+	return cmt.PreCommits
 }
 
-func (cmt *Commit) FirstPreCommit() *Vote {
-	return cmt.firstPrecommit
+func (cmt *Commit) First() *Vote {
+	return cmt.FirstPreCommit
 }
 
 func (cmt *Commit) Hash() common.Hash {
@@ -100,10 +101,10 @@ func (cmt *Commit) Hash() common.Hash {
 }
 
 func (cmt *Commit) Round() int {
-	if len(cmt.preCommits) == 0 {
+	if len(cmt.PreCommits) == 0 {
 		return 0
 	}
-	return cmt.FirstPreCommit().Round()
+	return cmt.First().Round()
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
@@ -162,9 +163,9 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt, commit *C
 	}
 
 	if commit != nil {
-		lastCommit := *commit
-		b.header.LastCommitHash = commit.Hash()
-		b.lastCommit = &lastCommit
+		lastCommit := CopyCommit(commit)
+		b.header.LastCommitHash = lastCommit.Hash()
+		b.lastCommit = lastCommit
 	}
 
 	return b
@@ -197,6 +198,23 @@ func CopyHeader(h *Header) *Header {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
 	}
+	return &cpy
+}
+
+// CopyCommit creates a deep copy of a block commit to prevent side efects from
+// modifying a header variable
+func CopyCommit(commit *Commit) *Commit {
+	cpy := *commit
+
+	if len(commit.PreCommits) > 0 {
+		cpy.PreCommits = make(Votes, len(commit.PreCommits))
+		copy(cpy.PreCommits, commit.PreCommits)
+	}
+
+	if commit.FirstPreCommit != nil {
+		cpy.FirstPreCommit = &(*commit.FirstPreCommit)
+	}
+
 	return &cpy
 }
 
@@ -256,6 +274,7 @@ func (b *Block) Header() *Header { return CopyHeader(b.header) }
 // Body returns the non-header content of the block.
 func (b *Block) Body() *Body { return &Body{b.transactions} }
 
+// @TODO (rgeraldes) - review
 func (b *Block) HashNoNonce() common.Hash {
 	return b.header.HashNoNonce()
 }
@@ -319,7 +338,7 @@ func (b *Block) AsFragments(size int) (BlockFragments, error) {
 
 func (b *Block) String() string {
 	str := fmt.Sprintf(`Block(#%v): Size: %v {
-MinerHash: %x
+ValidatorHash: %x
 %v
 Transactions:
 %v
