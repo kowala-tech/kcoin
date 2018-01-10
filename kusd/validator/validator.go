@@ -103,13 +103,13 @@ out:
 	}
 }
 
-// @TODO (rgeraldes) - review logic (start is called by sync later on if the node is syncing)
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
+	// @TODO (rgeraldes) - review logic (start is called by sync later on if the node is syncing)
 	account := accounts.Account{Address: coinbase}
 	wallet, err := val.kusd.AccountManager().Find(account)
-
-	// @TODO (rgeraldes) - there are some validations before this one (cmdline cli) - confirm
 	if err != nil {
+		log.Crit("Failed to find a wallet", "err", err, "account", account.Address)
+		return
 	}
 
 	atomic.StoreInt32(&val.shouldStart, 1)
@@ -501,21 +501,22 @@ func (val *Validator) propose() {
 	lockedBlock := common.Hash{}
 
 	// @TODO (rgeraldes) - review int/int64; address situation where validators size might be zero (no peers)
-	// @NOTE (rgeraldes) - number of block fragments = number of validators - self
+	// @NOTE (rgeraldes) - (for now size = block size) number of block fragments = number of validators - self
 	blockFragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
 	if err != nil {
 		// @TODO(rgeraldes) - complete
-		log.Crit("")
+		log.Crit("Failed to get the block as a set of fragments of information")
 		return
 	}
 
-	// @NOTE (rgeraldes) - size of chunks = block size / n validators
-	// @BENCHMARK (rgeraldes) - find sweet spot for the size
 	proposal := types.NewProposal(val.blockNumber, val.round, blockFragments.Metadata(), lockedRound, lockedBlock)
+
+	log.Info("info", "wallet", val.wallet)
+
 	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
 	if err != nil {
 		// @TODO (rgeraldes) - complete
-		log.Crit("")
+		log.Crit("Failed to sign the proposal")
 		return
 	}
 
@@ -598,7 +599,7 @@ func (val *Validator) preCommit() {
 func (val *Validator) vote(vote *types.Vote) {
 	signedVote, err := val.wallet.SignVote(val.account, vote, val.config.ChainID)
 	if err != nil {
-		log.Crit("")
+		log.Crit("Failed to sign the vote")
 		return
 	}
 

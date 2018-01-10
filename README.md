@@ -52,17 +52,17 @@ There aren't public networks at the moment.
 
 ### Running a PoS validator
 
-Make sure that you have an unlocked account available:
+Make sure that you have an account available:
 
 ```
-kusd account new
-kusd --unlock "0x407d73d8a49eeb85d32cf465507dd71d507100c1"
+$ kusd --config /path/to/your_config.toml account new
+Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 ```
 
 To start a kusd instance for block validation, run it with all your usual flags, extended by:
 
 ```
-$ kusd <usual-flags> --validate --deposit 4000 --coinbase 0x407d73d8a49eeb85d32cf465507dd71d507100c1
+$ kusd --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0xc7f1d574658e7b0f37244366c40c8002d78c734f –-coinbase 0xc7f1d574658e7b0f37244366c40c8002d78c734f
 ```
 
 ## Core Contributors
