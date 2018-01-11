@@ -209,6 +209,8 @@ func (val *Validator) restoreLastCommit() {
 		return
 	}
 
+	log.Info("commit", currentBlock.LastCommit())
+
 	// @TODO (rgeraldes) - VALIDATORS CONTRACT
 	lastValidators := &types.Validators{}
 

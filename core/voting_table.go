@@ -69,7 +69,7 @@ func NewVotingTable(blockNumber *big.Int, round int, voteType types.VoteType, va
 		round:         round,
 		voteType:      voteType,
 		voters:        validators,
-		votesBitArray: common.NewBitArray(uint64(validators.Size())),
+		votesBitArray: common.NewBitArray(uint64(1 /*validators.Size()*/)), // @TODO (rgeraldes)
 		votes:         make([]*types.Vote, validators.Size()),
 		sum:           0,
 		//maj23:         nil,

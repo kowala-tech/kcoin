@@ -110,6 +110,7 @@ func (cmt *Commit) Round() int {
 	}
 
 	return cmt.First().Round()
+	return 0
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving

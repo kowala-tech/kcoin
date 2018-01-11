@@ -342,6 +342,9 @@ func (s *Service) login(conn *websocket.Conn) error {
 		},
 		Secret: s.pass,
 	}
+
+	log.Info("auth msg", "auth", auth)
+
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
 	}
