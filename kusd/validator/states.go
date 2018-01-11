@@ -16,14 +16,14 @@ import (
 // election encapsulates the consensus state for a specific block election
 type election struct {
 	blockNumber *big.Int
-	round       int
+	round       uint64
 
 	validators             *types.Validators
 	proposal               *types.Proposal
 	proposalBlock          *types.Block
 	proposalBlockFragments *types.BlockFragments
 
-	lockedRound int
+	lockedRound uint64
 	lockedBlock *types.Block
 
 	start time.Time // used to sync the validator nodes

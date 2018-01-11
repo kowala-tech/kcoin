@@ -107,7 +107,9 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 			}
 		}
 	}
-	return types.NewBlockWithHeader(head).WithBody(body.Transactions), nil
+
+	// @TODO (rgeraldes) - replace the statement below with the last commit data
+	return types.NewBlockWithHeader(head).WithBody(body.Transactions, nil /*body.Lastcommit*/), nil
 }
 
 // HeaderByHash returns the block header with the given hash.

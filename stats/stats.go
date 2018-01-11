@@ -3,6 +3,7 @@ package stats
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -343,8 +344,6 @@ func (s *Service) login(conn *websocket.Conn) error {
 		Secret: s.pass,
 	}
 
-	log.Info("auth msg", "auth", auth)
-
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
 	}
@@ -421,17 +420,31 @@ type blockStats struct {
 	Hash       common.Hash    `json:"hash"`
 	ParentHash common.Hash    `json:"parentHash"`
 	Timestamp  *big.Int       `json:"timestamp"`
-	Validator  common.Address `json:"validator"`
+	Miner      common.Address `json:"miner"`
 	GasUsed    *big.Int       `json:"gasUsed"`
 	GasLimit   *big.Int       `json:"gasLimit"`
+	Diff       string         `json:"difficulty"`
+	TotalDiff  string         `json:"totalDifficulty"`
 	Txs        []txStats      `json:"transactions"`
 	TxHash     common.Hash    `json:"transactionsRoot"`
 	Root       common.Hash    `json:"stateRoot"`
+	Uncles     uncleStats     `json:"uncles"`
 }
 
 // txStats is the information to report about individual transactions.
 type txStats struct {
 	Hash common.Hash `json:"hash"`
+}
+
+// uncleStats is a custom wrapper around an uncle array to force serializing
+// empty arrays instead of returning null for them.
+type uncleStats []*types.Header
+
+func (s uncleStats) MarshalJSON() ([]byte, error) {
+	if uncles := ([]*types.Header)(s); len(uncles) > 0 {
+		return json.Marshal(uncles)
+	}
+	return []byte("[]"), nil
 }
 
 // reportBlock retrieves the current chain head and repors it to the stats server.
@@ -449,6 +462,7 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	report := map[string][]interface{}{
 		"emit": {"block", stats},
 	}
+
 	return websocket.JSON.Send(conn, report)
 }
 
@@ -480,7 +494,7 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		Hash:       header.Hash(),
 		ParentHash: header.ParentHash,
 		Timestamp:  header.Time,
-		Validator:  author,
+		Miner:      author,
 		GasUsed:    new(big.Int).Set(header.GasUsed),
 		GasLimit:   new(big.Int).Set(header.GasLimit),
 		Txs:        txs,
@@ -567,12 +581,13 @@ func (s *Service) reportPending(conn *websocket.Conn) error {
 
 // nodeStats is the information to report about the local node.
 type nodeStats struct {
-	Active     bool `json:"active"`
-	Syncing    bool `json:"syncing"`
-	Validating bool `json:"mining"`
-	Peers      int  `json:"peers"`
-	GasPrice   int  `json:"gasPrice"`
-	Uptime     int  `json:"uptime"`
+	Active   bool `json:"active"`
+	Syncing  bool `json:"syncing"`
+	Mining   bool `json:"mining"`
+	Hashrate int  `json:"hashrate"`
+	Peers    int  `json:"peers"`
+	GasPrice int  `json:"gasPrice"`
+	Uptime   int  `json:"uptime"`
 }
 
 // reportPending retrieves various stats about the node at the networking and
@@ -599,12 +614,12 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	stats := map[string]interface{}{
 		"id": s.node,
 		"stats": &nodeStats{
-			Active:     true,
-			Validating: validating,
-			Peers:      s.server.PeerCount(),
-			GasPrice:   gasprice,
-			Syncing:    syncing,
-			Uptime:     100,
+			Active:   true,
+			Mining:   validating,
+			Peers:    s.server.PeerCount(),
+			GasPrice: gasprice,
+			Syncing:  syncing,
+			Uptime:   100,
 		},
 	}
 	report := map[string][]interface{}{

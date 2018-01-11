@@ -209,8 +209,6 @@ func (val *Validator) restoreLastCommit() {
 		return
 	}
 
-	log.Info("commit", currentBlock.LastCommit())
-
 	// @TODO (rgeraldes) - VALIDATORS CONTRACT
 	lastValidators := &types.Validators{}
 
@@ -442,15 +440,19 @@ func (val *Validator) createBlock() *types.Block {
 	}
 
 	var commit *types.Commit
+
+	// @NOTE (rgeraldes) - temporary
+	first := types.NewVote(blockNumber, parent.Hash(), 0, types.PreCommit)
+
 	if blockNumber.Cmp(big.NewInt(1)) == 0 {
 		commit = &types.Commit{
-			PreCommits:     types.Votes{},
-			FirstPreCommit: &types.Vote{},
+			PreCommits:     types.Votes{first},
+			FirstPreCommit: first,
 		}
 	} else {
 		commit = &types.Commit{
-			PreCommits:     types.Votes{},
-			FirstPreCommit: &types.Vote{},
+			PreCommits:     types.Votes{first},
+			FirstPreCommit: first,
 		}
 		//commit = val.lastCommit.Proof()
 	}

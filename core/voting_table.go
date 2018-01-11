@@ -51,7 +51,7 @@ type VotingTable struct {
 	all map[common.Hash]*types.Vote // allow lookups
 
 	blockNumber *big.Int
-	round       int
+	round       uint64
 	voteType    types.VoteType
 
 	voters        *types.Validators
@@ -63,7 +63,7 @@ type VotingTable struct {
 	//peerMaj23s map[string]common.Hash // Maj23 for each peer
 }
 
-func NewVotingTable(blockNumber *big.Int, round int, voteType types.VoteType, validators *types.Validators) *VotingTable {
+func NewVotingTable(blockNumber *big.Int, round uint64, voteType types.VoteType, validators *types.Validators) *VotingTable {
 	return &VotingTable{
 		blockNumber:   blockNumber,
 		round:         round,

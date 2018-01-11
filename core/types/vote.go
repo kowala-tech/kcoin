@@ -41,7 +41,7 @@ type Vote struct {
 type votedata struct {
 	BlockHash   common.Hash `json:"blockHash"		gencodec:"required"`
 	BlockNumber *big.Int    `json:"blockNumber" gencodec:"required"`
-	Round       int         `json:"round"		gencodec:"required"`
+	Round       uint64      `json:"round"		gencodec:"required"`
 	Type        VoteType    `json:"type"		gencodec:"required"`
 
 	// Timestamp     time.Time      `json:"time"		gencoded:"required"` // @TODO (rgeraldes) confirm if it's necessary
@@ -55,17 +55,18 @@ type votedata struct {
 // votedataMarshalling - field type overrides for gencodec
 type votedataMarshalling struct {
 	BlockNumber *hexutil.Big
+	Round       hexutil.Uint64
 	V           *hexutil.Big
 	R           *hexutil.Big
 	S           *hexutil.Big
 }
 
 // NewVote returns a new consensus vote
-func NewVote(blockNumber *big.Int, blockHash common.Hash, round int, voteType VoteType) *Vote {
+func NewVote(blockNumber *big.Int, blockHash common.Hash, round uint64, voteType VoteType) *Vote {
 	return newVote(blockNumber, blockHash, round, voteType)
 }
 
-func newVote(blockNumber *big.Int, blockHash common.Hash, round int, voteType VoteType) *Vote {
+func newVote(blockNumber *big.Int, blockHash common.Hash, round uint64, voteType VoteType) *Vote {
 	d := votedata{
 		BlockNumber: new(big.Int),
 		BlockHash:   blockHash,
@@ -101,7 +102,7 @@ func (vote *Vote) DecodeRLP(s *rlp.Stream) error {
 
 func (vote *Vote) BlockNumber() *big.Int  { return vote.data.BlockNumber }
 func (vote *Vote) BlockHash() common.Hash { return vote.data.BlockHash }
-func (vote *Vote) Round() int             { return vote.data.Round }
+func (vote *Vote) Round() uint64          { return vote.data.Round }
 func (vote *Vote) Type() VoteType         { return vote.data.Type }
 func (vote *Vote) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
 	return vote.data.V, vote.data.R, vote.data.S
