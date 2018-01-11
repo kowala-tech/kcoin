@@ -87,17 +87,15 @@ func (val *Validator) newElectionState() stateFn {
 
 	<-time.NewTimer(val.start.Sub(time.Now())).C
 
-	/*
-		// @NOTE (rgeraldes) - wait for txs to be available in the txPool for the round 0
-		// If the last block changed the app hash, we may need an empty "proof" block.
-		numTxs, _ := val.kusd.TxPool().Stats() //
-		if val.round == 0 && numTxs == 0 {     //!cs.needProofBlock(height)
-			log.Info("Waiting for transactions")
-			txSub := val.eventMux.Subscribe(core.TxPreEvent{})
-			defer txSub.Unsubscribe()
-			<-txSub.Chan()
-		}
-	*/
+	// @NOTE (rgeraldes) - wait for txs to be available in the txPool for the round 0
+	// If the last block changed the app hash, we may need an empty "proof" block.
+	numTxs, _ := val.kusd.TxPool().Stats() //
+	if val.round == 0 && numTxs == 0 {     //!cs.needProofBlock(height)
+		log.Info("Waiting for transactions")
+		txSub := val.eventMux.Subscribe(core.TxPreEvent{})
+		defer txSub.Unsubscribe()
+		<-txSub.Chan()
+	}
 
 	return val.newRoundState
 }
