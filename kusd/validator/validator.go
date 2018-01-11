@@ -111,7 +111,6 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	wallet, err := val.kusd.AccountManager().Find(account)
 	if err != nil {
 		log.Crit("Failed to find a wallet", "err", err, "account", account.Address)
-		return
 	}
 
 	atomic.StoreInt32(&val.shouldStart, 1)
@@ -131,11 +130,13 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	atomic.StoreInt32(&val.validating, 1)
 
 	// launch the state machine
-	val.wg.Add(1)
 	go val.run()
 }
 
 func (val *Validator) run() {
+	val.wg.Add(1)
+	defer val.wg.Done()
+
 	log.Info("Starting the consensus state machine")
 	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
 		// @TODO(rgeraldes) - publish old/new state if necessary - need to review sync process
@@ -422,7 +423,6 @@ func (val *Validator) createBlock() *types.Block {
 	state, err := val.chain.StateAt(parent.Root())
 	if err != nil {
 		log.Crit("Failed to fetch the current state", "err", err)
-		return nil
 	}
 	blockNumber := parent.Number()
 	tstart := time.Now()
@@ -456,7 +456,6 @@ func (val *Validator) createBlock() *types.Block {
 	pending, err := val.kusd.TxPool().Pending()
 	if err != nil {
 		log.Crit("Failed to fetch pending transactions", "err", err)
-		return nil
 	}
 
 	txs := types.NewTransactionsByPriceAndNonce(pending)
@@ -468,7 +467,6 @@ func (val *Validator) createBlock() *types.Block {
 	var block *types.Block
 	if block, err = val.engine.Finalize(val.chain, header, state, val.txs, val.receipts, commit); err != nil {
 		log.Crit("Failed to finalize block for sealing", "err", err)
-		return nil
 	}
 
 	for _, r := range val.receipts {
@@ -495,7 +493,6 @@ func (val *Validator) propose() {
 	if err != nil {
 		// @TODO(rgeraldes) - complete
 		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
-		return
 	}
 
 	proposal := types.NewProposal(val.blockNumber, val.round, blockFragments.Metadata(), lockedRound, lockedBlock)
@@ -503,7 +500,6 @@ func (val *Validator) propose() {
 	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
 	if err != nil {
 		log.Crit("Failed to sign the proposal", "err", err)
-		return
 	}
 
 	val.proposal = signedProposal
@@ -586,7 +582,6 @@ func (val *Validator) vote(vote *types.Vote) {
 	signedVote, err := val.wallet.SignVote(val.account, vote, val.config.ChainID)
 	if err != nil {
 		log.Crit("Failed to sign the vote", "err", err)
-		return
 	}
 	val.eventMux.Post(core.NewVoteEvent{Vote: signedVote})
 }

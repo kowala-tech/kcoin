@@ -37,11 +37,18 @@ func (tendermint *Tendermint) VerifyHeader(chain consensus.ChainReader, header *
 }
 
 func (tendermint *Tendermint) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	return nil, nil
-}
+	abort := make(chan struct{})
+	errorsOut := make(chan error)
 
-func (tendermint *Tendermint) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
-	return nil
+	// @NOTE (rgeraldes) - the following work around is mandatory
+	// because the block insertion process will wait forever
+	// until it gets the results
+	// @TODO (rgeraldes) - temp work around
+	go func() {
+		errorsOut <- nil
+	}()
+
+	return abort, errorsOut
 }
 
 func (tendermint *Tendermint) VerifySeal(chain consensus.ChainReader, header *types.Header) error {

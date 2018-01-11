@@ -49,7 +49,10 @@ type stateFn func() stateFn
 
 // @NOTE (rgeraldes) - initial state
 func (val *Validator) notLoggedInState() stateFn {
-	log.Info("Waiting for a confirmation to participate in the consensus")
+	log.Info("Waiting confirmation to participate in the consensus")
+
+	val.firstMajority = val.eventMux.Subscribe()
+	val.secondMajority = val.eventMux.Subscribe()
 
 	/*
 		// @TODO (rgeraldes) - to do as soon as the contract for the dynamic validator is up
@@ -179,81 +182,34 @@ func (val *Validator) preCommitWaitState() stateFn {
 
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
-		return val.newRoundState
+		return val.commitState
 	}
 }
 
 func (val *Validator) commitState() stateFn {
 	log.Info("Commit state")
 
-	/*
+	// @NOTE (rgeraldes) - this is full validation which should not be necessary at this stage.
+	// @TODO (rgeraldes) - replace with just the necessary steps
+	if _, err := val.chain.InsertChain(types.Blocks{val.proposalBlock}); err != nil {
+		log.Crit("Failure to commit the proposed block", "err", err)
+	}
+	go val.eventMux.Post(core.NewMinedBlockEvent{Block: val.proposalBlock})
 
-		val.state.CommitTo(val.chainDb, self.config.IsEIP158(block.Number()))
-		stat, err := self.chain.WriteBlock(block)
-		if err != nil {
-			log.Error("Failed writing block to chain", "err", err)
+	// state updates
+	val.commitRound = int(val.round)
 
-		}
+	// @TODO(rgeraldes)
+	// leaves only when it has all the pre commits
 
-		// update block hash since it is now available and not when the receipt/log of individual transactions were created
-		for _, r := range val.receipts {
-			for _, l := range r.Logs {
-				l.BlockHash = block.Hash()
-			}
-		}
-		for _, log := range val.state.Logs() {
-			log.BlockHash = block.Hash()
-		}
-
-		// check if canon block and write transactions
-		if stat == core.CanonStatTy {
-			// This puts transactions in a extra db for rpc
-			core.WriteTxLookupEntries(self.chainDb, block)
-			// Write map map bloom filters
-			core.WriteMipmapBloom(self.chainDb, block.NumberU64(), work.receipts)
-			// implicit by posting ChainHeadEvent
-			mustCommitNewWork = false
-		}
-
-		// broadcast before waiting for validation
-		go func(block *types.Block, logs []*types.Log, receipts []*types.Receipt) {
-			self.mux.Post(core.NewMinedBlockEvent{Block: block})
-			self.mux.Post(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-
-			if stat == core.CanonStatTy {
-				self.mux.Post(core.ChainHeadEvent{Block: block})
-				self.mux.Post(logs)
-			}
-			if err := core.WriteBlockReceipts(self.chainDb, block.Hash(), block.NumberU64(), receipts); err != nil {
-				log.Warn("Failed writing block receipts", "err", err)
-			}
-		}(block, work.state.Logs(), work.receipts)
-
-		// @TODO (rgeraldes) - review type
-		// state updates
-		val.commitRound = int(val.round)
-
-		// @TODO(rgeraldes)
-
-		// leaves only when it has all the pre commits
-		select {}
-
-		// @TODO (rgeraldes) - VALIDATOR CONTRACT
-
-		// @TODO if the validator is not part of the validator state anymore, return nil
-		// if not part of the voters jump to left election
-		// return val.leftElectionsState
-		// return val.newElectionState
-
-
-
-	*/
+	// @TODO if the validator is not part of the new state log out
+	// return val.leftElectionsState
+	// return val.newElectionState
 
 	return val.newElectionState
 }
 
 // @NOTE (rgeraldes) - end state
 func (val *Validator) loggedOutState() stateFn {
-	val.wg.Done()
 	return nil
 }

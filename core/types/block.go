@@ -104,6 +104,11 @@ func (cmt *Commit) Round() int {
 	if len(cmt.PreCommits) == 0 {
 		return 0
 	}
+
+	if cmt.First() == nil {
+		return 0
+	}
+
 	return cmt.First().Round()
 }
 
