@@ -13,8 +13,8 @@ import (
 
 // @TODO (rgeraldes) - unsubscribe majority subscriptions
 
-// election encapsulates the consensus state for a specific block election
-type election struct {
+// Election encapsulates the consensus state for a specific block election
+type Election struct {
 	blockNumber *big.Int
 	round       uint64
 
@@ -22,6 +22,7 @@ type election struct {
 	proposal       *types.Proposal
 	block          *types.Block
 	blockFragments *types.BlockFragments
+	votes          VotingSystem // election votes since round 1
 
 	lockedRound uint64
 	lockedBlock *types.Block
@@ -30,7 +31,7 @@ type election struct {
 
 	commitRound int
 
-	lastCommit     *core.VotingTable // Last precommits at Height-1
+	lastCommit     *core.VotingTable // Last precommits at current block number-1
 	lastValidators *types.Validators
 
 	// proposer

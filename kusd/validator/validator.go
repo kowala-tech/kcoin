@@ -33,7 +33,7 @@ type Backend interface {
 type Validator struct {
 	// state machine
 	electionMu     sync.Mutex
-	election           // consensus state
+	Election           // consensus state
 	maxTransitions int // max number of state transitions (tests) 0 - unlimited
 
 	validating int32
@@ -303,7 +303,29 @@ func (val *Validator) AddProposal(proposal *types.Proposal) {
 	go func() { val.proposalCh <- proposal }()
 }
 
-func (val *Validator) AddVote(vote *types.Vote) {}
+func (val *Validator) AddVote(vote *types.Vote) {
+	if err := val.addVote(vote); err != nil {
+		switch err {
+		}
+	}
+}
+
+func (val *Validator) addVote(vote *types.Vote) error {
+	// @NOTE (rgeraldes) - for now just pre-vote/pre-commit for the current block number
+	added, err := val.votes.Add(vote)
+	if err != nil {
+		// @TODO (rgeraldes)
+	}
+
+	if added {
+		switch vote.Type {
+		//case PreVote:
+		//case PreCommit:
+		}
+	}
+
+	return nil
+}
 
 func (val *Validator) ProcessBlockFragment() {}
 
