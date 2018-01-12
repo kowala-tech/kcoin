@@ -54,10 +54,10 @@ type VotingTable struct {
 	round       uint64
 	voteType    types.VoteType
 
-	voters        *types.Validators
-	votesBitArray *common.BitArray
-	votes         []*types.Vote // Primary votes to share
-	sum           int64         // Sum of voting power for seen votes, discounting conflicts
+	voters   *types.Validators
+	received *common.BitArray
+	votes    []*types.Vote // Primary votes to share
+	sum      int64         // Sum of voting power for seen votes, discounting conflicts
 	//maj23         *common.Hash  // First 2/3 majority seen
 	//votesByBlock  map[string]*blockVotes // string(blockHash|blockParts) -> blockVotes
 	//peerMaj23s map[string]common.Hash // Maj23 for each peer
@@ -65,23 +65,17 @@ type VotingTable struct {
 
 func NewVotingTable(blockNumber *big.Int, round uint64, voteType types.VoteType, validators *types.Validators) *VotingTable {
 	return &VotingTable{
-		blockNumber:   blockNumber,
-		round:         round,
-		voteType:      voteType,
-		voters:        validators,
-		votesBitArray: common.NewBitArray(uint64(1 /*validators.Size()*/)), // @TODO (rgeraldes)
-		votes:         make([]*types.Vote, validators.Size()),
-		sum:           0,
+		blockNumber: blockNumber,
+		round:       round,
+		voteType:    voteType,
+		voters:      validators,
+		received:    common.NewBitArray(uint64(1 /*validators.Size()*/)), // @TODO (rgeraldes)
+		votes:       make([]*types.Vote, validators.Size()),
+		sum:         0,
 		//maj23:         nil,
 		//votesByBlock:  make(map[string]*blockVotes, valSet.Size()),
 		//peerMaj23s:    make(map[string]BlockID),
 	}
-}
-
-func (table *VotingTable) Add(vote *types.Vote) (added bool, err error) {
-	table.lock.Lock()
-	defer table.lock.Unlock()
-	return table.add(vote)
 }
 
 func (table *VotingTable) validateVote(vote *types.Vote) error {
@@ -128,7 +122,10 @@ func (table *VotingTable) validateVote(vote *types.Vote) error {
 	return nil
 }
 
-func (table *VotingTable) add(vote *types.Vote) (added bool, err error) {
+func (table *VotingTable) Add(vote *types.Vote) (added bool, err error) {
+	table.lock.Lock()
+	defer table.lock.Unlock()
+
 	// If the vote is already known, discard it
 	hash := vote.Hash()
 	if table.all[hash] != nil {
@@ -149,6 +146,9 @@ func (table *VotingTable) add(vote *types.Vote) (added bool, err error) {
 		}
 	*/
 
+	//added, conflict := table.add(vote)
+	table.add(vote)
+
 	/*
 		// Add vote and get conflicting vote if any
 		added, conflicting := voteSet.addVerifiedVote(vote, blockKey, val.VotingPower)
@@ -161,6 +161,19 @@ func (table *VotingTable) add(vote *types.Vote) (added bool, err error) {
 			return added, nil
 		}
 	*/
+	return true, nil
+}
+
+func (table *VotingTable) add(vote *types.Vote) (added bool, err error) {
+	// @TODO (rgeraldes) - replace with validator index?
+	if voted := table.votes[0]; voted != nil {
+		// @TODO (rgeraldes) - complete conflict code
+	} else {
+		table.votes[0] = vote
+		table.received.Set(0)
+		// voteSet.sum += votingPower
+	}
+
 	return true, nil
 }
 
