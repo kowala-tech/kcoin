@@ -18,10 +18,10 @@ type election struct {
 	blockNumber *big.Int
 	round       uint64
 
-	validators             *types.Validators
-	proposal               *types.Proposal
-	proposalBlock          *types.Block
-	proposalBlockFragments *types.BlockFragments
+	validators     *types.Validators
+	proposal       *types.Proposal
+	block          *types.Block
+	blockFragments *types.BlockFragments
 
 	lockedRound uint64
 	lockedBlock *types.Block
@@ -106,8 +106,8 @@ func (val *Validator) newRoundState() stateFn {
 
 	if val.round != 1 {
 		val.proposal = nil
-		val.proposalBlock = nil
-		val.proposalBlockFragments = nil
+		val.block = nil
+		val.blockFragments = nil
 	}
 
 	//	val.votes.SetRound(val.round + 1) // also track next round (round+1) to allow round-skipping
@@ -173,7 +173,7 @@ func (val *Validator) preCommitWaitState() stateFn {
 
 	case <-val.secondMajority.Chan():
 		log.Info("There's a majority!")
-		if val.proposalBlock == nil {
+		if val.block == nil {
 			return val.newRoundState
 		}
 		return val.commitState
@@ -189,10 +189,10 @@ func (val *Validator) commitState() stateFn {
 
 	// @NOTE (rgeraldes) - this is full validation which should not be necessary at this stage.
 	// @TODO (rgeraldes) - replace with just the necessary steps
-	if _, err := val.chain.InsertChain(types.Blocks{val.proposalBlock}); err != nil {
+	if _, err := val.chain.InsertChain(types.Blocks{val.block}); err != nil {
 		log.Crit("Failure to commit the proposed block", "err", err)
 	}
-	go val.eventMux.Post(core.NewMinedBlockEvent{Block: val.proposalBlock})
+	go val.eventMux.Post(core.NewMinedBlockEvent{Block: val.block})
 
 	// state updates
 	val.commitRound = int(val.round)

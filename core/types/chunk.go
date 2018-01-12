@@ -1,12 +1,14 @@
 package types
 
 import (
+	"bytes"
 	"errors"
 	"sync"
 	"sync/atomic"
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
+	"github.com/kowala-tech/kUSD/rlp"
 )
 
 // @TODO (rgeraldes) - review uint64/int
@@ -95,8 +97,37 @@ func (ds DataSet) Size() int {
 	return ds.header.nchunks
 }
 
-func (ds DataSet) Get(i int) *BlockFragment {
+func (ds DataSet) Get(i int) *Chunk {
 	// @TODO (rgeraldes) - add logic to verify if the fragment
 	// exists
 	return ds.data[i]
+}
+
+func (ds DataSet) Add(chunk *Chunk) {
+	// @TODO (rgeraldes) - validate index
+	// @TODO (rgeraldes) - check hash proof
+	ds.data[chunk.Index] = chunk
+	// @TODO (rgeraldes) - review int vs uint64
+	ds.membership.Set(int(chunk.Index))
+	ds.count++
+}
+
+func (ds DataSet) HasAll() bool {
+	return ds.count == ds.header.nchunks
+}
+
+func (ds DataSet) Data() []byte {
+	var buffer bytes.Buffer
+	for _, chunk := range ds.data {
+		buffer.Write(chunk.Data)
+	}
+	return buffer.Bytes()
+}
+
+func (ds DataSet) Assemble() (*Block, error) {
+	var block Block
+	if err := rlp.DecodeBytes(ds.Data(), &block); err != nil {
+		return nil, err
+	}
+	return &block, nil
 }

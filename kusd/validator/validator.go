@@ -240,14 +240,15 @@ func (val *Validator) init() {
 	// previous information, but I think that's something necessary.
 	val.start = time.Unix(parent.Time().Int64(), 0).Add(time.Duration(params.SyncDuration) * time.Millisecond)
 	val.proposal = nil
-	val.proposalBlock = nil
+	val.block = nil
+	val.blockFragments = nil
+
 	val.lockedRound = 0
 	val.lockedBlock = nil
 	val.commitRound = -1
 
 	val.validators = &types.Validators{}
 
-	// val.proposalBlockChunks = nil
 	// val.votes
 	// @TODO (rgeraldes) - VALIDATORS CONTRACT
 
@@ -507,7 +508,7 @@ func (val *Validator) propose() {
 	}
 
 	val.proposal = signedProposal
-	val.proposalBlock = block
+	val.block = block
 
 	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
 
@@ -524,12 +525,12 @@ func (val *Validator) preVote() {
 	case val.lockedBlock != nil:
 		log.Debug("Locked Block is not nil, voting for the locked block")
 		vote = val.lockedBlock.Hash()
-	case val.proposalBlock == nil:
+	case val.block == nil:
 		log.Debug("Proposal's block is nil, voting nil")
 		vote = common.Hash{}
 	default:
 		log.Debug("Voting for the proposal's block")
-		vote = val.proposalBlock.Hash()
+		vote = val.block.Hash()
 	}
 
 	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreVote))
@@ -558,11 +559,11 @@ func (val *Validator) preCommit() {
 		// vote on the pre-vote election winner
 		vote = winner
 	// majority pre-voted the proposed block
-	case winner == val.proposalBlock.Hash():
+	case winner == val.block.Hash():
 		log.Debug("majority of validators pre-voted the proposed block")
 		// lock block
 		val.lockedRound = val.round
-		val.lockedBlock = val.proposalBlock
+		val.lockedBlock = val.block
 		// vote on the pre-vote election winner
 		vote = winner
 	// we don't have the current block (fetch)
@@ -574,7 +575,7 @@ func (val *Validator) preCommit() {
 		val.lockedBlock = nil
 		//val.lockedBlockParts = nil
 		//if !cs.ProposalBlockParts.HasHeader(blockID.PartsHeader) {
-		val.proposalBlock = nil
+		val.block = nil
 		//val.ProposalBlockParts = types.NewPartSetFromHeader(blockID.PartsHeader)
 		//}
 	}
@@ -590,5 +591,21 @@ func (val *Validator) vote(vote *types.Vote) {
 	val.eventMux.Post(core.NewVoteEvent{Vote: signedVote})
 }
 
+// @TODO (rgeraldes) - verify if round is necessary (not the case in tendermint)
 func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) {
+	val.blockFragments.Add(fragment)
+
+	// assemble block
+	if val.blockFragments.HasAll() {
+		block, err := val.blockFragments.Assemble()
+		if err != nil {
+			log.Crit("Failed to assemble the block", "err", err)
+		}
+
+		// @TODO (rgeraldes) - validations
+		log.Info("Received the complete proposal block", "hash", block.Hash())
+		val.block = block
+
+		// @TODO (rgeraldes) - post event (to confirm that when we get to the commit state that we wait for the block)
+	}
 }
