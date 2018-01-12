@@ -90,3 +90,13 @@ type Metadata struct {
 func (ds DataSet) Metadata() Metadata {
 	return ds.header
 }
+
+func (ds DataSet) Size() int {
+	return ds.header.nchunks
+}
+
+func (ds DataSet) Get(i int) *BlockFragment {
+	// @TODO (rgeraldes) - add logic to verify if the fragment
+	// exists
+	return ds.data[i]
+}

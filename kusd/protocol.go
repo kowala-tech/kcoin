@@ -174,13 +174,12 @@ type electionData struct {
 	Type        types.VoteType
 	BlockNumber *big.Int
 	BlockHash   common.Hash
-	Round       int
+	Round       uint64
 }
 
-// @TODO (rgeraldes) - review name
 // blockFragmentData is the network packet that is sent to let the other validators have a part of the proposed block
 type blockFragmentData struct {
 	BlockNumber *big.Int
-	Round       int
-	//Data        *types.Chunk
+	Round       uint64
+	Data        *types.BlockFragment
 }

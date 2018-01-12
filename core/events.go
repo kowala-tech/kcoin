@@ -1,22 +1,8 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
+	"math/big"
+
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core/types"
 )
@@ -29,6 +15,13 @@ type NewVoteEvent struct{ Vote *types.Vote }
 
 // NewProposalEvent is posted when a consensus validator proposes a new block.
 type NewProposalEvent struct{ Proposal *types.Proposal }
+
+// NewBlockFragmentEvent is posted when a consensus validator broadcasts block fragments.
+type NewBlockFragmentEvent struct {
+	BlockNumber *big.Int
+	Round       uint64
+	Data        *types.BlockFragment
+}
 
 // PendingLogsEvent is posted pre mining and notifies of pending logs.
 type PendingLogsEvent struct {

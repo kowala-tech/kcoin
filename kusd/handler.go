@@ -62,10 +62,10 @@ type ProtocolManager struct {
 
 	SubProtocols []p2p.Protocol
 
-	eventMux             *event.TypeMux
-	txSub                *event.TypeMuxSubscription
-	minedBlockSub        *event.TypeMuxSubscription
-	proposalSub, voteSub *event.TypeMuxSubscription
+	eventMux                               *event.TypeMux
+	txSub                                  *event.TypeMuxSubscription
+	minedBlockSub                          *event.TypeMuxSubscription
+	proposalSub, voteSub, blockFragmentSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
@@ -197,6 +197,10 @@ func (pm *ProtocolManager) Start() {
 		// broadcast votes
 		pm.voteSub = pm.eventMux.Subscribe(core.NewVoteEvent{})
 		go pm.voteBroadcastLoop()
+
+		// broadcast block fragments
+		pm.blockFragmentSub = pm.eventMux.Subscribe(core.NewBlockFragmentEvent{})
+		go pm.fragmentBroadcastLoop()
 	}
 
 	// start sync handlers
@@ -211,8 +215,9 @@ func (pm *ProtocolManager) Stop() {
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 
 	if pm.validator != nil {
-		pm.proposalSub.Unsubscribe() // quits proposalBroadcastLoop
-		pm.voteSub.Unsubscribe()     // quits voteBroadcastLoop
+		pm.proposalSub.Unsubscribe()      // quits proposalBroadcastLoop
+		pm.voteSub.Unsubscribe()          // quits voteBroadcastLoop
+		pm.blockFragmentSub.Unsubscribe() // quits fragmentBroadcastLoop
 	}
 
 	// Quit the sync loop.
@@ -608,7 +613,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&proposal); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		pm.validator.SetProposal(proposal)
+		pm.validator.AddProposal(proposal)
 
 	case msg.Code == VoteMsg:
 		// Retrieve and decode the propagated vote
@@ -619,6 +624,17 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		p.MarkVote(vote.Hash())
 		pm.validator.AddVote(vote)
+
+	case msg.Code == BlockFragmentMsg:
+		// Retrieve and decode the propagated block fragment
+		var request blockFragmentData
+		if err := msg.Decode(&request); err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+
+		// @TODO (rgerades) - fragment hash?
+		p.MarkFragment(request.Data.Proof)
+		pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data)
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
@@ -681,6 +697,18 @@ func (pm *ProtocolManager) proposalBroadcastLoop() {
 		case core.NewProposalEvent:
 			for _, peer := range pm.peers.Peers() {
 				peer.SendNewProposal(ev.Proposal)
+			}
+		}
+	}
+}
+
+// Fragment broadcast loop
+func (pm *ProtocolManager) fragmentBroadcastLoop() {
+	for obj := range pm.blockFragmentSub.Chan() {
+		switch ev := obj.Data.(type) {
+		case core.NewBlockFragmentEvent:
+			for _, peer := range pm.peers.PeersWithoutFragment(ev.Data.Proof) {
+				go peer.SendBlockFragment(ev.BlockNumber, ev.Round, ev.Data)
 			}
 		}
 	}

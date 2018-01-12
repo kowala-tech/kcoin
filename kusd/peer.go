@@ -23,9 +23,10 @@ var (
 const (
 	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-	// @TODO (rgeraldes) - fine tune value?
-	maxKnownVotes    = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
-	handshakeTimeout = 5 * time.Second
+	// @TODO (rgeraldes) - fine tune values?
+	maxKnownVotes     = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
+	maxKnownFragments = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
+	handshakeTimeout  = 5 * time.Second
 )
 
 // PeerInfo represents a short summary of the Kowala sub-protocol metadata known
@@ -48,22 +49,24 @@ type peer struct {
 	head        common.Hash
 	lock        sync.RWMutex
 
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
-	knownVotes  *set.Set // set of vote hashes known to be known by this peer
+	knownTxs       *set.Set // Set of transaction hashes known to be known by this peer
+	knownBlocks    *set.Set // Set of block hashes known to be known by this peer
+	knownVotes     *set.Set // set of vote hashes known to be known by this peer
+	knownFragments *set.Set // set of fragment hashes known to be known by this peer
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	id := p.ID()
 
 	return &peer{
-		Peer:        p,
-		rw:          rw,
-		version:     version,
-		id:          fmt.Sprintf("%x", id[:8]),
-		knownTxs:    set.New(),
-		knownBlocks: set.New(),
-		knownVotes:  set.New(),
+		Peer:           p,
+		rw:             rw,
+		version:        version,
+		id:             fmt.Sprintf("%x", id[:8]),
+		knownTxs:       set.New(),
+		knownBlocks:    set.New(),
+		knownVotes:     set.New(),
+		knownFragments: set.New(),
 	}
 }
 
@@ -117,6 +120,16 @@ func (p *peer) MarkVote(hash common.Hash) {
 	p.knownVotes.Add(hash)
 }
 
+// MarkFragment marks a block fragment as known for the peer, ensuring that the
+// fragment will never be propagated to this particular peer.
+func (p *peer) MarkFragment(hash common.Hash) {
+	// If we reached the memory allowance, drop a previously known fragment hash
+	for p.knownFragments.Size() >= maxKnownFragments {
+		p.knownFragments.Pop()
+	}
+	p.knownFragments.Add(hash)
+}
+
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
 // will never be propagated to this particular peer.
 func (p *peer) MarkTransaction(hash common.Hash) {
@@ -164,6 +177,11 @@ func (p *peer) SendNewProposal(proposal *types.Proposal) error {
 // SendNewBlock propagates a vote to a remote peer.
 func (p *peer) SendVote(vote *types.Vote) error {
 	return p2p.Send(p.rw, VoteMsg, []interface{}{vote})
+}
+
+// SendBlockFragment propagates a block fragment to a remote peer.
+func (p *peer) SendBlockFragment(blockNumber *big.Int, round uint64, data *types.BlockFragment) error {
+	return p2p.Send(p.rw, BlockFragmentMsg, blockFragmentData{blockNumber, round, data})
 }
 
 // SendBlockHeaders sends a batch of block headers to the remote peer.
@@ -403,6 +421,21 @@ func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
 		if !p.knownVotes.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+// PeersWithoutFragment retrieves a list of peers that do not have a given block fragment
+// in their set of known hashes.
+func (ps *peerSet) PeersWithoutFragment(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.knownFragments.Has(hash) {
 			list = append(list, p)
 		}
 	}

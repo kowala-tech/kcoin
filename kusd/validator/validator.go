@@ -268,7 +268,7 @@ func (val *Validator) isProposer() bool {
 	return true
 }
 
-func (val *Validator) SetProposal(proposal *types.Proposal) {
+func (val *Validator) AddProposal(proposal *types.Proposal) {
 	// @TODO (rgeraldes) - Complete
 
 	/*
@@ -512,9 +512,9 @@ func (val *Validator) propose() {
 	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
 
 	// post block segments events
-	//for i := 0; i < SegmentedBlock.NumSegments(); i++ {
-	//	val.events.Post(core.NewBlockSegmentEvent{val.Height, val.Round, SegmentedBlock.GetSegment(i)})
-	//}
+	for i := 0; i < blockFragments.Size(); i++ {
+		val.eventMux.Post(core.NewBlockFragmentEvent{val.blockNumber, val.round, blockFragments.Get(i)})
+	}
 
 }
 
@@ -588,4 +588,7 @@ func (val *Validator) vote(vote *types.Vote) {
 		log.Crit("Failed to sign the vote", "err", err)
 	}
 	val.eventMux.Post(core.NewVoteEvent{Vote: signedVote})
+}
+
+func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) {
 }

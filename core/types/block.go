@@ -347,7 +347,7 @@ func (b *Block) AsFragments(size int) (BlockFragments, error) {
 	if err != nil {
 		return BlockFragments{}, err
 	}
-	return BlockFragments(NewDataSetFromData(rawBlock, size)), nil
+	return NewDataSetFromData(rawBlock, size), nil
 }
 
 func (b *Block) String() string {
