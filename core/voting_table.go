@@ -44,7 +44,7 @@ import (
 
 	NOTE: Assumes that the sum total of voting power does not exceed MaxUInt64.
 */
-
+// Voting table stores the votes of an election round
 type VotingTable struct {
 	lock sync.Mutex
 
