@@ -14,10 +14,10 @@ import (
 )
 
 // NetworkStatsContractABI is the input ABI used to generate the binding from.
-const NetworkStatsContractABI = `[{"constant":true,"inputs":[],"name":"lastPrice","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"lastBlockReward","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupplyWei","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"oldAddr","type":"address"},{"indexed":false,"name":"newAddr","type":"address"}],"name":"OwnershipTransfer","type":"event"}]`
+const NetworkStatsContractABI = `[{"constant":true,"inputs":[],"name":"lastPrice","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"lastBlockReward","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupplyWei","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"","type":"uint256"}],"name":"tendermintValidators","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"}]`
 
 // NetworkStatsContractBin is the compiled bytecode used for deploying new contracts.
-const NetworkStatsContractBin = `6060604052670de0b6b3a764000060015560006002556000600355336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506102af806100696000396000f300606060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063053f14da146100675780635798a6d51461009057806370a8f25b146100b9578063f2fde38b146100e2575b600080fd5b341561007257600080fd5b61007a61011b565b6040518082815260200191505060405180910390f35b341561009b57600080fd5b6100a3610121565b6040518082815260200191505060405180910390f35b34156100c457600080fd5b6100cc610127565b6040518082815260200191505060405180910390f35b34156100ed57600080fd5b610119600480803573ffffffffffffffffffffffffffffffffffffffff1690602001909190505061012d565b005b60035481565b60025481565b60015481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614151561018857600080fd5b806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055507f22500af037c600dd7b720644ab6e358635085601d9ac508ad83eb2d6b2d729ca6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1682604051808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019250505060405180910390a1505600a165627a7a72305820b73efead2bc728bb0b93833469f8f88c02c27dfc3b3f6de3fbddd654155cc7830029`
+const NetworkStatsContractBin = `6060604052670de0b6b3a764000060005560006001556000600255341561002557600080fd5b6003805480600101828161003991906100a1565b9160005260206000209001600073c57bf12bb34f6fd85bdbf0caca983528422bf7a2909190916101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550506100f2565b8154818355818115116100c8578183600052602060002091820191016100c791906100cd565b5b505050565b6100ef91905b808211156100eb5760008160009055506001016100d3565b5090565b90565b6101c2806101016000396000f300606060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063053f14da146100675780635798a6d51461009057806370a8f25b146100b95780639f56f159146100e2575b600080fd5b341561007257600080fd5b61007a610145565b6040518082815260200191505060405180910390f35b341561009b57600080fd5b6100a361014b565b6040518082815260200191505060405180910390f35b34156100c457600080fd5b6100cc610151565b6040518082815260200191505060405180910390f35b34156100ed57600080fd5b6101036004808035906020019091905050610157565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b60025481565b60015481565b60005481565b60038181548110151561016657fe5b90600052602060002090016000915054906101000a900473ffffffffffffffffffffffffffffffffffffffff16815600a165627a7a723058207c1ed1bd18665fdac10210d21d7aa2bfba9141119d98df2aff660ab7e82184a40029`
 
 // DeployNetworkStatsContract deploys a new Ethereum contract, binding an instance of NetworkStatsContract to it.
 func DeployNetworkStatsContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *NetworkStatsContract, error) {
@@ -211,6 +211,32 @@ func (_NetworkStatsContract *NetworkStatsContractCallerSession) LastPrice() (*bi
 	return _NetworkStatsContract.Contract.LastPrice(&_NetworkStatsContract.CallOpts)
 }
 
+// TendermintValidators is a free data retrieval call binding the contract method 0x9f56f159.
+//
+// Solidity: function tendermintValidators( uint256) constant returns(address)
+func (_NetworkStatsContract *NetworkStatsContractCaller) TendermintValidators(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _NetworkStatsContract.contract.Call(opts, out, "tendermintValidators", arg0)
+	return *ret0, err
+}
+
+// TendermintValidators is a free data retrieval call binding the contract method 0x9f56f159.
+//
+// Solidity: function tendermintValidators( uint256) constant returns(address)
+func (_NetworkStatsContract *NetworkStatsContractSession) TendermintValidators(arg0 *big.Int) (common.Address, error) {
+	return _NetworkStatsContract.Contract.TendermintValidators(&_NetworkStatsContract.CallOpts, arg0)
+}
+
+// TendermintValidators is a free data retrieval call binding the contract method 0x9f56f159.
+//
+// Solidity: function tendermintValidators( uint256) constant returns(address)
+func (_NetworkStatsContract *NetworkStatsContractCallerSession) TendermintValidators(arg0 *big.Int) (common.Address, error) {
+	return _NetworkStatsContract.Contract.TendermintValidators(&_NetworkStatsContract.CallOpts, arg0)
+}
+
 // TotalSupplyWei is a free data retrieval call binding the contract method 0x70a8f25b.
 //
 // Solidity: function totalSupplyWei() constant returns(uint256)
@@ -235,25 +261,4 @@ func (_NetworkStatsContract *NetworkStatsContractSession) TotalSupplyWei() (*big
 // Solidity: function totalSupplyWei() constant returns(uint256)
 func (_NetworkStatsContract *NetworkStatsContractCallerSession) TotalSupplyWei() (*big.Int, error) {
 	return _NetworkStatsContract.Contract.TotalSupplyWei(&_NetworkStatsContract.CallOpts)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(addr address) returns()
-func (_NetworkStatsContract *NetworkStatsContractTransactor) TransferOwnership(opts *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
-	return _NetworkStatsContract.contract.Transact(opts, "transferOwnership", addr)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(addr address) returns()
-func (_NetworkStatsContract *NetworkStatsContractSession) TransferOwnership(addr common.Address) (*types.Transaction, error) {
-	return _NetworkStatsContract.Contract.TransferOwnership(&_NetworkStatsContract.TransactOpts, addr)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(addr address) returns()
-func (_NetworkStatsContract *NetworkStatsContractTransactorSession) TransferOwnership(addr common.Address) (*types.Transaction, error) {
-	return _NetworkStatsContract.Contract.TransferOwnership(&_NetworkStatsContract.TransactOpts, addr)
 }

@@ -231,24 +231,12 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.BytesToHash(stateObject.CodeHash())
 }
 
-// func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
-// 	stateObject := self.getStateObject(a)
-// 	if stateObject != nil {
-// 		return stateObject.GetState(self.db, b)
-// 	}
-// 	return common.Hash{}
-// }
-
 func (self *StateDB) GetState(a common.Address, b common.Hash) common.Hash {
 	stateObject := self.getStateObject(a)
-	var r common.Hash
 	if stateObject != nil {
-		r = stateObject.GetState(self.db, b)
-	} else {
-		r = common.Hash{}
+		return stateObject.GetState(self.db, b)
 	}
-	// fmt.Printf("GetState(%s, %s) %s\n", a.Hex(), b.Hex(), r.Hex())
-	return r
+	return common.Hash{}
 }
 
 // StorageTrie returns the storage trie of an account.
@@ -312,7 +300,6 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 }
 
 func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	// fmt.Printf("SetState(%s, %s, %s)\n", addr.Hex(), key.Hex(), value.Hex())
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetState(self.db, key, value)

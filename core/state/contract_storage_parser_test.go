@@ -1,6 +1,7 @@
 package state_test
 
 import (
+	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -26,56 +27,82 @@ import (
 //go:generate solc --bin --abi --overwrite --out test_contracts test_contracts/Arrays.sol
 //go:generate solc --bin --abi --overwrite --out test_contracts test_contracts/Mappings.sol
 
-func parseFromTest(name string, v interface{}) error {
+type testContract struct {
+	code []byte
+	addr common.Address
+	abi  abi.ABI
+}
+
+type readerTest struct {
+	*backends.SimulatedBackend
+	testContract
+	privKey *ecdsa.PrivateKey
+}
+
+func (rt *readerTest) privAddr() common.Address {
+	return crypto.PubkeyToAddress(rt.privKey.PublicKey)
+}
+
+func parseReaderTest(name string) (*readerTest, error) {
 	// read contract bytecode
 	hexBytecode, err := ioutil.ReadFile(path.Join("test_contracts", name+".bin"))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	contractBytecode := make([]byte, len(hexBytecode)/2)
-	if _, err = hex.Decode(contractBytecode, hexBytecode); err != nil {
-		return err
+	r := &readerTest{
+		testContract: testContract{
+			code: make([]byte, len(hexBytecode)/2),
+		},
+	}
+	if _, err = hex.Decode(r.code, hexBytecode); err != nil {
+		return nil, err
 	}
 	// read contract ABI
 	f, err := os.Open(path.Join("test_contracts", name+".abi"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer f.Close()
-	contractABI, err := abi.JSON(f)
-	if err != nil {
-		return err
+	if r.abi, err = abi.JSON(f); err != nil {
+		return nil, err
 	}
 	// generate new private key
-	privKey, err := crypto.GenerateKey()
-	if err != nil {
-		return err
+	if r.privKey, err = crypto.GenerateKey(); err != nil {
+		return nil, err
 	}
 	// create a new simulated backend
-	sim := backends.NewSimulatedBackend(core.GenesisAlloc{
-		crypto.PubkeyToAddress(privKey.PublicKey): core.GenesisAccount{
+	r.SimulatedBackend = backends.NewSimulatedBackend(core.GenesisAlloc{
+		crypto.PubkeyToAddress(r.privKey.PublicKey): core.GenesisAccount{
 			Balance: new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.Ether)),
 		},
 	})
-	sim.Commit()
+	r.Commit()
 	// deploy contract
-	contractAddr, _, _, err := bind.DeployContract(
-		bind.NewKeyedTransactor(privKey),
-		contractABI,
-		contractBytecode,
-		sim,
+	r.addr, _, _, err = bind.DeployContract(
+		bind.NewKeyedTransactor(r.privKey),
+		r.abi,
+		r.code,
+		r,
 	)
+	if err != nil {
+		return nil, err
+	}
+	r.Commit()
+	return r, nil
+}
+
+func parseFromTest(name string, v interface{}) error {
+	t, err := parseReaderTest(name)
 	if err != nil {
 		return err
 	}
-	sim.Commit()
 	// get stateDB
-	stateDb, err := sim.BlockChain.State()
+	stateDb, err := t.BlockChain.State()
 	if err != nil {
 		return err
 	}
 	// parse state
-	if err = stateDb.UnmarshalState(contractAddr, v); err != nil {
+	if err = stateDb.UnmarshalState(t.addr, v); err != nil {
 		return err
 	}
 	return nil
@@ -103,32 +130,79 @@ type dataSmallInts struct {
 	BoolByte bool
 }
 
-func TestContractStorageParserSmallInts(t *testing.T) {
-	exp := dataSmallInts{I1: -127, U1: 129, BoolByte: true}
-	exp.I2 = int16(exp.I1-1)*256 + 1
-	exp.I3 = int32(exp.I2-1)*256 + 1
-	exp.I4 = int32(exp.I3-1)*256 + 1
-	exp.I5 = int64(exp.I4-1)*256 + 1
-	exp.I6 = int64(exp.I5-1)*256 + 1
-	exp.I7 = int64(exp.I6-1)*256 + 1
-	exp.I8 = int64(exp.I7-1)*256 + 1
-	exp.U2 = uint16(exp.U1-1)*256 + 1
-	exp.U3 = uint32(exp.U2-1)*256 + 1
-	exp.U4 = uint32(exp.U3-1)*256 + 1
-	exp.U5 = uint64(exp.U4-1)*256 + 1
-	exp.U6 = uint64(exp.U5-1)*256 + 1
-	exp.U7 = uint64(exp.U6-1)*256 + 1
-	exp.U8 = uint64(exp.U7-1)*256 + 1
+func newDataSmallInts() *dataSmallInts {
+	exp := &dataSmallInts{I1: -127, U1: 129, BoolByte: true}
+	n := 1
+	exp.I2 = int16(exp.I1)*256 - int16(n)
+	n++
+	exp.I3 = int32(exp.I2)*256 - int32(n)
+	n++
+	exp.I4 = int32(exp.I3)*256 - int32(n)
+	n++
+	exp.I5 = int64(exp.I4)*256 - int64(n)
+	n++
+	exp.I6 = int64(exp.I5)*256 - int64(n)
+	n++
+	exp.I7 = int64(exp.I6)*256 - int64(n)
+	n++
+	exp.I8 = int64(exp.I7)*256 - int64(n)
+	n++
+	exp.U2 = uint16(exp.U1)*256 - uint16(n)
+	n++
+	exp.U3 = uint32(exp.U2)*256 - uint32(n)
+	n++
+	exp.U4 = uint32(exp.U3)*256 - uint32(n)
+	n++
+	exp.U5 = uint64(exp.U4)*256 - uint64(n)
+	n++
+	exp.U6 = uint64(exp.U5)*256 - uint64(n)
+	n++
+	exp.U7 = uint64(exp.U6)*256 - uint64(n)
+	n++
+	exp.U8 = uint64(exp.U7)*256 - uint64(n)
+	return exp
+}
 
-	got := dataSmallInts{}
+func compareDataSmallInts(a, b *dataSmallInts) error {
+	if !reflect.DeepEqual(*a, *b) {
+		return fmt.Errorf("expected: %v\ngot: %v\n", a, b)
+	}
+	return nil
+}
 
-	if err := parseFromTest("SmallInts", &got); err != nil {
+func TestContractStorageSmallInts(t *testing.T) {
+	exp := newDataSmallInts()
+	got := &dataSmallInts{}
+	if err := parseFromTest("SmallInts", got); err != nil {
 		t.Error(err)
 		return
 	}
-
-	if !reflect.DeepEqual(&exp, &got) {
-		t.Errorf("expected: %v\ngot: %v\n", exp, got)
+	if err := compareDataSmallInts(exp, got); err != nil {
+		t.Error(err)
+		return
+	}
+	wt, err := newWriterTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	sdb, err := wt.State()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	exp = newDataSmallInts()
+	if err := sdb.MarshalState(wt.addr, exp); err != nil {
+		t.Error(err)
+		return
+	}
+	got = &dataSmallInts{}
+	if err := sdb.UnmarshalState(wt.addr, got); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareDataSmallInts(exp, got); err != nil {
+		t.Error(err)
 		return
 	}
 }
@@ -201,10 +275,10 @@ func mulShift(v *big.Int) *big.Int {
 	return r.Add(r, big1)
 }
 
-func TestContractStorageParserBigInts(t *testing.T) {
+func newDataBigInts() *dataBigInts {
 	t1, _ := new(big.Int).SetString("-549755813887", 10)
 	t2, _ := new(big.Int).SetString("2147483649", 10)
-	exp := dataBigInts{I9: t1, U9: t2}
+	exp := &dataBigInts{I9: t1, U9: t2}
 	exp.I10 = mulShift(exp.I9)
 	exp.I11 = mulShift(exp.I10)
 	exp.I12 = mulShift(exp.I11)
@@ -254,26 +328,59 @@ func TestContractStorageParserBigInts(t *testing.T) {
 	exp.I32_2 = exp.I32
 	exp.U32_2 = exp.U32
 	exp.AddrU20 = common.HexToAddress("ddea7d9bdc0a21b1e88788de4ce1fc89fcd17fd7")
+	return exp
+}
 
-	got := dataBigInts{}
+func compareDataBigInts(a, b *dataBigInts) error {
+	va := reflect.ValueOf(*a)
+	vb := reflect.ValueOf(*b)
+	for i := 0; i < 50; i++ {
+		aBig := va.Field(i).Interface().(*big.Int)
+		bBig := vb.Field(i).Interface().(*big.Int)
+		if aBig.Cmp(bBig) != 0 {
+			return fmt.Errorf("field %s has a different value than the expected.\nexpected: %v\ngot: %v\n", va.Type().Field(i).Name, aBig, bBig)
+		}
+	}
+	if !reflect.DeepEqual(a.AddrU20, b.AddrU20) {
+		return fmt.Errorf("got a different address than the expected: %v\ngot: %v\n", a.AddrU20, b.AddrU20)
+	}
+	return nil
+}
 
-	if err := parseFromTest("BigInts", &got); err != nil {
+func TestContractStorageBigInts(t *testing.T) {
+	exp := newDataBigInts()
+	got := &dataBigInts{}
+
+	if err := parseFromTest("BigInts", got); err != nil {
 		t.Error(err)
 		return
 	}
-
-	vExp := reflect.ValueOf(exp)
-	vGot := reflect.ValueOf(got)
-	for i := 0; i < 50; i++ {
-		bExp := vExp.Field(i).Interface().(*big.Int)
-		bGot := vGot.Field(i).Interface().(*big.Int)
-		if bExp.Cmp(bGot) != 0 {
-			t.Errorf("field %s has a different value than the expected.\nexpected: %v\ngot: %v\n", vExp.Type().Field(i).Name, bExp, bGot)
-			return
-		}
+	if err := compareDataBigInts(exp, got); err != nil {
+		t.Error(err)
+		return
 	}
-	if !reflect.DeepEqual(exp.AddrU20, got.AddrU20) {
-		t.Errorf("expected: %v\ngot: %v\n", exp.AddrU20, got.AddrU20)
+	wt, err := newWriterTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	sdb, err := wt.State()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	exp = newDataBigInts()
+	if err := sdb.MarshalState(wt.addr, exp); err != nil {
+		t.Error(err)
+		return
+	}
+	got = &dataBigInts{}
+	if err := sdb.UnmarshalState(wt.addr, got); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareDataBigInts(exp, got); err != nil {
+		t.Error(err)
 		return
 	}
 }
@@ -283,21 +390,54 @@ type dataStrings struct {
 	BigString   string
 }
 
-func TestContractStorageParserStrings(t *testing.T) {
-	exp := dataStrings{
+func newDataStrings() *dataStrings {
+	exp := &dataStrings{
 		SmallString: "small string",
 		BigString:   "this string is longer than 31 bytes",
 	}
+	return exp
+}
 
-	got := dataStrings{}
+func compareDataStrings(a, b *dataStrings) error {
+	if !reflect.DeepEqual(*a, *b) {
+		return fmt.Errorf("expected: %v\ngot: %v\n", a, b)
+	}
+	return nil
+}
 
-	if err := parseFromTest("Strings", &got); err != nil {
+func TestContractStorageStrings(t *testing.T) {
+	exp := newDataStrings()
+	got := &dataStrings{}
+	if err := parseFromTest("Strings", got); err != nil {
 		t.Error(err)
 		return
 	}
-
-	if !reflect.DeepEqual(&exp, &got) {
-		t.Errorf("expected: %v\ngot: %v\n", exp, got)
+	if err := compareDataStrings(exp, got); err != nil {
+		t.Error(err)
+		return
+	}
+	wt, err := newWriterTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	sdb, err := wt.State()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	exp = newDataStrings()
+	if err := sdb.MarshalState(wt.addr, exp); err != nil {
+		t.Error(err)
+		return
+	}
+	got = &dataStrings{}
+	if err := sdb.UnmarshalState(wt.addr, got); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareDataStrings(exp, got); err != nil {
+		t.Error(err)
 		return
 	}
 }
@@ -333,8 +473,8 @@ type dataArrays struct {
 	BigDynamic    []bigStruct
 }
 
-func TestContractStorageParserArrays(t *testing.T) {
-	exp := dataArrays{
+func newDataArrays() *dataArrays {
+	exp := &dataArrays{
 		Owners: [3]common.Address{
 			common.HexToAddress("0xe92a2a4e3f4c378495145619f2975ce8c60819c2"),
 			common.HexToAddress("0x14dd8d9c759a6827aacbf726085ef13a357989ec"),
@@ -353,36 +493,27 @@ func TestContractStorageParserArrays(t *testing.T) {
 		exp.BigFixed[i] = b
 		exp.BigDynamic = append(exp.BigDynamic, b)
 	}
-	got := dataArrays{}
+	return exp
+}
 
-	if err := parseFromTest("Arrays", &got); err != nil {
-		t.Error(err)
-		return
+func compareDataArrays(a, b *dataArrays) error {
+	if !reflect.DeepEqual(a.Owners, b.Owners) {
+		return fmt.Errorf("expected: %v\ngot: %v\n", a, b)
 	}
-
-	if !reflect.DeepEqual(exp.Owners, got.Owners) {
-		t.Errorf("expected: %v\ngot: %v\n", exp, got)
-		return
+	if !reflect.DeepEqual(a.Votes, b.Votes) {
+		return fmt.Errorf("expected: %v\ngot: %v\n", a, b)
 	}
-	if !reflect.DeepEqual(exp.Votes, got.Votes) {
-		t.Errorf("expected: %v\ngot: %v\n", exp, got)
-		return
+	if !reflect.DeepEqual(a.SmallFixed, b.SmallFixed) {
+		return fmt.Errorf("expected: %v\ngot: %v\n", a, b)
 	}
-	if !reflect.DeepEqual(exp.SmallFixed, got.SmallFixed) {
-		t.Errorf("expected: %v\ngot: %v\n", exp, got)
-		return
+	if !reflect.DeepEqual(a.SmallDynamic, b.SmallDynamic) {
+		return fmt.Errorf("expected: %v\ngot: %v\n", a, b)
 	}
-	if !reflect.DeepEqual(exp.SmallDynamic, got.SmallDynamic) {
-		t.Errorf("expected: %v\ngot: %v\n", exp, got)
-		return
+	if !reflect.DeepEqual(a.MediumFixed, b.MediumFixed) {
+		return fmt.Errorf("expected: %v\ngot: %v\n", a, b)
 	}
-	if !reflect.DeepEqual(exp.MediumFixed, got.MediumFixed) {
-		t.Errorf("expected: %v\ngot: %v\n", exp, got)
-		return
-	}
-	if !reflect.DeepEqual(exp.MediumDynamic, got.MediumDynamic) {
-		t.Errorf("expected: %v\ngot: %v\n", exp, got)
-		return
+	if !reflect.DeepEqual(a.MediumDynamic, b.MediumDynamic) {
+		return fmt.Errorf("expected: %v\ngot: %v\n", a, b)
 	}
 	cmpBigStruct := func(bs1, bs2 *bigStruct) bool {
 		if !reflect.DeepEqual(bs1.Addr, bs2.Addr) {
@@ -397,26 +528,70 @@ func TestContractStorageParserArrays(t *testing.T) {
 		return true
 	}
 	for i := 0; i < 3; i++ {
-		if !cmpBigStruct(&exp.BigFixed[i], &got.BigFixed[i]) {
-			t.Errorf("expected: %v\ngot: %v\n", exp.BigFixed[i], got.BigFixed[i])
-			return
+		if !cmpBigStruct(&a.BigFixed[i], &b.BigFixed[i]) {
+			return fmt.Errorf("expected: %v\ngot: %v\n", a.BigFixed[i], b.BigFixed[i])
 		}
-		if !cmpBigStruct(&exp.BigDynamic[i], &got.BigDynamic[i]) {
-			t.Errorf("expected: %v\ngot: %v\n", exp.BigDynamic[i], got.BigDynamic[i])
-			return
+		if !cmpBigStruct(&a.BigDynamic[i], &b.BigDynamic[i]) {
+			return fmt.Errorf("expected: %v\ngot: %v\n", a.BigDynamic[i], b.BigDynamic[i])
 		}
+	}
+	return nil
+}
+
+func TestContractStorageArraysSlices(t *testing.T) {
+	exp := newDataArrays()
+	got := &dataArrays{}
+
+	if err := parseFromTest("Arrays", got); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareDataArrays(exp, got); err != nil {
+		t.Error(err)
+		return
+	}
+	wt, err := newWriterTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	sdb, err := wt.State()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	exp = newDataArrays()
+	if err := sdb.MarshalState(wt.addr, exp); err != nil {
+		t.Error(err)
+		return
+	}
+	got = &dataArrays{}
+	if err := sdb.UnmarshalState(wt.addr, got); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareDataArrays(exp, got); err != nil {
+		t.Error(err)
+		return
 	}
 }
 
 type dataMappings struct {
+	IdAddr       *state.Mapping
+	AddrsSmall   *state.Mapping
+	BigKeys      *state.Mapping
+	StringMedium *state.Mapping
+}
+
+type dataMappingsMaps struct {
 	IdAddr       map[uint64]common.Address
 	AddrsSmall   map[common.Address]smallStruct
 	BigKeys      map[*big.Int]bigStruct
 	StringMedium map[string]mediumStruct
 }
 
-func TestContractStorageParserMappings(t *testing.T) {
-	exp := dataMappings{
+func newDataMappingsMaps() *dataMappingsMaps {
+	exp := &dataMappingsMaps{
 		IdAddr: map[uint64]common.Address{
 			0: common.HexToAddress("0xe92a2a4e3f4c378495145619f2975ce8c60819c2"),
 			1: common.HexToAddress("0x14dd8d9c759a6827aacbf726085ef13a357989ec"),
@@ -433,39 +608,29 @@ func TestContractStorageParserMappings(t *testing.T) {
 		exp.StringMedium["still a small string"] = mediumStruct{Id: 1, Addr: exp.IdAddr[1]}
 		exp.StringMedium["a big string must be longer than 31 bytes"] = mediumStruct{Id: 2, Addr: exp.IdAddr[2]}
 	}
-	got := struct {
-		IdAddr       *state.Mapping
-		AddrsSmall   *state.Mapping
-		BigKeys      *state.Mapping
-		StringMedium *state.Mapping
-	}{}
-	if err := parseFromTest("Mappings", &got); err != nil {
-		t.Error(err)
-		return
+	return exp
+}
+
+func compareDataMappings(a *dataMappingsMaps, b *dataMappings) error {
+	if err := compareMaps(a.IdAddr, b.IdAddr); err != nil {
+		return err
 	}
-	if err := compareMaps(exp.IdAddr, got.IdAddr); err != nil {
-		t.Error(err)
-		return
+	if err := compareMaps(a.AddrsSmall, b.AddrsSmall); err != nil {
+		return err
 	}
-	if err := compareMaps(exp.AddrsSmall, got.AddrsSmall); err != nil {
-		t.Error(err)
-		return
+	if err := compareMaps(a.StringMedium, b.StringMedium); err != nil {
+		return err
 	}
-	if err := compareMaps(exp.StringMedium, got.StringMedium); err != nil {
-		t.Error(err)
-		return
-	}
-	for k, v := range exp.BigKeys {
+	for k, v := range a.BigKeys {
 		bs := &bigStruct{}
-		if err := got.BigKeys.Get(k, bs); err != nil {
-			t.Error(err)
-			return
+		if err := b.BigKeys.Get(k, bs); err != nil {
+			return err
 		}
 		if !v.Cmp(*bs) {
-			t.Errorf("expected: %#+v\ngot: %#+v", v, bs)
-			return
+			return fmt.Errorf("expected: %#+v\ngot: %#+v", v, bs)
 		}
 	}
+	return nil
 }
 
 func compareMaps(m interface{}, sm *state.Mapping) error {
@@ -478,8 +643,66 @@ func compareMaps(m interface{}, sm *state.Mapping) error {
 		gotV := reflect.New(mVal.Type())
 		sm.Get(k.Interface(), gotV.Interface())
 		if !reflect.DeepEqual(mVal.Interface(), gotV.Elem().Interface()) {
-			return fmt.Errorf("got a mismatch")
+			return fmt.Errorf("got a mismatch, exp: %#+v, got: %#+v", mVal.Interface(), gotV.Interface())
 		}
 	}
 	return nil
+}
+
+func TestContractStorageMappings(t *testing.T) {
+	exp := newDataMappingsMaps()
+	got := &dataMappings{}
+	if err := parseFromTest("Mappings", got); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareDataMappings(exp, got); err != nil {
+		t.Error(err)
+		return
+	}
+	wt, err := newWriterTest()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	sdb, err := wt.State()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	exp = newDataMappingsMaps()
+	if err := sdb.MarshalState(wt.addr, exp); err != nil {
+		t.Error(err)
+		return
+	}
+	got = &dataMappings{}
+	if err := sdb.UnmarshalState(wt.addr, got); err != nil {
+		t.Error(err)
+		return
+	}
+	if err := compareDataMappings(exp, got); err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+type writerTest struct {
+	*backends.SimulatedBackend
+	addr common.Address
+}
+
+func newWriterTest() (*writerTest, error) {
+	k, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+	addr := crypto.PubkeyToAddress(k.PublicKey)
+	return &writerTest{
+		SimulatedBackend: backends.NewSimulatedBackend(core.GenesisAlloc{
+			addr: core.GenesisAccount{
+				Balance: new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.Ether)),
+			},
+		}),
+		addr: addr,
+	}, nil
 }

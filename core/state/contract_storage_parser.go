@@ -1,7 +1,6 @@
 package state
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math/big"
@@ -14,10 +13,11 @@ import (
 )
 
 var (
-	// ErrNeedValidStructPointer is returned by the reflection code
-	ErrNeedValidStructPointer = fmt.Errorf("r needs to be a valid pointer to a struct type")
+	// ErrNeedValidStruct is returned by the reflection code
+	ErrNeedValidStruct = fmt.Errorf("r needs to be a struct type (or pointer to)")
 	// ErrNilPointer is returned when finding a nil pointer
-	ErrNilPointer = fmt.Errorf("can't marshal a nil pointer")
+	ErrNilPointer  = fmt.Errorf("can't marshal/unmarshal a nil pointer")
+	ErrInvalidSize = fmt.Errorf("invalid size")
 )
 
 // UnmarshalState is  used to parse a contract's local storage, starting
@@ -63,16 +63,16 @@ func (so *stateObject) UnmarshalState(r interface{}) error {
 	// needs to be a pointer
 	val := reflect.ValueOf(r)
 	if val.Kind() != reflect.Ptr {
-		return ErrNeedValidStructPointer
+		return ErrNeedValidStruct
 	}
 	// can't be nil
 	if val.IsNil() {
-		return ErrNeedValidStructPointer
+		return ErrNeedValidStruct
 	}
 	val = val.Elem()
 	// must point to a struct
 	if val.Kind() != reflect.Struct {
-		return ErrNeedValidStructPointer
+		return ErrNeedValidStruct
 	}
 	// parse
 	return newStateReader(so, common.Hash{}).readValue(&val, 0, false)
@@ -135,6 +135,7 @@ func newStateIo(so *stateObject, firstKey common.Hash) *stateIo {
 
 func (sio *stateIo) keyHash() common.Hash { return common.BytesToHash(sio.curKey.Bytes()) }
 func (sio *stateIo) keyBytes() []byte     { return sio.keyHash().Bytes() }
+func (sio *stateIo) nextKey()             { sio.curKey.Add(sio.curKey, common.Big1) }
 
 // state parser
 type stateReader struct {
@@ -150,22 +151,26 @@ func newStateReader(so *stateObject, firstKey common.Hash) *stateReader {
 	}
 }
 
-func (sr *stateReader) nextFullWord() {
+func (sr *stateReader) forceNextKey() {
+	sr.stateIo.nextKey()
+	sr.curBytes = sr.so.GetState(sr.so.db.db, sr.keyHash()).Bytes()
+}
+
+func (sr *stateReader) nextKey() {
 	if len(sr.curBytes) == 32 {
 		return
 	}
-	sr.curKey.Add(sr.curKey, common.Big1)
-	sr.curBytes = sr.so.GetState(sr.so.db.db, sr.keyHash()).Bytes()
+	sr.forceNextKey()
 }
 
 func (sr *stateReader) readN(n int) []byte {
 	if n > len(sr.curBytes) {
-		sr.nextFullWord()
+		sr.nextKey()
 	}
 	r := make([]byte, 0, n)
 	for len(r) < n {
 		if len(sr.curBytes) == 0 {
-			sr.nextFullWord()
+			sr.nextKey()
 		}
 		sz := n - len(r)
 		if bsz := len(sr.curBytes); sz > bsz {
@@ -205,7 +210,7 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 		return nil
 	case *Mapping:
 		if len(sr.curBytes) != 32 {
-			sr.nextFullWord()
+			sr.nextKey()
 		}
 		if vv == nil {
 			v.Set(reflect.New(v.Type().Elem()))
@@ -215,7 +220,7 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 		if len(sr.curBytes) == 32 {
 			sr.curBytes = []byte{}
 		}
-		sr.nextFullWord()
+		sr.nextKey()
 		return nil
 	}
 
@@ -297,14 +302,14 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 		v.Set(reflect.ValueOf(vb))
 		return nil
 	case reflect.String:
-		sr.nextFullWord()
+		sr.nextKey()
 		if sr.curBytes[31]%2 == 0 {
 			fullWord := sr.readN(32)
 			fullWord = fullWord[:fullWord[31]/2]
 			v.Set(reflect.ValueOf(string(fullWord)))
-			sr.nextFullWord()
+			sr.nextKey()
 		} else {
-			sz := sr.readInt(31, false)
+			sz := sr.readInt(32, false)
 			sz.Div(sz, common.Big2)
 			h := keccak256Sum(sr.keyBytes())
 			nWords, rem := new(big.Int).DivMod(sz, common.Big32, new(big.Int))
@@ -312,7 +317,7 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 				nWords.Add(nWords, common.Big1)
 			}
 			if nWords.Cmp(big64k) > 0 {
-				panic("string to big")
+				return fmt.Errorf("string to big %s", nWords)
 			}
 			strSr := newStateReader(sr.so, common.BytesToHash(h))
 			nw := nWords.Uint64()
@@ -321,7 +326,7 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 		}
 		return nil
 	case reflect.Struct:
-		sr.nextFullWord()
+		sr.nextKey()
 		rt := v.Type()
 		for i := 0; i < v.NumField(); i++ {
 			fv := v.Field(i)
@@ -361,7 +366,7 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 				signed = &sign
 			}
 			if t, ok := sf.Tag.Lookup("solStartWord"); ok && t != "" {
-				sr.nextFullWord()
+				sr.nextKey()
 			}
 			if err := sr.readValue(&fv, *size, *signed); err != nil {
 				return err
@@ -379,7 +384,7 @@ func (sr *stateReader) readValue(v *reflect.Value, size int, signed bool) error 
 		} else {
 			sz = int(sr.readInt(31, false).Int64())
 			newSr = newStateReader(sr.so, common.BytesToHash(keccak256Sum(sr.keyBytes())))
-			sr.nextFullWord()
+			sr.nextKey()
 		}
 		newS := reflect.New(reflect.SliceOf(v.Type().Elem())).Elem()
 		for i := 0; i < sz; i++ {
@@ -442,11 +447,6 @@ func (m *Mapping) Get(k, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	switch k.(type) {
-	case string:
-	default:
-		kb = append(make([]byte, 32-len(kb), 32), kb...)
-	}
 	return m.GetWithKeyBytes(kb, v)
 }
 
@@ -454,13 +454,31 @@ func (m *Mapping) Get(k, v interface{}) error {
 // using k as the key (already marshaled data).
 func (m *Mapping) GetWithKeyBytes(k []byte, v interface{}) error {
 	vv := reflect.ValueOf(v)
-	return newStateReader(m.so, m.getFirstKey(k)).readValue(&vv, 0, false)
+	return newStateReader(m.so, mappingFirstKey(k, m.mapKey)).readValue(&vv, 0, false)
 }
 
-func (m *Mapping) getFirstKey(b []byte) common.Hash {
+// Set marshals the value of v, using k as the key.
+func (m *Mapping) Set(k, v interface{}) error {
+	kb, err := marshalMappingKey(k)
+	if err != nil {
+		return err
+	}
+	return m.SetWithKeyBytes(kb, v)
+}
+
+// Set marshals the value of v, using k as the already marshaled key.
+func (m *Mapping) SetWithKeyBytes(k []byte, v interface{}) error {
+	sw := newStateWriter(m.so, mappingFirstKey(k, m.mapKey))
+	if err := sw.writeValue(reflect.ValueOf(v), 0, false); err != nil {
+		return err
+	}
+	return sw.flush(true)
+}
+
+func mappingFirstKey(b []byte, mapKey common.Hash) common.Hash {
 	kb := make([]byte, 0, len(b)+32)
 	kb = append(kb, b...)
-	return common.BytesToHash(keccak256Sum(append(kb, m.mapKey.Bytes()...)))
+	return common.BytesToHash(keccak256Sum(append(kb, mapKey.Bytes()...)))
 }
 
 func marshalMappingKey(k interface{}) (kb []byte, err error) {
@@ -470,9 +488,13 @@ func marshalMappingKey(k interface{}) (kb []byte, err error) {
 		int32, uint32, int16, uint16,
 		int8, uint8, bool, *big.Int,
 		common.Address, *common.Address:
-		return valueAsBytes(v, 32)
+		b, err := valueAsBytes(v, 32, nil)
+		if err != nil {
+			return nil, err
+		}
+		return append(make([]byte, 32-len(b), 32), b...), nil
 	case string:
-		return valueAsBytes(v, 0)
+		return valueAsBytes(v, 0, nil)
 	}
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
@@ -499,20 +521,29 @@ func whichIntSize(k reflect.Kind) int {
 	panic("only for ints")
 }
 
-func valueAsBytes(v reflect.Value, size int) ([]byte, error) {
+func valueAsBytes(v reflect.Value, size int, signed *bool) ([]byte, error) {
 	switch vv := v.Interface().(type) {
 	case StateMarshaler:
 		return vv.MarshalStateBytes()
 	case *big.Int:
+		var sign bool
+		if signed != nil && *signed == true {
+			sign = true
+		}
 		b := vv.Bytes()
 		sz := len(b)
 		if vv.Cmp(common.Big0) < 0 && b[0]&0x80 != 0 {
 			sz++
 		}
-		if sz < size {
+		if size < 1 {
+			sz = 32
+		} else if sz < size {
 			sz = size
 		}
-		return intoSignedBytes(vv, sz), nil
+		if sign {
+			return intoSignedBytes(vv, sz), nil
+		}
+		return append(make([]byte, sz-len(b), sz), b...), nil
 	case common.Address:
 		return vv.Bytes(), nil
 	case *common.Address:
@@ -530,13 +561,196 @@ func valueAsBytes(v reflect.Value, size int) ([]byte, error) {
 		if v.IsNil() {
 			return nil, nil
 		}
-		return valueAsBytes(v.Elem(), size)
-	case reflect.Struct:
-		vt := v.Type()
-		bb := make([][]byte, 0, vt.NumField())
-		bSz := 0
-		for i := 0; i < vt.NumField(); i++ {
-			sf := vt.Field(i)
+		return valueAsBytes(v.Elem(), size, nil)
+	case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
+		var sz int
+		if wSz := whichIntSize(k); size == 0 && size < wSz {
+			sz = wSz
+		} else {
+			sz = size
+		}
+		b := intoSignedBytes(big.NewInt(v.Int()), sz)
+		return b, nil
+	case reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
+		var sz int
+		if wSz := whichIntSize(k); size == 0 && size < wSz {
+			sz = wSz
+		} else {
+			sz = size
+		}
+		b := intoSignedBytes(big.NewInt(int64(v.Uint())), sz)
+		return b, nil
+	}
+	return nil, nil
+}
+
+// StateMarshaler is implemented by types that need to customize the data layout
+type StateMarshaler interface {
+	MarshalStateBytes() ([]byte, error)
+}
+
+func (s *StateDB) MarshalState(addr common.Address, v interface{}) error {
+	return s.GetOrNewStateObject(addr).MarshalState(v)
+}
+
+func (so *stateObject) MarshalState(v interface{}) error {
+	val := reflect.ValueOf(v)
+	for val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return ErrNilPointer
+		}
+		val = val.Elem()
+	}
+	if val.Kind() != reflect.Struct {
+		return ErrNeedValidStruct
+	}
+	sw := newStateWriter(so, common.Hash{})
+	if err := sw.writeValue(val, 0, false); err != nil {
+		return err
+	}
+	return sw.flush(true)
+}
+
+type stateWriter struct {
+	*stateIo
+	buf   [][]byte
+	bufSz int
+}
+
+func newStateWriter(so *stateObject, firstKey common.Hash) *stateWriter {
+	return &stateWriter{
+		stateIo: newStateIo(so, firstKey),
+	}
+}
+
+func (sw *stateWriter) completeWord() {
+	sz := 32 - sw.bufSz%32
+	if sz == 0 || sz == 32 {
+		return
+	}
+	sw.buf = append(sw.buf, make([]byte, sz))
+	sw.bufSz += sz
+}
+
+func (sw *stateWriter) isAtWordBoundary() bool {
+	return sw.bufSz != 0 && sw.bufSz%32 == 0
+}
+
+func (sw *stateWriter) flush(all bool) error {
+	if all {
+		sw.completeWord()
+	}
+	for sw.bufSz > 31 {
+		chunks := make([][]byte, 0, sw.bufSz/32)
+		for sz := 0; sz < 32; {
+			sz += len(sw.buf[0])
+			chunks = append(chunks, sw.buf[0])
+			sw.bufSz -= len(sw.buf[0])
+			sw.buf = sw.buf[1:]
+		}
+		b := make([]byte, 0, 32)
+		for i := len(chunks) - 1; i > -1; i-- {
+			b = append(b, chunks[i]...)
+		}
+		sw.so.SetState(sw.so.db.db, common.BigToHash(sw.curKey), common.BytesToHash(b))
+		sw.nextKey()
+	}
+	return nil
+}
+
+func (sw *stateWriter) writeBytes(b []byte) error {
+	bSz := len(b)
+	if bSz > 32 {
+		if bSz%32 != 0 {
+			return ErrInvalidSize
+		}
+		sw.completeWord()
+	} else {
+		remBytes := 32 - sw.bufSz%32
+		if bSz > remBytes {
+			sw.completeWord()
+		}
+	}
+	for len(b) > 0 {
+		var ssz int
+		if len(b) > 31 {
+			ssz = 32
+		} else {
+			ssz = len(b)
+		}
+		sw.buf = append(sw.buf, b[:ssz])
+		sw.bufSz += ssz
+		b = b[ssz:]
+	}
+	return sw.flush(false)
+}
+
+func (sw *stateWriter) writeStruct(v reflect.Value) error {
+	if err := sw.flush(true); err != nil {
+		return err
+	}
+	vt := v.Type()
+	for i := 0; i < vt.NumField(); i++ {
+		sf := vt.Field(i)
+		fld := v.Field(i)
+		vi := fld.Interface()
+		if a, ok := vi.(common.Address); ok {
+			if err := sw.writeBytes(a.Bytes()); err != nil {
+				return err
+			}
+			continue
+		} else if a, ok := vi.(*common.Address); ok {
+			if err := sw.writeBytes(a.Bytes()); err != nil {
+				return err
+			}
+			continue
+		}
+		switch fk := sf.Type.Kind(); fk {
+		case reflect.String:
+			if err := sw.writeString(fld.String()); err != nil {
+				return err
+			}
+		case reflect.Array, reflect.Slice:
+			if err := sw.flush(true); err != nil {
+				return err
+			}
+			var nsw *stateWriter
+			if fk == reflect.Slice {
+				if err := sw.writeBytes(big.NewInt(int64(fld.Len())).Bytes()); err != nil {
+					return err
+				}
+				nsw = newStateWriter(sw.so, common.BytesToHash(keccak256Sum(sw.keyBytes())))
+				if err := sw.flush(true); err != nil {
+					return err
+				}
+			} else {
+				nsw = sw
+			}
+			for i := 0; i < fld.Len(); i++ {
+				if err := nsw.writeValue(fld.Index(i), 0, true); err != nil {
+					return err
+				}
+			}
+			if err := nsw.flush(true); err != nil {
+				return err
+			}
+		case reflect.Map:
+			mapping := NewMapping(sw.so, sw.keyHash())
+			for _, mk := range fld.MapKeys() {
+				if err := mapping.Set(
+					mk.Interface(),
+					fld.MapIndex(mk).Interface(),
+				); err != nil {
+					return err
+				}
+			}
+			if err := sw.writeBytes(make([]byte, 32)); err != nil {
+				return err
+			}
+			if err := sw.flush(true); err != nil {
+				return err
+			}
+		default:
 			if _, ok := sf.Tag.Lookup("solIgnore"); ok {
 				continue
 			}
@@ -546,62 +760,83 @@ func valueAsBytes(v reflect.Value, size int) ([]byte, error) {
 			)
 			if szStr, ok := sf.Tag.Lookup("solSize"); ok {
 				if fldSz, err = strconv.Atoi(szStr); err != nil {
-					panic(fmt.Sprintf("bad size: %s", szStr))
+					return fmt.Errorf("bad size: %s", szStr)
 				}
 			}
-			b, err := valueAsBytes(v.Field(i), fldSz)
-			bb = append(bb, b)
-			bSz += len(b)
-		}
-		return bytes.Join(packBytesIntoWords(bb), []byte{}), nil
-	case reflect.Array, reflect.Slice:
-		if v.Len() == 0 {
-			return nil, nil
-		}
-		r := make([]byte, 0, 1024)
-		lastWord := 0
-		for i := 0; i < v.Len(); i++ {
-			vv := v.Index(i)
-			b, err := valueAsBytes(vv, size)
+			var signed *bool
+			if strSign, ok := sf.Tag.Lookup("solSign"); ok {
+				var t bool
+				switch strSign {
+				case "signed":
+					t = true
+				case "unsigned":
+					t = false
+				default:
+					return fmt.Errorf("unknown sign: %s", strSign)
+				}
+				signed = &t
+			}
+			bb, err := valueAsBytes(v.Field(i), fldSz, signed)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			if (len(r)+len(b))/32 != lastWord {
-				r = append(r, make([]byte, (lastWord+1)*32-len(r))...)
+			if err := sw.writeBytes(bb); err != nil {
+				return err
 			}
-			r = append(r, b...)
 		}
-		return r, nil
-	case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
-		return intoSignedBytes(big.NewInt(v.Int()), whichIntSize(k)), nil
-	case reflect.Uint, reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8:
-		return intoSignedBytes(big.NewInt(int64(v.Uint())), whichIntSize(k)), nil
 	}
-	return nil, nil
+	return nil
 }
 
-func packBytesIntoWords(chunks [][]byte) [][]byte {
-	r := make([][]byte, 0, len(chunks))
-	for len(chunks) > 0 {
-		nChunks := 0
-		remBytes := 0
-		wsz := 0
-		for nChunks = 0; nChunks < len(chunks); nChunks++ {
-			if remBytes = wsz + len(chunks[nChunks]); remBytes > 32 {
-				break
-			}
-		}
-		b := make([]byte, remBytes, 32)
-		for i := nChunks - 1; i < 0; i-- {
-			b = append(b, chunks[i]...)
-		}
-		chunks = chunks[nChunks:]
-		r = append(r, b)
+func (sw *stateWriter) writeString(s string) error {
+	b := []byte(s)
+	bSz := len(b)
+	if bSz < 32 {
+		b = append(b, make([]byte, 32-len(b))...)
+		b[31] = byte(bSz) * 2
+		return sw.writeBytes(b)
 	}
-	return r
+	b = append(b, make([]byte, 32-len(b)%32)...)
+	if err := sw.flush(true); err != nil {
+		return err
+	}
+	kb := sw.keyBytes()
+	if err := sw.writeBytes(big.NewInt(int64(bSz*2 + 1)).Bytes()); err != nil {
+		return err
+	}
+	ssw := newStateWriter(sw.so, common.BytesToHash(keccak256Sum(common.BytesToHash(kb).Bytes())))
+	if err := ssw.writeBytes(b); err != nil {
+		return err
+	}
+	if err := ssw.flush(true); err != nil {
+		return err
+	}
+	return nil
 }
 
-// StateMarshaler is implemented by types that need to customize the data layout
-type StateMarshaler interface {
-	MarshalStateBytes() ([]byte, error)
+func (sw *stateWriter) writeValue(v reflect.Value, size int, signed bool) error {
+	switch kv := v.Kind(); kv {
+	case reflect.Ptr:
+		if v.IsNil() {
+			return nil
+		}
+		return sw.writeValue(v.Elem(), size, signed)
+	case reflect.String:
+		if err := sw.writeString(v.String()); err != nil {
+			return err
+		}
+	// case *Mapping:
+	case reflect.Struct:
+		if err := sw.writeStruct(v); err != nil {
+			return err
+		}
+	// 	case reflect.Array, reflect.Slice:
+	default:
+		b, err := valueAsBytes(v, size, nil)
+		if err != nil {
+			return err
+		}
+		return sw.writeBytes(b)
+	}
+	return nil
 }

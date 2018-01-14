@@ -112,6 +112,10 @@ func (cm *NetworkContractsMap) GetMToken(sdb *state.StateDB) (*MToken, error) {
 	return r, nil
 }
 
+func (cm *NetworkContractsMap) SetMToken(sdb *state.StateDB, mt *MToken) error {
+	return sdb.MarshalState(cm.MToken, mt)
+}
+
 // GetPriceOracle parses the PriceOracle contract local storage.
 func (cm *NetworkContractsMap) GetPriceOracle(sdb *state.StateDB) (*PriceOracle, error) {
 	r := &PriceOracle{}
@@ -121,6 +125,10 @@ func (cm *NetworkContractsMap) GetPriceOracle(sdb *state.StateDB) (*PriceOracle,
 	return r, nil
 }
 
+func (cm *NetworkContractsMap) SetPriceOracle(sdb *state.StateDB, po *PriceOracle) error {
+	return sdb.MarshalState(cm.PriceOracle, po)
+}
+
 // GetNetworkStats parses the GetNetworkStats contract local storage.
 func (cm *NetworkContractsMap) GetNetworkStats(sdb *state.StateDB) (*NetworkStats, error) {
 	r := &NetworkStats{}
@@ -128,6 +136,10 @@ func (cm *NetworkContractsMap) GetNetworkStats(sdb *state.StateDB) (*NetworkStat
 		return nil, err
 	}
 	return r, nil
+}
+
+func (cm *NetworkContractsMap) SetNetworkStats(sdb *state.StateDB, ns *NetworkStats) error {
+	return sdb.MarshalState(cm.NetworkStats, ns)
 }
 
 // OracleAllowedAddress data layout.
@@ -192,11 +204,12 @@ func (po *PriceOracle) PriceForOneFiat() *big.Int {
 
 // NetworkStats data layout.
 type NetworkStats struct {
-	Ownable
 	// Total supply of wei. Must be updated every block.
 	TotalSupplyWei *big.Int
 	// Reward calculated for the last block. Must be updated every block.
 	LastBlockReward *big.Int
 	// Price established by the price oracle for the last block. Must be updated every block.
 	LastPrice *big.Int
+	// Tendermint validators.
+	TendermintValidators []common.Address
 }
