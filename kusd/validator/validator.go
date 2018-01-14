@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kUSD/accounts"
+	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
+	"github.com/kowala-tech/kUSD/contracts/voters/contract"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -45,6 +47,9 @@ type Validator struct {
 	config *params.ChainConfig
 	engine consensus.Engine
 
+	// registry
+	registry *contract.VoterRegistry
+
 	// wallet (signer)
 	account accounts.Account
 	wallet  accounts.Wallet
@@ -62,12 +67,22 @@ type Validator struct {
 // New returns a new consensus validator
 func New(kusd Backend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine) *Validator {
 	validator := &Validator{
+		config:   config,
 		kusd:     kusd,
 		chain:    kusd.BlockChain(),
-		config:   config,
-		eventMux: eventMux,
 		engine:   engine,
+		eventMux: eventMux,
 	}
+
+	// setup the registry
+	// @TODO (rgeraldes) - complete
+	/*
+		registry, err := contract.NewVoterRegistry()
+		if err != nil {
+			// @TODO (rgeraldes) -
+		}
+		validator.registry = registry
+	*/
 
 	//go validator.sync()
 
@@ -105,6 +120,7 @@ out:
 	}
 }
 
+// @TODO (rgeraldes) - add logic to prevent re-running the state machine
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	// @TODO (rgeraldes) - review logic (start is called by sync later on if the node is syncing)
 	account := accounts.Account{Address: coinbase}
@@ -125,6 +141,12 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 			return
 		}
 	*/
+
+	val.joinElection()
+
+	//if joined := val.joinElections; !joined {
+	//log.Error("Failed to register validator")
+	//}
 
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
@@ -151,7 +173,7 @@ func (val *Validator) run() {
 func (val *Validator) Stop() {
 	log.Info("Stopping consensus validator")
 
-	val.leaveElections()
+	val.leaveElection()
 	val.wg.Wait()
 
 	//val.worker.stop()
@@ -415,20 +437,66 @@ func (val *Validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 	return nil, nil
 }
 
-func (val *Validator) joinElections() {
+func (val *Validator) joinElection() bool {
+	voter, err := val.registry.IsVoter(&bind.CallOpts{}, val.account.Address)
+	if err != nil {
+		log.Error("Failed to verify if the validator is already registered as a voter")
+		return false
+	}
+
+	if voter {
+		log.Warn("Validator is already registered as a voter")
+		return false
+	}
+
 	val.makeDeposit()
+	return true
 }
 
-func (val *Validator) leaveElections() {
-	val.withdrawDeposit()
+func (val *Validator) leaveElection() {
+	val.withdraw()
 }
 
+// @TODO (rgeraldes) - review call opts
 func (val *Validator) makeDeposit() {
-	// @TODO (rgeraldes) - to complete as soon as the dynamic validator set contract is ready
+	// @TODO (rgeraldes) - the initial deposit value should also be
+	// validated against the minimum deposit
+	min, err := val.registry.MinimumDeposit(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to verify the minimum deposit")
+		return
+	}
+
+	if min.Cmp(big.NewInt(int64(val.deposit))) > 0 {
+		log.Warn("Current deposit is inferior than the minimum required", "deposit", val.deposit, "minimum required", min)
+		return
+	}
+
+	// check if there are spots left to vote
+	available, err := val.registry.Availability(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to verify the registry availability")
+		return
+	}
+
+	if available {
+		opts := &bind.TransactOpts{}
+		_, err := val.registry.Deposit(opts)
+		if err != nil {
+			log.Crit("Failed to make a deposit to participate in the election")
+		}
+	} else {
+		log.Info("There are not positions available at the moment.")
+	}
+
 }
 
-func (val *Validator) withdrawDeposit() {
-	// @TODO (rgeraldes) - to complete as soon as the dynamic validator set contract is ready
+func (val *Validator) withdraw() {
+	opts := &bind.TransactOpts{}
+	_, err := val.registry.Withdraw(opts)
+	if err != nil {
+		log.Error("Failed to withdraw from the election")
+	}
 }
 
 func (val *Validator) createProposalBlock() *types.Block {
