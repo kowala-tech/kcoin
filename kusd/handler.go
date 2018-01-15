@@ -739,7 +739,8 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 // about the host peer.
 type KowalaNodeInfo struct {
 	// @TODO (rgeraldes) - review comment
-	Network    uint64      `json:"network"`    // Kowala network ID (1=Frontier, 2=Morden, Ropsten=3)
+	Network uint64 `json:"network"` // Kowala network ID (1=Mainnet, 2=Testnet)
+	// @TODO (rgeraldes) - remove as soon as we know that does not conflict with the stats app
 	Difficulty *big.Int    `json:"difficulty"` // Total difficulty of the host's blockchain
 	Genesis    common.Hash `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Head       common.Hash `json:"head"`       // SHA3 hash of the host's best owned block
@@ -749,9 +750,9 @@ type KowalaNodeInfo struct {
 func (self *ProtocolManager) NodeInfo() *KowalaNodeInfo {
 	currentBlock := self.blockchain.CurrentBlock()
 	return &KowalaNodeInfo{
-		Network:    self.networkID,
-		Difficulty: self.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
-		Genesis:    self.blockchain.Genesis().Hash(),
-		Head:       currentBlock.Hash(),
+		Network: self.networkID,
+		//Difficulty: self.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
+		Genesis: self.blockchain.Genesis().Hash(),
+		Head:    currentBlock.Hash(),
 	}
 }

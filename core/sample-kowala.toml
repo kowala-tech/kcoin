@@ -23,7 +23,7 @@ Blocks = 10
 Percentile = 50
 
 [Node]
-DataDir = ".kowala2"
+DataDir = ".kowala"
 
 [Node.P2P]
 MaxPeers = 25
@@ -33,7 +33,7 @@ BootstrapNodes = ["enode://111929beaa10c4eef786996c79267ad041b919830d0c66587f213
 # BootstrapNodesV5 = ["enode://bae38251dece370a6c99482364d433244f183ce74169ed148a57960e46b2ab36995c0ee15d54cdff2edfa92a423ab62faecdb8185a5c536c9090507284c87427@192.168.12.171:33445"]
 StaticNodes = []
 TrustedNodes = []
-ListenAddr = ":30304"
+ListenAddr = ":30303"
 
 [Stats]
-URL = "Ricardo's node (2):DVagynuHLdn9sK6c@testnet.kowala.io:80"
+URL = "Ricardo's node (1):DVagynuHLdn9sK6c@testnet.kowala.io:80"

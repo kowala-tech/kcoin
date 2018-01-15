@@ -87,10 +87,6 @@ func (b *KowalaApiBackend) GetReceipts(ctx context.Context, blockHash common.Has
 	return core.GetBlockReceipts(b.kusd.chainDb, blockHash, core.GetBlockNumber(b.kusd.chainDb, blockHash)), nil
 }
 
-func (b *KowalaApiBackend) GetTd(blockHash common.Hash) *big.Int {
-	return b.kusd.blockchain.GetTdByHash(blockHash)
-}
-
 func (b *KowalaApiBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	state.SetBalance(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
