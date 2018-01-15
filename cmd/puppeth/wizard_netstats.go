@@ -135,11 +135,11 @@ func (w *wizard) networkStats(tips bool) {
 			log.Error("Failed to parse remote genesis", "err", err)
 		} else {
 			w.conf.genesis = genesis
-			protips.network = genesis.Config.ChainId.Int64()
+			protips.network = genesis.Config.ChainID.Int64()
 		}
 	}
 	if protips.ethstats != "" {
-		w.conf.ethstats = protips.ethstats
+		w.conf.stats = protips.ethstats
 	}
 	w.conf.bootFull = protips.bootFull
 	w.conf.bootLight = protips.bootLight

@@ -54,7 +54,9 @@ type ChainConfig struct {
 }
 
 // TendermintConfig is the consensus engine configs for proof-of-stake based sealing.
-type TendermintConfig struct{}
+type TendermintConfig struct {
+	Rewarded bool `json:"rewarded"` // rewarded version of tendermint
+}
 
 // String implements the stringer interface, returning the consensus engine details.
 func (c *TendermintConfig) String() string {

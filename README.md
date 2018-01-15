@@ -42,7 +42,56 @@ docker run -d --name kusd-node -v /Users/alice/kusd:/root \
 
 ## Networks
 
+### Public
+
 There aren't public networks at the moment.
+
+### Test
+
+http://testnet.kowala.io/
+
+### Creating a Private Blockchain Network
+
+#### Genesis State
+
+1. Generate a new account - this account will be selected (on the next step) as the owner of the network contracts.
+
+```
+$ kusd --config /path/to/your_config.toml account new
+Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
+```
+
+2. The second step consists in creating the genesis of your new network. By far, the easiest way to do it, is by
+   running the puppeth client.
+
+```
+
+```
+
+3. Initialize the blockchain based on the genesis file given.
+
+```
+$ kusd --config /path/to/your_config.toml init path/to/genesis.json
+```
+
+#### Bootstrap Node
+
+In order to have nodes find each other, you need to start a bootstrap node.
+
+1. Generate a node key.
+
+```
+$ bootnode --genkey=boot.key
+```
+
+2. Start the bootnode using the given node key.
+
+```
+$ bootnode --nodekey=boot.key
+```
+
+As soon as the bootnode is running, it will display an enode URL that other nodes can use to connect
+and gather info on other nodes.
 
 ## Proof-of-Stake (PoS)
 

@@ -455,14 +455,14 @@ func deployDashboard(client *sshClient, network string, port int, vhost string, 
 	})
 	files[filepath.Join(workdir, "docker-compose.yaml")] = composefile.Bytes()
 
-	statsLogin := fmt.Sprintf("yournode:%s", conf.ethstats)
+	statsLogin := fmt.Sprintf("yournode:%s", conf.stats)
 	if !ethstats {
 		statsLogin = ""
 	}
 	indexfile := new(bytes.Buffer)
 	template.Must(template.New("").Parse(dashboardContent)).Execute(indexfile, map[string]interface{}{
 		"Network":            network,
-		"NetworkID":          conf.genesis.Config.ChainId,
+		"NetworkID":          conf.genesis.Config.ChainID,
 		"NetworkTitle":       strings.Title(network),
 		"EthstatsPage":       services["ethstats"],
 		"ExplorerPage":       services["explorer"],

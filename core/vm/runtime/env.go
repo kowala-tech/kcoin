@@ -19,7 +19,6 @@ func NewEnv(cfg *Config, state *state.StateDB) *vm.EVM {
 		Coinbase:    cfg.Coinbase,
 		BlockNumber: cfg.BlockNumber,
 		Time:        cfg.Time,
-		Difficulty:  cfg.Difficulty,
 		GasLimit:    new(big.Int).SetUint64(cfg.GasLimit),
 		GasPrice:    cfg.GasPrice,
 	}
