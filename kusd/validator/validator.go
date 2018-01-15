@@ -142,7 +142,7 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 		}
 	*/
 
-	val.joinElection()
+	// val.joinElection()
 
 	//if joined := val.joinElections; !joined {
 	//log.Error("Failed to register validator")
@@ -173,7 +173,7 @@ func (val *Validator) run() {
 func (val *Validator) Stop() {
 	log.Info("Stopping consensus validator")
 
-	val.leaveElection()
+	// val.leaveElection()
 	val.wg.Wait()
 
 	//val.worker.stop()

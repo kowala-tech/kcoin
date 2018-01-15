@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/event"
@@ -201,9 +202,14 @@ func (val *Validator) commitState() stateFn {
 	// @TODO(rgeraldes)
 	// leaves only when it has all the pre commits
 
-	// @TODO if the validator is not part of the new state log out
-	// return val.leftElectionsState
-	// return val.newElectionState
+	voter, err := val.registry.IsVoter(&bind.CallOpts{}, val.account.Address)
+	if err != nil {
+		// @TODO (rgeraldes) - complete
+		//log.Error()
+	}
+	if !voter {
+		return val.loggedOutState
+	}
 
 	return val.newElectionState
 }
