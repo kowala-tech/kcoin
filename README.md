@@ -50,9 +50,9 @@ There aren't public networks at the moment.
 
 http://testnet.kowala.io/
 
-### Creating a Private Blockchain Network
+## Creating a Private Blockchain Network
 
-#### Genesis State
+### Genesis State
 
 1. Generate a new account - this account will be selected (on the next step) as the owner of the network contracts.
 
@@ -74,7 +74,7 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 $ kusd --config /path/to/your_config.toml init path/to/genesis.json
 ```
 
-#### Bootstrap Node
+### Bootstrap Node
 
 In order to have nodes find each other, you need to start a bootstrap node.
 
