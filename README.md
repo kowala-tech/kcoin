@@ -105,7 +105,6 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 
    8. Select "2. Save existing genesis" and fill in the file path to save the genesis into.
 
-
 ```
     $ Which file to save the genesis into? (default = test.json)
     > /src/github.com/kowala-tech/kUSD/assets/test.json
@@ -165,11 +164,3 @@ $ kusd --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0xc
 ## Contact us
 
 Feel free to email us at support@kowala.tech.
-
-```
-
-```
-
-```
-
-```
