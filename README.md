@@ -68,8 +68,6 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
    1. pre-fund the validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/mUSD.sol#L10)
    2. mark the validators as genesis validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L96)
 
-3. run the code generation on the `contracts/network` sub-package
-
 ```
 $ go generate
 ```
@@ -83,9 +81,15 @@ $ kusd --config /path/to/your_config.toml account new
 Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 ```
 
+#### Network
+
+1. Set `totalSupplyWei` field present in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L5) to the correct pre-minted amount of kusd (only needed to calculate the blockcap for the reward)
+
 #### File
 
-1. The first step consists in creating the genesis of your new network. By far, the easiest way to do it, is by running the puppeth client.
+1. run the code generation on the `contracts/network` sub-package
+
+2. The first step consists in creating the genesis of your new network. By far, the easiest way to do it, is by running the puppeth client.
 
    1. Rebuild the puppeth client
       `$ cd cmd $ go install ./puppeth/...`
@@ -111,10 +115,18 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
     INFO [01-16|16:49:37] Exported existing genesis block
 ```
 
-2. Initialize the blockchain based on the genesis file created on the previous step.
+3. Initialize the blockchain based on the genesis file created on the previous step.
 
 ```
 $ kusd --config /path/to/your_config.toml init path/to/genesis.json
+```
+
+4. Set the `mapAddress` (based on the genesis file) variable in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/data_layouts.go#L94) to the correct address.
+
+5. Rebuild the kusd client
+
+```
+$ make kusd
 ```
 
 ### Bootstrap Node
