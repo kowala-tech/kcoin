@@ -10,6 +10,7 @@ import (
 
 	"github.com/kowala-tech/kUSD/accounts/abi"
 	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/vm"
@@ -114,7 +115,7 @@ func createContracts(owner common.Address, contractsCode map[contractType][]byte
 	}
 	r = append(r, c)
 	// create price oracle contract
-	priceOracleAbi, err := abi.JSON(strings.NewReader(nc.PriceOracleContractABI))
+	priceOracleAbi, err := abi.JSON(strings.NewReader(network.PriceOracleContractABI))
 	if err != nil {
 		fmt.Println("can't parse price oracle contract ABI:", err)
 		os.Exit(-7)
@@ -133,7 +134,7 @@ func createContracts(owner common.Address, contractsCode map[contractType][]byte
 	}
 	r = append(r, c)
 	// create network map contract
-	netMapAbi, err := abi.JSON(strings.NewReader(nc.NetworkContractsMapContractABI))
+	netMapAbi, err := abi.JSON(strings.NewReader(network.ContractsContractABI))
 	if err != nil {
 		fmt.Println("can't parse network stats abi:", err)
 		os.Exit(-10)
@@ -178,10 +179,10 @@ func (w *wizard) makeGenesis() {
 		}
 
 		contractsData, err := createContracts(*ownerAddr, map[contractType][]byte{
-			ctNetworkMap:   common.FromHex(nc.NetworkContractsMapContractBin),
-			ctMToken:       common.FromHex(nc.MusdContractBin),
-			ctNetworkStats: common.FromHex(nc.NetworkStatsContractBin),
-			ctPriceOracle:  common.FromHex(nc.PriceOracleContractBin),
+			ctNetworkMap:   common.FromHex(network.ContractsContractBin),
+			ctMToken:       common.FromHex(network.MusdContractBin),
+			ctNetworkStats: common.FromHex(network.NetworkContractBin),
+			ctPriceOracle:  common.FromHex(network.PriceOracleContractBin),
 		})
 		if err != nil {
 			log.Crit("Failed to create contracts", "err", err)
