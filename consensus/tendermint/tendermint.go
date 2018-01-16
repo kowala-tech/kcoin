@@ -89,7 +89,7 @@ func (tendermint *Tendermint) accumulateRewards(state *state.StateDB, header *ty
 		return err
 	}
 	// get mToken contract data
-	mt, err := cMap.GetMToken(sdb)
+	mt, err := cMap.GetMToken(state)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (tendermint *Tendermint) accumulateRewards(state *state.StateDB, header *ty
 			return err
 		}
 		bal.Mul(bal, rewardPerToken)
-		sdb.AddBalance(a, bal)
+		state.AddBalance(a, bal)
 	}
 	reward.Sub(reward, remReward)
 	// update network stats
@@ -141,7 +141,7 @@ func (tendermint *Tendermint) accumulateRewards(state *state.StateDB, header *ty
 	// @TODO (hrosa): should be using a state writer
 	reward.Sub(reward, remReward)
 	w := common.BytesToHash(nStats.TotalSupplyWei.Add(nStats.TotalSupplyWei, reward).Bytes())
-	sdb.SetState(cMap.NetworkStats, common.BytesToHash([]byte{0}), w)
+	state.SetState(cMap.NetworkStats, common.BytesToHash([]byte{0}), w)
 
 	return nil
 }

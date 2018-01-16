@@ -5,8 +5,8 @@ package network
 //go:generate solc --abi --bin --overwrite -o build contracts/network-stats.sol
 //go:generate abigen -abi build/NetworkStats.abi -bin build/NetworkStats.bin -pkg network -type NetworkStatsContract -out network_stats_generated.go
 //go:generate solc --abi --bin --overwrite -o build contracts/network-contracts-map.sol
-//go:generate abigen -abi build/NetworkContractsMap.abi -bin build/NetworkContractsMap.bin -pkg network -type NetworkContractsMapContract -out network_contracts_map_generated.go
-//go:generate solc --abi --bin --overwrite -o build contracts/price-oracle.sol
+//go:generate abigen -abi build/Contracts.abi -bin build/Contracts.bin -pkg network -type NetworkContractsMapContract -out network_contracts_map_generated.go
+//go:generate solc --abi --bin --overwrite -o build contracts/price_oracle.sol
 //go:generate abigen -abi build/PriceOracle.abi -bin build/PriceOracle.bin -pkg network -type PriceOracleContract -out price_oracle_generated.go
 
 import (
@@ -82,8 +82,8 @@ func (m *MToken) Delegated(fromAddr, toAddr common.Address) (*big.Int, error) {
 	return r, nil
 }
 
-// NetworkContractsMap data layout.
-type NetworkContractsMap struct {
+// Contracts data layout.
+type Contracts struct {
 	Ownable
 	// mToken contract address.
 	MToken common.Address
@@ -202,8 +202,8 @@ func (po *PriceOracle) PriceForOneFiat() *big.Int {
 	return po.PriceForFiat(po.OneFiat())
 }
 
-// NetworkStats data layout.
-type NetworkStats struct {
+// Network data layout.
+type Network struct {
 	// Total supply of wei. Must be updated every block.
 	TotalSupplyWei *big.Int
 	// Reward calculated for the last block. Must be updated every block.
