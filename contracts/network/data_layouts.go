@@ -91,7 +91,7 @@ type Contracts struct {
 	Network common.Address
 }
 
-var mapAddress = common.HexToAddress("0x0c6e12469d65f6135f4b6b32148abbb25bed7349")
+var mapAddress = common.HexToAddress("0x2a4443ec27bf5f849b2da15eb697d3ef5302f186")
 
 func GetContracts(state *state.StateDB) (*Contracts, error) {
 	r := &Contracts{}
