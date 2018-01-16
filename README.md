@@ -56,7 +56,7 @@ http://testnet.kowala.io/
 
 #### Validators
 
-1. Generate/Request a new account for each genesis validator
+1. Generate/request a new account for each genesis validator
 
 ```
 $ kusd --config /path/to/your_config.toml account new
@@ -64,8 +64,8 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 ```
 
 2. Fill in the validator details in the network contracts
-   2.1. pre-fund the validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/mUSD.sol#L10)
-   2.2. mark the validators as genesis validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L96)
+   ⋅⋅1. pre-fund the validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/mUSD.sol#L10)
+   ⋅⋅2. mark the validators as genesis validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L96)
 
 3. run the code generation on the `contracts/network` sub-package
 
@@ -87,17 +87,10 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 1. The first step consists in creating the genesis of your new network. By far, the easiest way to do it, is by running the puppeth client.
 
 ⋅⋅1. Rebuild the puppeth client
-
-```
-     $ cd cmd
-     $ go install ./puppeth/...
-```
+`$ cd cmd $ go install ./puppeth/...`
 
 ⋅⋅2. Run the client
-
-    ```
-        $ puppeth
-    ```
+`$ puppeth`
 
 ⋅⋅3. Specify a network name
 
