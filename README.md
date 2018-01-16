@@ -54,6 +54,27 @@ http://testnet.kowala.io/
 
 ### Genesis State
 
+#### Validators
+
+1. Generate/Request a new account for each genesis validator
+
+```
+$ kusd --config /path/to/your_config.toml account new
+Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
+```
+
+2. Fill in the validator details in the network contracts
+   2.1. pre-fund the validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/mUSD.sol#L10)
+   2.2. mark the validators as genesis validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L96)
+
+3. run the code generation on the `contracts/network` sub-package
+
+````
+$ go generate
+```
+
+#### Network Contracts - Owner
+
 1. Generate a new account - this account will be selected (on the next step) as the owner of the network contracts.
 
 ```
@@ -61,14 +82,42 @@ $ kusd --config /path/to/your_config.toml account new
 Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 ```
 
-2. The second step consists in creating the genesis of your new network. By far, the easiest way to do it, is by
-   running the puppeth client.
+#### File
+
+1. The first step consists in creating the genesis of your new network. By far, the easiest way to do it, is by running the puppeth client.
+
+1.1. Rebuild the puppeth client
+
+   ```
+        $ cd cmd
+        $ go install ./puppeth/...
+   ```
+
+1.2. Run the client
+
+    ```
+        $ puppeth
+    ```
+
+1.3. Specify a network name
+
+1.4. Select the option "2. Configure new genesis"
+
+1.5. Select "1. Tendermint - proof-of-stake"
+
+1.6. Fill in the account of the owner of the network contracts
+
+1.7. Fill in any additional information (until the process is complete)
+
+1.8. Select "2. Save existing genesis" and fill in the file path to save the genesis into.
 
 ```
-
+    $ Which file to save the genesis into? (default = test.json)
+    > /src/github.com/kowala-tech/kUSD/assets/test.json
+    INFO [01-16|16:49:37] Exported existing genesis block
 ```
 
-3. Initialize the blockchain based on the genesis file given.
+2. Initialize the blockchain based on the genesis file created on the previous step.
 
 ```
 $ kusd --config /path/to/your_config.toml init path/to/genesis.json
@@ -121,3 +170,4 @@ $ kusd --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0xc
 ## Contact us
 
 Feel free to email us at support@kowala.tech.
+````
