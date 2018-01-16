@@ -69,7 +69,7 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 
 3. run the code generation on the `contracts/network` sub-package
 
-````
+```
 $ go generate
 ```
 
@@ -86,30 +86,30 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 
 1. The first step consists in creating the genesis of your new network. By far, the easiest way to do it, is by running the puppeth client.
 
-1.1. Rebuild the puppeth client
+⋅⋅1. Rebuild the puppeth client
 
-   ```
-        $ cd cmd
-        $ go install ./puppeth/...
-   ```
+```
+     $ cd cmd
+     $ go install ./puppeth/...
+```
 
-1.2. Run the client
+⋅⋅2. Run the client
 
     ```
         $ puppeth
     ```
 
-1.3. Specify a network name
+⋅⋅3. Specify a network name
 
-1.4. Select the option "2. Configure new genesis"
+⋅⋅4. Select the option "2. Configure new genesis"
 
-1.5. Select "1. Tendermint - proof-of-stake"
+⋅⋅5. Select "1. Tendermint - proof-of-stake"
 
-1.6. Fill in the account of the owner of the network contracts
+⋅⋅6. Fill in the account of the owner of the network contracts
 
-1.7. Fill in any additional information (until the process is complete)
+⋅⋅7. Fill in any additional information (until the process is complete)
 
-1.8. Select "2. Save existing genesis" and fill in the file path to save the genesis into.
+⋅⋅8. Select "2. Save existing genesis" and fill in the file path to save the genesis into.
 
 ```
     $ Which file to save the genesis into? (default = test.json)
@@ -170,4 +170,7 @@ $ kusd --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0xc
 ## Contact us
 
 Feel free to email us at support@kowala.tech.
-````
+
+```
+
+```
