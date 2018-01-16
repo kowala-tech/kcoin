@@ -32,13 +32,14 @@ balances:
 * `balanceOf(B)` returns 15 (10 + 10 - 5)
 * `balanceOf(C)` returns 15 (10 + 15)
 
-# Network contracts map
+# Contracts
 
 Contains the address of special purpose contracts (and allow for those to be changed by the contract owner).
 
-# Network stats
+# Network
 
-Contains useful info and is used to save the total amount of minted wei.
+Contains network information and is used to save the total amount of minted wei.
+It also contains the logic to handle network validators.
 
 # kUSD-USD
 

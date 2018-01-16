@@ -8,13 +8,13 @@ contract Contracts is Ownable {
     address public mToken;
     // kUSD/USD price oracle.
     address public priceOracle;
-    // Network stats and info.
-    address public networkStats;
+    // Network contract
+    address public networkContract;
 
-    function Contracts(address _mToken, address _priceOracle, address _networkStats) public {
+    function Contracts(address _mToken, address _priceOracle, address _networkContract) public {
         mToken = _mToken;
         priceOracle = _priceOracle;
-        networkStats = _networkStats;
+        networkContract = _networkContract;
     }
 
     // Set mToken contract address.
@@ -27,8 +27,8 @@ contract Contracts is Ownable {
         priceOracle = addr;
     }
 
-    // Set network stats address.
-    function setNetworkStats(address addr) onlyOwner public {
-        networkStats = addr;
+    // Set network contract address.
+    function setNetworkContract(address addr) onlyOwner public {
+        networkContract = addr;
     }
 }

@@ -61,7 +61,7 @@ contract Network {
         return voterIndex.length;
     }
 
-    function getUserAtIndex(uint index) public view returns (address addr) {
+    function getVoterAtIndex(uint index) public view returns (address addr) {
         return voterIndex[index];
     }
 
@@ -92,11 +92,13 @@ contract Network {
     }
 
     function Network() public {
-        genesis[0x0D4CA5AF584E49AB6D08EB0A8C6AD73A41AA74D8] = 50;
-        genesis[0x29EE62EB3A8322E7FDDB548E8A1FA62871027CD4] = 50;
-        genesis[0x98328A8723275E9588CFC6ABD71E93C3000BD7B5] = 50;
-        genesis[0xAE1B3B25B26E71343EDA6744F88D9D98DF141D2F] = 50;
-        genesis[0xB28FC698F28A8ADC2F38CC8A16B87FA709ADE0FF] = 50;
-        genesis[0xC57BF12BB34F6FD85BDBF0CACA983528422BF7A2] = 50;
+        // @TODO (rgerades) - on creation, set in the genesis 
+        // the existing accounts and their balance
+        genesis[0x0D4CA5AF584E49AB6D08EB0A8C6AD73A41AA74D8] = 100;
+        genesis[0x29EE62EB3A8322E7FDDB548E8A1FA62871027CD4] = 100;
+        genesis[0x98328A8723275E9588CFC6ABD71E93C3000BD7B5] = 100;
+        genesis[0xAE1B3B25B26E71343EDA6744F88D9D98DF141D2F] = 100;
+        genesis[0xB28FC698F28A8ADC2F38CC8A16B87FA709ADE0FF] = 100;
+        genesis[0xC57BF12BB34F6FD85BDBF0CACA983528422BF7A2] = 100;
     }
 }
