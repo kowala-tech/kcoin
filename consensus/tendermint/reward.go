@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/params"
 )
@@ -18,65 +19,65 @@ var (
 	big101    = big.NewInt(101)
 )
 
-func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, error) {
+func CalculateBlockReward(blockNumber *big.Int, state *state.StateDB) (*big.Int, error) {
 	// block 0
 	if blockNumber.Cmp(common.Big0) == 0 {
 		return common.Big0, nil
 	}
 	// open contracts map
-	cMap, err := nc.GetContractsMap(sdb)
+	contracts, err := network.GetContracts(state)
 	if err != nil {
 		return nil, err
 	}
 	// block 1
 	if blockNumber.Cmp(common.Big1) == 0 {
-		sdb.SetState(cMap.NetworkStats, common.HexToHash("0x02"), common.BigToHash(big42kUSD))
+		state.SetState(contracts.Network, common.HexToHash("0x02"), common.BigToHash(big42kUSD))
 		return big42kUSD, nil
 	}
-	// get network stats (last price)
-	nStats, err := cMap.GetNetworkStats(sdb)
+	// get network info (last price)
+	networkInfo, err := contracts.GetNetworkContract(state)
 	if err != nil {
 		return nil, err
 	}
 	// get price oracle
-	po, err := cMap.GetPriceOracle(sdb)
+	po, err := contracts.GetPriceOracle(state)
 	if err != nil {
 		return nil, err
 	}
 	// get current price
 	curPrice := po.PriceForOneCrypto()
 	// update last price
-	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x03"), common.BigToHash(curPrice))
+	state.SetState(contracts.Network, common.HexToHash("0x03"), common.BigToHash(curPrice))
 	// check price
 	oneFiat := po.OneFiat()
-	cmpRes := nStats.LastPrice.Cmp(oneFiat)
+	cmpRes := networkInfo.LastPrice.Cmp(oneFiat)
 	var r *big.Int
 	// p(b-1) > 1
 	// if curPrice.Cmp(nStats.LastPrice) >= 0 &&
 	if cmpRes > 0 {
 		// p(b) >= p(b - 1)
-		if curPrice.Cmp(nStats.LastPrice) >= 0 {
-			fmt.Println(">>>> p(b) >= p(b - 1) > 1 => min(1.01 * reward(b - 1), cap(b))", curPrice, nStats.LastPrice, nStats.LastBlockReward, blockRewardCap(nStats.TotalSupplyWei))
+		if curPrice.Cmp(networkInfo.LastPrice) >= 0 {
+			fmt.Println(">>>> p(b) >= p(b - 1) > 1 => min(1.01 * reward(b - 1), cap(b))", curPrice, networkInfo.LastPrice, networkInfo.LastBlockReward, blockRewardCap(networkInfo.TotalSupplyWei))
 			// min(1.01 * reward(b - 1), cap(b))
 			r = bigMin(
 				new(big.Int).Add(
-					nStats.LastBlockReward,
-					new(big.Int).Div(nStats.LastBlockReward, big100),
+					networkInfo.LastBlockReward,
+					new(big.Int).Div(networkInfo.LastBlockReward, big100),
 				),
-				blockRewardCap(nStats.TotalSupplyWei))
+				blockRewardCap(networkInfo.TotalSupplyWei))
 		}
 	} else if cmpRes < 0 {
 		// p(b) < p(b-1) < 1
-		if curPrice.Cmp(nStats.LastPrice) < 0 {
-			fmt.Println(">>>> p(b) < p(b-1) < 1 => max(1/1.01 * reward(b - 1), 0.0001)", curPrice, nStats.LastPrice, nStats.LastBlockReward)
+		if curPrice.Cmp(networkInfo.LastPrice) < 0 {
+			fmt.Println(">>>> p(b) < p(b-1) < 1 => max(1/1.01 * reward(b - 1), 0.0001)", curPrice, networkInfo.LastPrice, networkInfo.LastBlockReward)
 			// max(1/1.01 * reward(b - 1), 0.0001)
 			r = bigMax(
 				new(big.Int).Mul(
 					new(big.Int).Mul(
-						new(big.Int).Div(nStats.LastBlockReward, big101),
+						new(big.Int).Div(networkInfo.LastBlockReward, big101),
 						big100,
 					),
-					nStats.LastBlockReward,
+					networkInfo.LastBlockReward,
 				),
 				big10e14,
 			)
@@ -84,11 +85,11 @@ func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, e
 	}
 	// otherwise => reward(b - 1)
 	if r == nil {
-		fmt.Println(">>>> otherwise => reward(b - 1)", nStats.LastBlockReward)
-		r = nStats.LastBlockReward // reward(b - 1)
+		fmt.Println(">>>> otherwise => reward(b - 1)", networkInfo.LastBlockReward)
+		r = networkInfo.LastBlockReward // reward(b - 1)
 	}
 	//  update last block reward
-	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x02"), common.BigToHash(r))
+	state.SetState(contracts.Network, common.HexToHash("0x02"), common.BigToHash(r))
 	return r, nil
 }
 

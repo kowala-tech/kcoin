@@ -91,8 +91,8 @@ func (val *Validator) newElectionState() stateFn {
 
 	// @NOTE (rgeraldes) - wait for txs to be available in the txPool for the round 0
 	// If the last block changed the app hash, we may need an empty "proof" block.
-	numTxs, _ := val.kusd.TxPool().Stats() //
-	if val.round == 0 && numTxs == 0 {     //!cs.needProofBlock(height)
+	numTxs, _ := val.backend.TxPool().Stats() //
+	if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
 		log.Info("Waiting for transactions")
 		txSub := val.eventMux.Subscribe(core.TxPreEvent{})
 		defer txSub.Unsubscribe()
@@ -202,7 +202,7 @@ func (val *Validator) commitState() stateFn {
 	// @TODO(rgeraldes)
 	// leaves only when it has all the pre commits
 
-	voter, err := val.registry.IsVoter(&bind.CallOpts{}, val.account.Address)
+	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
 	if err != nil {
 		// @TODO (rgeraldes) - complete
 		//log.Error()

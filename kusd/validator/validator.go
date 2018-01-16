@@ -10,7 +10,7 @@ import (
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/contracts/voters/contract"
+	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -29,6 +29,7 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() kusddb.Database
+	ContractBackend() bind.ContractBackend
 }
 
 // Validator represents a consensus validator
@@ -42,17 +43,15 @@ type Validator struct {
 	deposit    uint64
 
 	// blockchain
-	kusd   Backend
-	chain  *core.BlockChain
-	config *params.ChainConfig
-	engine consensus.Engine
+	backend Backend
+	chain   *core.BlockChain
+	config  *params.ChainConfig
+	engine  consensus.Engine
 
-	// registry
-	registry *contract.VoterRegistry
+	network *network.NetworkContract // validators contract
 
-	// wallet (signer)
 	account accounts.Account
-	wallet  accounts.Wallet
+	wallet  accounts.Wallet // signer
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
@@ -65,24 +64,32 @@ type Validator struct {
 }
 
 // New returns a new consensus validator
-func New(kusd Backend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine) *Validator {
+func New(backend Backend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine) *Validator {
 	validator := &Validator{
 		config:   config,
-		kusd:     kusd,
-		chain:    kusd.BlockChain(),
+		backend:  backend,
+		chain:    backend.BlockChain(),
 		engine:   engine,
 		eventMux: eventMux,
 	}
+	state, err := validator.chain.State()
+	if err != nil {
+		log.Crit("Failed to fetch the current state", "err", err)
+	}
 
-	// setup the registry
-	// @TODO (rgeraldes) - complete
-	/*
-		registry, err := contract.NewVoterRegistry()
-		if err != nil {
-			// @TODO (rgeraldes) -
-		}
-		validator.registry = registry
-	*/
+	// network contracts
+	contracts, err := network.GetContracts(state)
+	if err != nil {
+		log.Crit("Failed to access the network contracts", "err", err)
+	}
+
+	// create the network contract instance
+	contract, err := network.NewNetworkContract(contracts.Network, backend.ContractBackend())
+	if err != nil {
+		log.Crit("Failed to load the network contract", "err", err)
+	}
+
+	validator.network = contract
 
 	//go validator.sync()
 
@@ -124,7 +131,7 @@ out:
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	// @TODO (rgeraldes) - review logic (start is called by sync later on if the node is syncing)
 	account := accounts.Account{Address: coinbase}
-	wallet, err := val.kusd.AccountManager().Find(account)
+	wallet, err := val.backend.AccountManager().Find(account)
 	if err != nil {
 		log.Crit("Failed to find a wallet", "err", err, "account", account.Address)
 	}
@@ -438,7 +445,7 @@ func (val *Validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 }
 
 func (val *Validator) joinElection() bool {
-	voter, err := val.registry.IsVoter(&bind.CallOpts{}, val.account.Address)
+	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
 	if err != nil {
 		log.Error("Failed to verify if the validator is already registered as a voter")
 		return false
@@ -461,7 +468,7 @@ func (val *Validator) leaveElection() {
 func (val *Validator) makeDeposit() {
 	// @TODO (rgeraldes) - the initial deposit value should also be
 	// validated against the minimum deposit
-	min, err := val.registry.MinimumDeposit(&bind.CallOpts{})
+	min, err := val.network.MinDeposit(&bind.CallOpts{})
 	if err != nil {
 		log.Crit("Failed to verify the minimum deposit")
 		return
@@ -473,15 +480,15 @@ func (val *Validator) makeDeposit() {
 	}
 
 	// check if there are spots left to vote
-	available, err := val.registry.Availability(&bind.CallOpts{})
+	available, err := val.network.Availability(&bind.CallOpts{})
 	if err != nil {
-		log.Crit("Failed to verify the registry availability")
+		log.Crit("Failed to verify the network availability")
 		return
 	}
 
 	if available {
 		opts := &bind.TransactOpts{}
-		_, err := val.registry.Deposit(opts)
+		_, err := val.network.Deposit(opts)
 		if err != nil {
 			log.Crit("Failed to make a deposit to participate in the election")
 		}
@@ -493,7 +500,7 @@ func (val *Validator) makeDeposit() {
 
 func (val *Validator) withdraw() {
 	opts := &bind.TransactOpts{}
-	_, err := val.registry.Withdraw(opts)
+	_, err := val.network.Withdraw(opts)
 	if err != nil {
 		log.Error("Failed to withdraw from the election")
 	}
@@ -548,7 +555,7 @@ func (val *Validator) createBlock() *types.Block {
 		//commit = val.lastCommit.Proof()
 	}
 
-	pending, err := val.kusd.TxPool().Pending()
+	pending, err := val.backend.TxPool().Pending()
 	if err != nil {
 		log.Crit("Failed to fetch pending transactions", "err", err)
 	}
@@ -556,7 +563,7 @@ func (val *Validator) createBlock() *types.Block {
 	txs := types.NewTransactionsByPriceAndNonce(pending)
 	val.commitTransactions(val.eventMux, txs, val.chain, val.account.Address)
 
-	val.kusd.TxPool().RemoveBatch(val.failedTxs)
+	val.backend.TxPool().RemoveBatch(val.failedTxs)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block

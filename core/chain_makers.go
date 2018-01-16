@@ -161,8 +161,8 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db kusddb.Da
 			gen(i, b)
 		}
 
-		// @TODO(rgeraldes) - review
-		tendermint.AccumulateRewards(statedb, h)
+		// @TODO(rgeraldes) - review/add signers
+		tendermint.AccumulateRewards(statedb, h, nil)
 		root, err := statedb.CommitTo(db, true)
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))

@@ -16,8 +16,6 @@ import (
 	"github.com/kowala-tech/kUSD/core/state"
 )
 
-// Contracts data layout.
-
 // Ownable contract.
 type Ownable struct {
 	ContractOwner common.Address
@@ -129,8 +127,8 @@ func (contracts *Contracts) SetPriceOracle(state *state.StateDB, po *PriceOracle
 	return state.MarshalState(contracts.PriceOracle, po)
 }
 
-// GetNetworkStats parses the GetNetworkStats contract local storage.
-func (contracts *Contracts) GetNetworkStats(state *state.StateDB) (*Network, error) {
+// GetNetworkContract parses the GetNetworkContract contract local storage.
+func (contracts *Contracts) GetNetworkContract(state *state.StateDB) (*Network, error) {
 	r := &Network{}
 	if err := state.UnmarshalState(contracts.Network, r); err != nil {
 		return nil, err
@@ -138,7 +136,7 @@ func (contracts *Contracts) GetNetworkStats(state *state.StateDB) (*Network, err
 	return r, nil
 }
 
-func (contracts *Contracts) SetNetworkStats(state *state.StateDB, network *Network) error {
+func (contracts *Contracts) SetNetworkContract(state *state.StateDB, network *Network) error {
 	return state.MarshalState(contracts.Network, network)
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
+	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/log"
@@ -70,7 +71,7 @@ func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *type
 	if tendermint.config.Rewarded {
 		// get signers addresses
 		// @TODO (rgeraldes)
-		if err := tendermint.accumulateRewards(state, header, nil); err != nil {
+		if err := AccumulateRewards(state, header, nil); err != nil {
 			return nil, err
 		}
 	}
@@ -81,15 +82,14 @@ func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *type
 	return types.NewBlock(header, txs, receipts, commit), nil
 }
 
-func (tendermint *Tendermint) accumulateRewards(state *state.StateDB, header *types.Header, addrs []common.Address) error {
+func AccumulateRewards(state *state.StateDB, header *types.Header, addrs []common.Address) error {
 	// @TODO (hrosa): what to do with transactions fees ?
-	// get contracts map
-	cMap, err := nc.GetContractsMap(state)
+	contracts, err := network.GetContracts(state)
 	if err != nil {
 		return err
 	}
 	// get mToken contract data
-	mt, err := cMap.GetMToken(state)
+	mt, err := contracts.GetMToken(state)
 	if err != nil {
 		return err
 	}
@@ -134,14 +134,14 @@ func (tendermint *Tendermint) accumulateRewards(state *state.StateDB, header *ty
 	}
 	reward.Sub(reward, remReward)
 	// update network stats
-	nStats, err := cMap.GetNetworkStats(state)
+	networkInfo, err := contracts.GetNetworkContract(state)
 	if err != nil {
 		return err
 	}
 	// @TODO (hrosa): should be using a state writer
 	reward.Sub(reward, remReward)
-	w := common.BytesToHash(nStats.TotalSupplyWei.Add(nStats.TotalSupplyWei, reward).Bytes())
-	state.SetState(cMap.NetworkStats, common.BytesToHash([]byte{0}), w)
+	w := common.BytesToHash(networkInfo.TotalSupplyWei.Add(networkInfo.TotalSupplyWei, reward).Bytes())
+	state.SetState(contracts.Network, common.BytesToHash([]byte{0}), w)
 
 	return nil
 }
