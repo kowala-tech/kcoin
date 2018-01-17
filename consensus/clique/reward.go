@@ -3,10 +3,12 @@ package clique
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/kowala-tech/kUSD/common"
 	nc "github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core/state"
+	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/params"
 )
 
@@ -19,20 +21,102 @@ var (
 	big101    = big.NewInt(101)
 )
 
-func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, error) {
+func (c *Clique) accumulateRewards(sdb *state.StateDB, header *types.Header, addrs []common.Address) error {
+	// TODO(hrosa): what to do with transactions fees ?
+	// get contracts map
+	cMap, err := nc.GetContractsMap(sdb)
+	if err != nil {
+		return err
+	}
+	// get mToken contract data
+	mt, err := cMap.GetMToken(sdb)
+	if err != nil {
+		return err
+	}
+	po, err := cMap.GetPriceOracle(sdb)
+	if err != nil {
+		return err
+	}
+	// gather how many tokens each address holds
+	addrsTokens := make(map[common.Address]int64, len(addrs))
+	var totalTokens int64
+	for _, a := range addrs {
+		b, err := mt.BalanceOf(a)
+		if err != nil {
+			return err
+		}
+		bi := b.Int64()
+		totalTokens += bi
+		addrsTokens[a] = bi
+	}
+	// TODO(hrosa): remove. on the mainnet, tokens already exist
+	if totalTokens == 0 {
+		panic("need tokens")
+	}
+	// calculate the block reward.
+	reward, err := calculateBlockReward(header.Number, sdb)
+	if err != nil {
+		return err
+	}
+	// calculate the reward per token.
+	rewardPerToken := new(big.Int).Div(
+		reward,
+		mt.MaximumTokens,
+	)
+	// calculate total reward
+	realReward := new(big.Int).Mul(rewardPerToken, big.NewInt(totalTokens))
+
+	coins, coinsRem := new(big.Int).DivMod(realReward, big.NewInt(1000000000000000000), new(big.Int))
+	coinsRemStr := coinsRem.String()
+	coinsPerToken, coinsPerTokenRem := new(big.Int).DivMod(rewardPerToken, big.NewInt(1000000000000000000), new(big.Int))
+	coinsPerTokenRemStr := coinsPerTokenRem.String()
+	fmt.Printf(
+		">>>> reward(%s): %s.%s (%s.%s per token, %d tokens) == %v\n>>>>\n",
+		header.Number,
+		coins.String(),
+		strings.Repeat("0", 18-len(coinsRemStr))+coinsRemStr,
+		coinsPerToken.String(),
+		strings.Repeat("0", 18-len(coinsPerTokenRemStr))+coinsPerTokenRemStr,
+		totalTokens,
+		rewardPerToken,
+	)
+
+	// distribute rewards
+	for _, a := range addrs {
+		bal, err := mt.BalanceOf(a)
+		if err != nil {
+			return err
+		}
+		bal.Mul(bal, rewardPerToken)
+		sdb.AddBalance(a, bal)
+	}
+	// update network stats
+	nStats, err := cMap.GetNetworkStats(sdb)
+	if err != nil {
+		return err
+	}
+	nStats.TotalSupplyWei.Add(nStats.TotalSupplyWei, realReward)
+	nStats.LastBlockReward = reward
+	nStats.LastPrice = po.PriceForOneCrypto()
+	if err := cMap.SetNetworkStats(sdb, nStats); err != nil {
+		return err
+	}
+	return nil
+}
+
+func calculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, error) {
 	// block 0
 	if blockNumber.Cmp(common.Big0) == 0 {
 		return common.Big0, nil
+	}
+	// block 1
+	if blockNumber.Cmp(common.Big1) == 0 {
+		return big42kUSD, nil
 	}
 	// open contracts map
 	cMap, err := nc.GetContractsMap(sdb)
 	if err != nil {
 		return nil, err
-	}
-	// block 1
-	if blockNumber.Cmp(common.Big1) == 0 {
-		sdb.SetState(cMap.NetworkStats, common.HexToHash("0x02"), common.BigToHash(big42kUSD))
-		return big42kUSD, nil
 	}
 	// get network stats (last price)
 	nStats, err := cMap.GetNetworkStats(sdb)
@@ -46,68 +130,64 @@ func CalculateBlockReward(blockNumber *big.Int, sdb *state.StateDB) (*big.Int, e
 	}
 	// get current price
 	curPrice := po.PriceForOneCrypto()
-	// update last price
-	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x03"), common.BigToHash(curPrice))
 	// check price
-	oneFiat := po.OneFiat()
-	cmpRes := nStats.LastPrice.Cmp(oneFiat)
+	cmpCurLast := curPrice.Cmp(nStats.LastPrice)
+	cmpLastOneFiat := nStats.LastPrice.Cmp(po.OneFiat())
 	var r *big.Int
 	// p(b-1) > 1
-	// if curPrice.Cmp(nStats.LastPrice) >= 0 &&
-	if cmpRes > 0 {
-		// p(b) >= p(b - 1)
-		if curPrice.Cmp(nStats.LastPrice) >= 0 {
-			fmt.Println(">>>> p(b) >= p(b - 1) > 1 => min(1.01 * reward(b - 1), cap(b))", curPrice, nStats.LastPrice, nStats.LastBlockReward, blockRewardCap(nStats.TotalSupplyWei))
-			// min(1.01 * reward(b - 1), cap(b))
-			r = bigMin(
-				new(big.Int).Add(
-					nStats.LastBlockReward,
-					new(big.Int).Div(nStats.LastBlockReward, big100),
-				),
-				blockRewardCap(nStats.TotalSupplyWei))
-		}
-	} else if cmpRes < 0 {
-		// p(b) < p(b-1) < 1
-		if curPrice.Cmp(nStats.LastPrice) < 0 {
-			fmt.Println(">>>> p(b) < p(b-1) < 1 => max(1/1.01 * reward(b - 1), 0.0001)", curPrice, nStats.LastPrice, nStats.LastBlockReward)
-			// max(1/1.01 * reward(b - 1), 0.0001)
-			r = bigMax(
+	if cmpCurLast >= 0 && cmpLastOneFiat > 0 {
+		fmt.Println(">>>> reward: p(b) >= p(b - 1) > 1 == min(1.01 * reward(b - 1), cap(b))", curPrice, nStats.LastPrice, nStats.LastBlockReward, blockRewardCap(nStats.TotalSupplyWei))
+		// min(1.01 * reward(b - 1), cap(b))
+		r = bigMin(
+			new(big.Int).Add(
+				nStats.LastBlockReward,
+				new(big.Int).Div(nStats.LastBlockReward, big100),
+			),
+			blockRewardCap(nStats.TotalSupplyWei))
+	} else if cmpCurLast <= 0 && cmpLastOneFiat < 0 {
+		fmt.Println(">>>> reward: p(b) <= p(b-1) < 1 == max(1/1.01 * reward(b - 1), 0.0001)", curPrice, nStats.LastPrice, nStats.LastBlockReward)
+		// max(1/1.01 * reward(b - 1), 0.0001)
+		r = bigMax(
+			new(big.Int).Div(
 				new(big.Int).Mul(
-					new(big.Int).Mul(
-						new(big.Int).Div(nStats.LastBlockReward, big101),
-						big100,
-					),
 					nStats.LastBlockReward,
+					big100,
 				),
-				big10e14,
-			)
-		}
+				big101,
+			),
+			big10e14,
+		)
 	}
 	// otherwise => reward(b - 1)
 	if r == nil {
-		fmt.Println(">>>> otherwise => reward(b - 1)", nStats.LastBlockReward)
+		fmt.Println(">>>> reward: otherwise == reward(b - 1)", nStats.LastBlockReward)
 		r = nStats.LastBlockReward // reward(b - 1)
 	}
-	//  update last block reward
-	sdb.SetState(cMap.NetworkStats, common.HexToHash("0x02"), common.BigToHash(r))
 	return r, nil
 }
 
 func bigMax(b1, b2 *big.Int) *big.Int {
+	fmt.Printf(">>>> bigMax(%s, %s) =", b1.String(), b2.String())
 	if b1.Cmp(b2) < 0 {
+		fmt.Printf("%s\n", b2.String())
 		return b2
 	}
+	fmt.Printf("%s\n", b1.String())
 	return b1
 }
 
 func bigMin(b1, b2 *big.Int) *big.Int {
+	fmt.Printf(">>>> bigMin(%s, %s) =", b1.String(), b2.String())
 	if b1.Cmp(b2) > 0 {
+		fmt.Printf("%s\n", b2.String())
 		return b2
 	}
+	fmt.Printf("%s\n", b1.String())
 	return b1
 }
 
 func blockRewardCap(totalWei *big.Int) *big.Int {
+	fmt.Printf(">>>> blockRewardCap(): ")
 	return bigMax(new(big.Int).Div(totalWei, big1k), big82kUSD)
 }
 

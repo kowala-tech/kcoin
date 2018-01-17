@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"strings"
 	"sync"
 	"time"
 
@@ -32,7 +31,6 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
 	"github.com/kowala-tech/kUSD/consensus"
-	nc "github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/crypto"
@@ -569,6 +567,7 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sdb *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	fmt.Println("Finalize()")
 	if c.config.Rewarded {
 		// get signers addresses.
 		// TODO: this should be tendermint active participants
@@ -587,71 +586,6 @@ func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sdb
 
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
-}
-
-func (c *Clique) accumulateRewards(sdb *state.StateDB, header *types.Header, addrs []common.Address) error {
-	// TODO(hrosa): what to do with transactions fees ?
-	// get contracts map
-	cMap, err := nc.GetContractsMap(sdb)
-	if err != nil {
-		return err
-	}
-	// get mToken contract data
-	mt, err := cMap.GetMToken(sdb)
-	if err != nil {
-		return err
-	}
-	// gather how many tokens each address holds
-	addrsTokens := make(map[common.Address]int64, len(addrs))
-	var totalTokens int64
-	for _, a := range addrs {
-		b, err := mt.BalanceOf(a)
-		if err != nil {
-			return err
-		}
-		bi := b.Int64()
-		totalTokens += bi
-		addrsTokens[a] = bi
-	}
-	// TODO(hrosa): remove. on the mainnet, tokens already exist
-	if totalTokens == 0 {
-		return nil
-	}
-	// calculate the block reward.
-	reward, err := CalculateBlockReward(header.Number, sdb)
-	if err != nil {
-		return err
-	}
-	coins, coinsRem := new(big.Int).DivMod(reward, big.NewInt(1000000000000000000), new(big.Int))
-	coinsRemStr := coinsRem.String()
-	fmt.Printf(">>>> reward(%s): %s.%s\n", header.Number, coins.String(), strings.Repeat("0", len(coinsRemStr))+coinsRemStr)
-	// calculate the reward per token.
-	rewardPerToken, remReward := new(big.Int).DivMod(
-		reward,
-		big.NewInt(totalTokens),
-		new(big.Int),
-	)
-	// distribute rewards
-	for _, a := range addrs {
-		bal, err := mt.BalanceOf(a)
-		if err != nil {
-			return err
-		}
-		bal.Mul(bal, rewardPerToken)
-		sdb.AddBalance(a, bal)
-	}
-	reward.Sub(reward, remReward)
-	// update network stats
-	nStats, err := cMap.GetNetworkStats(sdb)
-	if err != nil {
-		return err
-	}
-	// TODO(hrosa): should be using a state writer
-	reward.Sub(reward, remReward)
-	w := common.BytesToHash(nStats.TotalSupplyWei.Add(nStats.TotalSupplyWei, reward).Bytes())
-	sdb.SetState(cMap.NetworkStats, common.BytesToHash([]byte{0}), w)
-
-	return nil
 }
 
 // Authorize injects a private key into the consensus engine to mint new blocks
