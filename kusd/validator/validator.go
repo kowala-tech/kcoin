@@ -453,6 +453,24 @@ func (val *Validator) joinElection() {
 	// How long is it going to stay registered as a voter?
 	// He should connect again even if he is already registered as a voter?
 
+	count, err := val.network.GetVoterCount(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to get the voter count", "err", err)
+	}
+
+	maxVoters, err := val.network.MAX_VOTERS(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to get the maximum number of voters value", "err", err)
+	}
+
+	minDeposit, err := val.network.MinDeposit(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to get the minimum deposit", "err", err)
+	}
+
+	log.Info("Election info", "Number of voters", count, "Max Voters", maxVoters, "Minimum Deposit", minDeposit)
+
+	log.Info("Voter Registration", "address", val.account.Address.Hex())
 	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.account.Address)
 	if err != nil {
 		log.Crit("Failed to verify if the validator is part of the genesis block")

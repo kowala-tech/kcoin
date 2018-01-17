@@ -208,4 +208,5 @@ type Network struct {
 	LastBlockReward *big.Int
 	// Price established by the price oracle for the last block. Must be updated every block.
 	LastPrice *big.Int
+	Gencount *big.Int
 }

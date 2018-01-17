@@ -23,8 +23,25 @@ contract Network {
     // minimum deposit value to participate in the consensus
     uint public minDeposit = 0;
 
-    event LogNewVoter(address indexed addr, uint index, uint deposit);
-    event LogDeleteVoter(address indexed addr, uint index);
+    //event LogNewVoter(address indexed addr, uint index, uint deposit);
+    //event LogDeleteVoter(address indexed addr, uint index);
+
+    function Network() public {
+        address investor1 = 0xd6e579085c82329c89fca7a9f012be59028ed53f;
+        address investor2 = 0x497dc8a0096cf116e696ba9072516c92383770ed;
+        uint investment1 = 100;
+        uint investment2 = 100;
+
+        voterIndex.push(0x497dc8a0096cf116e696ba9072516c92383770ed);
+
+        // genesis validators
+        genesis[investor1] = investment1;
+        genesis[investor2] = investment2;
+
+        // @NOTE(rgeraldes) - be able to vote from the start
+        _insertVoter(investor1, investment1);
+        _insertVoter(investor2, investment2);
+    }
 
     function isGenesisVoter(address addr) public view returns (bool isIndeed) {
         return genesis[addr] > 0;
@@ -40,7 +57,6 @@ contract Network {
     function _insertVoter(address addr, uint deposit) private {
         voters[addr].deposit = deposit;
         voters[addr].index = voterIndex.push(addr) - 1;
-        LogNewVoter(addr, voters[addr].index, deposit);
     }
 
     function getVoter(address addr) public view returns (uint deposit, uint index) {
@@ -54,11 +70,10 @@ contract Network {
         voterIndex[rowToDelete] = keyToMove;
         voters[keyToMove].index = rowToDelete;
         voterIndex.length--;
-        LogDeleteVoter(addr, voters[keyToMove].index);
     }
 
-    function getVoterCount() public view returns (uint count) {
-        return voterIndex.length;
+    function getVoterCount() public pure returns (uint) {
+        return 1;
     }
 
     function getVoterAtIndex(uint index) public view returns (address addr) {
@@ -91,18 +106,4 @@ contract Network {
         return voterIndex.length <= MAX_VOTERS;
     }
 
-    function Network() public {
-        address investor1 = 0xd6e579085c82329c89fca7a9f012be59028ed53f;
-        address investor2 = 0x497dc8a0096cf116e696ba9072516c92383770ed;
-        uint investment1 = 100;
-        uint investment2 = 100;
-
-        // genesis validators
-        genesis[investor1] = investment1;
-        genesis[investor2] = investment2;
-
-        // @NOTE(rgeraldes) - be able to vote from the start
-        _insertVoter(investor1, investment1);
-        _insertVoter(investor2, investment2);
-    }
 }
