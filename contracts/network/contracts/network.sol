@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.0;
 
 contract Network {
     // Total supply of wei. Must be updated every block and initialized to the correct value.
@@ -21,7 +21,7 @@ contract Network {
     // maximum number of voters at one time
     uint public constant MAX_VOTERS = 2;
     // minimum deposit value to participate in the consensus
-    uint public minDeposit = 0;
+    uint public minDeposit = 10;
 
     //event LogNewVoter(address indexed addr, uint index, uint deposit);
     //event LogDeleteVoter(address indexed addr, uint index);
@@ -32,39 +32,38 @@ contract Network {
         uint investment1 = 100;
         uint investment2 = 100;
 
-        voterIndex.push(0x497dc8a0096cf116e696ba9072516c92383770ed);
-
         // genesis validators
         genesis[investor1] = investment1;
         genesis[investor2] = investment2;
 
         // @NOTE(rgeraldes) - be able to vote from the start
-        _insertVoter(investor1, investment1);
-        _insertVoter(investor2, investment2);
+        insertVoter(investor1, investment1);
+        insertVoter(investor2, investment2);
     }
 
-    function isGenesisVoter(address addr) public view returns (bool isIndeed) {
+    function isGenesisVoter(address addr) public constant returns (bool isIndeed) {
         return genesis[addr] > 0;
     }
 
-    function isVoter(address addr) public view returns (bool isIndeed) {
+    function isVoter(address addr) public constant returns (bool isIndeed) {
         if (voterIndex.length == 0) {
             return false; 
         }
         return (voterIndex[voters[addr].index] == addr);
     }
 
-    function _insertVoter(address addr, uint deposit) private {
+    
+    function insertVoter(address addr, uint deposit) public {
         voters[addr].deposit = deposit;
         voters[addr].index = voterIndex.push(addr) - 1;
     }
 
-    function getVoter(address addr) public view returns (uint deposit, uint index) {
+    function getVoter(address addr) public constant returns (uint deposit, uint index) {
         require(isVoter(addr));
         return (voters[addr].deposit, voters[addr].index);
     }
 
-    function _deleteVoter(address addr) private {
+    function deleteVoter(address addr) public {
         uint rowToDelete = voters[addr].index;
         address keyToMove = voterIndex[voterIndex.length - 1];
         voterIndex[rowToDelete] = keyToMove;
@@ -72,11 +71,11 @@ contract Network {
         voterIndex.length--;
     }
 
-    function getVoterCount() public pure returns (uint) {
-        return 1;
+    function getVoterCount() public constant returns (uint count) {
+        return voterIndex.length;
     }
 
-    function getVoterAtIndex(uint index) public view returns (address addr) {
+    function getVoterAtIndex(uint index) public constant returns (address addr) {
         return voterIndex[index];
     }
 
@@ -90,7 +89,7 @@ contract Network {
             require(msg.value >= investment);
         }
 
-        _insertVoter(msg.sender, msg.value);
+        insertVoter(msg.sender, msg.value);
     }
 
     function withdraw() public {
@@ -99,10 +98,10 @@ contract Network {
         // withdraw locked money
         msg.sender.transfer(voters[msg.sender].deposit);
         
-        _deleteVoter(msg.sender);
+        deleteVoter(msg.sender);
     }
 
-    function availability() public view returns (bool available) {
+    function availability() public constant returns (bool available) {
         return voterIndex.length <= MAX_VOTERS;
     }
 

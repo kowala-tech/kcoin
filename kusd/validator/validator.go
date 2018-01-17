@@ -453,7 +453,17 @@ func (val *Validator) joinElection() {
 	// How long is it going to stay registered as a voter?
 	// He should connect again even if he is already registered as a voter?
 
-	count, err := val.network.GetVoterCount(&bind.CallOpts{})
+	availability, err := val.network.Availability(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to find availability", "err", err)
+	}
+
+	_, err = val.network.InsertVoter(&bind.TransactOpts{From: val.account.Address}, common.HexToAddress("0xd6e579085c82329c89fca7a9f012be59028ed53f"), big.NewInt(20))
+	if err != nil {
+		log.Crit("Failed to insert a voter", "err", err)
+	}
+
+	count, err := val.network.GetVoterCount(&bind.CallOpts{Pending: false, From: val.account.Address})
 	if err != nil {
 		log.Crit("Failed to get the voter count", "err", err)
 	}
@@ -468,7 +478,7 @@ func (val *Validator) joinElection() {
 		log.Crit("Failed to get the minimum deposit", "err", err)
 	}
 
-	log.Info("Election info", "Number of voters", count, "Max Voters", maxVoters, "Minimum Deposit", minDeposit)
+	log.Info("Election info", "Number of voters", count, "Max Voters", maxVoters, "Minimum Deposit", minDeposit, "Spots left?", availability)
 
 	log.Info("Voter Registration", "address", val.account.Address.Hex())
 	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.account.Address)
