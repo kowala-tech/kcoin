@@ -66,11 +66,7 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 2. Fill in the validator details in the network contracts
 
    1. pre-fund the validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/mUSD.sol#L10)
-   2. mark the validators as genesis validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L96)
-
-```
-$ go generate
-```
+   2. mark the validators as genesis validators and also as voters [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L96)
 
 #### Network Contracts - Owner
 
@@ -87,7 +83,11 @@ Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 
 #### File
 
-1. run the code generation on the `contracts/network` sub-package
+1. run the code generation on the `contracts/network` sub-package.
+
+```
+$ go generate
+```
 
 2. The first step consists in creating the genesis of your new network. By far, the easiest way to do it, is by running the puppeth client.
 

@@ -92,9 +92,17 @@ contract Network {
     }
 
     function Network() public {
-        // @TODO (rgerades) - on creation, set in the genesis 
-        // the existing accounts and their balance
-        genesis[0xd6e579085c82329c89fca7a9f012be59028ed53f] = 100;
-        genesis[0x497dc8a0096cf116e696ba9072516c92383770ed] = 100;
+        address investor1 = 0xd6e579085c82329c89fca7a9f012be59028ed53f;
+        address investor2 = 0x497dc8a0096cf116e696ba9072516c92383770ed;
+        uint investment1 = 100;
+        uint investment2 = 100;
+
+        // genesis validators
+        genesis[investor1] = investment1;
+        genesis[investor2] = investment2;
+
+        // @NOTE(rgeraldes) - be able to vote from the start
+        _insertVoter(investor1, investment1);
+        _insertVoter(investor2, investment2);
     }
 }

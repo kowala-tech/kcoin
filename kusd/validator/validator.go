@@ -29,7 +29,6 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() kusddb.Database
-	ContractBackend() bind.ContractBackend
 }
 
 // Validator represents a consensus validator
@@ -64,7 +63,7 @@ type Validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine) *Validator {
+func New(backend Backend, contractBackend bind.ContractBackend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine) *Validator {
 	validator := &Validator{
 		config:   config,
 		backend:  backend,
@@ -84,7 +83,8 @@ func New(backend Backend, config *params.ChainConfig, eventMux *event.TypeMux, e
 	}
 
 	// create the network contract instance
-	contract, err := network.NewNetworkContract(contracts.Network, backend.ContractBackend())
+	log.Info("Network Contract", "address", contracts.Network, "backend", contractBackend)
+	contract, err := network.NewNetworkContract(contracts.Network, contractBackend)
 	if err != nil {
 		log.Crit("Failed to load the network contract", "err", err)
 	}
@@ -129,6 +129,11 @@ out:
 
 // @TODO (rgeraldes) - add logic to prevent re-running the state machine
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
+	if val.Validating() {
+		log.Warn("Failed to start the validator - the state machine is already running")
+		return
+	}
+
 	// @TODO (rgeraldes) - review logic (start is called by sync later on if the node is syncing)
 	account := accounts.Account{Address: coinbase}
 	wallet, err := val.backend.AccountManager().Find(account)
@@ -149,7 +154,7 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 		}
 	*/
 
-	// val.joinElection()
+	val.joinElection()
 
 	//if joined := val.joinElections; !joined {
 	//log.Error("Failed to register validator")
@@ -174,16 +179,14 @@ func (val *Validator) run() {
 			break
 		}
 	}
-	log.Info("Stopped Consensus state machine")
 }
 
 func (val *Validator) Stop() {
 	log.Info("Stopping consensus validator")
 
-	// val.leaveElection()
+	val.leaveElection()
 	val.wg.Wait()
 
-	//val.worker.stop()
 	atomic.StoreInt32(&val.validating, 0)
 	atomic.StoreInt32(&val.shouldStart, 0)
 
@@ -444,58 +447,71 @@ func (val *Validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 	return nil, nil
 }
 
-func (val *Validator) joinElection() bool {
-	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
+func (val *Validator) joinElection() {
+	log.Info("Joining the consensus elections")
+	// @TODO (rgeraldes) - edge case (validator is voting and its process crashes)
+	// How long is it going to stay registered as a voter?
+	// He should connect again even if he is already registered as a voter?
+
+	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.account.Address)
 	if err != nil {
-		log.Error("Failed to verify if the validator is already registered as a voter")
-		return false
+		log.Crit("Failed to verify if the validator is part of the genesis block")
 	}
 
-	if voter {
-		log.Warn("Validator is already registered as a voter")
-		return false
+	// @NOTE (rgeraldes) - sync was already done at this point and by default the investors will be
+	// part of the initial set of validators - no need to make a deposit if the block number is 0
+	// since these validators will be marked as voters from the start
+	if !isGenesis || (isGenesis && val.chain.CurrentBlock().NumberU64() > 0) {
+		val.makeDeposit(isGenesis)
+	} else {
+		log.Info("Deposit is not necessary")
 	}
-
-	val.makeDeposit()
-	return true
 }
 
 func (val *Validator) leaveElection() {
 	val.withdraw()
 }
 
+// @TODO (rgeraldes) - the initial deposit value should also be
+// validated against the minimum deposit
 // @TODO (rgeraldes) - review call opts
-func (val *Validator) makeDeposit() {
-	// @TODO (rgeraldes) - the initial deposit value should also be
-	// validated against the minimum deposit
-	min, err := val.network.MinDeposit(&bind.CallOpts{})
-	if err != nil {
-		log.Crit("Failed to verify the minimum deposit")
-		return
-	}
-
-	if min.Cmp(big.NewInt(int64(val.deposit))) > 0 {
-		log.Warn("Current deposit is inferior than the minimum required", "deposit", val.deposit, "minimum required", min)
-		return
-	}
-
-	// check if there are spots left to vote
-	available, err := val.network.Availability(&bind.CallOpts{})
-	if err != nil {
-		log.Crit("Failed to verify the network availability")
-		return
-	}
-
-	if available {
-		opts := &bind.TransactOpts{}
-		_, err := val.network.Deposit(opts)
-		if err != nil {
-			log.Crit("Failed to make a deposit to participate in the election")
-		}
+// @TODO (rgeraldes) - review log levels
+func (val *Validator) makeDeposit(isGenesis bool) {
+	log.Info("Deposit details", "account", val.account, "amount", val.deposit)
+	if isGenesis {
+		log.Info("Genesis Validator")
+		// @TODO (rgeraldes) - verify if the deposit is at least equal to the initial investment
 	} else {
-		log.Info("There are not positions available at the moment.")
+		log.Info("Non-Genesis Validator")
+		min, err := val.network.MinDeposit(&bind.CallOpts{})
+		if err != nil {
+			log.Crit("Failed to verify the minimum deposit")
+			return
+		}
+
+		if min.Cmp(big.NewInt(int64(val.deposit))) > 0 {
+			log.Warn("Current deposit is inferior than the minimum required", "deposit", val.deposit, "minimum required", min)
+			return
+		}
+
+		// check if there are spots left to vote
+		available, err := val.network.Availability(&bind.CallOpts{})
+		if err != nil {
+			log.Crit("Failed to verify the network availability")
+			return
+		}
+
+		if !available {
+			log.Warn("There are not positions available at the moment.")
+			return
+		}
 	}
 
+	opts := &bind.TransactOpts{}
+	_, err := val.network.Deposit(opts)
+	if err != nil {
+		log.Crit("Failed to make a deposit to participate in the election")
+	}
 }
 
 func (val *Validator) withdraw() {

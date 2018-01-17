@@ -40,14 +40,19 @@ func (b *KowalaApiBackend) SetHead(number uint64) {
 
 func (b *KowalaApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the validator
-	if blockNr == rpc.PendingBlockNumber {
-		block := b.kusd.validator.PendingBlock()
-		return block.Header(), nil
-	}
+	// @TODO (rgeraldes) - review uses of pending
+	// the flow is different in proof of stake
+	/*
+		if blockNr == rpc.PendingBlockNumber {
+			block := b.kusd.validator.PendingBlock()
+			return block.Header(), nil
+		}*/
+
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
 		return b.kusd.blockchain.CurrentBlock().Header(), nil
 	}
+
 	return b.kusd.blockchain.GetHeaderByNumber(uint64(blockNr)), nil
 }
 
@@ -66,10 +71,14 @@ func (b *KowalaApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockN
 
 func (b *KowalaApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the validator
-	if blockNr == rpc.PendingBlockNumber {
-		block, state := b.kusd.validator.Pending()
-		return state, block.Header(), nil
-	}
+	// @TODO (rgeraldes) - review uses of pending
+	/*
+		if blockNr == rpc.PendingBlockNumber {
+			block, state := b.kusd.validator.Pending()
+			return state, block.Header(), nil
+		}
+	*/
+
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
 	if header == nil || err != nil {

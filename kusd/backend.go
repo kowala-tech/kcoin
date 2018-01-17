@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
 	"github.com/kowala-tech/kUSD/consensus"
@@ -138,19 +137,20 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		}
 	}
 
-	kusd.validator = validator.New(kusd, kusd.chainConfig, kusd.EventMux(), kusd.engine)
-	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
-
-	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, maxPeers, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
-		return nil, err
-	}
-
 	kusd.ApiBackend = &KowalaApiBackend{kusd, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.GasPrice
 	}
 	kusd.ApiBackend.gpo = gasprice.NewOracle(kusd.ApiBackend, gpoParams)
+
+	// consensus validator
+	kusd.validator = validator.New(kusd, NewContractBackend(kusd.ApiBackend), kusd.chainConfig, kusd.EventMux(), kusd.engine)
+	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
+
+	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, maxPeers, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
+		return nil, err
+	}
 
 	return kusd, nil
 }
@@ -324,17 +324,16 @@ func (s *Kowala) StopValidating()                 { s.validator.Stop() }
 func (s *Kowala) IsValidating() bool              { return s.validator.Validating() }
 func (s *Kowala) Validator() *validator.Validator { return s.validator }
 
-func (s *Kowala) AccountManager() *accounts.Manager     { return s.accountManager }
-func (s *Kowala) BlockChain() *core.BlockChain          { return s.blockchain }
-func (s *Kowala) TxPool() *core.TxPool                  { return s.txPool }
-func (s *Kowala) EventMux() *event.TypeMux              { return s.eventMux }
-func (s *Kowala) Engine() consensus.Engine              { return s.engine }
-func (s *Kowala) ChainDb() kusddb.Database              { return s.chainDb }
-func (s *Kowala) IsListening() bool                     { return true } // Always listening
-func (s *Kowala) EthVersion() int                       { return int(s.protocolManager.SubProtocols[0].Version) }
-func (s *Kowala) NetVersion() uint64                    { return s.networkId }
-func (s *Kowala) Downloader() *downloader.Downloader    { return s.protocolManager.downloader }
-func (s *Kowala) ContractBackend() bind.ContractBackend { return NewContractBackend(s.ApiBackend) }
+func (s *Kowala) AccountManager() *accounts.Manager  { return s.accountManager }
+func (s *Kowala) BlockChain() *core.BlockChain       { return s.blockchain }
+func (s *Kowala) TxPool() *core.TxPool               { return s.txPool }
+func (s *Kowala) EventMux() *event.TypeMux           { return s.eventMux }
+func (s *Kowala) Engine() consensus.Engine           { return s.engine }
+func (s *Kowala) ChainDb() kusddb.Database           { return s.chainDb }
+func (s *Kowala) IsListening() bool                  { return true } // Always listening
+func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *Kowala) NetVersion() uint64                 { return s.networkId }
+func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
