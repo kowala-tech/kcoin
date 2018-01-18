@@ -11,6 +11,8 @@ import (
 	"github.com/kowala-tech/kUSD/common/hexutil"
 )
 
+var _ = (*txdataMarshalling)(nil)
+
 func (t txdata) MarshalJSON() ([]byte, error) {
 	type txdata struct {
 		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`

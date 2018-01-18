@@ -13,7 +13,7 @@ import (
 	"github.com/kowala-tech/kUSD/rlp"
 )
 
-//go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
+//go:generate gencodec -type txdata -field-override txdataMarshalling -out gen_tx_json.go
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
@@ -41,11 +41,11 @@ type txdata struct {
 	R *big.Int `json:"r" gencodec:"required"`
 	S *big.Int `json:"s" gencodec:"required"`
 
-	// This is only used when marshaling to JSON.
+	// This is only used when marshalling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
-type txdataMarshaling struct {
+type txdataMarshalling struct {
 	AccountNonce hexutil.Uint64
 	Price        *hexutil.Big
 	GasLimit     *hexutil.Big

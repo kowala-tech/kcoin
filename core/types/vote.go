@@ -11,7 +11,7 @@ import (
 	"github.com/kowala-tech/kUSD/rlp"
 )
 
-//go:generate gencodec -type votedata -field-override votedataMarshaling -out gen_vote_json.go
+//go:generate gencodec -type votedata -field-override votedataMarshalling -out gen_vote_json.go
 
 // VoteType represents the different kinds of consensus votes
 type VoteType byte

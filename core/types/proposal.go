@@ -11,7 +11,7 @@ import (
 	"github.com/kowala-tech/kUSD/rlp"
 )
 
-//go:generate gencodec -type proposaldata -field-override proposaldataMarshaling -out gen_proposal_json.go
+//go:generate gencodec -type proposaldata -field-override proposaldataMarshalling -out gen_proposal_json.go
 
 // Proposal represents a consensus block proposal
 type Proposal struct {

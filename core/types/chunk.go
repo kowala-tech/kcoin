@@ -37,7 +37,7 @@ type Chunk struct {
 	size atomic.Value
 }
 
-type chunkMarshaling struct {
+type chunkMarshalling struct {
 	Index hexutil.Uint64
 	Data  hexutil.Bytes
 }

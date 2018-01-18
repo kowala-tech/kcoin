@@ -91,6 +91,7 @@ func TxSender(signer Signer, tx *Transaction) (common.Address, error) {
 	var h common.Hash
 	if !tx.Protected() {
 		h = tx.UnprotectedHash()
+		signer = &UnprotectedSigner{}
 	} else {
 		h = tx.ProtectedHash(signer.ChainID())
 	}

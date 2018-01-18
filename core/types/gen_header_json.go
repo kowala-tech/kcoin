@@ -15,18 +15,20 @@ var _ = (*headerMarshaling)(nil)
 
 func (h Header) MarshalJSON() ([]byte, error) {
 	type Header struct {
-		ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-		Coinbase    common.Address `json:"miner"            gencodec:"required"`
-		Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-		TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-		ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-		Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-		Number      *hexutil.Big   `json:"number"           gencodec:"required"`
-		GasLimit    *hexutil.Big   `json:"gasLimit"         gencodec:"required"`
-		GasUsed     *hexutil.Big   `json:"gasUsed"          gencodec:"required"`
-		Time        *hexutil.Big   `json:"timestamp"        gencodec:"required"`
-		Extra       hexutil.Bytes  `json:"extraData"        gencodec:"required"`
-		Hash        common.Hash    `json:"hash"`
+		ParentHash     common.Hash    `json:"parentHash"       gencodec:"required"`
+		Coinbase       common.Address `json:"miner"            gencodec:"required"`
+		Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
+		TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
+		ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
+		ValidatorsHash common.Hash    `json:"validators"   	   gencodec:"required"`
+		LastCommitHash common.Hash    `json:"lastCommit"	   gencodec:"required"`
+		Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
+		Number         *hexutil.Big   `json:"number"           gencodec:"required"`
+		GasLimit       *hexutil.Big   `json:"gasLimit"         gencodec:"required"`
+		GasUsed        *hexutil.Big   `json:"gasUsed"          gencodec:"required"`
+		Time           *hexutil.Big   `json:"timestamp"        gencodec:"required"`
+		Extra          hexutil.Bytes  `json:"extraData"        gencodec:"required"`
+		Hash           common.Hash    `json:"hash"`
 	}
 	var enc Header
 	enc.ParentHash = h.ParentHash
@@ -34,6 +36,8 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.Root = h.Root
 	enc.TxHash = h.TxHash
 	enc.ReceiptHash = h.ReceiptHash
+	enc.ValidatorsHash = h.ValidatorsHash
+	enc.LastCommitHash = h.LastCommitHash
 	enc.Bloom = h.Bloom
 	enc.Number = (*hexutil.Big)(h.Number)
 	enc.GasLimit = (*hexutil.Big)(h.GasLimit)
@@ -46,17 +50,19 @@ func (h Header) MarshalJSON() ([]byte, error) {
 
 func (h *Header) UnmarshalJSON(input []byte) error {
 	type Header struct {
-		ParentHash  *common.Hash    `json:"parentHash"       gencodec:"required"`
-		Coinbase    *common.Address `json:"miner"            gencodec:"required"`
-		Root        *common.Hash    `json:"stateRoot"        gencodec:"required"`
-		TxHash      *common.Hash    `json:"transactionsRoot" gencodec:"required"`
-		ReceiptHash *common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-		Bloom       *Bloom          `json:"logsBloom"        gencodec:"required"`
-		Number      *hexutil.Big    `json:"number"           gencodec:"required"`
-		GasLimit    *hexutil.Big    `json:"gasLimit"         gencodec:"required"`
-		GasUsed     *hexutil.Big    `json:"gasUsed"          gencodec:"required"`
-		Time        *hexutil.Big    `json:"timestamp"        gencodec:"required"`
-		Extra       hexutil.Bytes   `json:"extraData"        gencodec:"required"`
+		ParentHash     *common.Hash    `json:"parentHash"       gencodec:"required"`
+		Coinbase       *common.Address `json:"miner"            gencodec:"required"`
+		Root           *common.Hash    `json:"stateRoot"        gencodec:"required"`
+		TxHash         *common.Hash    `json:"transactionsRoot" gencodec:"required"`
+		ReceiptHash    *common.Hash    `json:"receiptsRoot"     gencodec:"required"`
+		ValidatorsHash *common.Hash    `json:"validators"   	   gencodec:"required"`
+		LastCommitHash *common.Hash    `json:"lastCommit"	   gencodec:"required"`
+		Bloom          *Bloom          `json:"logsBloom"        gencodec:"required"`
+		Number         *hexutil.Big    `json:"number"           gencodec:"required"`
+		GasLimit       *hexutil.Big    `json:"gasLimit"         gencodec:"required"`
+		GasUsed        *hexutil.Big    `json:"gasUsed"          gencodec:"required"`
+		Time           *hexutil.Big    `json:"timestamp"        gencodec:"required"`
+		Extra          hexutil.Bytes   `json:"extraData"        gencodec:"required"`
 	}
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -82,6 +88,12 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'receiptsRoot' for Header")
 	}
 	h.ReceiptHash = *dec.ReceiptHash
+	if dec.ValidatorsHash != nil {
+		h.ValidatorsHash = *dec.ValidatorsHash
+	}
+	if dec.LastCommitHash != nil {
+		h.LastCommitHash = *dec.LastCommitHash
+	}
 	if dec.Bloom == nil {
 		return errors.New("missing required field 'logsBloom' for Header")
 	}
