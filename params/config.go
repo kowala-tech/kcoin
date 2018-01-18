@@ -36,8 +36,8 @@ var (
 	// anyone adding flags to the config to also have to set these
 	// fields.
 	// @TODO(rgeraldes) - review AllProtocolChanges, TestChainConfig
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337), nil /*new(EthashConfig)*/}
-	TestChainConfig    = &ChainConfig{big.NewInt(1), nil /*new(EthashConfig)*/}
+	AllProtocolChanges = &ChainConfig{big.NewInt(1337), new(TendermintConfig)}
+	TestChainConfig    = &ChainConfig{big.NewInt(1), new(TendermintConfig)}
 	TestRules          = TestChainConfig.Rules(new(big.Int))
 )
 

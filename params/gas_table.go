@@ -22,13 +22,13 @@ var (
 	// GasTableAndromeda contain the gas prices for
 	// the andromeda phase.
 	GasTableAndromeda = GasTable{
-		ExtcodeSize: 20,
-		ExtcodeCopy: 20,
-		Balance:     20,
-		SLoad:       50,
-		Calls:       40,
-		Suicide:     0,
-		ExpByte:     10,
+		ExtcodeSize: 700,
+		ExtcodeCopy: 700,
+		Balance:     400,
+		SLoad:       200,
+		Calls:       700,
+		Suicide:     5000,
+		ExpByte:     50,
 
 		CreateBySuicide: 25000,
 	}

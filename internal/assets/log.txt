@@ -1,16 +1,16 @@
 Local bootnode
 
+// @NOTE(rgeraldes) (rgeraldes) - High verbosity to verify errors like running out of gas
+
 bootnode --nodekey /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/node.key --verbosity 6
 
 Node 1
-
-./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/sample-kowala.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/test.json
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/sample-kowala.toml --verbosity 6 init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json
 cp /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/UTC--2018-01-16T16-31-38.006625000Z--d6e579085c82329c89fca7a9f012be59028ed53f /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/build/bin/.kowala/keystore 
 ./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/sample-kowala.toml --validate --coinbase 0xd6e579085c82329c89fca7a9f012be59028ed53f --unlock 0xd6e579085c82329c89fca7a9f012be59028ed53f
 
 Node 2 
-
-./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/test.json
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json
 cp /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/UTC--2018-01-16T16-33-27.301502000Z--497dc8a0096cf116e696ba9072516c92383770ed /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/build/bin/.kowala2/keystore 
 ./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml --validate --coinbase 0x497dc8a0096cf116e696ba9072516c92383770ed --unlock 0x497dc8a0096cf116e696ba9072516c92383770ed
 

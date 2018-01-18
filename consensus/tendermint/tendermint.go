@@ -1,13 +1,10 @@
 package tendermint
 
 import (
-	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/log"
@@ -34,7 +31,7 @@ func NewFaker() *Tendermint {
 }
 
 func (tendermint *Tendermint) Author(header *types.Header) (common.Address, error) {
-	return common.Address{}, nil
+	return header.Coinbase, nil
 }
 
 func (tendermint *Tendermint) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
@@ -80,70 +77,71 @@ func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *type
 
 	// Accumulate any block and uncle rewards and commit the final state root
 	header.Root = state.IntermediateRoot(true)
-
 	return types.NewBlock(header, txs, receipts, commit), nil
 }
 
 func AccumulateRewards(state *state.StateDB, header *types.Header, addrs []common.Address) error {
-	// @TODO (hrosa): what to do with transactions fees ?
-	contracts, err := network.GetContracts(state)
-	if err != nil {
-		return err
-	}
-	// get mToken contract data
-	mt, err := contracts.GetMToken(state)
-	if err != nil {
-		return err
-	}
-	// gather how many tokens each address holds
-	addrsTokens := make(map[common.Address]int64, len(addrs))
-	var totalTokens int64
-	for _, a := range addrs {
-		b, err := mt.BalanceOf(a)
+	/*
+		// @TODO (hrosa): what to do with transactions fees ?
+		contracts, err := network.GetContracts(state)
 		if err != nil {
 			return err
 		}
-		bi := b.Int64()
-		totalTokens += bi
-		addrsTokens[a] = bi
-	}
-	// @TODO (hrosa): remove. on the mainnet, tokens already exist
-	if totalTokens == 0 {
-		return nil
-	}
-	// calculate the block reward.
-	reward, err := CalculateBlockReward(header.Number, state)
-	if err != nil {
-		return err
-	}
-	coins, coinsRem := new(big.Int).DivMod(reward, big.NewInt(1000000000000000000), new(big.Int))
-	coinsRemStr := coinsRem.String()
-	fmt.Printf(">>>> reward(%s): %s.%s\n", header.Number, coins.String(), strings.Repeat("0", len(coinsRemStr))+coinsRemStr)
-	// calculate the reward per token.
-	rewardPerToken, remReward := new(big.Int).DivMod(
-		reward,
-		big.NewInt(totalTokens),
-		new(big.Int),
-	)
-	// distribute rewards
-	for _, a := range addrs {
-		bal, err := mt.BalanceOf(a)
+		// get mToken contract data
+		mt, err := contracts.GetMToken(state)
 		if err != nil {
 			return err
 		}
-		bal.Mul(bal, rewardPerToken)
-		state.AddBalance(a, bal)
-	}
-	reward.Sub(reward, remReward)
-	// update network stats
-	networkInfo, err := contracts.GetNetworkContract(state)
-	if err != nil {
-		return err
-	}
-	// @TODO (hrosa): should be using a state writer
-	reward.Sub(reward, remReward)
-	w := common.BytesToHash(networkInfo.TotalSupplyWei.Add(networkInfo.TotalSupplyWei, reward).Bytes())
-	state.SetState(contracts.Network, common.BytesToHash([]byte{0}), w)
+		// gather how many tokens each address holds
+		addrsTokens := make(map[common.Address]int64, len(addrs))
+		var totalTokens int64
+		for _, a := range addrs {
+			b, err := mt.BalanceOf(a)
+			if err != nil {
+				return err
+			}
+			bi := b.Int64()
+			totalTokens += bi
+			addrsTokens[a] = bi
+		}
+		// @TODO (hrosa): remove. on the mainnet, tokens already exist
+		if totalTokens == 0 {
+			return nil
+		}
+		// calculate the block reward.
+		reward, err := CalculateBlockReward(header.Number, state)
+		if err != nil {
+			return err
+		}
+		coins, coinsRem := new(big.Int).DivMod(reward, big.NewInt(1000000000000000000), new(big.Int))
+		coinsRemStr := coinsRem.String()
+		fmt.Printf(">>>> reward(%s): %s.%s\n", header.Number, coins.String(), strings.Repeat("0", len(coinsRemStr))+coinsRemStr)
+		// calculate the reward per token.
+		rewardPerToken, remReward := new(big.Int).DivMod(
+			reward,
+			big.NewInt(totalTokens),
+			new(big.Int),
+		)
+		// distribute rewards
+		for _, a := range addrs {
+			bal, err := mt.BalanceOf(a)
+			if err != nil {
+				return err
+			}
+			bal.Mul(bal, rewardPerToken)
+			state.AddBalance(a, bal)
+		}
+		reward.Sub(reward, remReward)
+		// update network stats
+		networkInfo, err := contracts.GetNetworkContract(state)
+		if err != nil {
+			return err
+		}
+		// @TODO (hrosa): should be using a state writer
+		reward.Sub(reward, remReward)
+		w := common.BytesToHash(networkInfo.TotalSupplyWei.Add(networkInfo.TotalSupplyWei, reward).Bytes())
+		state.SetState(contracts.Network, common.BytesToHash([]byte{0}), w)
+	*/
 
 	return nil
 }

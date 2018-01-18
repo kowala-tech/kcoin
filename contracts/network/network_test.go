@@ -2,6 +2,7 @@ package network_test
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -47,15 +48,18 @@ func NewNetworkTest(t *testing.T) (*NetworkTest, error) {
 	}
 	sim := backends.NewSimulatedBackend(core.GenesisAlloc{
 		owner.addr: core.GenesisAccount{
-			Balance: new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.Ether)),
+			Balance: new(big.Int).Mul(big.NewInt(10), new(big.Int).SetUint64(params.Ether)),
 		},
 	})
+
 	addr, _, contract, err := network.DeployNetworkContract(owner.auth, sim)
 	if err != nil {
 		t.Error(err)
 		return nil, err
 	}
+
 	sim.Commit()
+
 	return &NetworkTest{
 		owner:    owner,
 		sim:      sim,
@@ -71,12 +75,29 @@ func TestNumberOfVoters(t *testing.T) {
 		return
 	}
 
-	test.sim.Commit()
+	/*
+		state, _ := test.sim.StateAt(test.sim.CurrentBlock().Root())
+		code3 := state.GetCode(test.addr)
+		fmt.Println("Current block:" + test.sim.CurrentBlock().Number().String())
+		fmt.Println("code3: " + string(code3))
 
-	count, err := test.contract.MAX_VOTERS(&bind.CallOpts{})
+		fmt.Println("contract address" + test.addr.String())
+		code2, err := test.sim.CodeAt(context.TODO(), test.addr, big.NewInt(0))
+		code, err := test.sim.CodeAt(context.TODO(), test.addr, test.sim.CurrentBlock().Number())
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println(string(code))
+		if len(code) == 0 || len(code2) == 0 {
+			fmt.Println("Size of the code:", 0)
+		}
+	*/
+
+	count, err := test.contract.GetVoterCount(&bind.CallOpts{Pending: false, From: test.owner.addr})
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println("count " + count.String())
 
 	if count.Cmp(big.NewInt(2)) != 0 {
 		t.Error(count)

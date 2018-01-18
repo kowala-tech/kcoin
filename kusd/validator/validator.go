@@ -71,6 +71,7 @@ func New(backend Backend, contractBackend bind.ContractBackend, config *params.C
 		engine:   engine,
 		eventMux: eventMux,
 	}
+
 	state, err := validator.chain.State()
 	if err != nil {
 		log.Crit("Failed to fetch the current state", "err", err)
@@ -453,7 +454,7 @@ func (val *Validator) joinElection() {
 		log.Crit("Failed to find availability", "err", err)
 	}
 
-	count, err := val.network.GetVoterCount(&bind.CallOpts{Pending: false, From: val.account.Address})
+	count, err := val.network.GetVoterCount(&bind.CallOpts{})
 	if err != nil {
 		log.Crit("Failed to get the voter count", "err", err)
 	}
