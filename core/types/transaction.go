@@ -2,7 +2,6 @@ package types
 
 import (
 	"container/heap"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -15,11 +14,6 @@ import (
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
-
-var (
-	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
-	errNoSigner   = errors.New("missing signing methods")
-)
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
@@ -186,6 +180,31 @@ func (tx *Transaction) ProtectedHash(chainID *big.Int) common.Hash {
 	})
 }
 
+func (tx *Transaction) UnprotectedHash() common.Hash {
+	return rlpHash([]interface{}{
+		tx.data.AccountNonce,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Payload,
+	})
+}
+
+// Protected returns whether the transaction is protected from replay protection.
+func (tx *Transaction) Protected() bool {
+	return isProtectedV(tx.data.V)
+}
+
+func isProtectedV(V *big.Int) bool {
+	if V.BitLen() <= 8 {
+		v := V.Uint64()
+		return v != 27 && v != 28
+	}
+	// anything not 27 or 28 are considered unprotected
+	return true
+}
+
 func (tx *Transaction) Size() common.StorageSize {
 	if size := tx.size.Load(); size != nil {
 		return size.(common.StorageSize)
@@ -221,7 +240,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 // This signature needs to be formatted as described in the yellow paper (v+27).
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
 	cpy := &Transaction{data: tx.data}
-	V, R, S, err := signer.NewSignature(sig)
+	R, S, V, err := signer.NewSignature(sig)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +259,7 @@ func (tx *Transaction) Cost() *big.Int {
 }
 
 func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
-	return tx.data.V, tx.data.R, tx.data.S
+	return tx.data.R, tx.data.S, tx.data.V
 }
 
 func (tx *Transaction) String() string {

@@ -12,6 +12,8 @@ import (
 )
 
 var (
+	ErrInvalidSig     = errors.New("invalid v, r, s values")
+	errNoSigner       = errors.New("missing signing methods")
 	ErrInvalidChainId = errors.New("invalid chain id for signer")
 
 	errAbstractSigner     = errors.New("abstract signer")
@@ -37,8 +39,14 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 
 // SignTx signs the transaction using the given signer and private key
 func SignTx(tx *Transaction, signer Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
-	h := tx.ProtectedHash(signer.ChainID())
-	sig, err := crypto.Sign(h[:], prv)
+	var h common.Hash
+	if signer.ChainID() == nil {
+		h = tx.UnprotectedHash()
+	} else {
+		h = tx.ProtectedHash(signer.ChainID())
+	}
+
+	sig, err := crypto.Sign(h.Bytes(), prv)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +88,14 @@ func TxSender(signer Signer, tx *Transaction) (common.Address, error) {
 		}
 	}
 
-	addr, err := Sender(signer, tx.ProtectedHash(signer.ChainID()), signer.ChainID(), tx.data.V, tx.data.R, tx.data.S)
+	var h common.Hash
+	if !tx.Protected() {
+		h = tx.UnprotectedHash()
+	} else {
+		h = tx.ProtectedHash(signer.ChainID())
+	}
+
+	addr, err := signer.Sender(h, tx.data.R, tx.data.S, tx.data.V)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -101,7 +116,7 @@ func ProposalSender(signer Signer, proposal *Proposal) (common.Address, error) {
 		}
 	}
 
-	addr, err := Sender(signer, proposal.ProtectedHash(signer.ChainID()), signer.ChainID(), proposal.data.V, proposal.data.R, proposal.data.S)
+	addr, err := signer.Sender(proposal.ProtectedHash(signer.ChainID()), proposal.data.R, proposal.data.S, proposal.data.V)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -122,7 +137,7 @@ func VoteSender(signer Signer, proposal *Proposal) (common.Address, error) {
 		}
 	}
 
-	addr, err := Sender(signer, proposal.ProtectedHash(signer.ChainID()), signer.ChainID(), proposal.data.V, proposal.data.R, proposal.data.S)
+	addr, err := signer.Sender(proposal.ProtectedHash(signer.ChainID()), proposal.data.R, proposal.data.S, proposal.data.V)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -132,36 +147,40 @@ func VoteSender(signer Signer, proposal *Proposal) (common.Address, error) {
 	return addr, nil
 }
 
-// Sender derives the sender from the tx using the signer derivation
-// functions.
-
-// Sender returns the address derived from the signature (V, R, S) using secp256k1
-// elliptic curve and an error if it failed deriving or upon an incorrect
-// signature.
-//
-// Sender may cache the address, allowing it to be used regardless of
-// signing method. The cache is invalidated if the cached signer does
-// not match the signer used in the current call.
-func Sender(signer Signer, hash common.Hash, chainID, V, R, S *big.Int) (common.Address, error) {
-	pubkey, err := signer.PublicKey(hash, chainID, V, R, S)
-	if err != nil {
-		return common.Address{}, err
-	}
-	var addr common.Address
-	copy(addr[:], crypto.Keccak256(pubkey[1:])[12:])
-	return addr, nil
-}
-
 type Signer interface {
 	// PubilcKey returns the public key derived from the signature
-	PublicKey(hash common.Hash, chainID, V, R, S *big.Int) ([]byte, error)
+	Sender(hash common.Hash, R, S, V *big.Int) (common.Address, error)
 	// NewSignature returns a new signature.
 	// The signature must be encoded in [R || S || V] format where V is 0 or 1.
-	NewSignature(sig []byte) (V, R, S *big.Int, err error)
+	NewSignature(sig []byte) (R, S, V *big.Int, err error)
 	// Checks for equality on the signers
 	Equal(Signer) bool
 	// Returns the current network ID
 	ChainID() *big.Int
+}
+
+type UnprotectedSigner struct{}
+
+func (s UnprotectedSigner) ChainID() *big.Int { return nil }
+
+func (s UnprotectedSigner) Equal(s2 Signer) bool {
+	_, ok := s2.(UnprotectedSigner)
+	return ok
+}
+
+func (s UnprotectedSigner) Sender(hash common.Hash, R, S, V *big.Int) (common.Address, error) {
+	return recoverPlain(hash, R, S, V, true)
+}
+
+func (s UnprotectedSigner) NewSignature(sig []byte) (R, S, V *big.Int, err error) {
+	if len(sig) != 65 {
+		panic(fmt.Sprintf("wrong size for signature: got %d, want 65", len(sig)))
+	}
+
+	R = new(big.Int).SetBytes(sig[:32])
+	S = new(big.Int).SetBytes(sig[32:64])
+	V = new(big.Int).SetBytes([]byte{sig[64] + 27})
+	return
 }
 
 // AndromedaSigner implements the Signer interface using andromeda's rules
@@ -184,44 +203,18 @@ func (s AndromedaSigner) Equal(s2 Signer) bool {
 	return ok && andromeda.chainID.Cmp(s.chainID) == 0
 }
 
-func (s AndromedaSigner) PublicKey(hash common.Hash, chainID, V, R, S *big.Int) ([]byte, error) {
-	if chainID.Cmp(s.chainID) != 0 {
-		return nil, ErrInvalidChainId
-	}
-
-	rawV := byte(new(big.Int).Sub(V, s.chainIDMul).Uint64() - 35)
-	if !crypto.ValidateSignatureValues(rawV, R, S, true) {
-		return nil, ErrInvalidSig
-	}
-
-	// encode the signature in uncompressed format
-	rawR, rawS := R.Bytes(), S.Bytes()
-	sig := make([]byte, 65)
-	copy(sig[32-len(rawR):32], rawR)
-	copy(sig[64-len(rawS):64], rawS)
-	sig[64] = rawV
-
-	// recover the public key from the signature
-	pub, err := crypto.Ecrecover(hash[:], sig)
-	if err != nil {
-		return nil, err
-	}
-	if len(pub) == 0 || pub[0] != 4 {
-		return nil, errors.New("invalid public key")
-	}
-	return pub, nil
+func (s AndromedaSigner) Sender(hash common.Hash, R, S, V *big.Int) (common.Address, error) {
+	return recoverPlain(hash, R, S, V, true)
 }
 
 // NewSignature returns a new signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
-func (s AndromedaSigner) NewSignature(sig []byte) (V, R, S *big.Int, err error) {
-	if len(sig) != 65 {
-		panic(fmt.Sprintf("wrong size for signature: got %d, want 65", len(sig)))
+func (s AndromedaSigner) NewSignature(sig []byte) (R, S, V *big.Int, err error) {
+	R, S, V, err = UnprotectedSigner{}.NewSignature(sig)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
-	R = new(big.Int).SetBytes(sig[:32])
-	S = new(big.Int).SetBytes(sig[32:64])
-	V = new(big.Int).SetBytes([]byte{sig[64]})
 	if s.chainID.Sign() != 0 {
 		V = big.NewInt(int64(sig[64] + 35))
 		V.Add(V, s.chainIDMul)
@@ -244,4 +237,31 @@ func deriveChainID(v *big.Int) *big.Int {
 	}
 	v = new(big.Int).Sub(v, big.NewInt(35))
 	return v.Div(v, big.NewInt(2))
+}
+
+func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
+	if Vb.BitLen() > 8 {
+		return common.Address{}, ErrInvalidSig
+	}
+	V := byte(Vb.Uint64() - 27)
+	if !crypto.ValidateSignatureValues(V, R, S, homestead) {
+		return common.Address{}, ErrInvalidSig
+	}
+	// encode the snature in uncompressed format
+	r, s := R.Bytes(), S.Bytes()
+	sig := make([]byte, 65)
+	copy(sig[32-len(r):32], r)
+	copy(sig[64-len(s):64], s)
+	sig[64] = V
+	// recover the public key from the snature
+	pub, err := crypto.Ecrecover(sighash[:], sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+	if len(pub) == 0 || pub[0] != 4 {
+		return common.Address{}, errors.New("invalid public key")
+	}
+	var addr common.Address
+	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
+	return addr, nil
 }

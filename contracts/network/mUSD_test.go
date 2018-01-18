@@ -1,22 +1,6 @@
 package network_test
 
-import (
-	"context"
-	"crypto/ecdsa"
-	"math/big"
-	"testing"
-
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/kowala-tech/contracts"
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
-	"github.com/kowala-tech/kUSD/accounts/abi/bind/backends"
-	"github.com/kowala-tech/kUSD/common"
-	nc "github.com/kowala-tech/kUSD/contracts/network"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/params"
-)
+/*
 
 type key struct {
 	key  *ecdsa.PrivateKey
@@ -517,3 +501,4 @@ func TestPriceOracle(t *testing.T) {
 		return
 	}
 }
+*/

@@ -90,7 +90,7 @@ func (prop *Proposal) Round() uint64            { return prop.data.Round }
 func (prop *Proposal) LockedRound() uint64      { return prop.data.LockedRound }
 func (prop *Proposal) LockedBlock() common.Hash { return prop.data.LockedBlock }
 func (prop *Proposal) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
-	return prop.data.V, prop.data.R, prop.data.S
+	return prop.data.R, prop.data.S, prop.data.V
 }
 
 //func (p *Proposal) Timestamp() time.Time          { return p.data.Timestamp }

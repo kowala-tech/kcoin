@@ -7,11 +7,11 @@ import (
 	"math/big"
 	"sync"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	kowala "github.com/kowala-tech/kUSD"
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/math"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
+	"github.com/kowala-tech/kUSD/consensus/tendermint"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -30,7 +30,7 @@ var errBlockNumberUnsupported = errors.New("SimulatedBackend cannot access block
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
 	database         kusddb.Database // In memory database to store our testing data
-	*core.BlockChain                 // Ethereum blockchain to handle the consensus
+	*core.BlockChain                 // Kowala blockchain to handle the consensus
 
 	mu           sync.Mutex
 	pendingBlock *types.Block   // Currently pending block that will be imported on request
@@ -45,8 +45,8 @@ func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	database, _ := kusddb.NewMemDatabase()
 	genesis := core.Genesis{Config: params.AllProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
-	blockchain, _ := core.NewBlockChain(database, genesis.Config, ethash.NewFaker(), new(event.TypeMux), vm.Config{})
-	backend := &SimulatedBackend{database: database, Blockchain: blockchain, config: genesis.Config}
+	blockchain, _ := core.NewBlockChain(database, genesis.Config, tendermint.NewFaker(), new(event.TypeMux), vm.Config{})
+	backend := &SimulatedBackend{database: database, BlockChain: blockchain, config: genesis.Config}
 	backend.rollback()
 	return backend
 }
@@ -141,7 +141,7 @@ func (b *SimulatedBackend) PendingCodeAt(ctx context.Context, contract common.Ad
 }
 
 // CallContract executes a contract call.
-func (b *SimulatedBackend) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (b *SimulatedBackend) CallContract(ctx context.Context, call kowala.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -157,7 +157,7 @@ func (b *SimulatedBackend) CallContract(ctx context.Context, call ethereum.CallM
 }
 
 // PendingCallContract executes a contract call on the pending state.
-func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
+func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call kowala.CallMsg) ([]byte, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	defer b.pendingState.RevertToSnapshot(b.pendingState.Snapshot())
@@ -183,7 +183,7 @@ func (b *SimulatedBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error
 
 // EstimateGas executes the requested code against the currently pending block/state and
 // returns the used amount of gas.
-func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMsg) (*big.Int, error) {
+func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg) (*big.Int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -216,7 +216,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMs
 
 // callContract implemens common code between normal and pending contract calls.
 // state is modified during execution, make sure to copy it if necessary.
-func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, *big.Int, error) {
+func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, *big.Int, error) {
 	// Ensure message is initialized properly.
 	if call.GasPrice == nil {
 		call.GasPrice = big.NewInt(1)
@@ -233,7 +233,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	// Execute the call.
 	msg := callmsg{call}
 
-	evmContext := core.NewEVMContext(msg, block.Header(), b.Blockchain, nil)
+	evmContext := core.NewEVMContext(msg, block.Header(), b.BlockChain, nil)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})
@@ -248,7 +248,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	sender, err := types.Sender(types.HomesteadSigner{}, tx)
+	sender, err := types.TxSender(types.UnprotectedSigner{}, tx)
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
 	}
@@ -270,7 +270,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 
 // callmsg implements core.Message to allow passing it as a transaction simulator.
 type callmsg struct {
-	ethereum.CallMsg
+	kowala.CallMsg
 }
 
 func (m callmsg) From() common.Address { return m.CallMsg.From }

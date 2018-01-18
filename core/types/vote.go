@@ -105,7 +105,7 @@ func (vote *Vote) BlockHash() common.Hash { return vote.data.BlockHash }
 func (vote *Vote) Round() uint64          { return vote.data.Round }
 func (vote *Vote) Type() VoteType         { return vote.data.Type }
 func (vote *Vote) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
-	return vote.data.V, vote.data.R, vote.data.S
+	return vote.data.R, vote.data.S, vote.data.V
 }
 
 // Hash hashes the RLP encoding of the vote.

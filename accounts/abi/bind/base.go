@@ -200,9 +200,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 		return nil, errors.New("no signer to authorize the transaction with")
 	}
 
-	// @TODO (rgeraldes) - review
-	// signedTx, err := opts.Signer(types.HomesteadSigner{}, opts.From, rawTx)
-	signedTx, err := opts.Signer(types.AndromedaSigner{}, opts.From, rawTx)
+	signedTx, err := opts.Signer(types.UnprotectedSigner{}, opts.From, rawTx)
 	if err != nil {
 		return nil, err
 	}

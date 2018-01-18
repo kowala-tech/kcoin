@@ -52,7 +52,15 @@ func NewKeyedTransactor(key *ecdsa.PrivateKey) *TransactOpts {
 			if address != keyAddr {
 				return nil, errors.New("not authorized to sign this account")
 			}
-			signature, err := crypto.Sign(tx.ProtectedHash(signer.ChainID()).Bytes(), key)
+
+			var h common.Hash
+			if signer.ChainID() == nil {
+				h = tx.UnprotectedHash()
+			} else {
+				h = tx.ProtectedHash(signer.ChainID())
+			}
+
+			signature, err := crypto.Sign(h.Bytes(), key)
 			if err != nil {
 				return nil, err
 			}

@@ -33,10 +33,10 @@ func newKey() (*key, error) {
 }
 
 type NetworkTest struct {
-	owner   *key
-	sim     *backends.SimulatedBackend
-	addr    common.Address
-	network *network.NetworkContract
+	owner    *key
+	sim      *backends.SimulatedBackend
+	addr     common.Address
+	contract *network.NetworkContract
 }
 
 func NewNetworkTest(t *testing.T) (*NetworkTest, error) {
@@ -57,10 +57,10 @@ func NewNetworkTest(t *testing.T) (*NetworkTest, error) {
 	}
 	sim.Commit()
 	return &NetworkTest{
-		owner:   owner,
-		sim:     sim,
-		addr:    addr,
-		network: contract,
+		owner:    owner,
+		sim:      sim,
+		addr:     addr,
+		contract: contract,
 	}, nil
 }
 
@@ -71,7 +71,9 @@ func TestNumberOfVoters(t *testing.T) {
 		return
 	}
 
-	count, err := test.network.GetVoterCount(&bind.CallOpts{})
+	test.sim.Commit()
+
+	count, err := test.contract.MAX_VOTERS(&bind.CallOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,6 +2,7 @@ package validator
 
 import (
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
@@ -35,15 +36,22 @@ type Election struct {
 	lastCommit     *core.VotingTable // Last precommits at current block number-1
 	lastValidators *types.Validators
 
+	// inputs
+	proposalCh                    chan *types.Proposal
+	firstMajority, secondMajority *event.TypeMuxSubscription
+
 	// proposer
+	currentMu sync.Mutex
+	current   *work
+}
+
+// work is the proposer current environment and holds
+// all of the current state information
+type work struct {
 	tcount    int
 	failedTxs types.Transactions
 	txs       []*types.Transaction
 	receipts  []*types.Receipt
-
-	// inputs
-	proposalCh                    chan *types.Proposal
-	firstMajority, secondMajority *event.TypeMuxSubscription
 }
 
 // stateFn represents a state function

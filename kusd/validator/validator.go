@@ -207,32 +207,24 @@ func (val *Validator) SetDeposit(deposit uint64) {
 	val.deposit = deposit
 }
 
-// @TODO (rgeraldes) - not sure if pending makes much sense in pos context with low network latencies. review
 // Pending returns the currently pending block and associated state.
-func (val *Validator) Pending() (*types.Block, *state.StateDB) { return nil, nil }
+func (val *Validator) Pending() (*types.Block, *state.StateDB) {
+	val.currentMu.Lock()
+	defer val.currentMu.Unlock()
 
-// @TODO (rgeraldes) - same as Pending()
-// PendingBlock returns the currently pending block.
-//
-// Note, to access both the pending block and the pending state
-// simultaneously, please use Pending(), as the pending state can
-// change between multiple method calls
+	state, err := val.chain.State()
+	if err != nil {
+		log.Crit("Failed to fetch the latest state", "err", err)
+	}
+
+	return val.chain.CurrentBlock(), state
+}
+
 func (val *Validator) PendingBlock() *types.Block {
-	val.electionMu.Lock()
-	defer val.electionMu.Unlock()
+	val.currentMu.Lock()
+	defer val.currentMu.Unlock()
 
-	/*
-		if atomic.LoadInt32(&val.validating) == 0 {
-			return types.NewBlock(
-				val.current.header,
-				val.current.txs,
-				nil,
-				val.current.receipts,
-			)
-		}
-		return val.current.Block
-	*/
-	return nil
+	return val.chain.CurrentBlock()
 }
 
 func (val *Validator) restoreLastCommit() {
@@ -292,6 +284,9 @@ func (val *Validator) init() {
 	//	prevPreCommits = val.votes.PreCommits(val.commitRound)
 	//}
 	// val.prevCommit = prevPreCommits
+
+	// @TODO (rgeraldes) - reset just if was proposer
+	val.current = &work{}
 
 }
 
@@ -458,11 +453,6 @@ func (val *Validator) joinElection() {
 		log.Crit("Failed to find availability", "err", err)
 	}
 
-	_, err = val.network.InsertVoter(&bind.TransactOpts{From: val.account.Address}, common.HexToAddress("0xd6e579085c82329c89fca7a9f012be59028ed53f"), big.NewInt(20))
-	if err != nil {
-		log.Crit("Failed to insert a voter", "err", err)
-	}
-
 	count, err := val.network.GetVoterCount(&bind.CallOpts{Pending: false, From: val.account.Address})
 	if err != nil {
 		log.Crit("Failed to get the voter count", "err", err)
@@ -481,7 +471,7 @@ func (val *Validator) joinElection() {
 	log.Info("Election info", "Number of voters", count, "Max Voters", maxVoters, "Minimum Deposit", minDeposit, "Spots left?", availability)
 
 	log.Info("Voter Registration", "address", val.account.Address.Hex())
-	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.account.Address)
+	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{Pending: false}, val.account.Address)
 	if err != nil {
 		log.Crit("Failed to verify if the validator is part of the genesis block")
 	}
@@ -607,15 +597,15 @@ func (val *Validator) createBlock() *types.Block {
 	txs := types.NewTransactionsByPriceAndNonce(pending)
 	val.commitTransactions(val.eventMux, txs, val.chain, val.account.Address)
 
-	val.backend.TxPool().RemoveBatch(val.failedTxs)
+	val.backend.TxPool().RemoveBatch(val.current.failedTxs)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
-	if block, err = val.engine.Finalize(val.chain, header, state, val.txs, val.receipts, commit); err != nil {
+	if block, err = val.engine.Finalize(val.chain, header, state, val.current.txs, val.current.receipts, commit); err != nil {
 		log.Crit("Failed to finalize block for sealing", "err", err)
 	}
 
-	for _, r := range val.receipts {
+	for _, r := range val.current.receipts {
 		for _, l := range r.Logs {
 			l.BlockHash = block.Hash()
 		}
