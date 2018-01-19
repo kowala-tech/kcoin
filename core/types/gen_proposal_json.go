@@ -14,11 +14,11 @@ var _ = (*proposaldataMarshalling)(nil)
 
 func (p proposaldata) MarshalJSON() ([]byte, error) {
 	type proposaldata struct {
-		BlockNumber   *hexutil.Big   `json:"number"			gencodec:"required"`
-		Round         hexutil.Uint64 `json:"round"			gencodec:"required"`
+		BlockNumber   *hexutil.Big   `json:"blockNumber"		gencodec:"required"`
+		Round         hexutil.Uint64 `json:"round"				gencodec:"required"`
 		LockedRound   hexutil.Uint64 `json:"lockedRound"		gencodec:"required"`
 		LockedBlock   common.Hash    `json:"lockedBlock"		gencodec:"required"`
-		BlockMetadata Metadata       `json:"block" 			gencoded:"required"`
+		BlockMetadata *Metadata      `json:"blockMetadata" 	gencodec:"required"`
 		V             *hexutil.Big   `json:"v"	gencodec:"required"`
 		R             *hexutil.Big   `json:"r"	gencodec:"required"`
 		S             *hexutil.Big   `json:"s"	gencodec:"required"`
@@ -37,11 +37,11 @@ func (p proposaldata) MarshalJSON() ([]byte, error) {
 
 func (p *proposaldata) UnmarshalJSON(input []byte) error {
 	type proposaldata struct {
-		BlockNumber   *hexutil.Big    `json:"number"			gencodec:"required"`
-		Round         *hexutil.Uint64 `json:"round"			gencodec:"required"`
+		BlockNumber   *hexutil.Big    `json:"blockNumber"		gencodec:"required"`
+		Round         *hexutil.Uint64 `json:"round"				gencodec:"required"`
 		LockedRound   *hexutil.Uint64 `json:"lockedRound"		gencodec:"required"`
 		LockedBlock   *common.Hash    `json:"lockedBlock"		gencodec:"required"`
-		BlockMetadata *Metadata       `json:"block" 			gencoded:"required"`
+		BlockMetadata *Metadata       `json:"blockMetadata" 	gencodec:"required"`
 		V             *hexutil.Big    `json:"v"	gencodec:"required"`
 		R             *hexutil.Big    `json:"r"	gencodec:"required"`
 		S             *hexutil.Big    `json:"s"	gencodec:"required"`
@@ -63,7 +63,7 @@ func (p *proposaldata) UnmarshalJSON(input []byte) error {
 		p.LockedBlock = *dec.LockedBlock
 	}
 	if dec.BlockMetadata != nil {
-		p.BlockMetadata = *dec.BlockMetadata
+		p.BlockMetadata = dec.BlockMetadata
 	}
 	if dec.V != nil {
 		p.V = (*big.Int)(dec.V)

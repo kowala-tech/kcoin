@@ -24,11 +24,11 @@ type Proposal struct {
 }
 
 type proposaldata struct {
-	BlockNumber   *big.Int    `json:"number"			gencodec:"required"`
-	Round         uint64      `json:"round"			gencodec:"required"`
+	BlockNumber   *big.Int    `json:"blockNumber"		gencodec:"required"`
+	Round         uint64      `json:"round"				gencodec:"required"`
 	LockedRound   uint64      `json:"lockedRound"		gencodec:"required"`
 	LockedBlock   common.Hash `json:"lockedBlock"		gencodec:"required"`
-	BlockMetadata Metadata    `json:"block" 			gencoded:"required"`
+	BlockMetadata *Metadata   `json:"blockMetadata" 	gencodec:"required"`
 	//Timestamp     time.Time      `json:"time"		gencoded:"required"` // @TODO(rgeraldes) confirm if it's necessary
 
 	// signature values
@@ -48,11 +48,11 @@ type proposaldataMarshalling struct {
 }
 
 // NewProposal returns a new proposal
-func NewProposal(blockNumber *big.Int, round uint64, blockMetadata Metadata, lockedRound int, lockedBlock common.Hash) *Proposal {
+func NewProposal(blockNumber *big.Int, round uint64, blockMetadata *Metadata, lockedRound int, lockedBlock common.Hash) *Proposal {
 	return newProposal(blockNumber, round, blockMetadata, lockedRound, lockedBlock)
 }
 
-func newProposal(blockNumber *big.Int, round uint64, blockMetadata Metadata, lockedRound int, lockedBlock common.Hash) *Proposal {
+func newProposal(blockNumber *big.Int, round uint64, blockMetadata *Metadata, lockedRound int, lockedBlock common.Hash) *Proposal {
 	d := proposaldata{
 		BlockNumber:   new(big.Int),
 		BlockMetadata: blockMetadata,
@@ -92,9 +92,10 @@ func (prop *Proposal) LockedBlock() common.Hash { return prop.data.LockedBlock }
 func (prop *Proposal) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
 	return prop.data.R, prop.data.S, prop.data.V
 }
+func (prop *Proposal) BlockMetadata() *Metadata { return prop.data.BlockMetadata }
 
 //func (p *Proposal) Timestamp() time.Time          { return p.data.Timestamp }
-//func (prop *Proposal) BlockMetaData() *core.Metadata { return prop.data.BlockMetaData }
+
 
 // Hash hashes the RLP encoding of the proposal.
 // It uniquely identifies the proposal.

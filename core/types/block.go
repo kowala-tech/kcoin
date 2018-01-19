@@ -342,10 +342,10 @@ func (b *Block) Hash() common.Hash {
 	return v
 }
 
-func (b *Block) AsFragments(size int) (BlockFragments, error) {
+func (b *Block) AsFragments(size int) (*BlockFragments, error) {
 	rawBlock, err := rlp.EncodeToBytes(b)
 	if err != nil {
-		return BlockFragments{}, err
+		return &BlockFragments{}, err
 	}
 	return NewDataSetFromData(rawBlock, size), nil
 }

@@ -19,6 +19,7 @@ var (
 	ErrInvalidIndex = errors.New("invalid index")
 )
 
+// @TODO (rgeraldes) - move to another place
 func min(x, y int) int {
 	if x < y {
 		return x
@@ -44,7 +45,7 @@ type chunkMarshalling struct {
 
 // DataSet represents content as a set of data chunks
 type DataSet struct {
-	header Metadata
+	meta *Metadata
 
 	count      int // number of current data chunks
 	dataMu     sync.Mutex
@@ -53,7 +54,22 @@ type DataSet struct {
 
 }
 
-func NewDataSetFromData(data []byte, size int) DataSet {
+func NewDataSetFromMeta(meta *Metadata) *DataSet {	
+	// @TODO (rgeraldes) - review (pointers)
+	return &DataSet{ 
+		meta: CopyMeta(meta),
+		count: 0,
+		membership: common.NewBitArray(uint64(meta.nchunks)),
+		data: make([]*Chunk, meta.nchunks),
+	}
+}
+	
+func CopyMeta(meta *Metadata) *Metadata {
+	cpy := *meta
+	return &cpy
+}
+
+func NewDataSetFromData(data []byte, size int) *DataSet {
 	total := (len(data) + size - 1) / size
 	chunks := make([]*Chunk, total)
 	membership := common.NewBitArray(uint64(total))
@@ -72,8 +88,8 @@ func NewDataSetFromData(data []byte, size int) DataSet {
 	//trie.Update()
 	//root := trie.Hash()
 
-	return DataSet{
-		header: Metadata{
+	return &DataSet{
+		meta: &Metadata{
 			nchunks: total,
 			root:    common.Hash{},
 		},
@@ -89,12 +105,12 @@ type Metadata struct {
 	root    common.Hash `json:"proof"  	 gencodec:"required"` // root hash of the trie
 }
 
-func (ds DataSet) Metadata() Metadata {
-	return ds.header
+func (ds DataSet) Metadata() *Metadata {
+	return ds.meta
 }
 
 func (ds DataSet) Size() int {
-	return ds.header.nchunks
+	return ds.meta.nchunks
 }
 
 func (ds DataSet) Get(i int) *Chunk {
@@ -113,7 +129,7 @@ func (ds DataSet) Add(chunk *Chunk) {
 }
 
 func (ds DataSet) HasAll() bool {
-	return ds.count == ds.header.nchunks
+	return ds.count == ds.meta.nchunks
 }
 
 func (ds DataSet) Data() []byte {
