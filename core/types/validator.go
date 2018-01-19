@@ -1,6 +1,8 @@
 package types
 
-import "github.com/kowala-tech/kUSD/common"
+import (
+	"github.com/kowala-tech/kUSD/common"
+)
 
 // validator represents a consensus validator
 type Validator struct {
@@ -19,17 +21,22 @@ func (val *Validator) Hash() common.Hash    { return rlpHash(val) }
 func (val *Validator) Code() common.Address { return val.code }
 func (val *Validator) Power() uint64        { return val.power }
 
-type Validators struct {
+type ValidatorSet struct {
 	validators []*Validator
 	proposer   *Validator
 }
 
-func (vals Validators) Size() int {
-	return len(vals.validators)
+func NewValidatorSet(validators []*Validator) *ValidatorSet {
+	// @TODO (rgeraldes) - size needs to be > 0
+	return &ValidatorSet{
+		validators: validators,
+	}
+}
+func (set *ValidatorSet) Size() int {
+	return len(set.validators)
 }
 
-func (vals Validators) Proposer() common.Address {
-	// @TODO (rgeraldes) complete
-	// return the first validator for now
-	return vals.validators[0].Code()
+func (set *ValidatorSet) Proposer() common.Address {
+	// @TODO (rgeraldes) complete - return the first validator for now
+	return set.validators[0].Code()
 }

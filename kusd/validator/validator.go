@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -14,6 +15,7 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusddb"
@@ -40,6 +42,9 @@ type Validator struct {
 
 	validating int32
 	deposit    uint64
+
+	// signer
+	signer types.Signer
 
 	// blockchain
 	backend Backend
@@ -70,26 +75,22 @@ func New(backend Backend, contractBackend bind.ContractBackend, config *params.C
 		chain:    backend.BlockChain(),
 		engine:   engine,
 		eventMux: eventMux,
+		signer:   types.NewAndromedaSigner(config.ChainID),
 	}
 
+	// Network contract instance
 	state, err := validator.chain.State()
 	if err != nil {
 		log.Crit("Failed to fetch the current state", "err", err)
 	}
-
-	// network contracts
 	contracts, err := network.GetContracts(state)
 	if err != nil {
 		log.Crit("Failed to access the network contracts", "err", err)
 	}
-
-	// create the network contract instance
-	log.Info("Network Contract", "address", contracts.Network, "backend", contractBackend)
 	contract, err := network.NewNetworkContract(contracts.Network, contractBackend)
 	if err != nil {
 		log.Crit("Failed to load the network contract", "err", err)
 	}
-
 	validator.network = contract
 
 	//go validator.sync()
@@ -128,14 +129,12 @@ out:
 	}
 }
 
-// @TODO (rgeraldes) - add logic to prevent re-running the state machine
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	if val.Validating() {
 		log.Warn("Failed to start the validator - the state machine is already running")
 		return
 	}
 
-	// @TODO (rgeraldes) - review logic (start is called by sync later on if the node is syncing)
 	account := accounts.Account{Address: coinbase}
 	wallet, err := val.backend.AccountManager().Find(account)
 	if err != nil {
@@ -155,16 +154,9 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 		}
 	*/
 
-	val.joinElection()
-
-	//if joined := val.joinElections; !joined {
-	//log.Error("Failed to register validator")
-	//}
-
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
 
-	// launch the state machine
 	go val.run()
 }
 
@@ -174,7 +166,6 @@ func (val *Validator) run() {
 
 	log.Info("Starting the consensus state machine")
 	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
-		// @TODO(rgeraldes) - publish old/new state if necessary - need to review sync process
 		state = state()
 		if val.maxTransitions > 0 && numTransitions == val.maxTransitions {
 			break
@@ -185,8 +176,8 @@ func (val *Validator) run() {
 func (val *Validator) Stop() {
 	log.Info("Stopping consensus validator")
 
-	val.leaveElection()
-	val.wg.Wait()
+	val.withdraw()
+	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
 	atomic.StoreInt32(&val.validating, 0)
 	atomic.StoreInt32(&val.shouldStart, 0)
@@ -210,8 +201,9 @@ func (val *Validator) SetDeposit(deposit uint64) {
 
 // Pending returns the currently pending block and associated state.
 func (val *Validator) Pending() (*types.Block, *state.StateDB) {
-	val.currentMu.Lock()
-	defer val.currentMu.Unlock()
+	// @TODO (rgeraldes) - review
+	// val.currentMu.Lock()
+	// defer val.currentMu.Unlock()
 
 	state, err := val.chain.State()
 	if err != nil {
@@ -222,8 +214,9 @@ func (val *Validator) Pending() (*types.Block, *state.StateDB) {
 }
 
 func (val *Validator) PendingBlock() *types.Block {
-	val.currentMu.Lock()
-	defer val.currentMu.Unlock()
+	// @TODO (rgeraldes) - review
+	// val.currentMu.Lock()
+	// defer val.currentMu.Unlock()
 
 	return val.chain.CurrentBlock()
 }
@@ -235,7 +228,7 @@ func (val *Validator) restoreLastCommit() {
 	}
 
 	// @TODO (rgeraldes) - VALIDATORS CONTRACT
-	lastValidators := &types.Validators{}
+	lastValidators := types.NewValidatorSet([]*types.Validator{})
 
 	lastCommit := currentBlock.LastCommit()
 	lastPreCommits := core.NewVotingTable(currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
@@ -253,16 +246,15 @@ func (val *Validator) restoreLastCommit() {
 	val.lastCommit = lastPreCommits
 }
 
-func (val *Validator) init() {
+func (val *Validator) init() error {
 	parent := val.chain.CurrentBlock()
 
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
 
 	// @NOTE (rgeraldes) - in order to sync the nodes, the start time
-	// must be the timestamp on the block + a sync interval
-	// Tendermint uses a different logic that does not rely on the
-	// previous information, but I think that's something necessary.
+	// must be the timestamp on the block + a sync interval. Tendermint offers another
+	// option. Review
 	val.start = time.Unix(parent.Time().Int64(), 0).Add(time.Duration(params.SyncDuration) * time.Millisecond)
 	val.proposal = nil
 	val.block = nil
@@ -272,29 +264,35 @@ func (val *Validator) init() {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.validators = &types.Validators{}
+	// @TODO (rgeraldes) - review types
+	// validators
+	count, err := val.network.GetVoterCount(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	validators := make([]*types.Validator, count.Uint64())
+	for i := int64(0); i < count.Int64(); i++ {
+		addr, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
+		if err != nil {
+			return err
+		}
+		// @TODO (rgeraldes) - modify power based on tokens?
+		validators[i] = types.NewValidator(addr, 1)
+	}
+	val.validators = types.NewValidatorSet(validators)
 
-	// val.votes
-	// @TODO (rgeraldes) - VALIDATORS CONTRACT
+	// voting system
+	val.votingSystem = NewVotingSystem()
 
 	// val.lastValidators
 
-	// val.prevValidators =
-	//prevPreCommits := new(*core.VoteSet)
-	//if val.commitRound > -1 && val.votes != nil {
-	//	prevPreCommits = val.votes.PreCommits(val.commitRound)
-	//}
-	// val.prevCommit = prevPreCommits
+	// events
 
-	// @TODO (rgeraldes) - reset just if was proposer
-	val.current = &work{}
-
+	return nil
 }
 
 func (val *Validator) isProposer() bool {
-	// @TODO (rgeraldes) - modify as soon as we access to the validator list
-	//return val.validators.Proposer() == val.account.Address
-	return true
+	return val.validators.Proposer() == val.account.Address
 }
 
 func (val *Validator) AddProposal(proposal *types.Proposal) {
@@ -340,7 +338,7 @@ func (val *Validator) AddVote(vote *types.Vote) {
 
 func (val *Validator) addVote(vote *types.Vote) error {
 	// @NOTE (rgeraldes) - for now just pre-vote/pre-commit for the current block number
-	added, err := val.votes.Add(vote)
+	added, err := val.votingSystem.Add(vote)
 	if err != nil {
 		// @TODO (rgeraldes)
 	}
@@ -358,179 +356,117 @@ func (val *Validator) addVote(vote *types.Vote) error {
 func (val *Validator) ProcessBlockFragment() {}
 
 func (val *Validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
-	/*
-		gp := new(core.GasPool).AddGas(env.header.GasLimit)
+	gp := new(core.GasPool).AddGas(val.header.GasLimit)
 
-		var coalescedLogs []*types.Log
+	var coalescedLogs []*types.Log
 
-		for {
-			// Retrieve the next transaction and abort if all done
-			tx := txs.Peek()
-			if tx == nil {
-				break
-			}
-			// Error may be ignored here. The error has already been checked
-			// during transaction acceptance is the transaction pool.
-			//
-			// We use the eip155 signer regardless of the current hf.
-			from, _ := types.Sender(env.signer, tx)
-			// Check whether the tx is replay protected. If we're not in the EIP155 hf
-			// phase, start ignoring the sender until we do.
-			if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
-				log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
-
-				txs.Pop()
-				continue
-			}
-			// Start executing the transaction
-			env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
-
-			err, logs := env.commitTransaction(tx, bc, coinbase, gp)
-			switch err {
-			case core.ErrGasLimitReached:
-				// Pop the current out-of-gas transaction without shifting in the next from the account
-				log.Trace("Gas limit exceeded for current block", "sender", from)
-				txs.Pop()
-
-			case nil:
-				// Everything ok, collect the logs and shift in the next transaction from the same account
-				coalescedLogs = append(coalescedLogs, logs...)
-				env.tcount++
-				txs.Shift()
-
-			default:
-				// Pop the current failed transaction without shifting in the next from the account
-				log.Trace("Transaction failed, will be removed", "hash", tx.Hash(), "err", err)
-				env.failedTxs = append(env.failedTxs, tx)
-				txs.Pop()
-			}
+	for {
+		// Retrieve the next transaction and abort if all done
+		tx := txs.Peek()
+		if tx == nil {
+			break
 		}
+		// Error may be ignored here. The error has already been checked
+		// during transaction acceptance is the transaction pool.
+		//
+		// We use the eip155 signer regardless of the current hf.
+		from, _ := types.TxSender(val.signer, tx)
 
-		if len(coalescedLogs) > 0 || env.tcount > 0 {
-			// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
-			// logs by filling in the block hash when the block was mined by the local miner. This can
-			// cause a race condition if a log was "upgraded" before the PendingLogsEvent is processed.
-			cpy := make([]*types.Log, len(coalescedLogs))
-			for i, l := range coalescedLogs {
-				cpy[i] = new(types.Log)
-				*cpy[i] = *l
-			}
-			go func(logs []*types.Log, tcount int) {
-				if len(logs) > 0 {
-					mux.Post(core.PendingLogsEvent{Logs: logs})
-				}
-				if tcount > 0 {
-					mux.Post(core.PendingStateEvent{})
-				}
-			}(cpy, env.tcount)
+		// Start executing the transaction
+		val.state.Prepare(tx.Hash(), common.Hash{}, val.tcount)
+
+		err, logs := val.commitTransaction(tx, bc, coinbase, gp)
+		switch err {
+		case core.ErrGasLimitReached:
+			// Pop the current out-of-gas transaction without shifting in the next from the account
+			log.Trace("Gas limit exceeded for current block", "sender", from)
+			txs.Pop()
+
+		case nil:
+			// Everything ok, collect the logs and shift in the next transaction from the same account
+			coalescedLogs = append(coalescedLogs, logs...)
+			val.tcount++
+			txs.Shift()
+
+		default:
+			// Pop the current failed transaction without shifting in the next from the account
+			log.Trace("Transaction failed, will be removed", "hash", tx.Hash(), "err", err)
+			val.failedTxs = append(val.failedTxs, tx)
+			txs.Pop()
 		}
-	*/
+	}
+
+	if len(coalescedLogs) > 0 || val.tcount > 0 {
+		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
+		// logs by filling in the block hash when the block was mined by the local miner. This can
+		// cause a race condition if a log was "upgraded" before the PendingLogsEvent is processed.
+		cpy := make([]*types.Log, len(coalescedLogs))
+		for i, l := range coalescedLogs {
+			cpy[i] = new(types.Log)
+			*cpy[i] = *l
+		}
+		go func(logs []*types.Log, tcount int) {
+			if len(logs) > 0 {
+				mux.Post(core.PendingLogsEvent{Logs: logs})
+			}
+			if tcount > 0 {
+				mux.Post(core.PendingStateEvent{})
+			}
+		}(cpy, val.tcount)
+	}
 }
 
 func (val *Validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
-	/*
-		snap := env.state.Snapshot()
+	snap := val.state.Snapshot()
 
-		receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed, vm.Config{})
-		if err != nil {
-			env.state.RevertToSnapshot(snap)
-			return err, nil
-		}
-		env.txs = append(env.txs, tx)
-		env.receipts = append(env.receipts, receipt)
-	*/
-	//	return nil, receipt.Logs
-	return nil, nil
-}
-
-func (val *Validator) joinElection() {
-	log.Info("Joining the consensus elections")
-	// @TODO (rgeraldes) - edge case (validator is voting and its process crashes)
-	// How long is it going to stay registered as a voter?
-	// He should connect again even if he is already registered as a voter?
-
-	availability, err := val.network.Availability(&bind.CallOpts{})
+	receipt, _, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, val.header.GasUsed, vm.Config{})
 	if err != nil {
-		log.Crit("Failed to find availability", "err", err)
+		val.state.RevertToSnapshot(snap)
+		return err, nil
 	}
+	val.txs = append(val.txs, tx)
+	val.receipts = append(val.receipts, receipt)
 
-	count, err := val.network.GetVoterCount(&bind.CallOpts{})
-	if err != nil {
-		log.Crit("Failed to get the voter count", "err", err)
-	}
-
-	maxVoters, err := val.network.MAX_VOTERS(&bind.CallOpts{})
-	if err != nil {
-		log.Crit("Failed to get the maximum number of voters value", "err", err)
-	}
-
-	minDeposit, err := val.network.MinDeposit(&bind.CallOpts{})
-	if err != nil {
-		log.Crit("Failed to get the minimum deposit", "err", err)
-	}
-
-	log.Info("Election info", "Number of voters", count, "Max Voters", maxVoters, "Minimum Deposit", minDeposit, "Spots left?", availability)
-
-	log.Info("Voter Registration", "address", val.account.Address.Hex())
-	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{Pending: false}, val.account.Address)
-	if err != nil {
-		log.Crit("Failed to verify if the validator is part of the genesis block")
-	}
-
-	// @NOTE (rgeraldes) - sync was already done at this point and by default the investors will be
-	// part of the initial set of validators - no need to make a deposit if the block number is 0
-	// since these validators will be marked as voters from the start
-	if !isGenesis || (isGenesis && val.chain.CurrentBlock().NumberU64() > 0) {
-		val.makeDeposit(isGenesis)
-	} else {
-		log.Info("Deposit is not necessary")
-	}
-}
-
-func (val *Validator) leaveElection() {
-	val.withdraw()
+	return nil, receipt.Logs
 }
 
 // @TODO (rgeraldes) - the initial deposit value should also be
 // validated against the minimum deposit
 // @TODO (rgeraldes) - review call opts
 // @TODO (rgeraldes) - review log levels
-func (val *Validator) makeDeposit(isGenesis bool) {
-	log.Info("Deposit details", "account", val.account, "amount", val.deposit)
+func (val *Validator) makeDeposit(isGenesis bool) error {
 	if isGenesis {
-		log.Info("Genesis Validator")
+		log.Debug("Genesis Validator")
 		// @TODO (rgeraldes) - verify if the deposit is at least equal to the initial investment
 	} else {
-		log.Info("Non-Genesis Validator")
+		log.Debug("Non-Genesis Validator")
 		min, err := val.network.MinDeposit(&bind.CallOpts{})
 		if err != nil {
-			log.Crit("Failed to verify the minimum deposit")
-			return
+			return err
 		}
 
 		if min.Cmp(big.NewInt(int64(val.deposit))) > 0 {
-			log.Warn("Current deposit is inferior than the minimum required", "deposit", val.deposit, "minimum required", min)
-			return
+			return fmt.Errorf("Current deposit - %d - is not enough. The minimum required is %d", val.deposit, min)
 		}
 
 		// check if there are spots left to vote
 		available, err := val.network.Availability(&bind.CallOpts{})
 		if err != nil {
-			log.Crit("Failed to verify the network availability")
-			return
+			return err
 		}
 
 		if !available {
-			log.Warn("There are not positions available at the moment.")
-			return
+			return fmt.Errorf("There are not positions available at the moment")
 		}
 	}
 
 	opts := &bind.TransactOpts{}
 	_, err := val.network.Deposit(opts)
 	if err != nil {
-		log.Crit("Failed to make a deposit to participate in the election")
+		return fmt.Errorf("Failed to transact the deposit: %x", err)
 	}
+
+	return nil
 }
 
 func (val *Validator) withdraw() {
@@ -590,6 +526,19 @@ func (val *Validator) createBlock() *types.Block {
 		//commit = val.lastCommit.Proof()
 	}
 
+	if err := val.engine.Prepare(val.chain, header); err != nil {
+		log.Error("Failed to prepare header for mining", "err", err)
+		// @TODO (rgeraldes) - review returning nil
+		return nil
+	}
+
+	// Could potentially happen if starting to mine in an odd state.
+	if err = val.makeCurrent(parent, header); err != nil {
+		log.Error("Failed to create mining context", "err", err)
+		// @TODO (rgeraldes) - review returning nil
+		return nil
+	}
+
 	pending, err := val.backend.TxPool().Pending()
 	if err != nil {
 		log.Crit("Failed to fetch pending transactions", "err", err)
@@ -598,15 +547,15 @@ func (val *Validator) createBlock() *types.Block {
 	txs := types.NewTransactionsByPriceAndNonce(pending)
 	val.commitTransactions(val.eventMux, txs, val.chain, val.account.Address)
 
-	val.backend.TxPool().RemoveBatch(val.current.failedTxs)
+	val.backend.TxPool().RemoveBatch(val.failedTxs)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
-	if block, err = val.engine.Finalize(val.chain, header, state, val.current.txs, val.current.receipts, commit); err != nil {
+	if block, err = val.engine.Finalize(val.chain, header, state, val.txs, val.receipts, commit); err != nil {
 		log.Crit("Failed to finalize block for sealing", "err", err)
 	}
 
-	for _, r := range val.current.receipts {
+	for _, r := range val.receipts {
 		for _, l := range r.Logs {
 			l.BlockHash = block.Hash()
 		}
@@ -740,4 +689,20 @@ func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 
 		// @TODO (rgeraldes) - post event (to confirm that when we get to the commit state that we wait for the block)
 	}
+}
+
+func (val *Validator) makeCurrent(parent *types.Block, header *types.Header) error {
+	state, err := val.chain.StateAt(parent.Root())
+	if err != nil {
+		return err
+	}
+	work := &work{
+		header: header,
+		state:  state,
+	}
+
+	// Keep track of transactions which return errors so they can be removed
+	work.tcount = 0
+	val.work = work
+	return nil
 }
