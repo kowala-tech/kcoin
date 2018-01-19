@@ -20,11 +20,13 @@ package clique
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
@@ -38,7 +40,6 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rlp"
 	"github.com/kowala-tech/kUSD/rpc"
-	lru "github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -565,9 +566,22 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
-func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	// No block rewards in PoA, so the state remains as is and uncles are dropped
-	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+func (c *Clique) Finalize(chain consensus.ChainReader, header *types.Header, sdb *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	fmt.Println("Finalize()")
+	if c.config.Rewarded {
+		// get signers addresses.
+		// TODO: this should be tendermint active participants
+		snap, err := c.snapshot(chain, header.Number.Uint64()-1, header.ParentHash, nil)
+		if err != nil {
+			return nil, err
+		}
+		// distribute block reward
+		if err := c.accumulateRewards(sdb, header, snap.signers()); err != nil {
+			return nil, err
+		}
+	}
+	// uncles are dropped
+	header.Root = sdb.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
 
 	// Assemble and return the final block for sealing
