@@ -287,6 +287,7 @@ func (val *Validator) init() error {
 	// val.lastValidators
 
 	// events
+	val.blockCh = make(chan *types.Block)
 
 	return nil
 }
@@ -326,7 +327,8 @@ func (val *Validator) AddProposal(proposal *types.Proposal) {
 		return
 	*/
 
-	go func() { val.proposalCh <- proposal }()
+	val.proposal = proposal
+	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
 }
 
 func (val *Validator) AddVote(vote *types.Vote) {
@@ -352,8 +354,6 @@ func (val *Validator) addVote(vote *types.Vote) error {
 
 	return nil
 }
-
-func (val *Validator) ProcessBlockFragment() {}
 
 func (val *Validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
 	gp := new(core.GasPool).AddGas(val.header.GasLimit)
@@ -563,6 +563,7 @@ func (val *Validator) createBlock() *types.Block {
 	for _, log := range state.Logs() {
 		log.BlockHash = block.Hash()
 	}
+
 	return block
 }
 
@@ -582,11 +583,13 @@ func (val *Validator) propose() {
 	}
 
 	proposal := types.NewProposal(val.blockNumber, val.round, blockFragments.Metadata(), lockedRound, lockedBlock)
+	log.Info("Proposal info", "proposal", proposal)
 
 	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
 	if err != nil {
 		log.Crit("Failed to sign the proposal", "err", err)
 	}
+	log.Info("Proposal info", "signed proposal", signedProposal)
 
 	val.proposal = signedProposal
 	val.block = block
@@ -595,7 +598,11 @@ func (val *Validator) propose() {
 
 	// post block segments events
 	for i := 0; i < blockFragments.Size(); i++ {
-		val.eventMux.Post(core.NewBlockFragmentEvent{val.blockNumber, val.round, blockFragments.Get(i)})
+		val.eventMux.Post(core.NewBlockFragmentEvent{
+			BlockNumber: val.blockNumber,
+			Round:       val.round,
+			Data:        blockFragments.Get(i),
+		})
 	}
 
 }
@@ -687,7 +694,7 @@ func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		log.Info("Received the complete proposal block", "hash", block.Hash())
 		val.block = block
 
-		// @TODO (rgeraldes) - post event (to confirm that when we get to the commit state that we wait for the block)
+		go func() { val.blockCh <- block }()
 	}
 }
 

@@ -31,7 +31,7 @@ type Election struct {
 	lastValidators *types.ValidatorSet
 
 	// inputs
-	proposalCh                    chan *types.Proposal
+	blockCh                    chan *types.Block
 	firstMajority, secondMajority *event.TypeMuxSubscription
 
 	// @TODO (rgeraldes) - not sure if it will be necessary

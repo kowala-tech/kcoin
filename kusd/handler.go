@@ -315,9 +315,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	if err != nil {
 		return err
 	}
+
 	if msg.Size > ProtocolMaxMsgSize {
 		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 	}
+
 	defer msg.Discard()
 
 	// Handle the message depending on its contents
@@ -696,7 +698,9 @@ func (pm *ProtocolManager) proposalBroadcastLoop() {
 		switch ev := obj.Data.(type) {
 		case core.NewProposalEvent:
 			for _, peer := range pm.peers.Peers() {
-				peer.SendNewProposal(ev.Proposal)
+				if err := peer.SendNewProposal(ev.Proposal); err != nil {
+					log.Error("Failed to send proposal", "err", err)
+				}
 			}
 		}
 	}

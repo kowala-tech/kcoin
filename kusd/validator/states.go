@@ -92,6 +92,7 @@ func (val *Validator) newElectionState() stateFn {
 			<-txSub.Chan()
 		}
 	*/
+	time.Sleep(time.Duration(30) * time.Second)
 
 	return val.newRoundState
 }
@@ -117,11 +118,11 @@ func (val *Validator) newProposalState() stateFn {
 		log.Info("Proposing a new block")
 		val.propose()
 	} else {
-		log.Info("Waiting for the proposal", "proposer", nil)
+		log.Info("Waiting for the proposal", "proposer", val.validators.Proposer())
 		select {
-		case proposal := <-val.proposalCh:
-			val.proposal = proposal
-			log.Info("Received a new proposal", "hash", val.proposal.Hash())
+		case block := <- val.blockCh:
+			val.block = block
+			log.Info("Received the block", "hash", val.block.Hash())
 		case <-time.After(timeout):
 			log.Info("Timeout expired", "duration", timeout)
 		}
@@ -143,8 +144,10 @@ func (val *Validator) preVoteWaitState() stateFn {
 
 	select {
 
-	case <-val.firstMajority.Chan():
-		log.Info("There's a majority!")
+	/*
+		case <-val.firstMajority.Chan():
+			log.Info("There's a majority!")
+	*/
 
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
@@ -165,14 +168,14 @@ func (val *Validator) preCommitWaitState() stateFn {
 	timeout := time.Duration(params.PreCommitDuration+uint64(val.round)+params.PreCommitDeltaDuration) * time.Millisecond
 
 	select {
-
-	case <-val.secondMajority.Chan():
-		log.Info("There's a majority!")
-		if val.block == nil {
-			return val.newRoundState
-		}
-		return val.commitState
-
+	/*
+		case <-val.secondMajority.Chan():
+			log.Info("There's a majority!")
+			if val.block == nil {
+				return val.newRoundState
+			}
+			return val.commitState
+	*/
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
 		return val.commitState

@@ -22,7 +22,7 @@ var ProtocolName = "kusd"
 var ProtocolVersions = []uint{kusd1}
 
 // Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17}
+var ProtocolLengths = []uint64{21}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -36,17 +36,17 @@ const (
 	GetBlockBodiesMsg  = 0x05
 	BlockBodiesMsg     = 0x06
 	NewBlockMsg        = 0x07
-	GetNodeDataMsg     = 0x0d
-	NodeDataMsg        = 0x0e
-	GetReceiptsMsg     = 0x0f
-	ReceiptsMsg        = 0x10
+	GetNodeDataMsg     = 0x08
+	NodeDataMsg        = 0x09
+	GetReceiptsMsg     = 0x0a
+	ReceiptsMsg        = 0x0b
 
 	// consensus
-	ProposalMsg      = 0x11
-	ProposalPOLMsg   = 0x12
-	VoteMsg          = 0x13
-	ElectionMsg      = 0x14
-	BlockFragmentMsg = 0x15
+	ProposalMsg      = 0x10
+	ProposalPOLMsg   = 0x11
+	VoteMsg          = 0x12
+	ElectionMsg      = 0x13
+	BlockFragmentMsg = 0x14
 )
 
 type errCode int

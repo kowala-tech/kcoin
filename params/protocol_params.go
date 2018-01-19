@@ -47,16 +47,16 @@ const (
 	MaxCodeSize = 24576
 
 	// Proof of Stake - timeouts
-	ProposeDuration        uint64 = 10000
+	ProposeDuration        uint64 = 30000
 	ProposeDeltaDuration   uint64 = 5000
-	PreVoteDuration        uint64 = 10000
+	PreVoteDuration        uint64 = 30000
 	PreVoteDeltaDuration   uint64 = 5000
-	PreCommitDuration      uint64 = 10000
+	PreCommitDuration      uint64 = 30000
 	PreCommitDeltaDuration uint64 = 5000
 
 	// @NOTE (rgeraldes) - this duration can be used to change the times
 	// between blocks
-	SyncDuration uint64 = 10000
+	SyncDuration uint64 = 20000
 )
 
 var (
