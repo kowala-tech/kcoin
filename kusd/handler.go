@@ -611,21 +611,21 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	case msg.Code == ProposalMsg:
 		// Retrieve and decode the propagated proposal
-		var proposal *types.Proposal
+		var proposal types.Proposal
 		if err := msg.Decode(&proposal); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		pm.validator.AddProposal(proposal)
+		pm.validator.AddProposal(&proposal)
 
 	case msg.Code == VoteMsg:
 		// Retrieve and decode the propagated vote
-		var vote *types.Vote
+		var vote types.Vote
 		if err := msg.Decode(&vote); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
 		p.MarkVote(vote.Hash())
-		pm.validator.AddVote(vote)
+		pm.validator.AddVote(&vote)
 
 	case msg.Code == BlockFragmentMsg:
 		// Retrieve and decode the propagated block fragment

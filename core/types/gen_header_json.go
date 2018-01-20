@@ -11,7 +11,7 @@ import (
 	"github.com/kowala-tech/kUSD/common/hexutil"
 )
 
-var _ = (*headerMarshaling)(nil)
+var _ = (*headerMarshalling)(nil)
 
 func (h Header) MarshalJSON() ([]byte, error) {
 	type Header struct {

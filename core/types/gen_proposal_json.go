@@ -4,6 +4,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
@@ -14,14 +15,14 @@ var _ = (*proposaldataMarshalling)(nil)
 
 func (p proposaldata) MarshalJSON() ([]byte, error) {
 	type proposaldata struct {
-		BlockNumber   *hexutil.Big   `json:"blockNumber"		gencodec:"required"`
-		Round         hexutil.Uint64 `json:"round"				gencodec:"required"`
-		LockedRound   hexutil.Uint64 `json:"lockedRound"		gencodec:"required"`
-		LockedBlock   common.Hash    `json:"lockedBlock"		gencodec:"required"`
-		BlockMetadata *Metadata      `json:"blockMetadata" 	gencodec:"required"`
-		V             *hexutil.Big   `json:"v"	gencodec:"required"`
-		R             *hexutil.Big   `json:"r"	gencodec:"required"`
-		S             *hexutil.Big   `json:"s"	gencodec:"required"`
+		BlockNumber   *hexutil.Big   `json:"blockNumber"   gencodec:"required"`
+		Round         hexutil.Uint64 `json:"round"         gencodec:"required"`
+		LockedRound   hexutil.Uint64 `json:"lockedRound"   gencodec:"required"`
+		LockedBlock   common.Hash    `json:"lockedBlock"   gencodec:"required"`
+		BlockMetadata *Metadata      `json:"metadata"      gencodec:"required"`
+		V             *hexutil.Big   `json:"v"      gencodec:"required"`
+		R             *hexutil.Big   `json:"r"      gencodec:"required"`
+		S             *hexutil.Big   `json:"s"      gencodec:"required"`
 	}
 	var enc proposaldata
 	enc.BlockNumber = (*hexutil.Big)(p.BlockNumber)
@@ -37,42 +38,50 @@ func (p proposaldata) MarshalJSON() ([]byte, error) {
 
 func (p *proposaldata) UnmarshalJSON(input []byte) error {
 	type proposaldata struct {
-		BlockNumber   *hexutil.Big    `json:"blockNumber"		gencodec:"required"`
-		Round         *hexutil.Uint64 `json:"round"				gencodec:"required"`
-		LockedRound   *hexutil.Uint64 `json:"lockedRound"		gencodec:"required"`
-		LockedBlock   *common.Hash    `json:"lockedBlock"		gencodec:"required"`
-		BlockMetadata *Metadata       `json:"blockMetadata" 	gencodec:"required"`
-		V             *hexutil.Big    `json:"v"	gencodec:"required"`
-		R             *hexutil.Big    `json:"r"	gencodec:"required"`
-		S             *hexutil.Big    `json:"s"	gencodec:"required"`
+		BlockNumber   *hexutil.Big    `json:"blockNumber"   gencodec:"required"`
+		Round         *hexutil.Uint64 `json:"round"         gencodec:"required"`
+		LockedRound   *hexutil.Uint64 `json:"lockedRound"   gencodec:"required"`
+		LockedBlock   *common.Hash    `json:"lockedBlock"   gencodec:"required"`
+		BlockMetadata *Metadata       `json:"metadata"      gencodec:"required"`
+		V             *hexutil.Big    `json:"v"      gencodec:"required"`
+		R             *hexutil.Big    `json:"r"      gencodec:"required"`
+		S             *hexutil.Big    `json:"s"      gencodec:"required"`
 	}
 	var dec proposaldata
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
-	if dec.BlockNumber != nil {
-		p.BlockNumber = (*big.Int)(dec.BlockNumber)
+	if dec.BlockNumber == nil {
+		return errors.New("missing required field 'blockNumber' for proposaldata")
 	}
-	if dec.Round != nil {
-		p.Round = uint64(*dec.Round)
+	p.BlockNumber = (*big.Int)(dec.BlockNumber)
+	if dec.Round == nil {
+		return errors.New("missing required field 'round' for proposaldata")
 	}
-	if dec.LockedRound != nil {
-		p.LockedRound = uint64(*dec.LockedRound)
+	p.Round = uint64(*dec.Round)
+	if dec.LockedRound == nil {
+		return errors.New("missing required field 'lockedRound' for proposaldata")
 	}
-	if dec.LockedBlock != nil {
-		p.LockedBlock = *dec.LockedBlock
+	p.LockedRound = uint64(*dec.LockedRound)
+	if dec.LockedBlock == nil {
+		return errors.New("missing required field 'lockedBlock' for proposaldata")
 	}
-	if dec.BlockMetadata != nil {
-		p.BlockMetadata = dec.BlockMetadata
+	p.LockedBlock = *dec.LockedBlock
+	if dec.BlockMetadata == nil {
+		return errors.New("missing required field 'metadata' for proposaldata")
 	}
-	if dec.V != nil {
-		p.V = (*big.Int)(dec.V)
+	p.BlockMetadata = dec.BlockMetadata
+	if dec.V == nil {
+		return errors.New("missing required field 'v' for proposaldata")
 	}
-	if dec.R != nil {
-		p.R = (*big.Int)(dec.R)
+	p.V = (*big.Int)(dec.V)
+	if dec.R == nil {
+		return errors.New("missing required field 'r' for proposaldata")
 	}
-	if dec.S != nil {
-		p.S = (*big.Int)(dec.S)
+	p.R = (*big.Int)(dec.R)
+	if dec.S == nil {
+		return errors.New("missing required field 's' for proposaldata")
 	}
+	p.S = (*big.Int)(dec.S)
 	return nil
 }

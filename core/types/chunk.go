@@ -14,6 +14,7 @@ import (
 // @TODO (rgeraldes) - review uint64/int
 
 //go:generate gencodec -type Chunk -field-override chunkMarshalling -out gen_chunk_json.go
+//go:generate gencodec -type Metadata -field-override MetadataMarshalling -out gen_metadata_json.go
 
 var (
 	ErrInvalidIndex = errors.New("invalid index")
@@ -47,7 +48,7 @@ type chunkMarshalling struct {
 type DataSet struct {
 	meta *Metadata
 
-	count      int // number of current data chunks
+	count      uint // number of current data chunks
 	dataMu     sync.Mutex
 	data       []*Chunk         // stores data chunks
 	membership *common.BitArray // indicates whether a data unit is present or not
@@ -55,12 +56,11 @@ type DataSet struct {
 }
 
 func NewDataSetFromMeta(meta *Metadata) *DataSet {	
-	// @TODO (rgeraldes) - review (pointers)
 	return &DataSet{ 
 		meta: CopyMeta(meta),
 		count: 0,
-		membership: common.NewBitArray(uint64(meta.nchunks)),
-		data: make([]*Chunk, meta.nchunks),
+		membership: common.NewBitArray(uint64(meta.NChunks)),
+		data: make([]*Chunk, meta.NChunks),
 	}
 }
 	
@@ -90,27 +90,31 @@ func NewDataSetFromData(data []byte, size int) *DataSet {
 
 	return &DataSet{
 		meta: &Metadata{
-			nchunks: total,
-			root:    common.Hash{},
+			NChunks: uint(total),
+			Root:    common.Hash{},
 		},
 		data:       chunks,
 		membership: membership,
-		count:      total,
+		count:      uint(total),
 	}
 }
 
 // Metadata represents the content specifications
 type Metadata struct {
-	nchunks int         `json:"nchunks"  gencodec:"required"`
-	root    common.Hash `json:"proof"  	 gencodec:"required"` // root hash of the trie
+	NChunks uint         `json:"nchunks" gencodec:"required"`
+	Root    common.Hash  `json:"proof"   gencodec:"required"` // root hash of the trie
+}
+
+type MetadataMarshalling struct {
+	NChunks hexutil.Uint64
 }
 
 func (ds DataSet) Metadata() *Metadata {
 	return ds.meta
 }
 
-func (ds DataSet) Size() int {
-	return ds.meta.nchunks
+func (ds DataSet) Size() uint {
+	return ds.meta.NChunks
 }
 
 func (ds DataSet) Get(i int) *Chunk {
@@ -129,7 +133,7 @@ func (ds DataSet) Add(chunk *Chunk) {
 }
 
 func (ds DataSet) HasAll() bool {
-	return ds.count == ds.meta.nchunks
+	return ds.count == ds.meta.NChunks
 }
 
 func (ds DataSet) Data() []byte {

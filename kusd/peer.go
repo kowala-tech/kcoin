@@ -167,18 +167,19 @@ func (p *peer) SendNewBlockHashes(hashes []common.Hash, numbers []uint64) error 
 // SendNewBlock propagates an entire block to a remote peer.
 func (p *peer) SendNewBlock(block *types.Block) error {
 	p.knownBlocks.Add(block.Hash())
+	// @TODO (rgeraldes) - td was sent too - review
 	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block})
 }
 
 // SendNewBlock propagates a proposal to a remote peer.
 func (p *peer) SendNewProposal(proposal *types.Proposal) error {
 	log.Info("Sending proposal")
-	return p2p.Send(p.rw, ProposalMsg, []interface{}{proposal})
+	return p2p.Send(p.rw, ProposalMsg, proposal)
 }
 
 // SendNewBlock propagates a vote to a remote peer.
 func (p *peer) SendVote(vote *types.Vote) error {
-	return p2p.Send(p.rw, VoteMsg, []interface{}{vote})
+	return p2p.Send(p.rw, VoteMsg, vote)
 }
 
 // SendBlockFragment propagates a block fragment to a remote peer.

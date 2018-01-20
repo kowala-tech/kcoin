@@ -39,17 +39,17 @@ type Vote struct {
 }
 
 type votedata struct {
-	BlockHash   common.Hash `json:"blockHash"		gencodec:"required"`
-	BlockNumber *big.Int    `json:"blockNumber" gencodec:"required"`
-	Round       uint64      `json:"round"		gencodec:"required"`
-	Type        VoteType    `json:"type"		gencodec:"required"`
+	BlockHash   common.Hash `json:"blockHash"    gencodec:"required"`
+	BlockNumber *big.Int    `json:"blockNumber"  gencodec:"required"`
+	Round       uint64      `json:"round"        gencodec:"required"`
+	Type        VoteType    `json:"type"         gencodec:"required"`
 
 	// Timestamp     time.Time      `json:"time"		gencoded:"required"` // @TODO (rgeraldes) confirm if it's necessary
 
 	// signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
+	V *big.Int `json:"v"   gencodec:"required"`
+	R *big.Int `json:"r"   gencodec:"required"`
+	S *big.Int `json:"s"   gencodec:"required"`
 }
 
 // votedataMarshalling - field type overrides for gencodec

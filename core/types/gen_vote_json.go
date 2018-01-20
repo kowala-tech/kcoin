@@ -15,13 +15,13 @@ var _ = (*votedataMarshalling)(nil)
 
 func (v votedata) MarshalJSON() ([]byte, error) {
 	type votedata struct {
-		BlockHash   common.Hash    `json:"blockHash"		gencodec:"required"`
-		BlockNumber *hexutil.Big   `json:"blockNumber" gencodec:"required"`
-		Round       hexutil.Uint64 `json:"round"		gencodec:"required"`
-		Type        VoteType       `json:"type"		gencodec:"required"`
-		V           *hexutil.Big   `json:"v" gencodec:"required"`
-		R           *hexutil.Big   `json:"r" gencodec:"required"`
-		S           *hexutil.Big   `json:"s" gencodec:"required"`
+		BlockHash   common.Hash    `json:"blockHash"    gencodec:"required"`
+		BlockNumber *hexutil.Big   `json:"blockNumber"  gencodec:"required"`
+		Round       hexutil.Uint64 `json:"round"        gencodec:"required"`
+		Type        VoteType       `json:"type"         gencodec:"required"`
+		V           *hexutil.Big   `json:"v"   gencodec:"required"`
+		R           *hexutil.Big   `json:"r"   gencodec:"required"`
+		S           *hexutil.Big   `json:"s"   gencodec:"required"`
 	}
 	var enc votedata
 	enc.BlockHash = v.BlockHash
@@ -36,31 +36,34 @@ func (v votedata) MarshalJSON() ([]byte, error) {
 
 func (v *votedata) UnmarshalJSON(input []byte) error {
 	type votedata struct {
-		BlockHash   *common.Hash    `json:"blockHash"		gencodec:"required"`
-		BlockNumber *hexutil.Big    `json:"blockNumber" gencodec:"required"`
-		Round       *hexutil.Uint64 `json:"round"		gencodec:"required"`
-		Type        *VoteType       `json:"type"		gencodec:"required"`
-		V           *hexutil.Big    `json:"v" gencodec:"required"`
-		R           *hexutil.Big    `json:"r" gencodec:"required"`
-		S           *hexutil.Big    `json:"s" gencodec:"required"`
+		BlockHash   *common.Hash    `json:"blockHash"    gencodec:"required"`
+		BlockNumber *hexutil.Big    `json:"blockNumber"  gencodec:"required"`
+		Round       *hexutil.Uint64 `json:"round"        gencodec:"required"`
+		Type        *VoteType       `json:"type"         gencodec:"required"`
+		V           *hexutil.Big    `json:"v"   gencodec:"required"`
+		R           *hexutil.Big    `json:"r"   gencodec:"required"`
+		S           *hexutil.Big    `json:"s"   gencodec:"required"`
 	}
 	var dec votedata
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
-	if dec.BlockHash != nil {
-		v.BlockHash = *dec.BlockHash
+	if dec.BlockHash == nil {
+		return errors.New("missing required field 'blockHash' for votedata")
 	}
+	v.BlockHash = *dec.BlockHash
 	if dec.BlockNumber == nil {
 		return errors.New("missing required field 'blockNumber' for votedata")
 	}
 	v.BlockNumber = (*big.Int)(dec.BlockNumber)
-	if dec.Round != nil {
-		v.Round = uint64(*dec.Round)
+	if dec.Round == nil {
+		return errors.New("missing required field 'round' for votedata")
 	}
-	if dec.Type != nil {
-		v.Type = *dec.Type
+	v.Round = uint64(*dec.Round)
+	if dec.Type == nil {
+		return errors.New("missing required field 'type' for votedata")
 	}
+	v.Type = *dec.Type
 	if dec.V == nil {
 		return errors.New("missing required field 'v' for votedata")
 	}

@@ -46,7 +46,7 @@ import (
 */
 // Voting table stores the votes of an election round
 type VotingTable struct {
-	lock sync.Mutex
+	mtx sync.Mutex
 
 	all map[common.Hash]*types.Vote // allow lookups
 
@@ -72,6 +72,7 @@ func NewVotingTable(blockNumber *big.Int, round uint64, voteType types.VoteType,
 		received:    common.NewBitArray(uint64(1 /*validators.Size()*/)), // @TODO (rgeraldes)
 		votes:       make([]*types.Vote, validators.Size()),
 		sum:         0,
+		all: 		 make(map[common.Hash]*types.Vote),
 		//maj23:         nil,
 		//votesByBlock:  make(map[string]*blockVotes, valSet.Size()),
 		//peerMaj23s:    make(map[string]BlockID),
@@ -123,8 +124,8 @@ func (table *VotingTable) validateVote(vote *types.Vote) error {
 }
 
 func (table *VotingTable) Add(vote *types.Vote) (added bool, err error) {
-	table.lock.Lock()
-	defer table.lock.Unlock()
+	//table.lock.Lock()
+	//defer table.lock.Unlock()
 
 	// If the vote is already known, discard it
 	hash := vote.Hash()

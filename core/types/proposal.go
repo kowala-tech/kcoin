@@ -24,17 +24,17 @@ type Proposal struct {
 }
 
 type proposaldata struct {
-	BlockNumber   *big.Int    `json:"blockNumber"		gencodec:"required"`
-	Round         uint64      `json:"round"				gencodec:"required"`
-	LockedRound   uint64      `json:"lockedRound"		gencodec:"required"`
-	LockedBlock   common.Hash `json:"lockedBlock"		gencodec:"required"`
-	BlockMetadata *Metadata   `json:"blockMetadata" 	gencodec:"required"`
+	BlockNumber   *big.Int 		`json:"blockNumber"   gencodec:"required"`
+	Round         uint64   		`json:"round"         gencodec:"required"`
+	LockedRound   uint64     	`json:"lockedRound"   gencodec:"required"`
+	LockedBlock   common.Hash	`json:"lockedBlock"   gencodec:"required"`
+	BlockMetadata *Metadata		`json:"metadata"      gencodec:"required"`
 	//Timestamp     time.Time      `json:"time"		gencoded:"required"` // @TODO(rgeraldes) confirm if it's necessary
 
 	// signature values
-	V *big.Int `json:"v"	gencodec:"required"`
-	R *big.Int `json:"r"	gencodec:"required"`
-	S *big.Int `json:"s"	gencodec:"required"`
+	V *big.Int	`json:"v"      gencodec:"required"`
+	R *big.Int	`json:"r"      gencodec:"required"`
+	S *big.Int	`json:"s"      gencodec:"required"`
 }
 
 // proposaldataMarshalling - field type overrides for gencodec

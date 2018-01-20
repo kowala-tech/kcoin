@@ -326,7 +326,6 @@ func (val *Validator) AddProposal(proposal *types.Proposal) {
 
 		return
 	*/
-
 	val.proposal = proposal
 	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
 }
@@ -583,19 +582,18 @@ func (val *Validator) propose() {
 	}
 
 	proposal := types.NewProposal(val.blockNumber, val.round, blockFragments.Metadata(), lockedRound, lockedBlock)
-	log.Info("Proposal info", "proposal", proposal)
 
 	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
 	if err != nil {
 		log.Crit("Failed to sign the proposal", "err", err)
 	}
-	log.Info("Proposal info", "signed proposal", signedProposal)
 
 	val.proposal = signedProposal
 	val.block = block
 
 	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
 
+	/*
 	// post block segments events
 	for i := 0; i < blockFragments.Size(); i++ {
 		val.eventMux.Post(core.NewBlockFragmentEvent{
@@ -603,7 +601,7 @@ func (val *Validator) propose() {
 			Round:       val.round,
 			Data:        blockFragments.Get(i),
 		})
-	}
+	}*/
 
 }
 

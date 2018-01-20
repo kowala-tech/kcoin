@@ -19,7 +19,7 @@ var (
 	EmptyRootHash = DeriveSha(Transactions{})
 )
 
-//go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
+//go:generate gencodec -type Header -field-override headerMarshalling -out gen_header_json.go
 //go:generate gencodec -type Commit -out gen_commit_json.go
 
 // Header represents a block header in the Ethereum blockchain.
@@ -40,7 +40,7 @@ type Header struct {
 }
 
 // field type overrides for gencodec
-type headerMarshaling struct {
+type headerMarshalling struct {
 	Number   *hexutil.Big
 	GasLimit *hexutil.Big
 	GasUsed  *hexutil.Big
@@ -84,8 +84,8 @@ func rlpHash(x interface{}) (h common.Hash) {
 // Commit contains the evidence that a block was committed by a set of validators
 type Commit struct {
 	// @NOTE (rgeraldes) - pre-commits are in order of address
-	PreCommits     Votes `json:"votes"		gencodec:"required"`
-	FirstPreCommit *Vote `json:"vote" 		gencodec:"required"`
+	PreCommits     Votes `json:"votes"    gencodec:"required"`
+	FirstPreCommit *Vote `json:"vote"     gencodec:"required"`
 }
 
 func (cmt *Commit) Commits() Votes {
