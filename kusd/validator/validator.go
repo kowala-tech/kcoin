@@ -282,7 +282,7 @@ func (val *Validator) init() error {
 	val.validators = types.NewValidatorSet(validators)
 
 	// voting system
-	val.votingSystem = NewVotingSystem()
+	val.votingSystem = NewVotingSystem(val.blockNumber, val.validators)
 
 	// val.lastValidators
 
@@ -326,6 +326,8 @@ func (val *Validator) AddProposal(proposal *types.Proposal) {
 
 		return
 	*/
+	log.Info("Received Proposal")
+	log.Info("Proposal Block Meta info", "meta", proposal.BlockMetadata())
 	val.proposal = proposal
 	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
 }
@@ -593,15 +595,17 @@ func (val *Validator) propose() {
 
 	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
 
-	/*
+	time.Sleep(time.Duration(5) * time.Second)
+
 	// post block segments events
-	for i := 0; i < blockFragments.Size(); i++ {
+	// @TODO(rgeraldes) - review types int/uint
+	for i := uint(0); i < blockFragments.Size(); i++ {
 		val.eventMux.Post(core.NewBlockFragmentEvent{
 			BlockNumber: val.blockNumber,
 			Round:       val.round,
-			Data:        blockFragments.Get(i),
+			Data:        blockFragments.Get(int(i)),
 		})
-	}*/
+	}
 
 }
 
@@ -679,10 +683,14 @@ func (val *Validator) vote(vote *types.Vote) {
 
 // @TODO (rgeraldes) - verify if round is necessary (not the case in tendermint)
 func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) {
+	log.Info("Received block fragment")
 	val.blockFragments.Add(fragment)
+
+	log.Info("block fragents info", "size", val.blockFragments.Size(), "count", val.blockFragments.Count())
 
 	// assemble block
 	if val.blockFragments.HasAll() {
+		log.Info("Block is complete")
 		block, err := val.blockFragments.Assemble()
 		if err != nil {
 			log.Crit("Failed to assemble the block", "err", err)

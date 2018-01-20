@@ -31,7 +31,7 @@ type Election struct {
 	lastValidators *types.ValidatorSet
 
 	// inputs
-	blockCh                    chan *types.Block
+	blockCh                       chan *types.Block
 	firstMajority, secondMajority *event.TypeMuxSubscription
 
 	// @TODO (rgeraldes) - not sure if it will be necessary
@@ -42,18 +42,37 @@ type Election struct {
 // VotingTables represents the voting tables available for each election round
 type VotingTables = [2]*core.VotingTable
 
+func NewVotingTables(electionNumber *big.Int, round uint64, voters *types.ValidatorSet) VotingTables {
+	tables := VotingTables{}
+	tables[0] = core.NewVotingTable(electionNumber, round, types.PreVote, voters)
+	tables[1] = core.NewVotingTable(electionNumber, round, types.PreCommit, voters)
+	return tables
+}
+
 // VotingSystem records the election votes since round 1
 type VotingSystem struct {
-	round         uint64
-	votesPerRound map[uint64]VotingTables
+	voters         *types.ValidatorSet
+	electionNumber *big.Int // election number
+	round          uint64
+	votesPerRound  map[uint64]VotingTables
 }
 
 // NewVotingSystem returns a new voting system
-func NewVotingSystem() *VotingSystem {
-	return &VotingSystem{
-		round:         0,
-		votesPerRound: make(map[uint64]VotingTables),
+func NewVotingSystem(electionNumber *big.Int, voters *types.ValidatorSet) *VotingSystem {
+	system := &VotingSystem{
+		voters:         voters,
+		electionNumber: electionNumber,
+		round:          0,
+		votesPerRound:  make(map[uint64]VotingTables),
 	}
+
+	system.NewRound()
+
+	return system
+}
+
+func (vs *VotingSystem) NewRound() {
+	vs.votesPerRound[vs.round] = NewVotingTables(vs.electionNumber, vs.round, vs.voters)
 }
 
 // Add registers a vote

@@ -63,16 +63,16 @@ type VotingTable struct {
 	//peerMaj23s map[string]common.Hash // Maj23 for each peer
 }
 
-func NewVotingTable(blockNumber *big.Int, round uint64, voteType types.VoteType, validators *types.ValidatorSet) *VotingTable {
+func NewVotingTable(blockNumber *big.Int, round uint64, voteType types.VoteType, voters *types.ValidatorSet) *VotingTable {
 	return &VotingTable{
 		blockNumber: blockNumber,
 		round:       round,
 		voteType:    voteType,
-		voters:      validators,
+		voters:      voters,
 		received:    common.NewBitArray(uint64(1 /*validators.Size()*/)), // @TODO (rgeraldes)
-		votes:       make([]*types.Vote, validators.Size()),
+		votes:       make([]*types.Vote, voters.Size()),
 		sum:         0,
-		all: 		 make(map[common.Hash]*types.Vote),
+		all:         make(map[common.Hash]*types.Vote),
 		//maj23:         nil,
 		//votesByBlock:  make(map[string]*blockVotes, valSet.Size()),
 		//peerMaj23s:    make(map[string]BlockID),

@@ -55,15 +55,15 @@ type DataSet struct {
 
 }
 
-func NewDataSetFromMeta(meta *Metadata) *DataSet {	
-	return &DataSet{ 
-		meta: CopyMeta(meta),
-		count: 0,
+func NewDataSetFromMeta(meta *Metadata) *DataSet {
+	return &DataSet{
+		meta:       CopyMeta(meta),
+		count:      0,
 		membership: common.NewBitArray(uint64(meta.NChunks)),
-		data: make([]*Chunk, meta.NChunks),
+		data:       make([]*Chunk, meta.NChunks),
 	}
 }
-	
+
 func CopyMeta(meta *Metadata) *Metadata {
 	cpy := *meta
 	return &cpy
@@ -101,29 +101,33 @@ func NewDataSetFromData(data []byte, size int) *DataSet {
 
 // Metadata represents the content specifications
 type Metadata struct {
-	NChunks uint         `json:"nchunks" gencodec:"required"`
-	Root    common.Hash  `json:"proof"   gencodec:"required"` // root hash of the trie
+	NChunks uint        `json:"nchunks" gencodec:"required"`
+	Root    common.Hash `json:"proof"   gencodec:"required"` // root hash of the trie
 }
 
 type MetadataMarshalling struct {
 	NChunks hexutil.Uint64
 }
 
-func (ds DataSet) Metadata() *Metadata {
+func (ds *DataSet) Metadata() *Metadata {
 	return ds.meta
 }
 
-func (ds DataSet) Size() uint {
+func (ds *DataSet) Size() uint {
 	return ds.meta.NChunks
 }
 
-func (ds DataSet) Get(i int) *Chunk {
+func (ds *DataSet) Count() uint {
+	return ds.count
+}
+
+func (ds *DataSet) Get(i int) *Chunk {
 	// @TODO (rgeraldes) - add logic to verify if the fragment
 	// exists
 	return ds.data[i]
 }
 
-func (ds DataSet) Add(chunk *Chunk) {
+func (ds *DataSet) Add(chunk *Chunk) {
 	// @TODO (rgeraldes) - validate index
 	// @TODO (rgeraldes) - check hash proof
 	ds.data[chunk.Index] = chunk
@@ -132,11 +136,11 @@ func (ds DataSet) Add(chunk *Chunk) {
 	ds.count++
 }
 
-func (ds DataSet) HasAll() bool {
+func (ds *DataSet) HasAll() bool {
 	return ds.count == ds.meta.NChunks
 }
 
-func (ds DataSet) Data() []byte {
+func (ds *DataSet) Data() []byte {
 	var buffer bytes.Buffer
 	for _, chunk := range ds.data {
 		buffer.Write(chunk.Data)
@@ -144,7 +148,7 @@ func (ds DataSet) Data() []byte {
 	return buffer.Bytes()
 }
 
-func (ds DataSet) Assemble() (*Block, error) {
+func (ds *DataSet) Assemble() (*Block, error) {
 	var block Block
 	if err := rlp.DecodeBytes(ds.Data(), &block); err != nil {
 		return nil, err
