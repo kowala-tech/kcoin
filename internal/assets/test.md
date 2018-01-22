@@ -20,4 +20,4 @@ Passphrase: test
 
 ## Genesis file
 
-File: test.json
+File: genesis.json

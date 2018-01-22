@@ -18,6 +18,8 @@ var (
 
 	errAbstractSigner     = errors.New("abstract signer")
 	abstractSignerAddress = common.HexToAddress("ffffffffffffffffffffffffffffffffffffffff")
+
+	big8 = big.NewInt(8)
 )
 
 // sigCache is used to cache the derived sender and contains
@@ -89,14 +91,17 @@ func TxSender(signer Signer, tx *Transaction) (common.Address, error) {
 	}
 
 	var h common.Hash
+	V := tx.data.V
 	if !tx.Protected() {
 		h = tx.UnprotectedHash()
 		signer = &UnprotectedSigner{}
 	} else {
+		V = new(big.Int).Sub(V, signer.ChainIDMul())
+		V.Sub(V, big8)
 		h = tx.ProtectedHash(signer.ChainID())
 	}
 
-	addr, err := signer.Sender(h, tx.data.R, tx.data.S, tx.data.V)
+	addr, err := signer.Sender(h, tx.data.R, tx.data.S, V)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -117,7 +122,9 @@ func ProposalSender(signer Signer, proposal *Proposal) (common.Address, error) {
 		}
 	}
 
-	addr, err := signer.Sender(proposal.ProtectedHash(signer.ChainID()), proposal.data.R, proposal.data.S, proposal.data.V)
+	V := new(big.Int).Sub(proposal.data.V, signer.ChainIDMul())
+	V.Sub(V, big8)
+	addr, err := signer.Sender(proposal.ProtectedHash(signer.ChainID()), proposal.data.R, proposal.data.S, V)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -138,7 +145,9 @@ func VoteSender(signer Signer, vote *Vote) (common.Address, error) {
 		}
 	}
 
-	addr, err := signer.Sender(vote.ProtectedHash(signer.ChainID()), vote.data.R, vote.data.S, vote.data.V)
+	V := new(big.Int).Sub(vote.data.V, signer.ChainIDMul())
+	V.Sub(V, big8)
+	addr, err := signer.Sender(vote.ProtectedHash(signer.ChainID()), vote.data.R, vote.data.S, V)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -158,11 +167,14 @@ type Signer interface {
 	Equal(Signer) bool
 	// Returns the current network ID
 	ChainID() *big.Int
+	// Returns the current network ID
+	ChainIDMul() *big.Int
 }
 
 type UnprotectedSigner struct{}
 
-func (s UnprotectedSigner) ChainID() *big.Int { return nil }
+func (s UnprotectedSigner) ChainID() *big.Int    { return nil }
+func (s UnprotectedSigner) ChainIDMul() *big.Int { return nil }
 
 func (s UnprotectedSigner) Equal(s2 Signer) bool {
 	_, ok := s2.(UnprotectedSigner)
@@ -220,11 +232,16 @@ func (s AndromedaSigner) NewSignature(sig []byte) (R, S, V *big.Int, err error) 
 		V = big.NewInt(int64(sig[64] + 35))
 		V.Add(V, s.chainIDMul)
 	}
-	return
+
+	return R, S, V, nil
 }
 
 func (s AndromedaSigner) ChainID() *big.Int {
 	return s.chainID
+}
+
+func (s AndromedaSigner) ChainIDMul() *big.Int {
+	return s.chainIDMul
 }
 
 // deriveChainID derives the chain id from the given v parameter

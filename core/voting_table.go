@@ -87,7 +87,7 @@ type VotingTable struct {
 	//peerMaj23s map[string]common.Hash // Maj23 for each peer
 }
 
-func NewVotingTable(eventMux *event.TypeMux, blockNumber *big.Int, round uint64, voteType types.VoteType, voters *types.ValidatorSet) *VotingTable {
+func NewVotingTable(eventMux *event.TypeMux, signer types.Signer, blockNumber *big.Int, round uint64, voteType types.VoteType, voters *types.ValidatorSet) *VotingTable {
 	table := &VotingTable{
 		blockNumber:   blockNumber,
 		round:         round,
@@ -99,6 +99,7 @@ func NewVotingTable(eventMux *event.TypeMux, blockNumber *big.Int, round uint64,
 		all:           make(map[common.Hash]*types.Vote),
 		votesPerBlock: make(map[common.Hash]*Votes, voters.Size()),
 		eventMux:      eventMux,
+		signer:        signer,
 		// @TODO (rgeraldes) - replace with constants
 		quorum:         voters.Size()*2/3 + 1,
 		addressToIndex: make(map[common.Address]int, voters.Size()),
@@ -189,7 +190,7 @@ func (table *VotingTable) Add(vote *types.Vote, local bool) (bool, error) {
 	}
 
 	if added {
-		table.eventMux.Post(NewVoteEvent{Vote: vote})
+		go table.eventMux.Post(NewVoteEvent{Vote: vote})
 	}
 
 	/*
@@ -209,7 +210,10 @@ func (table *VotingTable) Add(vote *types.Vote, local bool) (bool, error) {
 
 func (table *VotingTable) add(vote *types.Vote) (bool, error) {
 	// check signature
-	from, _ := types.VoteSender(table.signer, vote) // already validated & cached
+	from, err := types.VoteSender(table.signer, vote) // already validated & cached
+	if err != nil {
+		return false, err
+	}
 
 	index, ok := table.addressToIndex[from]
 	if !ok {
@@ -225,7 +229,7 @@ func (table *VotingTable) add(vote *types.Vote) (bool, error) {
 	}
 
 	if len(table.votes) == table.quorum {
-		table.eventMux.Post(NewMajorityEvent{})
+		go table.eventMux.Post(NewMajorityEvent{})
 	}
 
 	/*

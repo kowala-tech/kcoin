@@ -231,7 +231,7 @@ func (val *Validator) restoreLastCommit() {
 	lastValidators := types.NewValidatorSet([]*types.Validator{})
 
 	lastCommit := currentBlock.LastCommit()
-	lastPreCommits := core.NewVotingTable(val.eventMux, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
+	lastPreCommits := core.NewVotingTable(val.eventMux, val.signer, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
 	for _, preCommit := range lastCommit.Commits() {
 		if preCommit == nil {
 			continue
@@ -282,7 +282,7 @@ func (val *Validator) init() error {
 	val.validators = types.NewValidatorSet(validators)
 
 	// voting system
-	val.votingSystem = NewVotingSystem(val.eventMux, val.blockNumber, val.validators)
+	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
 
 	// val.lastValidators
 
@@ -298,6 +298,7 @@ func (val *Validator) isProposer() bool {
 }
 
 func (val *Validator) AddProposal(proposal *types.Proposal) {
+	log.Info("Received Proposal")
 	// @TODO (rgeraldes) - Complete
 
 	/*
@@ -327,8 +328,7 @@ func (val *Validator) AddProposal(proposal *types.Proposal) {
 
 		return
 	*/
-	log.Info("Received Proposal")
-	log.Info("Proposal Block Meta info", "meta", proposal.BlockMetadata())
+
 	val.proposal = proposal
 	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
 }
@@ -636,7 +636,7 @@ func (val *Validator) preCommit() {
 	//case !val.hasPolka():
 	// majority pre-voted nil
 	case winner == common.Hash{}:
-		log.Debug("majority of validators pre-voted nil")
+		log.Debug("Majority of validators pre-voted nil")
 		// unlock locked block
 		if val.lockedBlock != nil {
 			val.lockedRound = 0
@@ -644,14 +644,14 @@ func (val *Validator) preCommit() {
 		}
 	// majority pre-voted the locked block
 	case winner == val.lockedBlock.Hash():
-		log.Debug("majority of validators pre-voted the locked block")
+		log.Debug("Majority of validators pre-voted the locked block")
 		// update locked block round
 		val.lockedRound = val.round
 		// vote on the pre-vote election winner
 		vote = winner
 	// majority pre-voted the proposed block
 	case winner == val.block.Hash():
-		log.Debug("majority of validators pre-voted the proposed block")
+		log.Debug("Majority of validators pre-voted the proposed block")
 		// lock block
 		val.lockedRound = val.round
 		val.lockedBlock = val.block
@@ -685,21 +685,16 @@ func (val *Validator) vote(vote *types.Vote) {
 
 // @TODO (rgeraldes) - verify if round is necessary (not the case in tendermint)
 func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) {
-	log.Info("Received block fragment")
 	val.blockFragments.Add(fragment)
-
-	log.Info("block fragents info", "size", val.blockFragments.Size(), "count", val.blockFragments.Count())
 
 	// assemble block
 	if val.blockFragments.HasAll() {
-		log.Info("Block is complete")
 		block, err := val.blockFragments.Assemble()
 		if err != nil {
 			log.Crit("Failed to assemble the block", "err", err)
 		}
 
 		// @TODO (rgeraldes) - validations
-		log.Info("Received the complete proposal block", "hash", block.Hash())
 		val.block = block
 
 		go func() { val.blockCh <- block }()

@@ -39,7 +39,6 @@ type Vote struct {
 }
 
 type votedata struct {
-	VoterIndex  uint64      `json:"voterIndex"   gencoded:"required"`
 	BlockHash   common.Hash `json:"blockHash"    gencodec:"required"`
 	BlockNumber *big.Int    `json:"blockNumber"  gencodec:"required"`
 	Round       uint64      `json:"round"        gencodec:"required"`
@@ -54,7 +53,6 @@ type votedata struct {
 
 // votedataMarshalling - field type overrides for gencodec
 type votedataMarshalling struct {
-	VoterIndex  hexutil.Uint64
 	BlockNumber *hexutil.Big
 	Round       hexutil.Uint64
 	V           *hexutil.Big
@@ -136,7 +134,7 @@ func (vote *Vote) ProtectedHash(chainID *big.Int) common.Hash {
 // This signature needs to be formatted as described in the yellow paper (v+27).
 func (vote *Vote) WithSignature(signer Signer, sig []byte) (*Vote, error) {
 	cpy := &Vote{data: vote.data}
-	V, R, S, err := signer.NewSignature(sig)
+	R, S, V, err := signer.NewSignature(sig)
 	if err != nil {
 		return nil, err
 	}

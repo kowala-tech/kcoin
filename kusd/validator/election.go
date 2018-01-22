@@ -42,10 +42,10 @@ type Election struct {
 // VotingTables represents the voting tables available for each election round
 type VotingTables = [2]*core.VotingTable
 
-func NewVotingTables(eventMux *event.TypeMux, electionNumber *big.Int, round uint64, voters *types.ValidatorSet) VotingTables {
+func NewVotingTables(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, round uint64, voters *types.ValidatorSet) VotingTables {
 	tables := VotingTables{}
-	tables[0] = core.NewVotingTable(eventMux, electionNumber, round, types.PreVote, voters)
-	tables[1] = core.NewVotingTable(eventMux, electionNumber, round, types.PreCommit, voters)
+	tables[0] = core.NewVotingTable(eventMux, signer, electionNumber, round, types.PreVote, voters)
+	tables[1] = core.NewVotingTable(eventMux, signer, electionNumber, round, types.PreCommit, voters)
 	return tables
 }
 
@@ -55,19 +55,21 @@ type VotingSystem struct {
 	electionNumber *big.Int // election number
 	round          uint64
 	votesPerRound  map[uint64]VotingTables
+	signer         types.Signer
 
 	eventMux *event.TypeMux
 }
 
 // NewVotingSystem returns a new voting system
 // @TODO (rgeraldes) - in the future replace eventMux with a subscription method
-func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters *types.ValidatorSet) *VotingSystem {
+func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters *types.ValidatorSet) *VotingSystem {
 	system := &VotingSystem{
 		voters:         voters,
 		electionNumber: electionNumber,
 		round:          0,
 		votesPerRound:  make(map[uint64]VotingTables),
 		eventMux:       eventMux,
+		signer:         signer,
 	}
 
 	system.NewRound()
@@ -76,7 +78,7 @@ func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters *t
 }
 
 func (vs *VotingSystem) NewRound() {
-	vs.votesPerRound[vs.round] = NewVotingTables(vs.eventMux, vs.electionNumber, vs.round, vs.voters)
+	vs.votesPerRound[vs.round] = NewVotingTables(vs.eventMux, vs.signer, vs.electionNumber, vs.round, vs.voters)
 }
 
 // Add registers a vote
