@@ -174,6 +174,7 @@ func (val *Validator) preCommitWaitState() stateFn {
 		return val.commitState
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
+		// @TODO (rgeraldes) - confirm
 		return val.commitState
 	}
 }

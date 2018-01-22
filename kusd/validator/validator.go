@@ -23,8 +23,6 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 )
 
-// @TODO (rgeraldes) - protect concurrent accesses
-
 // Backend wraps all methods required for mining.
 type Backend interface {
 	AccountManager() *accounts.Manager
@@ -93,7 +91,7 @@ func New(backend Backend, contractBackend bind.ContractBackend, config *params.C
 	}
 	validator.network = contract
 
-	//go validator.sync()
+	go validator.sync()
 
 	return validator
 }
@@ -147,12 +145,10 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	val.account = account
 	val.deposit = deposit
 
-	/*
-		if atomic.LoadInt32(&val.canStart) == 0 {
-			log.Info("Network syncing, will start validator afterwards")
-			return
-		}
-	*/
+	if atomic.LoadInt32(&val.canStart) == 0 {
+		log.Info("Network syncing, will start validator afterwards")
+		return
+	}
 
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
@@ -227,7 +223,7 @@ func (val *Validator) restoreLastCommit() {
 		return
 	}
 
-	// @TODO (rgeraldes) - VALIDATORS CONTRACT
+	// @TODO (rgeraldes) - review the following statement
 	lastValidators := types.NewValidatorSet([]*types.Validator{})
 
 	lastCommit := currentBlock.LastCommit()
@@ -264,7 +260,6 @@ func (val *Validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	// @TODO (rgeraldes) - review types
 	// validators
 	count, err := val.network.GetVoterCount(&bind.CallOpts{})
 	if err != nil {
@@ -276,7 +271,6 @@ func (val *Validator) init() error {
 		if err != nil {
 			return err
 		}
-		// @TODO (rgeraldes) - modify power based on tokens?
 		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64())
 	}
 	val.validators = types.NewValidatorSet(validators)
@@ -284,6 +278,7 @@ func (val *Validator) init() error {
 	// voting system
 	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
 
+	// @TODO (rgeraldes) - last validators
 	// val.lastValidators
 
 	// events
@@ -299,7 +294,7 @@ func (val *Validator) isProposer() bool {
 
 func (val *Validator) AddProposal(proposal *types.Proposal) {
 	log.Info("Received Proposal")
-	// @TODO (rgeraldes) - Complete
+	// @TODO (rgeraldes) - Add proposal validation
 
 	/*
 		// not relevant
@@ -580,7 +575,7 @@ func (val *Validator) propose() {
 	// @NOTE (rgeraldes) - (for now size = block size) number of block fragments = number of validators - self
 	blockFragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
 	if err != nil {
-		// @TODO(rgeraldes) - complete
+		// @TODO(rgeraldes) - analyse consequences
 		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
 	}
 
@@ -683,7 +678,7 @@ func (val *Validator) vote(vote *types.Vote) {
 	val.votingSystem.Add(signedVote, true)
 }
 
-// @TODO (rgeraldes) - verify if round is necessary (not the case in tendermint)
+// @TODO (rgeraldes) - review the round argument
 func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) {
 	val.blockFragments.Add(fragment)
 
@@ -694,7 +689,9 @@ func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 			log.Crit("Failed to assemble the block", "err", err)
 		}
 
-		// @TODO (rgeraldes) - validations
+		// @TODO (rgeraldes) - add block validations
+		// and remove them when the block is committed
+
 		val.block = block
 
 		go func() { val.blockCh <- block }()
