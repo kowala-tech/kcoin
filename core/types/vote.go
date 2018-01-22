@@ -39,11 +39,11 @@ type Vote struct {
 }
 
 type votedata struct {
+	VoterIndex  uint64      `json:"voterIndex"   gencoded:"required"`
 	BlockHash   common.Hash `json:"blockHash"    gencodec:"required"`
 	BlockNumber *big.Int    `json:"blockNumber"  gencodec:"required"`
 	Round       uint64      `json:"round"        gencodec:"required"`
 	Type        VoteType    `json:"type"         gencodec:"required"`
-
 	// Timestamp     time.Time      `json:"time"		gencoded:"required"` // @TODO (rgeraldes) confirm if it's necessary
 
 	// signature values
@@ -54,6 +54,7 @@ type votedata struct {
 
 // votedataMarshalling - field type overrides for gencodec
 type votedataMarshalling struct {
+	VoterIndex  hexutil.Uint64
 	BlockNumber *hexutil.Big
 	Round       hexutil.Uint64
 	V           *hexutil.Big

@@ -75,8 +75,9 @@ contract Network {
         return voterIndex.length;
     }
 
-    function getVoterAtIndex(uint index) public view returns (address addr) {
-        return voterIndex[index];
+    function getVoterAtIndex(uint index) public view returns (address addr, uint deposit) {
+        addr = voterIndex[index];
+        deposit = voters[addr].deposit;
     }
 
     function deposit() public payable {

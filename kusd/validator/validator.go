@@ -231,12 +231,12 @@ func (val *Validator) restoreLastCommit() {
 	lastValidators := types.NewValidatorSet([]*types.Validator{})
 
 	lastCommit := currentBlock.LastCommit()
-	lastPreCommits := core.NewVotingTable(currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
+	lastPreCommits := core.NewVotingTable(val.eventMux, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
 	for _, preCommit := range lastCommit.Commits() {
 		if preCommit == nil {
 			continue
 		}
-		added, err := lastPreCommits.Add(preCommit)
+		added, err := lastPreCommits.Add(preCommit, false)
 		if !added || err != nil {
 			// @TODO (rgeraldes) - this should not happen > complete
 			log.Error("Failed to restore the latest commit")
@@ -272,22 +272,23 @@ func (val *Validator) init() error {
 	}
 	validators := make([]*types.Validator, count.Uint64())
 	for i := int64(0); i < count.Int64(); i++ {
-		addr, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
+		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
 		if err != nil {
 			return err
 		}
 		// @TODO (rgeraldes) - modify power based on tokens?
-		validators[i] = types.NewValidator(addr, 1)
+		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64())
 	}
 	val.validators = types.NewValidatorSet(validators)
 
 	// voting system
-	val.votingSystem = NewVotingSystem(val.blockNumber, val.validators)
+	val.votingSystem = NewVotingSystem(val.eventMux, val.blockNumber, val.validators)
 
 	// val.lastValidators
 
 	// events
 	val.blockCh = make(chan *types.Block)
+	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 
 	return nil
 }
@@ -341,7 +342,7 @@ func (val *Validator) AddVote(vote *types.Vote) {
 
 func (val *Validator) addVote(vote *types.Vote) error {
 	// @NOTE (rgeraldes) - for now just pre-vote/pre-commit for the current block number
-	added, err := val.votingSystem.Add(vote)
+	added, err := val.votingSystem.Add(vote, false)
 	if err != nil {
 		// @TODO (rgeraldes)
 	}
@@ -678,7 +679,8 @@ func (val *Validator) vote(vote *types.Vote) {
 	if err != nil {
 		log.Crit("Failed to sign the vote", "err", err)
 	}
-	val.eventMux.Post(core.NewVoteEvent{Vote: signedVote})
+
+	val.votingSystem.Add(signedVote, true)
 }
 
 // @TODO (rgeraldes) - verify if round is necessary (not the case in tendermint)

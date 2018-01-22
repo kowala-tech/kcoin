@@ -127,8 +127,8 @@ func ProposalSender(signer Signer, proposal *Proposal) (common.Address, error) {
 	return addr, nil
 }
 
-func VoteSender(signer Signer, proposal *Proposal) (common.Address, error) {
-	if sc := proposal.from.Load(); sc != nil {
+func VoteSender(signer Signer, vote *Vote) (common.Address, error) {
+	if sc := vote.from.Load(); sc != nil {
 		sigCache := sc.(sigCache)
 		// If the signer used to derive from in a previous
 		// call is not the same as used current, invalidate
@@ -138,12 +138,12 @@ func VoteSender(signer Signer, proposal *Proposal) (common.Address, error) {
 		}
 	}
 
-	addr, err := signer.Sender(proposal.ProtectedHash(signer.ChainID()), proposal.data.R, proposal.data.S, proposal.data.V)
+	addr, err := signer.Sender(vote.ProtectedHash(signer.ChainID()), vote.data.R, vote.data.S, vote.data.V)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	proposal.from.Store(sigCache{signer: signer, from: addr})
+	vote.from.Store(sigCache{signer: signer, from: addr})
 
 	return addr, nil
 }
@@ -254,7 +254,7 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (commo
 	copy(sig[32-len(r):32], r)
 	copy(sig[64-len(s):64], s)
 	sig[64] = V
-	// recover the public key from the snature
+	// recover the public key from the signature
 	pub, err := crypto.Ecrecover(sighash[:], sig)
 	if err != nil {
 		return common.Address{}, err
