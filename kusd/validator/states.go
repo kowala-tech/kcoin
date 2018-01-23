@@ -37,7 +37,6 @@ func (val *Validator) notLoggedInState() stateFn {
 	// part of the initial set of validators - no need to make a deposit if the block number is 0
 	// since these validators will be marked as voters from the start
 	if !isGenesis || (isGenesis && val.chain.CurrentBlock().NumberU64() > 0) {
-		log.Info("Waiting confirmation to participate in the consensus")
 		headSub := val.eventMux.Subscribe(core.ChainHeadEvent{})
 		defer headSub.Unsubscribe()
 
@@ -45,6 +44,7 @@ func (val *Validator) notLoggedInState() stateFn {
 			return nil
 		}
 
+		log.Info("Waiting confirmation to participate in the consensus")
 	L:
 		for {
 			select {

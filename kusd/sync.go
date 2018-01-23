@@ -148,6 +148,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 	if peer == nil {
 		return
 	}
+
 	// Make sure the peer's block number is higher than our own
 	currentBlock := pm.blockchain.CurrentBlock()
 	blockNumber := currentBlock.Number()

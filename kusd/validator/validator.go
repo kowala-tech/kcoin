@@ -74,6 +74,7 @@ func New(backend Backend, contractBackend bind.ContractBackend, config *params.C
 		engine:   engine,
 		eventMux: eventMux,
 		signer:   types.NewAndromedaSigner(config.ChainID),
+		canStart: 1,
 	}
 
 	// Network contract instance
@@ -114,6 +115,7 @@ out:
 			}
 		case downloader.DoneEvent, downloader.FailedEvent:
 			shouldStart := atomic.LoadInt32(&val.shouldStart) == 1
+
 			atomic.StoreInt32(&val.canStart, 1)
 			atomic.StoreInt32(&val.shouldStart, 0)
 			if shouldStart {

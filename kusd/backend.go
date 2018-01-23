@@ -310,6 +310,17 @@ func (s *Kowala) StartValidating() error {
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
+	/*
+		if clique, ok := s.engine.(*clique.Clique); ok {
+			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+			if wallet == nil || err != nil {
+				log.Error("Etherbase account unavailable locally", "err", err)
+				return fmt.Errorf("signer missing: %v", err)
+			}
+			clique.Authorize(eb, wallet.SignHash)
+		}
+	*/
+
 	dep, err := s.Deposit()
 	if err != nil {
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)

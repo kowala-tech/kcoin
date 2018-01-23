@@ -75,7 +75,6 @@ var (
 	errCancelHeaderProcessing  = errors.New("header processing canceled (requested)")
 	errCancelContentProcessing = errors.New("content processing canceled (requested)")
 	errNoSyncActive            = errors.New("no sync active")
-	errTooOld                  = errors.New("peer doesn't speak recent enough protocol version (need version >= 62)")
 )
 
 type Downloader struct {
@@ -302,7 +301,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, blockNumber *big.I
 	case errBusy:
 
 	case errTimeout, errBadPeer, errStallingPeer,
-		errEmptyHeaderSet, errPeersUnavailable, errTooOld,
+		errEmptyHeaderSet, errPeersUnavailable,
 		errInvalidAncestor, errInvalidChain:
 		log.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
 		d.dropPeer(id)
@@ -390,9 +389,6 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, blockNumb
 			d.mux.Post(DoneEvent{})
 		}
 	}()
-	if p.version < 62 {
-		return errTooOld
-	}
 
 	log.Debug("Synchronising with the network", "peer", p.id, "kusd", p.version, "head", hash, "block number", blockNumber, "mode", d.mode)
 	defer func(start time.Time) {
