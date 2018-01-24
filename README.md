@@ -1,7 +1,7 @@
 ## Kowala
 
-Official implementation of the Kowala protocol. The **`kusd`** client is the main client for the Kowala network.
-It is the entry point into the Kowala network, and is capable of running a full node(default). The client offers
+Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kusd`** client is the main client for the Kowala network.
+It is the entry point into the Kowala network, and is capable of running a full node. The client offers
 a gateway (Endpoints, WebSocket, IPC) to the Kowala network to other processes.
 
 ## Running kusd
