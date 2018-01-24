@@ -189,6 +189,7 @@ func (pm *ProtocolManager) Start() {
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
+	// @TODO (rgeraldes) - verify if this condition makes sense
 	if pm.validator != nil {
 		// broadcast proposals
 		pm.proposalSub = pm.eventMux.Subscribe(core.NewProposalEvent{})
@@ -276,6 +277,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	pm.syncTransactions(p)
 
 	// @TODO (rgeraldes) - review
+
 	/*
 		// If we're DAO hard-fork aware, validate any remote peer with regard to the hard-fork
 		if daoBlock := pm.chainconfig.DAOForkBlock; daoBlock != nil {
@@ -295,8 +297,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 					p.forkDrop = nil
 				}
 			}()
-		}
-	*/
+		}*/
 
 	// main loop. handle incoming messages.
 	for {
@@ -413,7 +414,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&headers); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-
 		if len(headers) > 0 {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
@@ -455,18 +455,20 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Deliver them all to the downloader for queuing
-		trasactions := make([][]*types.Transaction, len(request))
+		transactions := make([][]*types.Transaction, len(request))
+		commits := make([]*types.Commit, len(request))
 
 		for i, body := range request {
-			trasactions[i] = body.Transactions
+			transactions[i] = body.Transactions
+			commits[i] = body.Commit
 		}
 		// Filter out any explicitly requested bodies, deliver the rest to the downloader
-		filter := len(trasactions) > 0
+		filter := len(transactions) > 0 || len(commits) > 0
 		if filter {
-			trasactions = pm.fetcher.FilterBodies(trasactions, time.Now())
+			transactions, commits = pm.fetcher.FilterBodies(transactions, commits, time.Now())
 		}
-		if len(trasactions) > 0 || !filter {
-			err := pm.downloader.DeliverBodies(p.id, trasactions)
+		if len(transactions) > 0 || len(commits) > 0 || !filter {
+			err := pm.downloader.DeliverBodies(p.id, transactions, commits)
 			if err != nil {
 				log.Debug("Failed to deliver bodies", "err", err)
 			}

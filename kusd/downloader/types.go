@@ -29,12 +29,19 @@ func (p *headerPack) Stats() string  { return fmt.Sprintf("%d", len(p.headers)) 
 // bodyPack is a batch of block bodies returned by a peer.
 type bodyPack struct {
 	peerId       string
+	commits      []*types.Commit
 	transactions [][]*types.Transaction
 }
 
 func (p *bodyPack) PeerId() string { return p.peerId }
 func (p *bodyPack) Items() int {
-	return len(p.transactions)
+	// @TODO (rgeraldes) - send commit at a different timing?
+	// It's probably not a good move since the number of empty blocks should be small.
+	commit := 1
+	if len(p.transactions) > commit {
+		return len(p.transactions)
+	}
+	return commit
 }
 func (p *bodyPack) Stats() string { return fmt.Sprintf("%d", len(p.transactions)) }
 

@@ -38,6 +38,7 @@ type fetchResult struct {
 	Pending int // Number of data fetches still pending
 
 	Header       *types.Header
+	Commit       *types.Commit
 	Transactions types.Transactions
 	Receipts     types.Receipts
 }
@@ -417,7 +418,7 @@ func (q *queue) ReserveHeaders(p *peerConnection, count int) *fetchRequest {
 // returns a flag whether empty blocks were queued requiring processing.
 func (q *queue) ReserveBodies(p *peerConnection, count int) (*fetchRequest, bool, error) {
 	isNoop := func(header *types.Header) bool {
-		return header.TxHash == types.EmptyRootHash
+		return header.TxHash == types.EmptyRootHash && header.LastCommitHash == common.Hash{}
 	}
 	q.lock.Lock()
 	defer q.lock.Unlock()
@@ -735,15 +736,17 @@ func (q *queue) DeliverHeaders(id string, headers []*types.Header, headerProcCh 
 // DeliverBodies injects a block body retrieval response into the results queue.
 // The method returns the number of blocks bodies accepted from the delivery and
 // also wakes any threads waiting for data delivery.
-func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, error) {
+func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction, commits []*types.Commit) (int, error) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
 	reconstruct := func(header *types.Header, index int, result *fetchResult) error {
+		// @TODO (rgeraldes) - add commit hash verifitcation
 		if types.DeriveSha(types.Transactions(txLists[index])) != header.TxHash {
 			return errInvalidBody
 		}
 		result.Transactions = txLists[index]
+		result.Commit = commits[index]
 		return nil
 	}
 	return q.deliver(id, q.blockTaskPool, q.blockTaskQueue, q.blockPendPool, q.blockDonePool, bodyReqTimer, len(txLists), reconstruct)
@@ -819,6 +822,7 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 		request.Headers[i] = nil
 		delete(taskPool, header.Hash())
 	}
+
 	// Return all failed or missing fetches to the queue
 	for _, header := range request.Headers {
 		if header != nil {

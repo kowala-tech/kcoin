@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	ethereum "github.com/kowala-tech/kUSD"
+	kowala "github.com/kowala-tech/kUSD"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/event"
@@ -220,7 +220,7 @@ func New(mode SyncMode, stateDb kusddb.Database, mux *event.TypeMux, chain Block
 // In addition, during the state download phase of fast synchronisation the number
 // of processed and the total number of known states are also returned. Otherwise
 // these are zero.
-func (d *Downloader) Progress() ethereum.SyncProgress {
+func (d *Downloader) Progress() kowala.SyncProgress {
 	// Lock the current stats and return the progress
 	d.syncStatsLock.RLock()
 	defer d.syncStatsLock.RUnlock()
@@ -234,7 +234,7 @@ func (d *Downloader) Progress() ethereum.SyncProgress {
 	case LightSync:
 		current = d.lightchain.CurrentHeader().Number.Uint64()
 	}
-	return ethereum.SyncProgress{
+	return kowala.SyncProgress{
 		StartingBlock: d.syncStatsChainOrigin,
 		CurrentBlock:  current,
 		HighestBlock:  d.syncStatsChainHeight,
@@ -772,6 +772,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64) error {
 			go p.peer.RequestHeadersByNumber(from, MaxHeaderFetch, 0, false)
 		}
 	}
+
 	// Start pulling the header chain skeleton until all is done
 	getHeaders(from)
 
@@ -897,10 +898,12 @@ func (d *Downloader) fetchBodies(from uint64) error {
 	var (
 		deliver = func(packet dataPack) (int, error) {
 			pack := packet.(*bodyPack)
-			return d.queue.DeliverBodies(pack.peerId, pack.transactions)
+			return d.queue.DeliverBodies(pack.peerId, pack.transactions, pack.commits)
 		}
-		expire   = func() map[string]int { return d.queue.ExpireBodies(d.requestTTL()) }
-		fetch    = func(p *peerConnection, req *fetchRequest) error { return p.FetchBodies(req) }
+		expire = func() map[string]int { return d.queue.ExpireBodies(d.requestTTL()) }
+		fetch  = func(p *peerConnection, req *fetchRequest) error {
+			return p.FetchBodies(req)
+		}
 		capacity = func(p *peerConnection) int { return p.BlockCapacity(d.requestRTT()) }
 		setIdle  = func(p *peerConnection, accepted int) { p.SetBodiesIdle(accepted) }
 	)
@@ -1070,6 +1073,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 					throttled = true
 					break
 				}
+
 				// Reserve a chunk of fetches for a peer. A nil can mean either that
 				// no more headers are available, or that the peer is known not to
 				// have them.
@@ -1083,6 +1087,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 				if request == nil {
 					continue
 				}
+
 				if request.From > 0 {
 					peer.log.Trace("Requesting new batch of data", "type", kind, "from", request.From)
 				} else if len(request.Headers) > 0 {
@@ -1094,6 +1099,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 				if fetchHook != nil {
 					fetchHook(request.Headers)
 				}
+
 				if err := fetch(peer, request); err != nil {
 					// Although we could try and make an attempt to fix this, this error really
 					// means that we've double allocated a fetch task to a peer. If that is the
@@ -1274,6 +1280,7 @@ func (d *Downloader) processHeaders(origin uint64, blockNumber *big.Int) error {
 						case <-time.After(time.Second):
 						}
 					}
+
 					// Otherwise insert the headers for content retrieval
 					inserts := d.queue.Schedule(chunk, origin)
 					if len(inserts) != len(chunk) {
@@ -1284,6 +1291,7 @@ func (d *Downloader) processHeaders(origin uint64, blockNumber *big.Int) error {
 				headers = headers[limit:]
 				origin += uint64(limit)
 			}
+
 			// Signal the content downloaders of the availablility of new tasks
 			for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh} {
 				select {
@@ -1305,6 +1313,7 @@ func (d *Downloader) processFullSyncContent() error {
 		if d.chainInsertHook != nil {
 			d.chainInsertHook(results)
 		}
+
 		if err := d.importBlockResults(results); err != nil {
 			return err
 		}
@@ -1329,7 +1338,7 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 		blocks := make([]*types.Block, items)
 		for i, result := range results[:items] {
 			// @TODO (rgeraldes) - replace the statement below with the commit data
-			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, nil)
+			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Commit)
 		}
 		if index, err := d.blockchain.InsertChain(blocks); err != nil {
 			log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
@@ -1453,8 +1462,8 @@ func (d *Downloader) DeliverHeaders(id string, headers []*types.Header) (err err
 }
 
 // DeliverBodies injects a new batch of block bodies received from a remote node.
-func (d *Downloader) DeliverBodies(id string, transactions [][]*types.Transaction) (err error) {
-	return d.deliver(id, d.bodyCh, &bodyPack{id, transactions}, bodyInMeter, bodyDropMeter)
+func (d *Downloader) DeliverBodies(id string, transactions [][]*types.Transaction, commits []*types.Commit) (err error) {
+	return d.deliver(id, d.bodyCh, &bodyPack{id, commits, transactions}, bodyInMeter, bodyDropMeter)
 }
 
 // DeliverReceipts injects a new batch of receipts received from a remote node.

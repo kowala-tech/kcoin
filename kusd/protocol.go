@@ -155,6 +155,7 @@ type newBlockData struct {
 
 // blockBody represents the data content of a single block.
 type blockBody struct {
+	Commit       *types.Commit
 	Transactions []*types.Transaction // Transactions contained within a block
 }
 

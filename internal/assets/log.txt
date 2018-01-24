@@ -6,18 +6,34 @@ Local bootnode
 
 bootnode --nodekey /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/node.key --verbosity 6
 
-Node 1
+Node 1 - Genesis Validator
 ./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/sample-kowala.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json
 cp /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/UTC--2018-01-16T16-31-38.006625000Z--d6e579085c82329c89fca7a9f012be59028ed53f /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/build/bin/.kowala/keystore 
-./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/sample-kowala.toml --validate --coinbase 0xd6e579085c82329c89fca7a9f012be59028ed53f --unlock 0xd6e579085c82329c89fca7a9f012be59028ed53f --verbosity 4 console 2>> kowala1.log
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/sample-kowala.toml --validate --coinbase 0xd6e579085c82329c89fca7a9f012be59028ed53f --unlock 0xd6e579085c82329c89fca7a9f012be59028ed53f
+
 tail -f kowala1.log
 
 ./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/sample-kowala.toml --validate --coinbase 0xd6e579085c82329c89fca7a9f012be59028ed53f --unlock 0xd6e579085c82329c89fca7a9f012be59028ed53f --verbosity 6
 
-Node 2 
+Node 2 - Genesis Validator
 ./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json
 cp /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/UTC--2018-01-16T16-33-27.301502000Z--497dc8a0096cf116e696ba9072516c92383770ed /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/build/bin/.kowala2/keystore 
-./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml --validate --coinbase 0x497dc8a0096cf116e696ba9072516c92383770ed --unlock 0x497dc8a0096cf116e696ba9072516c92383770ed --bootnodes "enode://051d1f1091cfba999021a6d929975ad0984d8c14b971b2961ea02e5e5a78ca8bf0fb1a5092e341cd631cb080cfdea529b653539bc88253087eebad6f8c1ef40d@127.0.0.1:30303" --verbosity 4 console 2>> kowala2.log
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml --validate --coinbase 0x497dc8a0096cf116e696ba9072516c92383770ed --unlock 0x497dc8a0096cf116e696ba9072516c92383770ed --bootnodes "enode://3d451fc99d0375857a5426944912a5abbfa702c658ca21c038b3ef294cfad3c5de2dcb4f243bc33ece5beb4fc00eddd969d09276e71ea8402e9b4eb939479236@127.0.0.1:30303" --verbosity 4
+
 tail -f kowala2.log
 
-./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml --validate --coinbase 0x497dc8a0096cf116e696ba9072516c92383770ed --unlock 0x497dc8a0096cf116e696ba9072516c92383770ed --bootnodes "enode://051d1f1091cfba999021a6d929975ad0984d8c14b971b2961ea02e5e5a78ca8bf0fb1a5092e341cd631cb080cfdea529b653539bc88253087eebad6f8c1ef40d@127.0.0.1:30303" --verbosity 6
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml --validate --coinbase 0x497dc8a0096cf116e696ba9072516c92383770ed --unlock 0x497dc8a0096cf116e696ba9072516c92383770ed --bootnodes "enode://cbbc911bc7f65f72fe4d9522a79d43fe6e64638670b7c13fcd903b79a3124ba1de7077630554bf41a091930f78b00eeae95a85bf91fc1fcac774cd7009d35e5d@127.0.0.1:30303" --verbosity 6
+
+Node 3 - Archive Node (Full sync)
+
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala3.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala3.toml --bootnodes "enode://3d451fc99d0375857a5426944912a5abbfa702c658ca21c038b3ef294cfad3c5de2dcb4f243bc33ece5beb4fc00eddd969d09276e71ea8402e9b4eb939479236@127.0.0.1:30303" --verbosity 3
+
+Node 4 - Archive Node (Fast sync)
+
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala3.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala3.toml --bootnodes "enode://3d451fc99d0375857a5426944912a5abbfa702c658ca21c038b3ef294cfad3c5de2dcb4f243bc33ece5beb4fc00eddd969d09276e71ea8402e9b4eb939479236@127.0.0.1:30303" --fast --verbosity 3
+
+console
+
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/sample-kowala.toml --validate --coinbase 0xd6e579085c82329c89fca7a9f012be59028ed53f --unlock 0xd6e579085c82329c89fca7a9f012be59028ed53f --verbosity 4 console 2>> kowala1.log

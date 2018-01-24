@@ -7,7 +7,6 @@ import (
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rpc"
 )
@@ -39,18 +38,12 @@ func (tendermint *Tendermint) VerifyHeader(chain consensus.ChainReader, header *
 }
 
 func (tendermint *Tendermint) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	abort := make(chan struct{})
-	errorsOut := make(chan error)
-
-	// @NOTE (rgeraldes) - the following work around is mandatory
-	// because the block insertion process will wait forever
-	// until it gets the results
-	// @TODO (rgeraldes) - temp work around
-	go func() {
-		errorsOut <- nil
-	}()
-
-	return abort, errorsOut
+	// @TODO (rgeraldes) - temporary work around
+	abort, results := make(chan struct{}), make(chan error, len(headers))
+	for i := 0; i < len(headers); i++ {
+		results <- nil
+	}
+	return abort, results
 }
 
 func (tendermint *Tendermint) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
@@ -62,7 +55,6 @@ func (tendermint *Tendermint) Prepare(chain consensus.ChainReader, header *types
 }
 
 func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt, commit *types.Commit) (*types.Block, error) {
-	log.Info("Finalising the block")
 
 	/*
 		// distribute block reward

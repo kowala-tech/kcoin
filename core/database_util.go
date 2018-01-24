@@ -164,21 +164,6 @@ func GetBody(db kusddb.Database, hash common.Hash, number uint64) *types.Body {
 	return body
 }
 
-// GetTd retrieves a block's total difficulty corresponding to the hash, nil if
-// none found.
-func GetTd(db kusddb.Database, hash common.Hash, number uint64) *big.Int {
-	data, _ := db.Get(append(append(append(headerPrefix, encodeBlockNumber(number)...), hash[:]...), tdSuffix...))
-	if len(data) == 0 {
-		return nil
-	}
-	td := new(big.Int)
-	if err := rlp.Decode(bytes.NewReader(data), td); err != nil {
-		log.Error("Invalid block total difficulty RLP", "hash", hash, "err", err)
-		return nil
-	}
-	return td
-}
-
 // GetBlock retrieves an entire block corresponding to the hash, assembling it
 // back from the stored header and body. If either the header or body could not
 // be retrieved nil is returned.

@@ -275,6 +275,8 @@ func (val *Validator) init() error {
 		}
 		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64())
 	}
+
+	// @TODO (rgeraldes) - update list of trusted peers based on the validators
 	val.validators = types.NewValidatorSet(validators)
 
 	// voting system

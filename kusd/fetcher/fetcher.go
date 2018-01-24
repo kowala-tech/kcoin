@@ -75,7 +75,7 @@ type headerFilterTask struct {
 // needing fetcher filtering.
 type bodyFilterTask struct {
 	transactions [][]*types.Transaction // Collection of transactions per block bodies
-	uncles       [][]*types.Header      // Collection of uncles per block bodies
+	commits      []*types.Commit        // Commit per block bodies
 	time         time.Time              // Arrival time of the blocks' contents
 }
 
@@ -230,8 +230,8 @@ func (f *Fetcher) FilterHeaders(headers []*types.Header, time time.Time) []*type
 
 // FilterBodies extracts all the block bodies that were explicitly requested by
 // the fetcher, returning those that should be handled differently.
-func (f *Fetcher) FilterBodies(transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction {
-	log.Trace("Filtering bodies", "txs", len(transactions))
+func (f *Fetcher) FilterBodies(transactions [][]*types.Transaction, commits []*types.Commit, time time.Time) ([][]*types.Transaction, []*types.Commit) {
+	log.Trace("Filtering bodies", "txs", len(transactions), "commits", len(commits))
 
 	// Send the filter channel to the fetcher
 	filter := make(chan *bodyFilterTask)
@@ -239,20 +239,20 @@ func (f *Fetcher) FilterBodies(transactions [][]*types.Transaction, time time.Ti
 	select {
 	case f.bodyFilter <- filter:
 	case <-f.quit:
-		return nil
+		return nil, nil
 	}
 	// Request the filtering of the body list
 	select {
-	case filter <- &bodyFilterTask{transactions: transactions, time: time}:
+	case filter <- &bodyFilterTask{transactions: transactions, commits: commits, time: time}:
 	case <-f.quit:
-		return nil
+		return nil, nil
 	}
 	// Retrieve the bodies remaining after filtering
 	select {
 	case task := <-filter:
-		return task.transactions
+		return task.transactions, task.commits
 	case <-f.quit:
-		return nil
+		return nil, nil
 	}
 }
 
@@ -498,7 +498,8 @@ func (f *Fetcher) loop() {
 			bodyFilterInMeter.Mark(int64(len(task.transactions)))
 
 			blocks := []*types.Block{}
-			for i := 0; i < len(task.transactions) && i < len(task.uncles); i++ {
+			// @TODO (rgeraldes) - review len(task.commits)
+			for i := 0; i < len(task.transactions) && i < len(task.commits); i++ {
 				// Match up a body to any possible completion request
 				matched := false
 
@@ -512,7 +513,7 @@ func (f *Fetcher) loop() {
 
 							if f.getBlock(hash) == nil {
 								// @TODO (rgeraldes) - replace the statement below with the commit data
-								block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i], nil)
+								block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i], task.commits[i])
 								block.ReceivedAt = task.time
 
 								blocks = append(blocks, block)
@@ -524,7 +525,7 @@ func (f *Fetcher) loop() {
 				}
 				if matched {
 					task.transactions = append(task.transactions[:i], task.transactions[i+1:]...)
-					task.uncles = append(task.uncles[:i], task.uncles[i+1:]...)
+					task.commits = append(task.commits[:i], task.commits[i+1:]...)
 					i--
 					continue
 				}

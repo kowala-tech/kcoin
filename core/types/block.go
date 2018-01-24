@@ -115,15 +115,15 @@ func (cmt *Commit) Round() uint64 {
 // Body is a simple (mutable, non-safe) data container for storing and moving
 // a block's data contents (transactions) together.
 type Body struct {
-	Transactions []*Transaction
 	LastCommit   *Commit
+	Transactions []*Transaction
 }
 
 // Block represents an entire block in the Ethereum blockchain.
 type Block struct {
 	header       *Header
-	transactions Transactions
 	lastCommit   *Commit
+	transactions Transactions
 
 	// caches
 	hash atomic.Value
@@ -135,11 +135,11 @@ type Block struct {
 	ReceivedFrom interface{}
 }
 
-// "external" block encoding. used for eth protocol, etc.
+// "external" block encoding. used for kusd protocol, etc.
 type extblock struct {
 	Header     *Header
-	Txs        []*Transaction
 	LastCommit *Commit
+	Txs        []*Transaction
 }
 
 // NewBlock creates a new block. The input data is copied,
@@ -224,14 +224,14 @@ func CopyCommit(commit *Commit) *Commit {
 	return &cpy
 }
 
-// DecodeRLP decodes the Ethereum
+// DecodeRLP decodes the Kowala block
 func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	var eb extblock
 	_, size, _ := s.Kind()
 	if err := s.Decode(&eb); err != nil {
 		return err
 	}
-	b.header, b.transactions, b.lastCommit = eb.Header, eb.Txs, eb.LastCommit
+	b.header, b.lastCommit, b.transactions, b.lastCommit = eb.Header, eb.LastCommit, eb.Txs, eb.LastCommit
 	b.size.Store(common.StorageSize(rlp.ListSize(size)))
 	return nil
 }
@@ -240,8 +240,8 @@ func (b *Block) DecodeRLP(s *rlp.Stream) error {
 func (b *Block) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, extblock{
 		Header:     b.header,
-		Txs:        b.transactions,
 		LastCommit: b.lastCommit,
+		Txs:        b.transactions,
 	})
 }
 
@@ -279,7 +279,7 @@ func (b *Block) Extra() []byte               { return common.CopyBytes(b.header.
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.lastCommit} }
+func (b *Block) Body() *Body { return &Body{b.lastCommit, b.transactions} }
 
 // @TODO (rgeraldes) - review
 func (b *Block) HashNoNonce() common.Hash {
@@ -310,8 +310,8 @@ func (b *Block) WithSeal(header *Header) *Block {
 
 	return &Block{
 		header:       &cpy,
-		transactions: b.transactions,
 		lastCommit:   b.lastCommit,
+		transactions: b.transactions,
 	}
 }
 
