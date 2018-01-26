@@ -92,7 +92,6 @@ func (val *Validator) newElectionState() stateFn {
 			<-txSub.Chan()
 		}
 	*/
-	time.Sleep(time.Duration(30) * time.Second)
 
 	return val.newRoundState
 }

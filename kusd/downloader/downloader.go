@@ -1196,7 +1196,6 @@ func (d *Downloader) processHeaders(origin uint64, blockNumber *big.Int) error {
 				// L: Sync begins, and finds common ancestor at 11
 				// L: Request new headers up from 11 (R's TD was higher, it must have something)
 				// R: Nothing to give
-				// @TODO (rgeraldes) - review
 				if d.mode != LightSync {
 					if !gotHeaders && blockNumber.Cmp(d.blockchain.CurrentBlock().Number()) > 0 {
 						return errStallingPeer
@@ -1219,7 +1218,7 @@ func (d *Downloader) processHeaders(origin uint64, blockNumber *big.Int) error {
 				return nil
 			}
 			// Otherwise split the chunk of headers into batches and process them
-			//gotHeaders = true
+			gotHeaders = true
 
 			for len(headers) > 0 {
 				// Terminate if something failed in between processing chunks
@@ -1427,7 +1426,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 		receipts := make([]types.Receipts, items)
 		for i, result := range results[:items] {
 			// @TODO (rgeraldes) - replace the statement below with the commit data
-			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, nil)
+			blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Commit)
 			receipts[i] = result.Receipts
 		}
 		if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {
@@ -1442,7 +1441,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 
 func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	// @TODO (rgeraldes) - replace the statement below with the commit data
-	b := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, nil)
+	b := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Commit)
 	// Sync the pivot block state. This should complete reasonably quickly because
 	// we've already synced up to the reported head block state earlier.
 	if err := d.syncState(b.Root()).Wait(); err != nil {
