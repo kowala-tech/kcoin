@@ -1,16 +1,14 @@
+FROM golang:1.9.2-alpine as builder
+
+WORKDIR /kusd/
+ADD . .
+RUN apk update && apk add --update git make gcc musl-dev linux-headers
+RUN make kusd
+
 FROM alpine:3.7
-
-ADD . /kusd
-rUN \
-  apk update && apk add --update git go make gcc musl-dev linux-headers && \
-  go version && \
-  (cd /kusd && make kusd)                           && \
-  cp /kusd/build/bin/kusd /usr/local/bin/           && \
-  apk del git go make gcc musl-dev linux-headers          && \
-  rm -rf /kusd && rm -rf /var/cache/apk/*
-
+WORKDIR /kusd/
+COPY --from=builder /kusd/build/bin/kusd .
 EXPOSE 11223
 EXPOSE 22334
 EXPOSE 22334/udp
-
-ENTRYPOINT ["kusd"]
+ENTRYPOINT ["./kusd"] 
