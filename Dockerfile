@@ -1,8 +1,8 @@
 FROM golang:1.9.2-alpine as builder
+RUN apk update && apk add --update git make gcc musl-dev linux-headers
 
 WORKDIR /kusd/
 ADD . .
-RUN apk update && apk add --update git make gcc musl-dev linux-headers
 RUN make kusd
 
 FROM alpine:3.7
