@@ -19,9 +19,9 @@ contract Network {
     address[] private voterIndex; 
 
     // maximum number of voters at one time
-    uint public constant MAX_VOTERS = 3;
+    uint public constant MAX_VOTERS = 100;
     // minimum deposit value to participate in the consensus
-    uint public minDeposit = 10;
+    uint public minDeposit = 100000;
 
     //event LogNewVoter(address indexed addr, uint index, uint deposit);
     //event LogDeleteVoter(address indexed addr, uint index);
@@ -29,12 +29,15 @@ contract Network {
     function Network() public {
         address investor1 = 0xd6e579085c82329c89fca7a9f012be59028ed53f;
         address investor2 = 0x497dc8a0096cf116e696ba9072516c92383770ed;
+        address investor3 = 0xd46d2023a7dde27037de5387b38b17ce1e93e3d2;
         uint investment1 = 100;
         uint investment2 = 100;
+        uint investment3 = 100;
 
         // genesis validators
         genesis[investor1] = investment1;
         genesis[investor2] = investment2;
+        genesis[investor3] = investment3;
 
         // @NOTE(rgeraldes) - be able to vote from the start
         _insertVoter(investor1, investment1);
@@ -82,14 +85,10 @@ contract Network {
 
     function deposit() public payable {
         require(!isVoter(msg.sender));
+        require(msg.value >= minDeposit);
         if (!isGenesisVoter(msg.sender)) {
             require(voterIndex.length < MAX_VOTERS);
-            require(msg.value >= minDeposit);
-        } else {
-            uint investment = genesis[msg.sender];
-            require(msg.value >= investment);
-        }
-
+        } 
         _insertVoter(msg.sender, msg.value);
     }
 

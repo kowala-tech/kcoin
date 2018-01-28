@@ -18,7 +18,7 @@ tail -f kowala1.log
 Node 2 - Genesis Validator
 ./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json
 cp /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/UTC--2018-01-16T16-33-27.301502000Z--497dc8a0096cf116e696ba9072516c92383770ed /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/build/bin/.kowala2/keystore 
-./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml --validate --coinbase 0x497dc8a0096cf116e696ba9072516c92383770ed --unlock 0x497dc8a0096cf116e696ba9072516c92383770ed --bootnodes "enode://12750fb281941b23ef8a19b714103769e71cee929ef9adf840079ae01e2b5c9a46bf6f3d78d71f29539c08c153af66ffbf7911091226360b2607c40d00e23f30@127.0.0.1:30303"
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala2.toml --validate --coinbase 0x497dc8a0096cf116e696ba9072516c92383770ed --unlock 0x497dc8a0096cf116e696ba9072516c92383770ed --bootnodes "enode://164a52b98afce2e8d24bb9c4ecfbfd616e4f378a2657b679e81683ebebec014afe74f9581f35703ddb15540edb5107f67013d9fcfcf3c0dac4d3e2fc39486428@127.0.0.1:30303"
 
 Node 3 - Archive Node (Full sync)
 
@@ -29,6 +29,16 @@ Node 4 - Archive Node (Fast sync)
 
 ./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala4.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json
 ./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/sample-kowala4.toml --bootnodes "enode://12750fb281941b23ef8a19b714103769e71cee929ef9adf840079ae01e2b5c9a46bf6f3d78d71f29539c08c153af66ffbf7911091226360b2607c40d00e23f30@127.0.0.1:30303" --cache=512 --verbosity 4
+
+Node 5 - Genesis Validator not included as a voter from the start
+
+// @NOTE(rgeraldes) - deposit needs to be bigger than 100 000 at the moment
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/join-election.toml init /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json
+cp /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/UTC--2018-01-16T16-35-12.309844000Z--259be75d96876f2ada3d202722523e9cd4dd917d /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/build/bin/.kowala10/keystore 
+./kusd --config /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/join-election.toml --validate --coinbase 0x259be75d96876f2ada3d202722523e9cd4dd917d --unlock 0x259be75d96876f2ada3d202722523e9cd4dd917d --deposit 100001 --bootnodes "enode://164a52b98afce2e8d24bb9c4ecfbfd616e4f378a2657b679e81683ebebec014afe74f9581f35703ddb15540edb5107f67013d9fcfcf3c0dac4d3e2fc39486428@127.0.0.1:30303" --verbosity 4
+
+Node 6 - Non Genesis Validator
+
 
 console
 

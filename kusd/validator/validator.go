@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -38,6 +39,7 @@ type Validator struct {
 	Election           // consensus state
 	maxTransitions int // max number of state transitions (tests) 0 - unlimited
 
+	running    int32
 	validating int32
 	deposit    uint64
 
@@ -74,7 +76,7 @@ func New(backend Backend, contractBackend bind.ContractBackend, config *params.C
 		engine:   engine,
 		eventMux: eventMux,
 		signer:   types.NewAndromedaSigner(config.ChainID),
-		canStart: 1,
+		canStart: 0,
 	}
 
 	// Network contract instance
@@ -107,18 +109,12 @@ out:
 	for ev := range events.Chan() {
 		switch ev.Data.(type) {
 		case downloader.StartEvent:
-			atomic.StoreInt32(&val.canStart, 0)
-			if val.Validating() {
-				val.Stop()
-				atomic.StoreInt32(&val.shouldStart, 1)
-				log.Info("Validation aborted due to sync")
-			}
+			atomic.StoreInt32(&val.shouldStart, 1)
 		case downloader.DoneEvent, downloader.FailedEvent:
-			shouldStart := atomic.LoadInt32(&val.shouldStart) == 1
-
+			start := atomic.LoadInt32(&val.shouldStart) == 1
 			atomic.StoreInt32(&val.canStart, 1)
 			atomic.StoreInt32(&val.shouldStart, 0)
-			if shouldStart {
+			if start {
 				val.Start(val.account.Address, val.deposit)
 			}
 			// unsubscribe. we're only interested in this event once
@@ -130,7 +126,7 @@ out:
 }
 
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
-	if val.Validating() {
+	if val.Started() {
 		log.Warn("Failed to start the validator - the state machine is already running")
 		return
 	}
@@ -147,13 +143,28 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	val.account = account
 	val.deposit = deposit
 
-	if atomic.LoadInt32(&val.canStart) == 0 {
-		log.Info("Network syncing, will start validator afterwards")
-		return
+	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
+	if err != nil {
+		log.Crit("Failed to verify if the validator is registered as a voter", "err", err)
 	}
 
+	// @NOTE (rgeraldes) - initial genesis validators are registered as voters from the start
+	// and we can use that info to verify if we need to sync
+	if voter {
+		// terminate sync go-routine
+		val.eventMux.Post(downloader.DoneEvent{})
+	} else {
+		if atomic.LoadInt32(&val.canStart) == 0 {
+			log.Info("Network syncing, will start validator afterwards")
+			return
+		}
+	}
+
+	// @NOTE (rgeraldes) - transaction rejection mechanism introduced to speed sync times
+	atomic.StoreUint32(&val.backend.ProtocolManager().acceptTxs, 1)
+
 	log.Info("Starting validation operation")
-	atomic.StoreInt32(&val.validating, 1)
+	atomic.StoreInt32(&val.running, 1)
 
 	go val.run()
 }
@@ -177,8 +188,8 @@ func (val *Validator) Stop() {
 	val.withdraw()
 	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
-	atomic.StoreInt32(&val.validating, 0)
 	atomic.StoreInt32(&val.shouldStart, 0)
+	atomic.StoreInt32(&val.running, 0)
 
 	log.Info("Consensus validator stopped")
 }
@@ -187,6 +198,10 @@ func (val *Validator) SetExtra(extra []byte) error { return nil }
 
 func (val *Validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0
+}
+
+func (val *Validator) Started() bool {
+	return atomic.LoadInt32(&val.running) > 0
 }
 
 func (val *Validator) SetCoinbase(addr common.Address) {
@@ -431,39 +446,44 @@ func (val *Validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 	return nil, receipt.Logs
 }
 
-// @TODO (rgeraldes) - the initial deposit value should also be
-// validated against the minimum deposit
-// @TODO (rgeraldes) - review call opts
-// @TODO (rgeraldes) - review log levels
-func (val *Validator) makeDeposit(isGenesis bool) error {
-	if isGenesis {
-		log.Debug("Genesis Validator")
-		// @TODO (rgeraldes) - verify if the deposit is at least equal to the initial investment
-	} else {
-		log.Debug("Non-Genesis Validator")
-		min, err := val.network.MinDeposit(&bind.CallOpts{})
-		if err != nil {
-			return err
-		}
-
-		if min.Cmp(big.NewInt(int64(val.deposit))) > 0 {
-			return fmt.Errorf("Current deposit - %d - is not enough. The minimum required is %d", val.deposit, min)
-		}
-
-		// check if there are spots left to vote
-		available, err := val.network.Availability(&bind.CallOpts{})
-		if err != nil {
-			return err
-		}
-
-		if !available {
-			return fmt.Errorf("There are not positions available at the moment")
-		}
+func (val *Validator) makeDeposit() error {
+	min, err := val.network.MinDeposit(&bind.CallOpts{})
+	if err != nil {
+		return err
 	}
 
-	opts := &bind.TransactOpts{}
-	_, err := val.network.Deposit(opts)
+	if min.Cmp(big.NewInt(int64(val.deposit))) > 0 {
+		return fmt.Errorf("Current deposit - %d - is not enough. The minimum required is %d", val.deposit, min)
+	}
+
+	availability, err := val.network.Availability(&bind.CallOpts{})
 	if err != nil {
+		return err
+	}
+	if !availability {
+		return fmt.Errorf("There are not positions available at the moment")
+	}
+
+	opts := &bind.TransactOpts{
+		From:  val.account.Address,
+		Value: min,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			// @NOTE (rgeraldes) - ignore the proposed signer as by default it will be a unprotected signer.
+
+			if address != val.account.Address {
+				return nil, errors.New("not authorized to sign this account")
+			}
+
+			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
+		},
+		// @TODO (rgeraldes) - price prediction & limits
+		GasPrice: big.NewInt(100000),
+		GasLimit: big.NewInt(200000),
+	}
+
+	_, err = val.network.Deposit(opts)
+	if err != nil {
+		log.Debug("Transaction failed", "err", err)
 		return fmt.Errorf("Failed to transact the deposit: %x", err)
 	}
 
@@ -471,7 +491,21 @@ func (val *Validator) makeDeposit(isGenesis bool) error {
 }
 
 func (val *Validator) withdraw() {
-	opts := &bind.TransactOpts{}
+	opts := &bind.TransactOpts{
+		From: val.account.Address,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			// @NOTE (rgeraldes) - ignore the proposed signer as by default it will be a unprotected signer.
+
+			if address != val.account.Address {
+				return nil, errors.New("not authorized to sign this account")
+			}
+
+			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
+		},
+		// @TODO (rgeraldes) - price prediction & limits
+		GasPrice: big.NewInt(100000),
+		GasLimit: big.NewInt(200000),
+	}
 	_, err := val.network.Withdraw(opts)
 	if err != nil {
 		log.Error("Failed to withdraw from the election")
@@ -541,6 +575,7 @@ func (val *Validator) createBlock() *types.Block {
 	}
 
 	pending, err := val.backend.TxPool().Pending()
+	log.Error("PENDING", "txs", len(pending))
 	if err != nil {
 		log.Crit("Failed to fetch pending transactions", "err", err)
 	}

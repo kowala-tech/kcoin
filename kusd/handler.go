@@ -613,9 +613,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash())
 		}
+
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == ProposalMsg:
+		// @TODO (rgeraldes) - review flow (we will not need this condition)
+		if !pm.validator.Validating() {
+			break
+		}
+
 		// Retrieve and decode the propagated proposal
 		var proposal types.Proposal
 		if err := msg.Decode(&proposal); err != nil {
@@ -624,6 +630,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.validator.AddProposal(&proposal)
 
 	case msg.Code == VoteMsg:
+		// @TODO (rgeraldes) - review flow (we will not need this condition)
+		if !pm.validator.Validating() {
+			break
+		}
+
 		// Retrieve and decode the propagated vote
 		var vote types.Vote
 		if err := msg.Decode(&vote); err != nil {
@@ -634,6 +645,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.validator.AddVote(&vote)
 
 	case msg.Code == BlockFragmentMsg:
+		// @TODO (rgeraldes) - review flow (we will not need this condition)
+		if !pm.validator.Validating() {
+			break
+		}
+
 		// Retrieve and decode the propagated block fragment
 		var request blockFragmentData
 		if err := msg.Decode(&request); err != nil {

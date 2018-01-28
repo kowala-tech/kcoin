@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
@@ -40,7 +41,7 @@ func (val *Validator) notLoggedInState() stateFn {
 		headSub := val.eventMux.Subscribe(core.ChainHeadEvent{})
 		defer headSub.Unsubscribe()
 
-		if err := val.makeDeposit(isGenesis); err != nil {
+		if err := val.makeDeposit(); err != nil {
 			return nil
 		}
 
@@ -50,6 +51,7 @@ func (val *Validator) notLoggedInState() stateFn {
 			select {
 			case _, ok := <-headSub.Chan():
 				if !ok {
+					// @TODO (rgeraldes) - log
 					return nil
 				}
 
@@ -67,6 +69,10 @@ func (val *Validator) notLoggedInState() stateFn {
 		log.Info("Deposit is not necessary for a genesis validator (first block)")
 	}
 
+	log.Info("Starting validation operation")
+	atomic.StoreInt32(&val.validating, 1)
+
+	log.Info("Voter has been accepted in the election")
 	val.restoreLastCommit()
 
 	return val.newElectionState
@@ -208,5 +214,7 @@ func (val *Validator) commitState() stateFn {
 
 // @NOTE (rgeraldes) - end state
 func (val *Validator) loggedOutState() stateFn {
+	atomic.StoreInt32(&val.validating, 0)
+
 	return nil
 }
