@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
@@ -326,6 +327,10 @@ func (s *Kowala) StartValidating() error {
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
 		return fmt.Errorf("insufficient funds: %v", err)
 	}
+
+	// @NOTE (rgeraldes) - ignored transaction rejection mechanism introduced to speed sync times
+	// @TODO (rgeraldes) - review (does it make sense to have a list of transactions before the election or not)
+	atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
 	go s.validator.Start(cb, dep)
 	return nil

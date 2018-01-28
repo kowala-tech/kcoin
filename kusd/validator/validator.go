@@ -160,9 +160,6 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 		}
 	}
 
-	// @NOTE (rgeraldes) - transaction rejection mechanism introduced to speed sync times
-	atomic.StoreUint32(&val.backend.ProtocolManager().acceptTxs, 1)
-
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.running, 1)
 
