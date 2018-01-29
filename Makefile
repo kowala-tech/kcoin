@@ -16,6 +16,11 @@ kusd:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kusd\" to launch kusd."
 
+bootnode:
+	build/env.sh go run build/ci.go install ./cmd/bootnode
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
+
 swarm:
 	build/env.sh go run build/ci.go install ./cmd/swarm
 	@echo "Done building."
@@ -145,3 +150,12 @@ kusd-windows-amd64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kusd
 	@echo "Windows amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/kusd-windows-* | grep amd64
+
+
+## Docker
+
+docker-build-bootnode:
+	docker build -t kowala-tech/bootnode -f bootnode.Dockerfile .
+
+docker-build-kusd:
+	docker build -t kowala-tech/kusd -f kusd.Dockerfile .

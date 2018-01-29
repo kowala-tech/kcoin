@@ -120,8 +120,9 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	utils.RegisterKowalaService(stack, &cfg.Kowala)
 
 	// Add the Stats daemon if requested.
-	if cfg.Stats.URL != "" {
-		utils.RegisterKowalaStatsService(stack, cfg.Stats.URL)
+	statsUrl := cfg.Stats.GetURL()
+	if statsUrl != "" {
+		utils.RegisterKowalaStatsService(stack, statsUrl)
 	}
 
 	// Add the release oracle service so it boots along with node.

@@ -11,4 +11,4 @@ COPY --from=builder /kusd/build/bin/kusd .
 EXPOSE 11223
 EXPOSE 22334
 EXPOSE 22334/udp
-ENTRYPOINT ["./kusd"] 
+ENTRYPOINT ["./kusd"]
