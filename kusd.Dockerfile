@@ -11,5 +11,4 @@ COPY --from=builder /kusd/build/bin/kusd .
 EXPOSE 11223
 EXPOSE 22334
 EXPOSE 22334/udp
-ADD testnet.toml .
-ENTRYPOINT ["./kusd", "--config", "testnet.toml"]
+ENTRYPOINT ["./kusd"]
