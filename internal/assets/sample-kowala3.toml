@@ -2,7 +2,7 @@
 NetworkId = 1
 SyncMode = "full"
 DatabaseCache = 128
-GasPrice = 18000000000
+GasPrice = 20
 EnablePreimageRecording = false
 
 [Kowala.TxPool]

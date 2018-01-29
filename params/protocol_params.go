@@ -56,7 +56,7 @@ const (
 
 	// @NOTE (rgeraldes) - this duration can be used to change the times
 	// between blocks
-	SyncDuration uint64 = 5000
+	SyncDuration uint64 = 15000
 )
 
 var (

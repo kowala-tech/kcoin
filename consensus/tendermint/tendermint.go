@@ -69,6 +69,8 @@ func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *type
 
 	// Accumulate any block and uncle rewards and commit the final state root
 	header.Root = state.IntermediateRoot(true)
+
+	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, receipts, commit), nil
 }
 

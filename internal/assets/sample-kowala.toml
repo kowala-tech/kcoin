@@ -3,7 +3,7 @@ NetworkId = 1
 SyncMode = "fast"
 LightPeers = 20
 DatabaseCache = 128
-GasPrice = 18000000000
+GasPrice = 20
 EnablePreimageRecording = false
 
 [Kowala.TxPool]

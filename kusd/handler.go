@@ -62,10 +62,10 @@ type ProtocolManager struct {
 
 	SubProtocols []p2p.Protocol
 
-	eventMux                               *event.TypeMux
-	txSub                                  *event.TypeMuxSubscription
-	minedBlockSub                          *event.TypeMuxSubscription
-	proposalSub, voteSub, blockFragmentSub *event.TypeMuxSubscription
+	eventMux             *event.TypeMux
+	txSub                *event.TypeMuxSubscription
+	minedBlockSub        *event.TypeMuxSubscription
+	proposalSub, voteSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
@@ -192,16 +192,12 @@ func (pm *ProtocolManager) Start() {
 	// @TODO (rgeraldes) - verify if this condition makes sense
 	if pm.validator != nil {
 		// broadcast proposals
-		pm.proposalSub = pm.eventMux.Subscribe(core.NewProposalEvent{})
+		pm.proposalSub = pm.eventMux.Subscribe(core.NewProposalEvent{}, core.NewBlockFragmentEvent{})
 		go pm.proposalBroadcastLoop()
 
 		// broadcast votes
 		pm.voteSub = pm.eventMux.Subscribe(core.NewVoteEvent{})
 		go pm.voteBroadcastLoop()
-
-		// broadcast block fragments
-		pm.blockFragmentSub = pm.eventMux.Subscribe(core.NewBlockFragmentEvent{})
-		go pm.fragmentBroadcastLoop()
 	}
 
 	// start sync handlers
@@ -216,9 +212,8 @@ func (pm *ProtocolManager) Stop() {
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 
 	if pm.validator != nil {
-		pm.proposalSub.Unsubscribe()      // quits proposalBroadcastLoop
-		pm.voteSub.Unsubscribe()          // quits voteBroadcastLoop
-		pm.blockFragmentSub.Unsubscribe() // quits fragmentBroadcastLoop
+		pm.proposalSub.Unsubscribe() // quits proposalBroadcastLoop
+		pm.voteSub.Unsubscribe()     // quits voteBroadcastLoop
 	}
 
 	// Quit the sync loop.
@@ -720,21 +715,11 @@ func (pm *ProtocolManager) proposalBroadcastLoop() {
 		switch ev := obj.Data.(type) {
 		case core.NewProposalEvent:
 			for _, peer := range pm.peers.Peers() {
-				if err := peer.SendNewProposal(ev.Proposal); err != nil {
-					log.Error("Failed to send proposal", "err", err)
-				}
+				peer.SendNewProposal(ev.Proposal)
 			}
-		}
-	}
-}
-
-// Fragment broadcast loop
-func (pm *ProtocolManager) fragmentBroadcastLoop() {
-	for obj := range pm.blockFragmentSub.Chan() {
-		switch ev := obj.Data.(type) {
 		case core.NewBlockFragmentEvent:
 			for _, peer := range pm.peers.PeersWithoutFragment(ev.Data.Proof) {
-				go peer.SendBlockFragment(ev.BlockNumber, ev.Round, ev.Data)
+				peer.SendBlockFragment(ev.BlockNumber, ev.Round, ev.Data)
 			}
 		}
 	}

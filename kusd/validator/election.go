@@ -34,8 +34,7 @@ type Election struct {
 	blockCh  chan *types.Block
 	majority *event.TypeMuxSubscription
 
-	// @TODO (rgeraldes) - not sure if it will be necessary
-	// proposer
+	// state changes related to the election
 	*work
 }
 

@@ -47,10 +47,11 @@ type Validator struct {
 	signer types.Signer
 
 	// blockchain
-	backend Backend
-	chain   *core.BlockChain
-	config  *params.ChainConfig
-	engine  consensus.Engine
+	backend  Backend
+	chain    *core.BlockChain
+	config   *params.ChainConfig
+	engine   consensus.Engine
+	vmConfig vm.Config // @NOTE (rgeraldes) - temporary
 
 	network *network.NetworkContract // validators contract
 
@@ -68,7 +69,7 @@ type Validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, contractBackend bind.ContractBackend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine) *Validator {
+func New(backend Backend, contractBackend bind.ContractBackend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *Validator {
 	validator := &Validator{
 		config:   config,
 		backend:  backend,
@@ -76,6 +77,7 @@ func New(backend Backend, contractBackend bind.ContractBackend, config *params.C
 		engine:   engine,
 		eventMux: eventMux,
 		signer:   types.NewAndromedaSigner(config.ChainID),
+		vmConfig: vmConfig,
 		canStart: 0,
 	}
 
@@ -301,6 +303,12 @@ func (val *Validator) init() error {
 	val.blockCh = make(chan *types.Block)
 	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 
+	// @TODO (rgeraldes) - review vs go-eth
+	if err = val.makeCurrent(parent); err != nil {
+		log.Error("Failed to create mining context", "err", err)
+		return nil
+	}
+
 	return nil
 }
 
@@ -463,7 +471,7 @@ func (val *Validator) makeDeposit() error {
 
 	opts := &bind.TransactOpts{
 		From:  val.account.Address,
-		Value: min,
+		Value: min.Mul(min, big.NewInt(2)),
 		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
 			// @NOTE (rgeraldes) - ignore the proposed signer as by default it will be a unprotected signer.
 
@@ -474,13 +482,13 @@ func (val *Validator) makeDeposit() error {
 			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
 		},
 		// @TODO (rgeraldes) - price prediction & limits
-		GasPrice: big.NewInt(100000),
-		GasLimit: big.NewInt(200000),
+		GasPrice: big.NewInt(25),
+		GasLimit: big.NewInt(600000),
 	}
 
 	_, err = val.network.Deposit(opts)
 	if err != nil {
-		log.Debug("Transaction failed", "err", err)
+		log.Error("Transaction failed", "err", err)
 		return fmt.Errorf("Failed to transact the deposit: %x", err)
 	}
 
@@ -500,12 +508,12 @@ func (val *Validator) withdraw() {
 			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
 		},
 		// @TODO (rgeraldes) - price prediction & limits
-		GasPrice: big.NewInt(100000),
-		GasLimit: big.NewInt(200000),
+		GasPrice: big.NewInt(25),
+		GasLimit: big.NewInt(600000),
 	}
 	_, err := val.network.Withdraw(opts)
 	if err != nil {
-		log.Error("Failed to withdraw from the election")
+		log.Error("Failed to withdraw from the election", "err", err)
 	}
 }
 
@@ -539,6 +547,7 @@ func (val *Validator) createBlock() *types.Block {
 		GasUsed:    new(big.Int),
 		Time:       big.NewInt(tstamp),
 	}
+	val.header = header
 
 	var commit *types.Commit
 
@@ -564,15 +573,7 @@ func (val *Validator) createBlock() *types.Block {
 		return nil
 	}
 
-	// Could potentially happen if starting to mine in an odd state.
-	if err = val.makeCurrent(parent, header); err != nil {
-		log.Error("Failed to create mining context", "err", err)
-		// @TODO (rgeraldes) - review returning nil
-		return nil
-	}
-
 	pending, err := val.backend.TxPool().Pending()
-	log.Error("PENDING", "txs", len(pending))
 	if err != nil {
 		log.Crit("Failed to fetch pending transactions", "err", err)
 	}
@@ -584,7 +585,7 @@ func (val *Validator) createBlock() *types.Block {
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
-	if block, err = val.engine.Finalize(val.chain, header, state, val.txs, val.receipts, commit); err != nil {
+	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, val.receipts, commit); err != nil {
 		log.Crit("Failed to finalize block for sealing", "err", err)
 	}
 
@@ -626,8 +627,6 @@ func (val *Validator) propose() {
 	val.block = block
 
 	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
-
-	time.Sleep(time.Duration(5) * time.Second)
 
 	// post block segments events
 	// @TODO(rgeraldes) - review types int/uint
@@ -718,15 +717,78 @@ func (val *Validator) vote(vote *types.Vote) {
 func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) {
 	val.blockFragments.Add(fragment)
 
-	// assemble block
+	// @NOTE (rgeraldes) - the whole section needs to be refactored
 	if val.blockFragments.HasAll() {
 		block, err := val.blockFragments.Assemble()
 		if err != nil {
 			log.Crit("Failed to assemble the block", "err", err)
 		}
 
-		// @TODO (rgeraldes) - add block validations
-		// and remove them when the block is committed
+		// @TODO (rgeraldes) - refactor ; based on core/blockchain.go (InsertChain)
+		// Start the parallel header verifier
+		nBlocks := 1
+		headers := make([]*types.Header, nBlocks)
+		seals := make([]bool, nBlocks)
+		headers[nBlocks-1] = block.Header()
+		seals[nBlocks-1] = true
+
+		abort, results := val.engine.VerifyHeaders(val.chain, headers, seals)
+		defer close(abort)
+
+		err = <-results
+		if err == nil {
+			err = val.chain.Validator().ValidateBody(block)
+		}
+
+		// @NOTE(rgeraldes) - ignore for now (assume that the block is ok)
+		/*
+			if err != nil {
+				if err == ErrKnownBlock {
+					stats.ignored++
+					continue
+				}
+
+				if err == consensus.ErrFutureBlock {
+					// Allow up to MaxFuture second in the future blocks. If this limit
+					// is exceeded the chain is discarded and processed at a later time
+					// if given.
+					max := big.NewInt(time.Now().Unix() + maxTimeFutureBlocks)
+					if block.Time().Cmp(max) > 0 {
+						return i, fmt.Errorf("future block: %v > %v", block.Time(), max)
+					}
+					bc.futureBlocks.Add(block.Hash(), block)
+					stats.queued++
+					continue
+				}
+
+				if err == consensus.ErrUnknownAncestor && bc.futureBlocks.Contains(block.ParentHash()) {
+					bc.futureBlocks.Add(block.Hash(), block)
+					stats.queued++
+					continue
+				}
+
+				bc.reportBlock(block, nil, err)
+				return i, err
+			}
+		*/
+		parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
+
+		// Process block using the parent state as reference point.
+		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
+		if err != nil {
+			log.Crit("Failed to process the block", "err", err)
+			//bc.reportBlock(block, receipts, err)
+			//return i, err
+		}
+		val.receipts = receipts
+
+		// Validate the state using the default validator
+		err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
+		if err != nil {
+			log.Crit("Failed to validate the state", "err", err)
+			//bc.reportBlock(block, receipts, err)
+			//return i, err
+		}
 
 		val.block = block
 
@@ -734,14 +796,13 @@ func (val *Validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 	}
 }
 
-func (val *Validator) makeCurrent(parent *types.Block, header *types.Header) error {
+func (val *Validator) makeCurrent(parent *types.Block) error {
 	state, err := val.chain.StateAt(parent.Root())
 	if err != nil {
 		return err
 	}
 	work := &work{
-		header: header,
-		state:  state,
+		state: state,
 	}
 
 	// Keep track of transactions which return errors so they can be removed

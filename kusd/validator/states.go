@@ -28,7 +28,7 @@ type stateFn func() stateFn
 
 // @NOTE (rgeraldes) - initial state
 func (val *Validator) notLoggedInState() stateFn {
-	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{Pending: false}, val.account.Address)
+	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.account.Address)
 	if err != nil {
 		log.Crit("Failed to verify the voter information", "err", err)
 		return nil
@@ -41,6 +41,7 @@ func (val *Validator) notLoggedInState() stateFn {
 		headSub := val.eventMux.Subscribe(core.ChainHeadEvent{})
 		defer headSub.Unsubscribe()
 
+		log.Info("Making Deposit")
 		if err := val.makeDeposit(); err != nil {
 			return nil
 		}
@@ -87,15 +88,17 @@ func (val *Validator) newElectionState() stateFn {
 	}
 
 	<-time.NewTimer(val.start.Sub(time.Now())).C
-	// @NOTE (rgeraldes) - wait for txs to be available in the txPool for the round 0
-	// If the last block changed the app hash, we may need an empty "proof" block.
+
 	/*
-		numTxs, _ := val.backend.TxPool().Stats() //
-		if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
-			log.Info("Waiting for transactions")
-			txSub := val.eventMux.Subscribe(core.TxPreEvent{})
-			defer txSub.Unsubscribe()
-			<-txSub.Chan()
+		// @NOTE (rgeraldes) - wait for txs to be available in the txPool for the the first block
+		if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
+			numTxs, _ := val.backend.TxPool().Stats() //
+			if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
+				log.Info("Waiting for transactions")
+				txSub := val.eventMux.Subscribe(core.TxPreEvent{})
+				defer txSub.Unsubscribe()
+				<-txSub.Chan()
+			}
 		}
 	*/
 
@@ -187,14 +190,49 @@ func (val *Validator) preCommitWaitState() stateFn {
 func (val *Validator) commitState() stateFn {
 	log.Info("Commit state")
 
-	// @NOTE (rgeraldes) - this is full validation which should not be necessary at this stage.
-	// @TODO (rgeraldes) - replace with just the necessary steps
-	if _, err := val.chain.InsertChain(types.Blocks{val.block}); err != nil {
-		log.Crit("Failure to commit the proposed block", "err", err)
-	}
-	go val.eventMux.Post(core.NewMinedBlockEvent{Block: val.block})
+	// @TODO (rgeraldes) - replace work with unconfirmed, unjustified?
 
-	// state updates
+	block := val.block
+	work := val.work
+	chainDb := val.backend.ChainDb()
+
+	work.state.CommitTo(chainDb, true)
+
+	// @NOTE (rgeraldes) - stat is not necessary (finality property - never forks)
+	_, err := val.chain.WriteBlock(block)
+	if err != nil {
+		log.Error("Failed writing block to chain", "err", err)
+		return nil
+	}
+
+	// update block hash since it is now available and not when the receipt/log of individual transactions were created
+	for _, r := range val.work.receipts {
+		for _, l := range r.Logs {
+			l.BlockHash = block.Hash()
+		}
+	}
+	for _, log := range val.work.state.Logs() {
+		log.BlockHash = block.Hash()
+	}
+
+	// This puts transactions in a extra db for rpc
+	core.WriteTxLookupEntries(chainDb, block)
+	// Write map map bloom filters
+	core.WriteMipmapBloom(chainDb, block.NumberU64(), work.receipts)
+
+	go func(block *types.Block, logs []*types.Log, receipts []*types.Receipt) {
+		val.eventMux.Post(core.NewMinedBlockEvent{Block: block})
+		val.eventMux.Post(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+
+		val.eventMux.Post(core.ChainHeadEvent{Block: block})
+		val.eventMux.Post(logs)
+
+		if err := core.WriteBlockReceipts(chainDb, block.Hash(), block.NumberU64(), receipts); err != nil {
+			log.Warn("Failed writing block receipts", "err", err)
+		}
+	}(block, work.state.Logs(), work.receipts)
+
+	// election state updates
 	val.commitRound = int(val.round)
 
 	// @TODO(rgeraldes)
