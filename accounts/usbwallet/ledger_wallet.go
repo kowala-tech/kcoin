@@ -1,19 +1,3 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // This file contains the implementation for interacting with the Ledger hardware
 // wallets. The wire protocol spec can be found in the Ledger Blue GitHub repo:
 // https://raw.githubusercontent.com/LedgerHQ/blue-app-eth/master/doc/ethapp.asc
@@ -31,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/karalabe/hid"
 	ethereum "github.com/kowala-tech/kUSD"
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
@@ -38,7 +23,6 @@ import (
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/rlp"
-	"github.com/karalabe/hid"
 )
 
 // Maximum time between wallet health checks to detect USB unplugs.
@@ -591,6 +575,14 @@ func (w *ledgerWallet) SignTx(account accounts.Account, tx *types.Transaction, c
 	return w.ledgerSign(path, account.Address, tx, chainID)
 }
 
+func (w *ledgerWallet) SignProposal(account accounts.Account, proposal *types.Proposal, chainID *big.Int) (*types.Proposal, error) {
+	return nil, nil
+}
+
+func (w *ledgerWallet) SignVote(account accounts.Account, vote *types.Vote, chainID *big.Int) (*types.Vote, error) {
+	return nil, nil
+}
+
 // SignHashWithPassphrase implements accounts.Wallet, however signing arbitrary
 // data is not supported for Ledger wallets, so this method will always return
 // an error.
@@ -744,15 +736,11 @@ func (w *ledgerWallet) ledgerSign(derivationPath []uint32, address common.Addres
 		txrlp []byte
 		err   error
 	)
-	if chainID == nil {
-		if txrlp, err = rlp.EncodeToBytes([]interface{}{tx.Nonce(), tx.GasPrice(), tx.Gas(), tx.To(), tx.Value(), tx.Data()}); err != nil {
-			return nil, err
-		}
-	} else {
-		if txrlp, err = rlp.EncodeToBytes([]interface{}{tx.Nonce(), tx.GasPrice(), tx.Gas(), tx.To(), tx.Value(), tx.Data(), chainID, big.NewInt(0), big.NewInt(0)}); err != nil {
-			return nil, err
-		}
+
+	if txrlp, err = rlp.EncodeToBytes([]interface{}{tx.Nonce(), tx.GasPrice(), tx.Gas(), tx.To(), tx.Value(), tx.Data(), chainID, big.NewInt(0), big.NewInt(0)}); err != nil {
+		return nil, err
 	}
+
 	payload := append(path, txrlp...)
 
 	// Send the request and wait for the response
@@ -782,19 +770,15 @@ func (w *ledgerWallet) ledgerSign(derivationPath []uint32, address common.Addres
 	signature := append(reply[1:], reply[0])
 
 	// Create the correct signer and signature transform based on the chain ID
-	var signer types.Signer
-	if chainID == nil {
-		signer = new(types.HomesteadSigner)
-	} else {
-		signer = types.NewEIP155Signer(chainID)
-		signature[64] = signature[64] - byte(chainID.Uint64()*2+35)
-	}
+	signer := types.NewAndromedaSigner(chainID)
+	signature[64] = signature[64] - byte(chainID.Uint64()*2+35)
+
 	// Inject the final signature into the transaction and sanity check the sender
 	signed, err := tx.WithSignature(signer, signature)
 	if err != nil {
 		return nil, err
 	}
-	sender, err := types.Sender(signer, signed)
+	sender, err := types.TxSender(signer, signed)
 	if err != nil {
 		return nil, err
 	}

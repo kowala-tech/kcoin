@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
 // Contains the kusd command usage template and generator.
 
 package main
@@ -63,7 +47,7 @@ type flagGroup struct {
 // AppHelpFlagGroups is the application flags, grouped by functionality.
 var AppHelpFlagGroups = []flagGroup{
 	{
-		Name: "ETHEREUM",
+		Name: "KOWALA",
 		Flags: []cli.Flag{
 			configFileFlag,
 			utils.DataDirFlag,
@@ -71,25 +55,13 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.NoUSBFlag,
 			utils.NetworkIdFlag,
 			utils.TestnetFlag,
-			utils.RinkebyFlag,
 			utils.DevModeFlag,
 			utils.SyncModeFlag,
-			utils.EthStatsURLFlag,
+			utils.KowalaStatsURLFlag,
 			utils.IdentityFlag,
 			utils.LightServFlag,
 			utils.LightPeersFlag,
 			utils.LightKDFFlag,
-		},
-	},
-	{
-		Name: "ETHASH",
-		Flags: []cli.Flag{
-			utils.EthashCacheDirFlag,
-			utils.EthashCachesInMemoryFlag,
-			utils.EthashCachesOnDiskFlag,
-			utils.EthashDatasetDirFlag,
-			utils.EthashDatasetsInMemoryFlag,
-			utils.EthashDatasetsOnDiskFlag,
 		},
 	},
 	{
@@ -159,11 +131,11 @@ var AppHelpFlagGroups = []flagGroup{
 		},
 	},
 	{
-		Name: "MINER",
+		Name: "VALIDATOR",
 		Flags: []cli.Flag{
-			utils.MiningEnabledFlag,
-			utils.MinerThreadsFlag,
-			utils.EtherbaseFlag,
+			utils.ValidationEnabledFlag,
+			utils.ValidatorDepositFlag,
+			utils.CoinbaseFlag,
 			utils.TargetGasLimitFlag,
 			utils.GasPriceFlag,
 			utils.ExtraDataFlag,
@@ -186,13 +158,8 @@ var AppHelpFlagGroups = []flagGroup{
 		Name: "LOGGING AND DEBUGGING",
 		Flags: append([]cli.Flag{
 			utils.MetricsEnabledFlag,
-			utils.FakePoWFlag,
 			utils.NoCompactionFlag,
 		}, debug.Flags...),
-	},
-	{
-		Name:  "WHISPER (EXPERIMENTAL)",
-		Flags: whisperFlags,
 	},
 	{
 		Name: "DEPRECATED",

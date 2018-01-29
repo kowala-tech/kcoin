@@ -48,7 +48,7 @@ func (w *wizard) deployFaucet() {
 		}
 	}
 	infos.node.genesis, _ = json.MarshalIndent(w.conf.genesis, "", "  ")
-	infos.node.network = w.conf.genesis.Config.ChainId.Int64()
+	infos.node.network = w.conf.genesis.Config.ChainID.Int64()
 
 	// Figure out which port to listen on
 	fmt.Println()
@@ -156,12 +156,12 @@ func (w *wizard) deployFaucet() {
 
 	// Set a proper name to report on the stats page
 	fmt.Println()
-	if infos.node.ethstats == "" {
+	if infos.node.stats == "" {
 		fmt.Printf("What should the node be called on the stats page?\n")
-		infos.node.ethstats = w.readString() + ":" + w.conf.ethstats
+		infos.node.stats = w.readString() + ":" + w.conf.stats
 	} else {
-		fmt.Printf("What should the node be called on the stats page? (default = %s)\n", infos.node.ethstats)
-		infos.node.ethstats = w.readDefaultString(infos.node.ethstats) + ":" + w.conf.ethstats
+		fmt.Printf("What should the node be called on the stats page? (default = %s)\n", infos.node.stats)
+		infos.node.stats = w.readDefaultString(infos.node.stats) + ":" + w.conf.stats
 	}
 	// Load up the credential needed to release funds
 	if infos.node.keyJSON != "" {

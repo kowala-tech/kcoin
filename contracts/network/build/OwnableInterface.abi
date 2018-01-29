@@ -1,0 +1,1 @@
+[{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"oldAddr","type":"address"},{"indexed":false,"name":"newAddr","type":"address"}],"name":"OwnershipTransfer","type":"event"}]

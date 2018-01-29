@@ -22,3 +22,21 @@ pipeline:
       - crc32
     when:
       event: tag
+
+  docker_kusd:
+    image: plugins/docker
+    repo: kowala-tech/kusd
+    secrets: [ docker_username, docker_password ]
+    tags: latest
+    dockerfile: kusd.Dockerfile
+    when:
+      branch: [master, develop]
+
+  docker_bootnode:
+    image: plugins/docker
+    repo: kowala-tech/bootnode
+    secrets: [ docker_username, docker_password ]
+    tags: latest
+    dockerfile: bootnode.Dockerfile
+    when:
+      branch: [master, develop]

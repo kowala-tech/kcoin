@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
@@ -25,13 +9,13 @@ import (
 	mrand "math/rand"
 	"time"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
-	"github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -48,7 +32,7 @@ const (
 type HeaderChain struct {
 	config *params.ChainConfig
 
-	chainDb       ethdb.Database
+	chainDb       kusddb.Database
 	genesisHeader *types.Header
 
 	currentHeader     *types.Header // Current head of the header chain (may be above the block chain!)
@@ -68,7 +52,7 @@ type HeaderChain struct {
 //  getValidator should return the parent's validator
 //  procInterrupt points to the parent's interrupt semaphore
 //  wg points to the parent's shutdown wait group
-func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
+func NewHeaderChain(chainDb kusddb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
 	headerCache, _ := lru.New(headerCacheLimit)
 	tdCache, _ := lru.New(tdCacheLimit)
 	numberCache, _ := lru.New(numberCacheLimit)
@@ -134,59 +118,42 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 		hash   = header.Hash()
 		number = header.Number.Uint64()
 	)
-	// Calculate the total difficulty of the header
-	ptd := hc.GetTd(header.ParentHash, number-1)
-	if ptd == nil {
-		return NonStatTy, consensus.ErrUnknownAncestor
-	}
-	localTd := hc.GetTd(hc.currentHeaderHash, hc.currentHeader.Number.Uint64())
-	externTd := new(big.Int).Add(header.Difficulty, ptd)
 
-	// Irrelevant of the canonical status, write the td and header to the database
-	if err := hc.WriteTd(hash, number, externTd); err != nil {
-		log.Crit("Failed to write header total difficulty", "err", err)
-	}
 	if err := WriteHeader(hc.chainDb, header); err != nil {
 		log.Crit("Failed to write header content", "err", err)
 	}
-	// If the total difficulty is higher than our known, add it to the canonical chain
-	// Second clause in the if statement reduces the vulnerability to selfish mining.
-	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
-	if externTd.Cmp(localTd) > 0 || (externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5) {
-		// Delete any canonical number assignments above the new head
-		for i := number + 1; ; i++ {
-			hash := GetCanonicalHash(hc.chainDb, i)
-			if hash == (common.Hash{}) {
-				break
-			}
-			DeleteCanonicalHash(hc.chainDb, i)
-		}
-		// Overwrite any stale canonical number assignments
-		var (
-			headHash   = header.ParentHash
-			headNumber = header.Number.Uint64() - 1
-			headHeader = hc.GetHeader(headHash, headNumber)
-		)
-		for GetCanonicalHash(hc.chainDb, headNumber) != headHash {
-			WriteCanonicalHash(hc.chainDb, headHash, headNumber)
 
-			headHash = headHeader.ParentHash
-			headNumber = headHeader.Number.Uint64() - 1
-			headHeader = hc.GetHeader(headHash, headNumber)
+	// Delete any canonical number assignments above the new head
+	for i := number + 1; ; i++ {
+		hash := GetCanonicalHash(hc.chainDb, i)
+		if hash == (common.Hash{}) {
+			break
 		}
-		// Extend the canonical chain with the new header
-		if err := WriteCanonicalHash(hc.chainDb, hash, number); err != nil {
-			log.Crit("Failed to insert header number", "err", err)
-		}
-		if err := WriteHeadHeaderHash(hc.chainDb, hash); err != nil {
-			log.Crit("Failed to insert head header hash", "err", err)
-		}
-		hc.currentHeaderHash, hc.currentHeader = hash, types.CopyHeader(header)
-
-		status = CanonStatTy
-	} else {
-		status = SideStatTy
+		DeleteCanonicalHash(hc.chainDb, i)
 	}
+	// Overwrite any stale canonical number assignments
+	var (
+		headHash   = header.ParentHash
+		headNumber = header.Number.Uint64() - 1
+		headHeader = hc.GetHeader(headHash, headNumber)
+	)
+	for GetCanonicalHash(hc.chainDb, headNumber) != headHash {
+		WriteCanonicalHash(hc.chainDb, headHash, headNumber)
+
+		headHash = headHeader.ParentHash
+		headNumber = headHeader.Number.Uint64() - 1
+		headHeader = hc.GetHeader(headHash, headNumber)
+	}
+	// Extend the canonical chain with the new header
+	if err := WriteCanonicalHash(hc.chainDb, hash, number); err != nil {
+		log.Crit("Failed to insert header number", "err", err)
+	}
+	if err := WriteHeadHeaderHash(hc.chainDb, hash); err != nil {
+		log.Crit("Failed to insert head header hash", "err", err)
+	}
+	hc.currentHeaderHash, hc.currentHeader = hash, types.CopyHeader(header)
+
+	status = CanonStatTy
 
 	hc.headerCache.Add(hash, header)
 	hc.numberCache.Add(hash, number)
@@ -305,38 +272,6 @@ func (hc *HeaderChain) GetBlockHashesFromHash(hash common.Hash, max uint64) []co
 		}
 	}
 	return chain
-}
-
-// GetTd retrieves a block's total difficulty in the canonical chain from the
-// database by hash and number, caching it if found.
-func (hc *HeaderChain) GetTd(hash common.Hash, number uint64) *big.Int {
-	// Short circuit if the td's already in the cache, retrieve otherwise
-	if cached, ok := hc.tdCache.Get(hash); ok {
-		return cached.(*big.Int)
-	}
-	td := GetTd(hc.chainDb, hash, number)
-	if td == nil {
-		return nil
-	}
-	// Cache the found body for next time and return
-	hc.tdCache.Add(hash, td)
-	return td
-}
-
-// GetTdByHash retrieves a block's total difficulty in the canonical chain from the
-// database by hash, caching it if found.
-func (hc *HeaderChain) GetTdByHash(hash common.Hash) *big.Int {
-	return hc.GetTd(hash, hc.GetBlockNumber(hash))
-}
-
-// WriteTd stores a block's total difficulty into the database, also caching it
-// along the way.
-func (hc *HeaderChain) WriteTd(hash common.Hash, number uint64, td *big.Int) error {
-	if err := WriteTd(hc.chainDb, hash, number, td); err != nil {
-		return err
-	}
-	hc.tdCache.Add(hash, new(big.Int).Set(td))
-	return nil
 }
 
 // GetHeader retrieves a block header from the database by hash and number,

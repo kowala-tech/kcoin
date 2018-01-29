@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
@@ -30,8 +14,8 @@ import (
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/params"
 )
 
@@ -54,7 +38,7 @@ func pricedTransaction(nonce uint64, gaslimit, gasprice *big.Int, key *ecdsa.Pri
 }
 
 func setupTxPool() (*TxPool, *ecdsa.PrivateKey) {
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	key, _ := crypto.GenerateKey()
@@ -101,7 +85,7 @@ func deriveSender(tx *types.Transaction) (common.Address, error) {
 // block head event that initiated the resetState().
 func TestStateChangeDuringPoolReset(t *testing.T) {
 	var (
-		db, _      = ethdb.NewMemDatabase()
+		db, _      = kusddb.NewMemDatabase()
 		key, _     = crypto.GenerateKey()
 		address    = crypto.PubkeyToAddress(key.PublicKey)
 		mux        = new(event.TypeMux)
@@ -307,7 +291,7 @@ func TestTransactionChainFork(t *testing.T) {
 
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 	resetState := func() {
-		db, _ := ethdb.NewMemDatabase()
+		db, _ := kusddb.NewMemDatabase()
 		statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 		pool.currentState = func() (*state.StateDB, error) { return statedb, nil }
 		currentState, _ := pool.currentState()
@@ -335,7 +319,7 @@ func TestTransactionDoubleNonce(t *testing.T) {
 
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 	resetState := func() {
-		db, _ := ethdb.NewMemDatabase()
+		db, _ := kusddb.NewMemDatabase()
 		statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 		pool.currentState = func() (*state.StateDB, error) { return statedb, nil }
 		currentState, _ := pool.currentState()
@@ -663,7 +647,7 @@ func TestTransactionQueueGlobalLimitingNoLocals(t *testing.T) {
 
 func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 	// Create the pool to test the limit enforcement with
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	config := testTxPoolConfig
@@ -753,7 +737,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals bool) {
 	evictionInterval = 250 * time.Millisecond
 
 	// Create the pool to test the non-expiration enforcement
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	config := testTxPoolConfig
@@ -892,7 +876,7 @@ func testTransactionLimitingEquivalency(t *testing.T, origin uint64) {
 // attacks.
 func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	// Create the pool to test the limit enforcement with
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	config := testTxPoolConfig
@@ -938,7 +922,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 // Tests that if transactions start being capped, transasctions are also removed from 'all'
 func TestTransactionCapClearsFromAll(t *testing.T) {
 	// Create the pool to test the limit enforcement with
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	config := testTxPoolConfig
@@ -972,7 +956,7 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 // the transactions are still kept.
 func TestTransactionPendingMinimumAllowance(t *testing.T) {
 	// Create the pool to test the limit enforcement with
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	config := testTxPoolConfig
@@ -1020,7 +1004,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 // Note, local transactions are never allowed to be dropped.
 func TestTransactionPoolRepricing(t *testing.T) {
 	// Create the pool to test the pricing enforcement with
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, new(event.TypeMux), func() (*state.StateDB, error) { return statedb, nil }, func() *big.Int { return big.NewInt(1000000) })
@@ -1104,7 +1088,7 @@ func TestTransactionPoolRepricing(t *testing.T) {
 // Note, local transactions are never allowed to be dropped.
 func TestTransactionPoolUnderpricing(t *testing.T) {
 	// Create the pool to test the pricing enforcement with
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	config := testTxPoolConfig
@@ -1191,7 +1175,7 @@ func TestTransactionPoolUnderpricing(t *testing.T) {
 // price bump required.
 func TestTransactionReplacement(t *testing.T) {
 	// Create the pool to test the pricing enforcement with
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, new(event.TypeMux), func() (*state.StateDB, error) { return statedb, nil }, func() *big.Int { return big.NewInt(1000000) })
@@ -1270,7 +1254,7 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 	os.Remove(journal)
 
 	// Create the original pool to inject transaction into the journal
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := kusddb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
 	config := testTxPoolConfig

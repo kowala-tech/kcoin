@@ -1,19 +1,3 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package keystore
 
 import (
@@ -108,6 +92,30 @@ func (w *keystoreWallet) SignTx(account accounts.Account, tx *types.Transaction,
 	}
 	// Account seems valid, request the keystore to sign
 	return w.keystore.SignTx(account, tx, chainID)
+}
+
+func (w *keystoreWallet) SignProposal(account accounts.Account, proposal *types.Proposal, chainID *big.Int) (*types.Proposal, error) {
+	// Make sure the requested account is contained within
+	if account.Address != w.account.Address {
+		return nil, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return nil, accounts.ErrUnknownAccount
+	}
+	// Account seems valid, request the keystore to sign
+	return w.keystore.SignProposal(account, proposal, chainID)
+}
+
+func (w *keystoreWallet) SignVote(account accounts.Account, vote *types.Vote, chainID *big.Int) (*types.Vote, error) {
+	// Make sure the requested account is contained within
+	if account.Address != w.account.Address {
+		return nil, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return nil, accounts.ErrUnknownAccount
+	}
+	// Account seems valid, request the keystore to sign
+	return w.keystore.SignVote(account, vote, chainID)
 }
 
 // SignHashWithPassphrase implements accounts.Wallet, attempting to sign the

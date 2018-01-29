@@ -1,19 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
@@ -179,8 +163,6 @@ type TxPool struct {
 	priced  *txPricedList                      // All transactions sorted by price
 
 	wg sync.WaitGroup // for shutdown sync
-
-	homestead bool
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -193,7 +175,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, eventMux *e
 	pool := &TxPool{
 		config:       config,
 		chainconfig:  chainconfig,
-		signer:       types.NewEIP155Signer(chainconfig.ChainId),
+		signer:       types.NewAndromedaSigner(chainconfig.ChainID),
 		pending:      make(map[common.Address]*txList),
 		queue:        make(map[common.Address]*txList),
 		beats:        make(map[common.Address]time.Time),
@@ -256,11 +238,6 @@ func (pool *TxPool) loop() {
 			switch ev := ev.Data.(type) {
 			case ChainHeadEvent:
 				pool.mu.Lock()
-				if ev.Block != nil {
-					if pool.chainconfig.IsHomestead(ev.Block.Number()) {
-						pool.homestead = true
-					}
-				}
 				pool.resetState()
 				pool.mu.Unlock()
 
@@ -459,7 +436,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
-	from, err := types.Sender(pool.signer, tx)
+	from, err := types.TxSender(pool.signer, tx)
 	if err != nil {
 		return ErrInvalidSender
 	}
@@ -481,7 +458,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
-	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
+	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, true)
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}
@@ -526,7 +503,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		}
 	}
 	// If the transaction is replacing an already pending one, do directly
-	from, _ := types.Sender(pool.signer, tx) // already validated
+	from, _ := types.TxSender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
 		// Nonce already pending, check if required price bump is met
 		inserted, old := list.Add(tx, pool.config.PriceBump)
@@ -567,7 +544,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 // Note, this method assumes the pool lock is held!
 func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, error) {
 	// Try to insert the transaction into the future queue
-	from, _ := types.Sender(pool.signer, tx) // already validated
+	from, _ := types.TxSender(pool.signer, tx) // already validated
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
 	}
@@ -681,7 +658,7 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 		if err != nil {
 			return err
 		}
-		from, _ := types.Sender(pool.signer, tx) // already validated
+		from, _ := types.TxSender(pool.signer, tx) // already validated
 		pool.promoteExecutables(state, []common.Address{from})
 	}
 	return nil
@@ -697,7 +674,7 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) error {
 	for _, tx := range txs {
 		if replace, err := pool.add(tx, local); err == nil {
 			if !replace {
-				from, _ := types.Sender(pool.signer, tx) // already validated
+				from, _ := types.TxSender(pool.signer, tx) // already validated
 				dirty[from] = struct{}{}
 			}
 		}
@@ -752,7 +729,7 @@ func (pool *TxPool) removeTx(hash common.Hash) {
 	if !ok {
 		return
 	}
-	addr, _ := types.Sender(pool.signer, tx) // already validated during insertion
+	addr, _ := types.TxSender(pool.signer, tx) // already validated during insertion
 
 	// Remove it from the list of known transactions
 	delete(pool.all, hash)
@@ -1032,7 +1009,7 @@ func (as *accountSet) contains(addr common.Address) bool {
 // containsTx checks if the sender of a given tx is within the set. If the sender
 // cannot be derived, this method returns false.
 func (as *accountSet) containsTx(tx *types.Transaction) bool {
-	if addr, err := types.Sender(as.signer, tx); err == nil {
+	if addr, err := types.TxSender(as.signer, tx); err == nil {
 		return as.contains(addr)
 	}
 	return false
