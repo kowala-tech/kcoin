@@ -18,18 +18,30 @@
 package metrics
 
 import (
+	"fmt"
+	"net/http"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/kowala-tech/kUSD/log"
-	"github.com/rcrowley/go-metrics"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
+
+	prometheusmetrics "github.com/deathowl/go-metrics-prometheus"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
 var MetricsEnabledFlag = "metrics"
+
+// MetricsPrometheusAddressFlag is the CLI flag name to use to set the Prometheus server address
+var MetricsPrometheusAddressFlag = "metrics-prometheus-address"
+
+// MetricsPrometheusSubsystemFlag is the CLI flag name to use to set the Prometheus subsystem name
+var MetricsPrometheusSubsystemFlag = "metrics-prometheus-subsystem"
 
 // Enabled is the flag specifying if metrics are enable or not.
 var Enabled = false
@@ -40,10 +52,12 @@ var Enabled = false
 func init() {
 	for _, arg := range os.Args {
 		if strings.TrimLeft(arg, "-") == MetricsEnabledFlag {
-			log.Info("Enabling metrics collection")
+			// log.Info() will discard at this point; write to stdout
+			fmt.Println("Enabling metrics collection")
 			Enabled = true
 		}
 	}
+
 	exp.Exp(metrics.DefaultRegistry)
 }
 
@@ -76,11 +90,24 @@ func NewTimer(name string) metrics.Timer {
 
 // CollectProcessMetrics periodically collects various metrics about the running
 // process.
-func CollectProcessMetrics(refresh time.Duration) {
+func CollectProcessMetrics(refresh time.Duration, promAddr, promSubSys string) {
 	// Short circuit if the metrics system is disabled
 	if !Enabled {
 		return
 	}
+
+	// Set up Prometheus
+	go func() {
+		prometheusRegistry := prometheus.DefaultGatherer
+		metricsRegistry := metrics.DefaultRegistry
+		pClient := prometheusmetrics.NewPrometheusProvider(metricsRegistry, "eth", promSubSys, (prometheusRegistry).(*prometheus.Registry), refresh)
+		go pClient.UpdatePrometheusMetrics()
+
+		log.Info("Starting Prometheus metrics", "address", promAddr, "subsystem", promSubSys)
+		http.Handle("/metrics", promhttp.HandlerFor(prometheusRegistry, promhttp.HandlerOpts{}))
+		http.ListenAndServe(promAddr, nil)
+	}()
+
 	// Create the various data collectors
 	memstats := make([]*runtime.MemStats, 2)
 	diskstats := make([]*DiskStats, 2)

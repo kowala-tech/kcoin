@@ -14,6 +14,8 @@
 */**/*tx_database*
 */**/*dapps*
 build/_vendor/pkg
+pkg
+bin
 
 #*
 .#*
@@ -21,6 +23,7 @@ build/_vendor/pkg
 *~
 .project
 .settings
+.kowala
 
 # used by the Makefile
 /build/_workspace/

@@ -19,7 +19,7 @@ import (
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -83,6 +83,8 @@ var (
 		utils.RPCCORSDomainFlag,
 		utils.KowalaStatsURLFlag,
 		utils.MetricsEnabledFlag,
+		utils.MetricsPrometheusAddressFlag,
+		utils.MetricsPrometheusSubsystemFlag,
 		utils.NoCompactionFlag,
 		utils.GpoBlocksFlag,
 		utils.GpoPercentileFlag,
@@ -145,7 +147,11 @@ func init() {
 			return err
 		}
 		// Start system runtime metrics collection
-		go metrics.CollectProcessMetrics(3 * time.Second)
+		go metrics.CollectProcessMetrics(
+			3*time.Second,
+			ctx.GlobalString(utils.MetricsPrometheusAddressFlag.Name),
+			ctx.GlobalString(utils.MetricsPrometheusSubsystemFlag.Name),
+		)
 
 		utils.SetupNetwork(ctx)
 		return nil

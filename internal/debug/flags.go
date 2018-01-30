@@ -27,7 +27,7 @@ import (
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/log/term"
 	colorable "github.com/mattn/go-colorable"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -56,12 +56,12 @@ var (
 	}
 	pprofPortFlag = cli.IntFlag{
 		Name:  "pprofport",
-		Usage: "pprof HTTP server listening port",
+		Usage: "pprof HTTP server listening port (also for expvars, including metrics)",
 		Value: 6060,
 	}
 	pprofAddrFlag = cli.StringFlag{
 		Name:  "pprofaddr",
-		Usage: "pprof HTTP server listening interface",
+		Usage: "pprof HTTP server listening interface (also for expvars, including metrics)",
 		Value: "127.0.0.1",
 	}
 	memprofilerateFlag = cli.IntFlag{
@@ -130,6 +130,8 @@ func Setup(ctx *cli.Context) error {
 		address := fmt.Sprintf("%s:%d", ctx.GlobalString(pprofAddrFlag.Name), ctx.GlobalInt(pprofPortFlag.Name))
 		go func() {
 			log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))
+			log.Info("Expvars at", "addr", fmt.Sprintf("http://%s/debug/*", address))
+
 			if err := http.ListenAndServe(address, nil); err != nil {
 				log.Error("Failure in running pprof server", "err", err)
 			}

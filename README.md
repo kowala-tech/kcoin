@@ -169,6 +169,12 @@ To start a kusd instance for block validation, run it with all your usual flags,
 $ kusd --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0xc7f1d574658e7b0f37244366c40c8002d78c734f –-coinbase 0xc7f1d574658e7b0f37244366c40c8002d78c734f
 ```
 
+## Mining client metrics
+
+Start the client with `--metrics` to collect performance metrics. This will expose a [Prometheus](https://prometheus.io/) HTTP endpoint at `/metrics` on `http://localhost:8080`.
+
+Prometheus endpoint address can be specified using flag `--metrics-prometheus-address`.
+
 ## Core Contributors
 
 [Core Team Members](https://github.com/orgs/kowala-tech/people)

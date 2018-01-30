@@ -34,7 +34,8 @@ import (
 	"github.com/kowala-tech/kUSD/p2p/nat"
 	"github.com/kowala-tech/kUSD/p2p/netutil"
 	"github.com/kowala-tech/kUSD/params"
-	"gopkg.in/urfave/cli.v1"
+
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -273,6 +274,16 @@ var (
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  metrics.MetricsEnabledFlag,
 		Usage: "Enable metrics collection and reporting",
+	}
+	MetricsPrometheusAddressFlag = cli.StringFlag{
+		Name:  metrics.MetricsPrometheusAddressFlag,
+		Usage: "Set the address for Prometheus reporting",
+		Value: ":8080",
+	}
+	MetricsPrometheusSubsystemFlag = cli.StringFlag{
+		Name:  metrics.MetricsPrometheusSubsystemFlag,
+		Usage: "Set the subsystem name for Prometheus reporting",
+		Value: "node",
 	}
 	NoCompactionFlag = cli.BoolFlag{
 		Name:  "nocompaction",
