@@ -41,7 +41,7 @@ Node 6 - Non Genesis Validator
 
 Faucet
 
-faucet --genesis /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json 
+faucet --genesis /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json --bootnodes "enode://d7d679759fda756225b69abd53ee70a4ae78a840e29644f1de96410270913aa9e0401827d7293c5881fca615bce08870bfefe2eeb8b71adb7fb0e488f542e45d@127.0.0.1:30303" --account.json /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/UTC--2018-01-16T16-33-27.301502000Z--497dc8a0096cf116e696ba9072516c92383770ed --account.pass /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/password.txt
 
 
 console
