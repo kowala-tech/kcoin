@@ -1,3 +1,24 @@
+<p align="center">
+  <a href="https://kowala.tech/">
+    <img src="https://avatars0.githubusercontent.com/u/29745494?s=200&v=4" alt="" width=72 height=72>
+  </a>
+
+  <h3 align="center">Kowala</h3>
+
+  <p align="center">
+    A stable cryptocurrency, algorithmically pegged to $1 USD.
+    <br>
+    <a href=""><strong>Explore Kowala docs »</strong></a>
+    <br>
+    <br>
+    <a href="">Job Board</a>
+    ·
+    <a href="">Blog</a>
+  </p>
+</p>
+
+<br>
+
 ## Kowala
 
 Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kusd`** client is the main client for the Kowala network.
