@@ -39,6 +39,10 @@ cp /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/U
 
 Node 6 - Non Genesis Validator
 
+Faucet
+
+faucet --genesis /Users/ricardogeraldes/Code/src/github.com/kowala-tech/kUSD/internal/assets/genesis.json 
+
 
 console
 

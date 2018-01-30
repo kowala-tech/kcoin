@@ -1,7 +1,7 @@
 // faucet is a mUSD faucet backed by a full node (for now)
 package main
 
-//go:generate go-bindata -o website.go faucet.html
+//go:generate go-bindata -nometadata -o website.go faucet.html
 //go:generate gofmt -w -s website.go
 
 import (
@@ -106,12 +106,9 @@ func main() {
 		}
 	}
 	// Load up and render the faucet website
-	tmpl, err := Asset("faucet.html")
-	if err != nil {
-		log.Crit("Failed to load the faucet template", "err", err)
-	}
+	tmpl := MustAsset("faucet.html")
 	website := new(bytes.Buffer)
-	err = template.Must(template.New("").Parse(string(tmpl))).Execute(website, map[string]interface{}{
+	err := template.Must(template.New("").Parse(string(tmpl))).Execute(website, map[string]interface{}{
 		"Network":   *netnameFlag,
 		"Amounts":   amounts,
 		"Periods":   periods,
