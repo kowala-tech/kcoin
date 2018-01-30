@@ -41,7 +41,7 @@ func NewClient(c *rpc.Client) *Client {
 // Note that loading full blocks requires two requests. Use HeaderByHash
 // if you don't need all transactions or uncle headers.
 func (ec *Client) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	return ec.getBlock(ctx, "eth_getBlockByHash", hash, true)
+	return ec.getBlock(ctx, "kusd_getBlockByHash", hash, true)
 }
 
 // BlockByNumber returns a block from the current canonical chain. If number is nil, the
@@ -50,7 +50,7 @@ func (ec *Client) BlockByHash(ctx context.Context, hash common.Hash) (*types.Blo
 // Note that loading full blocks requires two requests. Use HeaderByNumber
 // if you don't need all transactions or uncle headers.
 func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	return ec.getBlock(ctx, "eth_getBlockByNumber", toBlockNumArg(number), true)
+	return ec.getBlock(ctx, "kusd_getBlockByNumber", toBlockNumArg(number), true)
 }
 
 type rpcBlock struct {
@@ -90,7 +90,7 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 		reqs := make([]rpc.BatchElem, len(body.UncleHashes))
 		for i := range reqs {
 			reqs[i] = rpc.BatchElem{
-				Method: "eth_getUncleByBlockHashAndIndex",
+				Method: "kusd_getUncleByBlockHashAndIndex",
 				Args:   []interface{}{body.Hash, hexutil.EncodeUint64(uint64(i))},
 				Result: &uncles[i],
 			}
@@ -115,7 +115,7 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 // HeaderByHash returns the block header with the given hash.
 func (ec *Client) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
 	var head *types.Header
-	err := ec.c.CallContext(ctx, &head, "eth_getBlockByHash", hash, false)
+	err := ec.c.CallContext(ctx, &head, "kusd_getBlockByHash", hash, false)
 	if err == nil && head == nil {
 		err = kowala.NotFound
 	}
@@ -126,7 +126,7 @@ func (ec *Client) HeaderByHash(ctx context.Context, hash common.Hash) (*types.He
 // nil, the latest known header is returned.
 func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
 	var head *types.Header
-	err := ec.c.CallContext(ctx, &head, "eth_getBlockByNumber", toBlockNumArg(number), false)
+	err := ec.c.CallContext(ctx, &head, "kusd_getBlockByNumber", toBlockNumArg(number), false)
 	if err == nil && head == nil {
 		err = kowala.NotFound
 	}
@@ -136,7 +136,7 @@ func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 // TransactionByHash returns the transaction with the given hash.
 func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error) {
 	var raw json.RawMessage
-	err = ec.c.CallContext(ctx, &raw, "eth_getTransactionByHash", hash)
+	err = ec.c.CallContext(ctx, &raw, "kusd_getTransactionByHash", hash)
 	if err != nil {
 		return nil, false, err
 	} else if len(raw) == 0 {
@@ -157,14 +157,14 @@ func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *
 // TransactionCount returns the total number of transactions in the given block.
 func (ec *Client) TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error) {
 	var num hexutil.Uint
-	err := ec.c.CallContext(ctx, &num, "eth_getBlockTransactionCountByHash", blockHash)
+	err := ec.c.CallContext(ctx, &num, "kusd_getBlockTransactionCountByHash", blockHash)
 	return uint(num), err
 }
 
 // TransactionInBlock returns a single transaction at index in the given block.
 func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
 	var tx *types.Transaction
-	err := ec.c.CallContext(ctx, &tx, "eth_getTransactionByBlockHashAndIndex", blockHash, hexutil.Uint64(index))
+	err := ec.c.CallContext(ctx, &tx, "kusd_getTransactionByBlockHashAndIndex", blockHash, hexutil.Uint64(index))
 	if err == nil {
 		if tx == nil {
 			return nil, kowala.NotFound
@@ -179,7 +179,7 @@ func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash,
 // Note that the receipt is not available for pending transactions.
 func (ec *Client) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
 	var r *types.Receipt
-	err := ec.c.CallContext(ctx, &r, "eth_getTransactionReceipt", txHash)
+	err := ec.c.CallContext(ctx, &r, "kusd_getTransactionReceipt", txHash)
 	if err == nil {
 		if r == nil {
 			return nil, kowala.NotFound
@@ -207,7 +207,7 @@ type rpcProgress struct {
 // no sync currently running, it returns nil.
 func (ec *Client) SyncProgress(ctx context.Context) (*kowala.SyncProgress, error) {
 	var raw json.RawMessage
-	if err := ec.c.CallContext(ctx, &raw, "eth_syncing"); err != nil {
+	if err := ec.c.CallContext(ctx, &raw, "kusd_syncing"); err != nil {
 		return nil, err
 	}
 	// Handle the possible response types
@@ -231,7 +231,7 @@ func (ec *Client) SyncProgress(ctx context.Context) (*kowala.SyncProgress, error
 // SubscribeNewHead subscribes to notifications about the current blockchain head
 // on the given channel.
 func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kowala.Subscription, error) {
-	return ec.c.EthSubscribe(ctx, ch, "newHeads", map[string]struct{}{})
+	return ec.c.KowalaSubscribe(ctx, ch, "newHeads", map[string]struct{}{})
 }
 
 // State Access
@@ -240,7 +240,7 @@ func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header)
 // The block number can be nil, in which case the balance is taken from the latest known block.
 func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
 	var result hexutil.Big
-	err := ec.c.CallContext(ctx, &result, "eth_getBalance", account, toBlockNumArg(blockNumber))
+	err := ec.c.CallContext(ctx, &result, "kusd_getBalance", account, toBlockNumArg(blockNumber))
 	return (*big.Int)(&result), err
 }
 
@@ -248,7 +248,7 @@ func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNu
 // The block number can be nil, in which case the value is taken from the latest known block.
 func (ec *Client) StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
 	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_getStorageAt", account, key, toBlockNumArg(blockNumber))
+	err := ec.c.CallContext(ctx, &result, "kusd_getStorageAt", account, key, toBlockNumArg(blockNumber))
 	return result, err
 }
 
@@ -256,7 +256,7 @@ func (ec *Client) StorageAt(ctx context.Context, account common.Address, key com
 // The block number can be nil, in which case the code is taken from the latest known block.
 func (ec *Client) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
 	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_getCode", account, toBlockNumArg(blockNumber))
+	err := ec.c.CallContext(ctx, &result, "kusd_getCode", account, toBlockNumArg(blockNumber))
 	return result, err
 }
 
@@ -264,7 +264,7 @@ func (ec *Client) CodeAt(ctx context.Context, account common.Address, blockNumbe
 // The block number can be nil, in which case the nonce is taken from the latest known block.
 func (ec *Client) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
 	var result hexutil.Uint64
-	err := ec.c.CallContext(ctx, &result, "eth_getTransactionCount", account, toBlockNumArg(blockNumber))
+	err := ec.c.CallContext(ctx, &result, "kusd_getTransactionCount", account, toBlockNumArg(blockNumber))
 	return uint64(result), err
 }
 
@@ -273,13 +273,13 @@ func (ec *Client) NonceAt(ctx context.Context, account common.Address, blockNumb
 // FilterLogs executes a filter query.
 func (ec *Client) FilterLogs(ctx context.Context, q kowala.FilterQuery) ([]types.Log, error) {
 	var result []types.Log
-	err := ec.c.CallContext(ctx, &result, "eth_getLogs", toFilterArg(q))
+	err := ec.c.CallContext(ctx, &result, "kusd_getLogs", toFilterArg(q))
 	return result, err
 }
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
 func (ec *Client) SubscribeFilterLogs(ctx context.Context, q kowala.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error) {
-	return ec.c.EthSubscribe(ctx, ch, "logs", toFilterArg(q))
+	return ec.c.KowalaSubscribe(ctx, ch, "logs", toFilterArg(q))
 }
 
 func toFilterArg(q kowala.FilterQuery) interface{} {
@@ -300,21 +300,21 @@ func toFilterArg(q kowala.FilterQuery) interface{} {
 // PendingBalanceAt returns the wei balance of the given account in the pending state.
 func (ec *Client) PendingBalanceAt(ctx context.Context, account common.Address) (*big.Int, error) {
 	var result hexutil.Big
-	err := ec.c.CallContext(ctx, &result, "eth_getBalance", account, "pending")
+	err := ec.c.CallContext(ctx, &result, "kusd_getBalance", account, "pending")
 	return (*big.Int)(&result), err
 }
 
 // PendingStorageAt returns the value of key in the contract storage of the given account in the pending state.
 func (ec *Client) PendingStorageAt(ctx context.Context, account common.Address, key common.Hash) ([]byte, error) {
 	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_getStorageAt", account, key, "pending")
+	err := ec.c.CallContext(ctx, &result, "kusd_getStorageAt", account, key, "pending")
 	return result, err
 }
 
 // PendingCodeAt returns the contract code of the given account in the pending state.
 func (ec *Client) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
 	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_getCode", account, "pending")
+	err := ec.c.CallContext(ctx, &result, "kusd_getCode", account, "pending")
 	return result, err
 }
 
@@ -322,14 +322,14 @@ func (ec *Client) PendingCodeAt(ctx context.Context, account common.Address) ([]
 // This is the nonce that should be used for the next transaction.
 func (ec *Client) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
 	var result hexutil.Uint64
-	err := ec.c.CallContext(ctx, &result, "eth_getTransactionCount", account, "pending")
+	err := ec.c.CallContext(ctx, &result, "kusd_getTransactionCount", account, "pending")
 	return uint64(result), err
 }
 
 // PendingTransactionCount returns the total number of transactions in the pending state.
 func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 	var num hexutil.Uint
-	err := ec.c.CallContext(ctx, &num, "eth_getBlockTransactionCountByNumber", "pending")
+	err := ec.c.CallContext(ctx, &num, "kusd_getBlockTransactionCountByNumber", "pending")
 	return uint(num), err
 }
 
@@ -345,7 +345,7 @@ func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 // blocks might not be available.
 func (ec *Client) CallContract(ctx context.Context, msg kowala.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	var hex hexutil.Bytes
-	err := ec.c.CallContext(ctx, &hex, "eth_call", toCallArg(msg), toBlockNumArg(blockNumber))
+	err := ec.c.CallContext(ctx, &hex, "kusd_call", toCallArg(msg), toBlockNumArg(blockNumber))
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +356,7 @@ func (ec *Client) CallContract(ctx context.Context, msg kowala.CallMsg, blockNum
 // The state seen by the contract call is the pending state.
 func (ec *Client) PendingCallContract(ctx context.Context, msg kowala.CallMsg) ([]byte, error) {
 	var hex hexutil.Bytes
-	err := ec.c.CallContext(ctx, &hex, "eth_call", toCallArg(msg), "pending")
+	err := ec.c.CallContext(ctx, &hex, "kusd_call", toCallArg(msg), "pending")
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +367,7 @@ func (ec *Client) PendingCallContract(ctx context.Context, msg kowala.CallMsg) (
 // execution of a transaction.
 func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	var hex hexutil.Big
-	if err := ec.c.CallContext(ctx, &hex, "eth_gasPrice"); err != nil {
+	if err := ec.c.CallContext(ctx, &hex, "kusd_gasPrice"); err != nil {
 		return nil, err
 	}
 	return (*big.Int)(&hex), nil
@@ -379,7 +379,7 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 // but it should provide a basis for setting a reasonable default.
 func (ec *Client) EstimateGas(ctx context.Context, msg kowala.CallMsg) (*big.Int, error) {
 	var hex hexutil.Big
-	err := ec.c.CallContext(ctx, &hex, "eth_estimateGas", toCallArg(msg))
+	err := ec.c.CallContext(ctx, &hex, "kusd_estimateGas", toCallArg(msg))
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +395,7 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	if err != nil {
 		return err
 	}
-	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(data))
+	return ec.c.CallContext(ctx, nil, "kusd_sendRawTransaction", common.ToHex(data))
 }
 
 func toCallArg(msg kowala.CallMsg) interface{} {
