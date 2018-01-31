@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package rpc
 
 import (
@@ -29,11 +13,7 @@ import (
 	"gopkg.in/fatih/set.v0"
 )
 
-const (
-	notificationBufferSize = 10000 // max buffered notifications before codec is closed
-
-	MetadataApi = "rpc"
-)
+const MetadataApi = "rpc"
 
 // CodecOption specifies which type of messages this codec supports
 type CodecOption int
@@ -49,10 +29,9 @@ const (
 // NewServer will create a new server instance with no registered handlers.
 func NewServer() *Server {
 	server := &Server{
-		services:      make(serviceRegistry),
-		subscriptions: make(subscriptionRegistry),
-		codecs:        set.New(),
-		run:           1,
+		services: make(serviceRegistry),
+		codecs:   set.New(),
+		run:      1,
 	}
 
 	// register a default service which will provide meta information about the RPC service such as the services and
@@ -124,16 +103,6 @@ func (s *Server) RegisterName(name string, rcvr interface{}) error {
 	return nil
 }
 
-// hasOption returns true if option is included in options, otherwise false
-func hasOption(option CodecOption, options []CodecOption) bool {
-	for _, o := range options {
-		if option == o {
-			return true
-		}
-	}
-	return false
-}
-
 // serveRequest will reads requests from the codec, calls the RPC callback and
 // writes the response to the given codec.
 //
@@ -148,13 +117,11 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			const size = 64 << 10
 			buf := make([]byte, size)
 			buf = buf[:runtime.Stack(buf, false)]
-			log.Error(fmt.Sprint(string(buf)))
+			log.Error(string(buf))
 		}
 		s.codecsMu.Lock()
 		s.codecs.Remove(codec)
 		s.codecsMu.Unlock()
-
-		return
 	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -246,7 +213,7 @@ func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
 // close all codecs which will cancel pending requests/subscriptions.
 func (s *Server) Stop() {
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
-		log.Debug(fmt.Sprint("RPC Server shutdown initiatied"))
+		log.Debug("RPC Server shutdown initiatied")
 		s.codecsMu.Lock()
 		defer s.codecsMu.Unlock()
 		s.codecs.Each(func(c interface{}) bool {
