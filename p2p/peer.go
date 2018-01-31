@@ -1,19 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package p2p
 
 import (
@@ -25,15 +9,18 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kUSD/common/mclock"
+	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/p2p/discover"
 	"github.com/kowala-tech/kUSD/rlp"
 )
 
 const (
-	baseProtocolVersion    = 4
+	baseProtocolVersion    = 5
 	baseProtocolLength     = uint64(16)
 	baseProtocolMaxMsgSize = 2 * 1024
+
+	snappyProtocolVersion = 5
 
 	pingInterval = 15 * time.Second
 )
@@ -60,6 +47,38 @@ type protoHandshake struct {
 	Rest []rlp.RawValue `rlp:"tail"`
 }
 
+// PeerEventType is the type of peer events emitted by a p2p.Server
+type PeerEventType string
+
+const (
+	// PeerEventTypeAdd is the type of event emitted when a peer is added
+	// to a p2p.Server
+	PeerEventTypeAdd PeerEventType = "add"
+
+	// PeerEventTypeDrop is the type of event emitted when a peer is
+	// dropped from a p2p.Server
+	PeerEventTypeDrop PeerEventType = "drop"
+
+	// PeerEventTypeMsgSend is the type of event emitted when a
+	// message is successfully sent to a peer
+	PeerEventTypeMsgSend PeerEventType = "msgsend"
+
+	// PeerEventTypeMsgRecv is the type of event emitted when a
+	// message is received from a peer
+	PeerEventTypeMsgRecv PeerEventType = "msgrecv"
+)
+
+// PeerEvent is an event emitted when peers are either added or dropped from
+// a p2p.Server or when a message is sent or received on a peer connection
+type PeerEvent struct {
+	Type     PeerEventType   `json:"type"`
+	Peer     discover.NodeID `json:"peer"`
+	Error    string          `json:"error,omitempty"`
+	Protocol string          `json:"protocol,omitempty"`
+	MsgCode  *uint64         `json:"msg_code,omitempty"`
+	MsgSize  *uint32         `json:"msg_size,omitempty"`
+}
+
 // Peer represents a connected remote node.
 type Peer struct {
 	rw      *conn
@@ -71,6 +90,9 @@ type Peer struct {
 	protoErr chan error
 	closed   chan struct{}
 	disc     chan DiscReason
+
+	// events receives message send / receive events if set
+	events *event.Feed
 }
 
 // NewPeer returns a peer for testing purposes.
@@ -190,7 +212,7 @@ loop:
 }
 
 func (p *Peer) pingLoop() {
-	ping := time.NewTicker(pingInterval)
+	ping := time.NewTimer(pingInterval)
 	defer p.wg.Done()
 	defer ping.Stop()
 	for {
@@ -200,6 +222,7 @@ func (p *Peer) pingLoop() {
 				p.protoErr <- err
 				return
 			}
+			ping.Reset(pingInterval)
 		case <-p.closed:
 			return
 		}
@@ -296,9 +319,13 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 		proto.closed = p.closed
 		proto.wstart = writeStart
 		proto.werr = writeErr
+		var rw MsgReadWriter = proto
+		if p.events != nil {
+			rw = newMsgEventer(rw, p.events, p.ID(), proto.Name)
+		}
 		p.log.Trace(fmt.Sprintf("Starting protocol %s/%d", proto.Name, proto.Version))
 		go func() {
-			err := proto.Run(p, proto)
+			err := proto.Run(p, rw)
 			if err == nil {
 				p.log.Trace(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))
 				err = errProtocolReturned
