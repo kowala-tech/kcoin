@@ -19,7 +19,7 @@ import (
 	"github.com/kowala-tech/kUSD/p2p/discover"
 )
 
-var (
+const (
 	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
 	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
 	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
@@ -112,6 +112,13 @@ type Config struct {
 	// If the module list is empty, all RPC API endpoints designated public will be
 	// exposed.
 	WSModules []string `toml:",omitempty"`
+
+	// WSExposeAll exposes all API modules via the WebSocket RPC interface rather
+	// than just the public ones.
+	//
+	// *WARNING* Only set this if the node is running in a trusted network, exposing
+	// private APIs to untrusted users is a major security risk.
+	WSExposeAll bool `toml:",omitempty"`
 }
 
 // IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
@@ -144,7 +151,7 @@ func (c *Config) NodeDB() string {
 	if c.DataDir == "" {
 		return "" // ephemeral
 	}
-	return c.resolvePath("nodes")
+	return c.resolvePath(datadirNodeDatabase)
 }
 
 // DefaultIPCEndpoint returns the IPC path used by default.
@@ -337,35 +344,43 @@ func (c *Config) parsePersistentNodes(path string) []*discover.Node {
 	return nodes
 }
 
-func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
+// AccountConfig determines the settings for scrypt and keydirectory
+func (c *Config) AccountConfig() (int, int, string, error) {
 	scryptN := keystore.StandardScryptN
 	scryptP := keystore.StandardScryptP
-	if conf.UseLightweightKDF {
+	if c.UseLightweightKDF {
 		scryptN = keystore.LightScryptN
 		scryptP = keystore.LightScryptP
 	}
 
 	var (
-		keydir    string
-		ephemeral string
-		err       error
+		keydir string
+		err    error
 	)
 	switch {
-	case filepath.IsAbs(conf.KeyStoreDir):
-		keydir = conf.KeyStoreDir
-	case conf.DataDir != "":
-		if conf.KeyStoreDir == "" {
-			keydir = filepath.Join(conf.DataDir, datadirDefaultKeyStore)
+	case filepath.IsAbs(c.KeyStoreDir):
+		keydir = c.KeyStoreDir
+	case c.DataDir != "":
+		if c.KeyStoreDir == "" {
+			keydir = filepath.Join(c.DataDir, datadirDefaultKeyStore)
 		} else {
-			keydir, err = filepath.Abs(conf.KeyStoreDir)
+			keydir, err = filepath.Abs(c.KeyStoreDir)
 		}
-	case conf.KeyStoreDir != "":
-		keydir, err = filepath.Abs(conf.KeyStoreDir)
-	default:
+	case c.KeyStoreDir != "":
+		keydir, err = filepath.Abs(c.KeyStoreDir)
+	}
+	return scryptN, scryptP, keydir, err
+}
+
+func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
+	scryptN, scryptP, keydir, err := conf.AccountConfig()
+	var ephemeral string
+	if keydir == "" {
 		// There is no datadir.
 		keydir, err = ioutil.TempDir("", "kUSD-keystore")
 		ephemeral = keydir
 	}
+
 	if err != nil {
 		return nil, "", err
 	}
@@ -377,10 +392,17 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 		keystore.NewKeyStore(keydir, scryptN, scryptP),
 	}
 	if !conf.NoUSB {
+		// Start a USB hub for Ledger hardware wallets
 		if ledgerhub, err := usbwallet.NewLedgerHub(); err != nil {
 			log.Warn(fmt.Sprintf("Failed to start Ledger hub, disabling: %v", err))
 		} else {
 			backends = append(backends, ledgerhub)
+		}
+		// Start a USB hub for Trezor hardware wallets
+		if trezorhub, err := usbwallet.NewTrezorHub(); err != nil {
+			log.Warn(fmt.Sprintf("Failed to start Trezor hub, disabling: %v", err))
+		} else {
+			backends = append(backends, trezorhub)
 		}
 	}
 	return accounts.NewManager(backends...), ephemeral, nil
