@@ -328,6 +328,12 @@
 			"revisionTime": "2018-01-25T13:30:57Z"
 		},
 		{
+			"checksumSHA1": "WbbxCn2jUYIL5viqLo0BKXEdPrQ=",
+			"path": "github.com/prometheus/prometheus/util/flock",
+			"revision": "b30ee3e69ade44fd8c3dd8645bcf3375bb055ebb",
+			"revisionTime": "2018-02-01T06:08:38Z"
+		},
+		{
 			"checksumSHA1": "KAzbLjI9MzW2tjfcAsK75lVRp6I=",
 			"path": "github.com/rcrowley/go-metrics",
 			"revision": "1f30fe9094a513ce4c700b9a54458bbb0c96996c",
