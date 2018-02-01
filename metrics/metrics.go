@@ -1,24 +1,7 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // Package metrics provides general system and process level metrics collection.
 package metrics
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -34,14 +17,18 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
-var MetricsEnabledFlag = "metrics"
+const (
+	// MetricsEnabledFlag is the CLI flag name to use to enable metrics collections.
+	MetricsEnabledFlag = "metrics"
 
-// MetricsPrometheusAddressFlag is the CLI flag name to use to set the Prometheus server address
-var MetricsPrometheusAddressFlag = "metrics-prometheus-address"
+	// MetricsPrometheusAddressFlag is the CLI flag name to use to set the Prometheus server address
+	MetricsPrometheusAddressFlag = "metrics-prometheus-address"
 
-// MetricsPrometheusSubsystemFlag is the CLI flag name to use to set the Prometheus subsystem name
-var MetricsPrometheusSubsystemFlag = "metrics-prometheus-subsystem"
+	// MetricsPrometheusSubsystemFlag is the CLI flag name to use to set the Prometheus subsystem name
+	MetricsPrometheusSubsystemFlag = "metrics-prometheus-subsystem"
+
+	DashboardEnabledFlag = "dashboard"
+)
 
 // Enabled is the flag specifying if metrics are enable or not.
 var Enabled = false
@@ -51,9 +38,8 @@ var Enabled = false
 // and peek into the command line args for the metrics flag.
 func init() {
 	for _, arg := range os.Args {
-		if strings.TrimLeft(arg, "-") == MetricsEnabledFlag {
-			// log.Info() will discard at this point; write to stdout
-			fmt.Println("Enabling metrics collection")
+		if flag := strings.TrimLeft(arg, "-"); flag == MetricsEnabledFlag || flag == DashboardEnabledFlag {
+			log.Info("Enabling metrics collection")
 			Enabled = true
 		}
 	}
@@ -139,10 +125,10 @@ func CollectProcessMetrics(refresh time.Duration, promAddr, promSubSys string) {
 		memPauses.Mark(int64(memstats[i%2].PauseTotalNs - memstats[(i-1)%2].PauseTotalNs))
 
 		if ReadDiskStats(diskstats[i%2]) == nil {
-			diskReads.Mark(int64(diskstats[i%2].ReadCount - diskstats[(i-1)%2].ReadCount))
-			diskReadBytes.Mark(int64(diskstats[i%2].ReadBytes - diskstats[(i-1)%2].ReadBytes))
-			diskWrites.Mark(int64(diskstats[i%2].WriteCount - diskstats[(i-1)%2].WriteCount))
-			diskWriteBytes.Mark(int64(diskstats[i%2].WriteBytes - diskstats[(i-1)%2].WriteBytes))
+			diskReads.Mark(diskstats[i%2].ReadCount - diskstats[(i-1)%2].ReadCount)
+			diskReadBytes.Mark(diskstats[i%2].ReadBytes - diskstats[(i-1)%2].ReadBytes)
+			diskWrites.Mark(diskstats[i%2].WriteCount - diskstats[(i-1)%2].WriteCount)
+			diskWriteBytes.Mark(diskstats[i%2].WriteBytes - diskstats[(i-1)%2].WriteBytes)
 		}
 		time.Sleep(refresh)
 	}
