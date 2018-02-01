@@ -40,7 +40,7 @@ func (l *JSONLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cos
 	log := vm.StructLog{
 		Pc:         pc,
 		Op:         op,
-		Gas:        gas + cost,
+		Gas:        gas,
 		GasCost:    cost,
 		MemorySize: memory.Len(),
 		Storage:    nil,
@@ -62,6 +62,10 @@ func (l *JSONLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration) 
 		Output  string              `json:"output"`
 		GasUsed math.HexOrDecimal64 `json:"gasUsed"`
 		Time    time.Duration       `json:"time"`
+		Err     string              `json:"error,omitempty"`
+	}
+	if err != nil {
+		return l.encoder.Encode(endLog{common.Bytes2Hex(output), math.HexOrDecimal64(gasUsed), t, err.Error()})
 	}
 	return l.encoder.Encode(endLog{common.Bytes2Hex(output), math.HexOrDecimal64(gasUsed), t})
 }

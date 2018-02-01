@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/mclock"
@@ -62,10 +62,15 @@ const (
 type BlockChain struct {
 	config *params.ChainConfig // chain & network configuration
 
-	hc           *HeaderChain
-	chainDb      kusddb.Database
-	eventMux     *event.TypeMux
-	genesisBlock *types.Block
+	hc            *HeaderChain
+	chainDb       kusddb.Database
+	rmLogsFeed    event.Feed
+	chainFeed     event.Feed
+	chainSideFeed event.Feed
+	chainHeadFeed event.Feed
+	logsFeed      event.Feed
+	scope         event.SubscriptionScope
+	genesisBlock  *types.Block
 
 	mu      sync.RWMutex // global mutex for locking chain operations
 	chainmu sync.RWMutex // blockchain insertion lock
@@ -109,7 +114,6 @@ func NewBlockChain(chainDb kusddb.Database, config *params.ChainConfig, engine c
 		config:       config,
 		chainDb:      chainDb,
 		stateCache:   state.NewDatabase(chainDb),
-		eventMux:     mux,
 		quit:         make(chan struct{}),
 		bodyCache:    bodyCache,
 		bodyRLPCache: bodyRLPCache,
@@ -485,10 +489,13 @@ func (bc *BlockChain) GetBodyRLP(hash common.Hash) rlp.RawValue {
 	return body
 }
 
-// HasBlock checks if a block is fully present in the database or not, caching
-// it if present.
-func (bc *BlockChain) HasBlock(hash common.Hash) bool {
-	return bc.GetBlockByHash(hash) != nil
+// HasBlock checks if a block is fully present in the database or not.
+func (bc *BlockChain) HasBlock(hash common.Hash, number uint64) bool {
+	if bc.blockCache.Contains(hash) {
+		return true
+	}
+	ok, _ := bc.chainDb.Has(blockBodyKey(hash, number))
+	return ok
 }
 
 // HasBlockAndState checks if a block and associated state trie is fully present
@@ -557,6 +564,8 @@ func (bc *BlockChain) Stop() {
 	if !atomic.CompareAndSwapInt32(&bc.running, 0, 1) {
 		return
 	}
+	// Unsubscribe all subscriptions registered from blockchain
+	bc.scope.Close()
 	close(bc.quit)
 	atomic.StoreInt32(&bc.procInterrupt, 1)
 
@@ -649,130 +658,90 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 
 // InsertReceiptChain attempts to complete an already existing header chain with
 // transaction and receipt data.
-// XXX should this be moved to the test?
 func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain []types.Receipts) (int, error) {
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(blockChain); i++ {
 		if blockChain[i].NumberU64() != blockChain[i-1].NumberU64()+1 || blockChain[i].ParentHash() != blockChain[i-1].Hash() {
-			// Chain broke ancestry, log a messge (programming error) and skip insertion
 			log.Error("Non contiguous receipt insert", "number", blockChain[i].Number(), "hash", blockChain[i].Hash(), "parent", blockChain[i].ParentHash(),
 				"prevnumber", blockChain[i-1].Number(), "prevhash", blockChain[i-1].Hash())
-
 			return 0, fmt.Errorf("non contiguous insert: item %d is #%d [%x…], item %d is #%d [%x…] (parent [%x…])", i-1, blockChain[i-1].NumberU64(),
 				blockChain[i-1].Hash().Bytes()[:4], i, blockChain[i].NumberU64(), blockChain[i].Hash().Bytes()[:4], blockChain[i].ParentHash().Bytes()[:4])
 		}
 	}
-	// Pre-checks passed, start the block body and receipt imports
-	bc.wg.Add(1)
-	defer bc.wg.Done()
 
-	// Collect some import statistics to report on
-	stats := struct{ processed, ignored int32 }{}
-	start := time.Now()
+	var (
+		stats = struct{ processed, ignored int32 }{}
+		start = time.Now()
+		bytes = 0
+		batch = bc.chainDb.NewBatch()
+	)
+	for i, block := range blockChain {
+		receipts := receiptChain[i]
+		// Short circuit insertion if shutting down or processing failed
+		if atomic.LoadInt32(&bc.procInterrupt) == 1 {
+			return 0, nil
+		}
+		// Short circuit if the owner header is unknown
+		if !bc.HasHeader(block.Hash(), block.NumberU64()) {
+			return i, fmt.Errorf("containing header #%d [%x…] unknown", block.Number(), block.Hash().Bytes()[:4])
+		}
+		// Skip if the entire data is already known
+		if bc.HasBlock(block.Hash(), block.NumberU64()) {
+			stats.ignored++
+			continue
+		}
+		// Compute all the non-consensus fields of the receipts
+		SetReceiptsData(bc.config, block, receipts)
+		// Write all the data out into the database
+		if err := WriteBody(batch, block.Hash(), block.NumberU64(), block.Body()); err != nil {
+			return i, fmt.Errorf("failed to write block body: %v", err)
+		}
+		if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {
+			return i, fmt.Errorf("failed to write block receipts: %v", err)
+		}
+		if err := WriteTxLookupEntries(batch, block); err != nil {
+			return i, fmt.Errorf("failed to write lookup metadata: %v", err)
+		}
+		stats.processed++
 
-	// Create the block importing task queue and worker functions
-	tasks := make(chan int, len(blockChain))
-	for i := 0; i < len(blockChain) && i < len(receiptChain); i++ {
-		tasks <- i
-	}
-	close(tasks)
-
-	errs, failed := make([]error, len(tasks)), int32(0)
-	process := func(worker int) {
-		for index := range tasks {
-			block, receipts := blockChain[index], receiptChain[index]
-
-			// Short circuit insertion if shutting down or processing failed
-			if atomic.LoadInt32(&bc.procInterrupt) == 1 {
-				return
+		if batch.ValueSize() >= ethdb.IdealBatchSize {
+			if err := batch.Write(); err != nil {
+				return 0, err
 			}
-			if atomic.LoadInt32(&failed) > 0 {
-				return
-			}
-			// Short circuit if the owner header is unknown
-			if !bc.HasHeader(block.Hash()) {
-				errs[index] = fmt.Errorf("containing header #%d [%x…] unknown", block.Number(), block.Hash().Bytes()[:4])
-				atomic.AddInt32(&failed, 1)
-				return
-			}
-			// Skip if the entire data is already known
-			if bc.HasBlock(block.Hash()) {
-				atomic.AddInt32(&stats.ignored, 1)
-				continue
-			}
-			// Compute all the non-consensus fields of the receipts
-			SetReceiptsData(bc.config, block, receipts)
-			// Write all the data out into the database
-			if err := WriteBody(bc.chainDb, block.Hash(), block.NumberU64(), block.Body()); err != nil {
-				errs[index] = fmt.Errorf("failed to write block body: %v", err)
-				atomic.AddInt32(&failed, 1)
-				log.Crit("Failed to write block body", "err", err)
-				return
-			}
-			if err := WriteBlockReceipts(bc.chainDb, block.Hash(), block.NumberU64(), receipts); err != nil {
-				errs[index] = fmt.Errorf("failed to write block receipts: %v", err)
-				atomic.AddInt32(&failed, 1)
-				log.Crit("Failed to write block receipts", "err", err)
-				return
-			}
-			if err := WriteMipmapBloom(bc.chainDb, block.NumberU64(), receipts); err != nil {
-				errs[index] = fmt.Errorf("failed to write log blooms: %v", err)
-				atomic.AddInt32(&failed, 1)
-				log.Crit("Failed to write log blooms", "err", err)
-				return
-			}
-			if err := WriteTxLookupEntries(bc.chainDb, block); err != nil {
-				errs[index] = fmt.Errorf("failed to write lookup metadata: %v", err)
-				atomic.AddInt32(&failed, 1)
-				log.Crit("Failed to write lookup metadata", "err", err)
-				return
-			}
-			atomic.AddInt32(&stats.processed, 1)
+			bytes += batch.ValueSize()
+			batch = bc.chainDb.NewBatch()
 		}
 	}
-	// Start as many worker threads as goroutines allowed
-	pending := new(sync.WaitGroup)
-	for i := 0; i < runtime.GOMAXPROCS(0); i++ {
-		pending.Add(1)
-		go func(id int) {
-			defer pending.Done()
-			process(id)
-		}(i)
-	}
-	pending.Wait()
-
-	// If anything failed, report
-	if failed > 0 {
-		for i, err := range errs {
-			if err != nil {
-				return i, err
-			}
+	if batch.ValueSize() > 0 {
+		bytes += batch.ValueSize()
+		if err := batch.Write(); err != nil {
+			return 0, err
 		}
 	}
-	if atomic.LoadInt32(&bc.procInterrupt) == 1 {
-		log.Debug("Premature abort during receipts processing")
-		return 0, nil
-	}
+
 	// Update the head fast sync block if better
 	bc.mu.Lock()
-
-	head := blockChain[len(errs)-1]
-	if blockNumber := head.Number(); blockNumber != nil { // Rewind may have occurred, skip in that case
-		if bc.currentFastBlock.Number().Cmp(blockNumber) < 0 {
+	head := blockChain[len(blockChain)-1]
+	if td := bc.GetTd(head.Hash(), head.NumberU64()); td != nil { // Rewind may have occurred, skip in that case
+		if bc.GetTd(bc.currentFastBlock.Hash(), bc.currentFastBlock.NumberU64()).Cmp(td) < 0 {
 			if err := WriteHeadFastBlockHash(bc.chainDb, head.Hash()); err != nil {
 				log.Crit("Failed to update head fast block hash", "err", err)
 			}
 			bc.currentFastBlock = head
 		}
 	}
-
 	bc.mu.Unlock()
 
-	// Report some public statistics so the user has a clue what's going on
-	last := blockChain[len(blockChain)-1]
-	log.Info("Imported new block receipts", "count", stats.processed, "elapsed", common.PrettyDuration(time.Since(start)),
-		"number", last.Number(), "hash", last.Hash(), "ignored", stats.ignored)
-
+	log.Info("Imported new block receipts",
+		"count", stats.processed,
+		"elapsed", common.PrettyDuration(time.Since(start)),
+		"bytes", bytes,
+		"number", head.Number(),
+		"hash", head.Hash(),
+		"ignored", stats.ignored)
 	return 0, nil
 }
 
