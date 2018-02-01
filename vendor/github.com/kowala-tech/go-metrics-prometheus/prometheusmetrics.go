@@ -2,11 +2,10 @@ package prometheusmetrics
 
 import (
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rcrowley/go-metrics"
 	"strings"
 	"time"
-
-	"github.com/prometheus/client_golang/prometheus"
-	metrics "github.com/rcrowley/go-metrics"
 )
 
 // PrometheusConfig provides a container with config parameters for the

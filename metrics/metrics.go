@@ -29,7 +29,7 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
 
-	prometheusmetrics "github.com/deathowl/go-metrics-prometheus"
+	prometheusmetrics "github.com/kowala-tech/go-metrics-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

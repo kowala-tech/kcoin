@@ -51,6 +51,12 @@
 			"revisionTime": "2017-02-10T01:56:32Z"
 		},
 		{
+			"checksumSHA1": "lUAqx58lJ6qAMF0Vtxk+6mHjfjI=",
+			"path": "github.com/beorn7/perks",
+			"revision": "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9",
+			"revisionTime": "2016-08-04T10:47:26Z"
+		},
+		{
 			"checksumSHA1": "fIpm6Vr5a8kgr22gWkQx7vKUTyU=",
 			"path": "github.com/btcsuite/btcd/btcec",
 			"revision": "d06c0bb181529331be8f8d9350288c420d9e60e4",
@@ -103,6 +109,12 @@
 			"path": "github.com/go-stack/stack",
 			"revision": "54be5f394ed2c3e19dac9134a40a95ba5a017f7b",
 			"revisionTime": "2017-07-10T16:04:46Z"
+		},
+		{
+			"checksumSHA1": "CkKjyrCOethydl6d20AkBORNUFo=",
+			"path": "github.com/golang/protobuf",
+			"revision": "925541529c1fa6821df4e44ce2723319eb2be768",
+			"revisionTime": "2018-01-25T21:43:03Z"
 		},
 		{
 			"checksumSHA1": "p/8vSviYF91gFflhrt5vkyksroo=",
@@ -178,6 +190,12 @@
 			"tree": true
 		},
 		{
+			"checksumSHA1": "6PTJas3ikoC/84HzyyCihr5AirE=",
+			"path": "github.com/kowala-tech/go-metrics-prometheus",
+			"revision": "28a76e7211bcfe41f875413b8466832c077393a3",
+			"revisionTime": "2018-02-01T09:30:40Z"
+		},
+		{
 			"checksumSHA1": "7hln62oZPZmyqEmgXaybf9WxQ7A=",
 			"path": "github.com/maruel/panicparse/stack",
 			"revision": "ad661195ed0e88491e0f14be6613304e3b1141d6",
@@ -200,6 +218,12 @@
 			"path": "github.com/mattn/go-runewidth",
 			"revision": "14207d285c6c197daabb5c9793d63e7af9ab2d50",
 			"revisionTime": "2017-02-01T02:35:40Z"
+		},
+		{
+			"checksumSHA1": "NAtx7Q3I/4oZgjJem0YLgQetQcI=",
+			"path": "github.com/matttproud/golang_protobuf_extensions",
+			"revision": "c12348ce28de40eed0136aa2b644d0ee0650e56c",
+			"revisionTime": "2016-04-24T11:30:07Z"
 		},
 		{
 			"checksumSHA1": "L3leymg2RT8hFl5uL+5KP/LpBkg=",
@@ -244,10 +268,34 @@
 			"revisionTime": "2017-02-11T19:53:22Z"
 		},
 		{
-			"checksumSHA1": "KAzbLjI9MzW2tjfcAsK75lVRp6I=",
+			"checksumSHA1": "zYYhlTyiKaawQQqPqCAuzFobnpM=",
+			"path": "github.com/prometheus/client_golang",
+			"revision": "f4fb1b73fb099f396a7f0036bf86aa8def4ed823",
+			"revisionTime": "2018-01-31T14:28:26Z"
+		},
+		{
+			"checksumSHA1": "Fq/gKmQd6MZIsPdV/PNADheVGUI=",
+			"path": "github.com/prometheus/client_model",
+			"revision": "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c",
+			"revisionTime": "2017-11-17T10:05:41Z"
+		},
+		{
+			"checksumSHA1": "4rtnWwYtIcFuhci56T+Crhd9Xuc=",
+			"path": "github.com/prometheus/common",
+			"revision": "89604d197083d4781071d3c65855d24ecfb0a563",
+			"revisionTime": "2018-01-10T21:49:58Z"
+		},
+		{
+			"checksumSHA1": "lolK0h7LSVERIX8zLyVQ/+7wEyA=",
+			"path": "github.com/prometheus/procfs",
+			"revision": "cb4147076ac75738c9a7d279075a253c0cc5acbd",
+			"revisionTime": "2018-01-25T13:30:57Z"
+		},
+		{
+			"checksumSHA1": "oY/QEEFSa+kRKlgeIIAhCOYbnrE=",
 			"path": "github.com/rcrowley/go-metrics",
-			"revision": "1f30fe9094a513ce4c700b9a54458bbb0c96996c",
-			"revisionTime": "2016-11-28T21:05:44Z"
+			"revision": "8732c616f52954686704c8645fe1a9d59e9df7c1",
+			"revisionTime": "2018-01-25T23:19:41Z"
 		},
 		{
 			"checksumSHA1": "q/d9nXRQYKEJ/EWn+5y6jL8rPGs=",
