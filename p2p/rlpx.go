@@ -589,7 +589,6 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 		msg.Payload = bytes.NewReader(payload)
 		msg.Size = uint32(len(payload))
 	}
-
 	// write header
 	headbuf := make([]byte, 32)
 	fsize := uint32(len(ptype)) + msg.Size

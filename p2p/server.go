@@ -763,11 +763,13 @@ func (srv *Server) runPeer(p *Peer) {
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)
 	}
+
 	// broadcast peer add
 	srv.peerFeed.Send(&PeerEvent{
 		Type: PeerEventTypeAdd,
 		Peer: p.ID(),
 	})
+
 	// run the protocol
 	remoteRequested, err := p.run()
 
