@@ -167,6 +167,7 @@ func validateRequest(r *http.Request) (int, error) {
 	}
 	return 0, nil
 }
+
 func newCorsHandler(srv *Server, allowedOrigins []string) http.Handler {
 	// disable CORS support if user has not specified a custom CORS configuration
 	if len(allowedOrigins) == 0 {
