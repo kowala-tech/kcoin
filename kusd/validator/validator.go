@@ -585,7 +585,7 @@ func (val *Validator) createBlock() *types.Block {
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
-	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, val.receipts, commit); err != nil {
+	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, commit, val.receipts); err != nil {
 		log.Crit("Failed to finalize block for sealing", "err", err)
 	}
 
