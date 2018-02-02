@@ -160,15 +160,16 @@ func (s *Service) loop() {
 				case txCh <- struct{}{}:
 				default:
 				}
+
 			// node stopped
 			case <-txSub.Err():
 				break HandleLoop
 			case <-headSub.Err():
 				break HandleLoop
 			}
-			close(quitCh)
-			return
 		}
+		close(quitCh)
+		return
 	}()
 	// Loop reporting until termination
 	for {
@@ -368,7 +369,6 @@ func (s *Service) login(conn *websocket.Conn) error {
 		},
 		Secret: s.pass,
 	}
-
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
 	}
@@ -487,7 +487,6 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	report := map[string][]interface{}{
 		"emit": {"block", stats},
 	}
-
 	return websocket.JSON.Send(conn, report)
 }
 
