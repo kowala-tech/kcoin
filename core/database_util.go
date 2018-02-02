@@ -435,7 +435,7 @@ func WriteTxLookupEntries(db kusddb.Putter, block *types.Block) error {
 
 // WriteBloomBits writes the compressed bloom bits vector belonging to the given
 // section and bit index.
-func WriteBloomBits(db kusdb.Putter, bit uint, section uint64, head common.Hash, bits []byte) {
+func WriteBloomBits(db kusddb.Putter, bit uint, section uint64, head common.Hash, bits []byte) {
 	key := append(append(bloomBitsPrefix, make([]byte, 10)...), head.Bytes()...)
 
 	binary.BigEndian.PutUint16(key[1:], uint16(bit))
