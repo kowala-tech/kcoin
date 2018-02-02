@@ -29,6 +29,10 @@ import (
 const (
 	softResponseLimit = 2 * 1024 * 1024 // Target maximum size of returned blocks, headers or node data.
 	estHeaderRlpSize  = 500             // Approximate size of an RLP encoded block header
+
+	// txChanSize is the size of channel listening to TxPreEvent.
+	// The number is referenced from the size of tx pool.
+	txChanSize = 4096
 )
 
 var (
@@ -63,6 +67,7 @@ type ProtocolManager struct {
 	SubProtocols []p2p.Protocol
 
 	eventMux             *event.TypeMux
+	txCh                 chan core.TxPreEvent
 	txSub                *event.TypeMuxSubscription
 	minedBlockSub        *event.TypeMuxSubscription
 	proposalSub, voteSub *event.TypeMuxSubscription
@@ -183,7 +188,8 @@ func (pm *ProtocolManager) removePeer(id string) {
 
 func (pm *ProtocolManager) Start() {
 	// broadcast transactions
-	pm.txSub = pm.eventMux.Subscribe(core.TxPreEvent{})
+	pm.txCh = make(chan core.TxPreEvent, txChanSize)
+	pm.txSub = pm.txpool.SubscribeTxPreEvent(pm.txCh)
 	go pm.txBroadcastLoop()
 	// broadcast mined blocks
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
@@ -675,6 +681,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 			peer.SendNewBlock(block)
 		}
 		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+		return
 	}
 	// Otherwise if the block is indeed in out own chain, announce it
 	if pm.blockchain.HasBlock(hash) {
@@ -738,11 +745,16 @@ func (pm *ProtocolManager) voteBroadcastLoop() {
 	}
 }
 
-func (pm *ProtocolManager) txBroadcastLoop() {
-	// automatically stops if unsubscribe
-	for obj := range pm.txSub.Chan() {
-		event := obj.Data.(core.TxPreEvent)
-		pm.BroadcastTx(event.Tx.Hash(), event.Tx)
+func (self *ProtocolManager) txBroadcastLoop() {
+	for {
+		select {
+		case event := <-self.txCh:
+			self.BroadcastTx(event.Tx.Hash(), event.Tx)
+
+		// Err() channel will be closed when unsubscribing.
+		case <-self.txSub.Err():
+			return
+		}
 	}
 }
 
