@@ -318,74 +318,27 @@ func TestDecryptShared2(t *testing.T) {
 	}
 }
 
-// TestMarshalEncryption validates the encode/decode produces a valid
-// ECIES encryption key.
-func TestMarshalEncryption(t *testing.T) {
-	prv1, err := GenerateKey(rand.Reader, DefaultCurve, nil)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
-	}
-
-	out, err := MarshalPrivate(prv1)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
-	}
-
-	prv2, err := UnmarshalPrivate(out)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
-	}
-
-	message := []byte("Hello, world.")
-	ct, err := Encrypt(rand.Reader, &prv2.PublicKey, message, nil, nil)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
-	}
-
-	pt, err := prv2.Decrypt(rand.Reader, ct, nil, nil)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
-	}
-
-	if !bytes.Equal(pt, message) {
-		fmt.Println("ecies: plaintext doesn't match message")
-		t.FailNow()
-	}
-
-	_, err = prv1.Decrypt(rand.Reader, ct, nil, nil)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
-	}
-
-}
-
 type testCase struct {
 	Curve    elliptic.Curve
 	Name     string
-	Expected bool
+	Expected *ECIESParams
 }
 
 var testCases = []testCase{
 	{
 		Curve:    elliptic.P256(),
 		Name:     "P256",
-		Expected: true,
+		Expected: ECIES_AES128_SHA256,
 	},
 	{
 		Curve:    elliptic.P384(),
 		Name:     "P384",
-		Expected: true,
+		Expected: ECIES_AES256_SHA384,
 	},
 	{
 		Curve:    elliptic.P521(),
 		Name:     "P521",
-		Expected: true,
+		Expected: ECIES_AES256_SHA512,
 	},
 }
 
@@ -400,10 +353,10 @@ func TestParamSelection(t *testing.T) {
 
 func testParamSelection(t *testing.T, c testCase) {
 	params := ParamsFromCurve(c.Curve)
-	if params == nil && c.Expected {
+	if params == nil && c.Expected != nil {
 		fmt.Printf("%s (%s)\n", ErrInvalidParams.Error(), c.Name)
 		t.FailNow()
-	} else if params != nil && !c.Expected {
+	} else if params != nil && !cmpParams(params, c.Expected) {
 		fmt.Printf("ecies: parameters should be invalid (%s)\n",
 			c.Name)
 		t.FailNow()
