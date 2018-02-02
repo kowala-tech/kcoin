@@ -67,6 +67,7 @@ type announce struct {
 
 // headerFilterTask represents a batch of headers needing fetcher filtering.
 type headerFilterTask struct {
+	peer    string          // The source peer of block headers
 	headers []*types.Header // Collection of headers to filter
 	time    time.Time       // Arrival time of the headers
 }
@@ -74,6 +75,7 @@ type headerFilterTask struct {
 // headerFilterTask represents a batch of block bodies (transactions and uncles)
 // needing fetcher filtering.
 type bodyFilterTask struct {
+	peer         string                 // The source peer of block bodies
 	transactions [][]*types.Transaction // Collection of transactions per block bodies
 	commits      []*types.Commit        // Commit per block bodies
 	time         time.Time              // Arrival time of the blocks' contents
@@ -202,8 +204,8 @@ func (f *Fetcher) Enqueue(peer string, block *types.Block) error {
 
 // FilterHeaders extracts all the headers that were explicitly requested by the fetcher,
 // returning those that should be handled differently.
-func (f *Fetcher) FilterHeaders(headers []*types.Header, time time.Time) []*types.Header {
-	log.Trace("Filtering headers", "headers", len(headers))
+func (f *Fetcher) FilterHeaders(peer string, headers []*types.Header, time time.Time) []*types.Header {
+	log.Trace("Filtering headers", "peer", peer, "headers", len(headers))
 
 	// Send the filter channel to the fetcher
 	filter := make(chan *headerFilterTask)
@@ -215,7 +217,7 @@ func (f *Fetcher) FilterHeaders(headers []*types.Header, time time.Time) []*type
 	}
 	// Request the filtering of the header list
 	select {
-	case filter <- &headerFilterTask{headers: headers, time: time}:
+	case filter <- &headerFilterTask{peer: peer, headers: headers, time: time}:
 	case <-f.quit:
 		return nil
 	}
@@ -230,8 +232,8 @@ func (f *Fetcher) FilterHeaders(headers []*types.Header, time time.Time) []*type
 
 // FilterBodies extracts all the block bodies that were explicitly requested by
 // the fetcher, returning those that should be handled differently.
-func (f *Fetcher) FilterBodies(transactions [][]*types.Transaction, commits []*types.Commit, time time.Time) ([][]*types.Transaction, []*types.Commit) {
-	log.Trace("Filtering bodies", "txs", len(transactions), "commits", len(commits))
+func (f *Fetcher) FilterBodies(peer string, transactions [][]*types.Transaction, commits []*types.Commit, time time.Time) ([][]*types.Transaction, []*types.Commit) {
+	log.Trace("Filtering bodies", "peer", peer, "txs", len(transactions), "commits", len(commits))
 
 	// Send the filter channel to the fetcher
 	filter := make(chan *bodyFilterTask)
@@ -243,7 +245,7 @@ func (f *Fetcher) FilterBodies(transactions [][]*types.Transaction, commits []*t
 	}
 	// Request the filtering of the body list
 	select {
-	case filter <- &bodyFilterTask{transactions: transactions, commits: commits, time: time}:
+	case filter <- &bodyFilterTask{peer: peer, transactions: transactions, commits: commits, time: time}:
 	case <-f.quit:
 		return nil, nil
 	}
@@ -428,7 +430,7 @@ func (f *Fetcher) loop() {
 				hash := header.Hash()
 
 				// Filter fetcher-requested headers from other synchronisation algorithms
-				if announce := f.fetching[hash]; announce != nil && f.fetched[hash] == nil && f.completing[hash] == nil && f.queued[hash] == nil {
+				if announce := f.fetching[hash]; announce != nil && announce.origin == task.peer && f.fetched[hash] == nil && f.completing[hash] == nil && f.queued[hash] == nil {
 					// If the delivered header does not match the promised number, drop the announcer
 					if header.Number.Uint64() != announce.number {
 						log.Trace("Invalid block number fetched", "peer", announce.origin, "hash", header.Hash(), "announced", announce.number, "provided", header.Number)
@@ -442,6 +444,7 @@ func (f *Fetcher) loop() {
 						announce.time = task.time
 
 						// If the block is empty (header only), short circuit into the final import queue
+						// @TODO (rgeraldes) - add commit data?
 						if header.TxHash == types.DeriveSha(types.Transactions{}) {
 							log.Trace("Block empty, skipping body retrieval", "peer", announce.origin, "number", header.Number, "hash", header.Hash())
 
@@ -507,12 +510,12 @@ func (f *Fetcher) loop() {
 					if f.queued[hash] == nil {
 						txnHash := types.DeriveSha(types.Transactions(task.transactions[i]))
 
-						if txnHash == announce.header.TxHash {
+						//@TODO (rgeraldes) - add commit info?
+						if txnHash == announce.header.TxHash && announce.origin == task.peer {
 							// Mark the body matched, reassemble if still unknown
 							matched = true
 
 							if f.getBlock(hash) == nil {
-								// @TODO (rgeraldes) - replace the statement below with the commit data
 								block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i], task.commits[i])
 								block.ReceivedAt = task.time
 
