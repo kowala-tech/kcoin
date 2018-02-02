@@ -259,8 +259,6 @@ func (db *LDBDatabase) meter(refresh time.Duration) {
 	}
 }
 
-// TODO: remove this stuff and expose leveldb directly
-
 func (db *LDBDatabase) NewBatch() Batch {
 	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
 }
