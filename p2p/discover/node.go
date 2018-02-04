@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package discover
 
 import (
@@ -225,6 +209,11 @@ func (n *Node) UnmarshalText(text []byte) error {
 // The node identifier is a marshaled elliptic curve public key.
 type NodeID [NodeIDBits / 8]byte
 
+// Bytes returns a byte slice representation of the NodeID
+func (n NodeID) Bytes() []byte {
+	return n[:]
+}
+
 // NodeID prints as a long hexadecimal number.
 func (n NodeID) String() string {
 	return fmt.Sprintf("%x", n[:])
@@ -238,6 +227,41 @@ func (n NodeID) GoString() string {
 // TerminalString returns a shortened hex string for terminal logging.
 func (n NodeID) TerminalString() string {
 	return hex.EncodeToString(n[:8])
+}
+
+// MarshalText implements the encoding.TextMarshaler interface.
+func (n NodeID) MarshalText() ([]byte, error) {
+	return []byte(hex.EncodeToString(n[:])), nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+func (n *NodeID) UnmarshalText(text []byte) error {
+	id, err := HexID(string(text))
+	if err != nil {
+		return err
+	}
+	*n = id
+	return nil
+}
+
+// BytesID converts a byte slice to a NodeID
+func BytesID(b []byte) (NodeID, error) {
+	var id NodeID
+	if len(b) != len(id) {
+		return id, fmt.Errorf("wrong length, want %d bytes", len(id))
+	}
+	copy(id[:], b)
+	return id, nil
+}
+
+// MustBytesID converts a byte slice to a NodeID.
+// It panics if the byte slice is not a valid NodeID.
+func MustBytesID(b []byte) NodeID {
+	id, err := BytesID(b)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }
 
 // HexID converts a hex string to a NodeID.

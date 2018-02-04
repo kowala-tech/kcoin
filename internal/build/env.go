@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package build
 
 import (
@@ -82,18 +66,22 @@ func Env() Environment {
 // LocalEnv returns build environment metadata gathered from git.
 func LocalEnv() Environment {
 	env := applyEnvFlags(Environment{Name: "local", Repo: "kowala-tech/kUSD"})
-	if _, err := os.Stat(".git"); err != nil {
+
+	head := readGitFile("HEAD")
+	if splits := strings.Split(head, " "); len(splits) == 2 {
+		head = splits[1]
+	} else {
 		return env
 	}
 	if env.Commit == "" {
-		env.Commit = RunGit("rev-parse", "HEAD")
+		env.Commit = readGitFile(head)
 	}
 	if env.Branch == "" {
-		if b := RunGit("rev-parse", "--abbrev-ref", "HEAD"); b != "HEAD" {
-			env.Branch = b
+		if head != "HEAD" {
+			env.Branch = strings.TrimLeft(head, "refs/heads/")
 		}
 	}
-	if env.Tag == "" {
+	if info, err := os.Stat(".git/objects"); err == nil && info.IsDir() && env.Tag == "" {
 		env.Tag = firstLine(RunGit("tag", "-l", "--points-at", "HEAD"))
 	}
 	return env

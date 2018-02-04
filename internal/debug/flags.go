@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package debug
 
 import (
@@ -27,7 +11,7 @@ import (
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/log/term"
 	colorable "github.com/mattn/go-colorable"
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -56,12 +40,12 @@ var (
 	}
 	pprofPortFlag = cli.IntFlag{
 		Name:  "pprofport",
-		Usage: "pprof HTTP server listening port (also for expvars, including metrics)",
+		Usage: "pprof HTTP server listening port",
 		Value: 6060,
 	}
 	pprofAddrFlag = cli.StringFlag{
 		Name:  "pprofaddr",
-		Usage: "pprof HTTP server listening interface (also for expvars, including metrics)",
+		Usage: "pprof HTTP server listening interface",
 		Value: "127.0.0.1",
 	}
 	memprofilerateFlag = cli.IntFlag{
@@ -130,8 +114,6 @@ func Setup(ctx *cli.Context) error {
 		address := fmt.Sprintf("%s:%d", ctx.GlobalString(pprofAddrFlag.Name), ctx.GlobalInt(pprofPortFlag.Name))
 		go func() {
 			log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))
-			log.Info("Expvars at", "addr", fmt.Sprintf("http://%s/debug/*", address))
-
 			if err := http.ListenAndServe(address, nil); err != nil {
 				log.Error("Failure in running pprof server", "err", err)
 			}

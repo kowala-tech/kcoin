@@ -25,18 +25,13 @@ type operation struct {
 	validateStack stackValidationFunc
 	// memorySize returns the memory size required for the operation
 	memorySize memorySizeFunc
-	// halts indicates whether the operation shoult halt further execution
-	// and return
-	halts bool
-	// jumps indicates whether operation made a jump. This prevents the program
-	// counter from further incrementing.
-	jumps bool
-	// writes determines whether this a state modifying operation
-	writes bool
-	// valid is used to check whether the retrieved operation is valid and known
-	valid bool
-	// reverts determined whether the operation reverts state
-	reverts bool
+
+	halts   bool // indicates whether the operation should halt further execution
+	jumps   bool // indicates whether the program counter should not increment
+	writes  bool // determines whether this a state modifying operation
+	valid   bool // indication whether the retrieved operation is valid and known
+	reverts bool // determines whether the operation reverts state (implicitly halts)
+	returns bool // determines whether the operations sets the return data content
 }
 
 var (
@@ -224,22 +219,22 @@ func NewAndromedaInstructionSet() [256]operation {
 			valid:         true,
 		},
 		CALLDATALOAD: {
-			execute:       opCalldataLoad,
+			execute:       opCallDataLoad,
 			gasCost:       constGasFunc(GasFastestStep),
 			validateStack: makeStackFunc(1, 1),
 			valid:         true,
 		},
 		CALLDATASIZE: {
-			execute:       opCalldataSize,
+			execute:       opCallDataSize,
 			gasCost:       constGasFunc(GasQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		CALLDATACOPY: {
-			execute:       opCalldataCopy,
-			gasCost:       gasCalldataCopy,
+			execute:       opCallDataCopy,
+			gasCost:       gasCallDataCopy,
 			validateStack: makeStackFunc(3, 0),
-			memorySize:    memoryCalldataCopy,
+			memorySize:    memoryCallDataCopy,
 			valid:         true,
 		},
 		CODESIZE: {
@@ -779,6 +774,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(2, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG1: {
 			execute:       makeLog(1),
@@ -786,6 +782,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(3, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG2: {
 			execute:       makeLog(2),
@@ -793,6 +790,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(4, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG3: {
 			execute:       makeLog(3),
@@ -800,6 +798,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(5, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG4: {
 			execute:       makeLog(4),
@@ -807,6 +806,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(6, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		CREATE: {
 			execute:       opCreate,
@@ -815,6 +815,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			memorySize:    memoryCreate,
 			valid:         true,
 			writes:        true,
+			returns:       true,
 		},
 		CALL: {
 			execute:       opCall,
@@ -822,6 +823,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(7, 1),
 			memorySize:    memoryCall,
 			valid:         true,
+			returns:       true,
 		},
 		CALLCODE: {
 			execute:       opCallCode,
@@ -829,6 +831,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(7, 1),
 			memorySize:    memoryCall,
 			valid:         true,
+			returns:       true,
 		},
 		RETURN: {
 			execute:       opReturn,
@@ -852,6 +855,36 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(6, 1),
 			memorySize:    memoryDelegateCall,
 			valid:         true,
+		},
+		STATICCALL: {
+			execute:       opStaticCall,
+			gasCost:       gasStaticCall,
+			validateStack: makeStackFunc(6, 1),
+			memorySize:    memoryStaticCall,
+			valid:         true,
+			returns:       true,
+		},
+		RETURNDATASIZE: {
+			execute:       opReturnDataSize,
+			gasCost:       constGasFunc(GasQuickStep),
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		},
+		RETURNDATACOPY: {
+			execute:       opReturnDataCopy,
+			gasCost:       gasReturnDataCopy,
+			validateStack: makeStackFunc(3, 0),
+			memorySize:    memoryReturnDataCopy,
+			valid:         true,
+		},
+		REVERT: {
+			execute:       opRevert,
+			gasCost:       gasRevert,
+			validateStack: makeStackFunc(2, 0),
+			memorySize:    memoryRevert,
+			valid:         true,
+			reverts:       true,
+			returns:       true,
 		},
 	}
 }

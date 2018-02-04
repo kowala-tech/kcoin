@@ -198,14 +198,8 @@ func (val *Validator) commitState() stateFn {
 
 	work.state.CommitTo(chainDb, true)
 
-	// @NOTE (rgeraldes) - stat is not necessary (finality property - never forks)
-	_, err := val.chain.WriteBlock(block)
-	if err != nil {
-		log.Error("Failed writing block to chain", "err", err)
-		return nil
-	}
-
-	// update block hash since it is now available and not when the receipt/log of individual transactions were created
+	// update block hash since it is now available and not when
+	// the receipt/log of individual transactions were created
 	for _, r := range val.work.receipts {
 		for _, l := range r.Logs {
 			l.BlockHash = block.Hash()
@@ -215,22 +209,21 @@ func (val *Validator) commitState() stateFn {
 		log.BlockHash = block.Hash()
 	}
 
-	// This puts transactions in a extra db for rpc
-	core.WriteTxLookupEntries(chainDb, block)
-	// Write map map bloom filters
-	core.WriteMipmapBloom(chainDb, block.NumberU64(), work.receipts)
+	_, err := val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
+	if err != nil {
+		log.Error("Failed writing block to chain", "err", err)
+		return nil
+	}
 
-	go func(block *types.Block, logs []*types.Log, receipts []*types.Receipt) {
-		val.eventMux.Post(core.NewMinedBlockEvent{Block: block})
-		val.eventMux.Post(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-
-		val.eventMux.Post(core.ChainHeadEvent{Block: block})
-		val.eventMux.Post(logs)
-
-		if err := core.WriteBlockReceipts(chainDb, block.Hash(), block.NumberU64(), receipts); err != nil {
-			log.Warn("Failed writing block receipts", "err", err)
-		}
-	}(block, work.state.Logs(), work.receipts)
+	// Broadcast the block and announce chain insertion event
+	go val.eventMux.Post(core.NewMinedBlockEvent{Block: block})
+	var (
+		events []interface{}
+		logs   = work.state.Logs()
+	)
+	events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+	events = append(events, core.ChainHeadEvent{Block: block})
+	val.chain.PostChainEvents(events, logs)
 
 	// election state updates
 	val.commitRound = int(val.round)

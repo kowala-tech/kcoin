@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
-	"sync"
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -18,24 +16,36 @@ import (
 	"github.com/kowala-tech/kUSD/rlp"
 )
 
+// DatabaseReader wraps the Get method of a backing data store.
+type DatabaseReader interface {
+	Get(key []byte) (value []byte, err error)
+}
+
+// DatabaseDeleter wraps the Delete method of a backing data store.
+type DatabaseDeleter interface {
+	Delete(key []byte) error
+}
+
 var (
 	headHeaderKey = []byte("LastHeader")
 	headBlockKey  = []byte("LastBlock")
 	headFastKey   = []byte("LastFast")
 
-	headerPrefix        = []byte("h")   // headerPrefix + num (uint64 big endian) + hash -> header
-	tdSuffix            = []byte("t")   // headerPrefix + num (uint64 big endian) + hash + tdSuffix -> td
-	numSuffix           = []byte("n")   // headerPrefix + num (uint64 big endian) + numSuffix -> hash
-	blockHashPrefix     = []byte("H")   // blockHashPrefix + hash -> num (uint64 big endian)
-	bodyPrefix          = []byte("b")   // bodyPrefix + num (uint64 big endian) + hash -> block body
-	blockReceiptsPrefix = []byte("r")   // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
-	lookupPrefix        = []byte("l")   // lookupPrefix + hash -> transaction/receipt lookup metadata
-	preimagePrefix      = "secure-key-" // preimagePrefix + hash -> preimage
+	// Data item prefixes (use single byte to avoid mixing data types, avoid `i`).
+	headerPrefix        = []byte("h") // headerPrefix + num (uint64 big endian) + hash -> header
+	tdSuffix            = []byte("t") // headerPrefix + num (uint64 big endian) + hash + tdSuffix -> td
+	numSuffix           = []byte("n") // headerPrefix + num (uint64 big endian) + numSuffix -> hash
+	blockHashPrefix     = []byte("H") // blockHashPrefix + hash -> num (uint64 big endian)
+	bodyPrefix          = []byte("b") // bodyPrefix + num (uint64 big endian) + hash -> block body
+	blockReceiptsPrefix = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
+	lookupPrefix        = []byte("l") // lookupPrefix + hash -> transaction/receipt lookup metadata
+	bloomBitsPrefix     = []byte("B") // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
 
-	mipmapPre    = []byte("mipmap-log-bloom-")
-	MIPMapLevels = []uint64{1000000, 500000, 100000, 50000, 1000}
+	preimagePrefix = "secure-key-"              // preimagePrefix + hash -> preimage
+	configPrefix   = []byte("ethereum-config-") // config prefix for the db
 
-	configPrefix = []byte("ethereum-config-") // config prefix for the db
+	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
+	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
 
 	// used by old db, now only used for conversion
 	oldReceiptsPrefix = []byte("receipts-")
@@ -43,15 +53,13 @@ var (
 
 	ErrChainConfigNotFound = errors.New("ChainConfig not found") // general config not found error
 
-	mipmapBloomMu sync.Mutex // protect against race condition when updating mipmap blooms
-
 	preimageCounter    = metrics.NewCounter("db/preimage/total")
 	preimageHitCounter = metrics.NewCounter("db/preimage/hits")
 )
 
-// txLookupEntry is a positional metadata to help looking up the data content of
+// TxLookupEntry is a positional metadata to help looking up the data content of
 // a transaction or receipt given only its hash.
-type txLookupEntry struct {
+type TxLookupEntry struct {
 	BlockHash  common.Hash
 	BlockIndex uint64
 	Index      uint64
@@ -65,7 +73,7 @@ func encodeBlockNumber(number uint64) []byte {
 }
 
 // GetCanonicalHash retrieves a hash assigned to a canonical block number.
-func GetCanonicalHash(db kusddb.Database, number uint64) common.Hash {
+func GetCanonicalHash(db DatabaseReader, number uint64) common.Hash {
 	data, _ := db.Get(append(append(headerPrefix, encodeBlockNumber(number)...), numSuffix...))
 	if len(data) == 0 {
 		return common.Hash{}
@@ -79,7 +87,7 @@ const missingNumber = uint64(0xffffffffffffffff)
 
 // GetBlockNumber returns the block number assigned to a block hash
 // if the corresponding header is present in the database
-func GetBlockNumber(db kusddb.Database, hash common.Hash) uint64 {
+func GetBlockNumber(db DatabaseReader, hash common.Hash) uint64 {
 	data, _ := db.Get(append(blockHashPrefix, hash.Bytes()...))
 	if len(data) != 8 {
 		return missingNumber
@@ -92,7 +100,7 @@ func GetBlockNumber(db kusddb.Database, hash common.Hash) uint64 {
 // last block hash is only updated upon a full block import, the last header
 // hash is updated already at header import, allowing head tracking for the
 // light synchronization mechanism.
-func GetHeadHeaderHash(db kusddb.Database) common.Hash {
+func GetHeadHeaderHash(db DatabaseReader) common.Hash {
 	data, _ := db.Get(headHeaderKey)
 	if len(data) == 0 {
 		return common.Hash{}
@@ -101,7 +109,7 @@ func GetHeadHeaderHash(db kusddb.Database) common.Hash {
 }
 
 // GetHeadBlockHash retrieves the hash of the current canonical head block.
-func GetHeadBlockHash(db kusddb.Database) common.Hash {
+func GetHeadBlockHash(db DatabaseReader) common.Hash {
 	data, _ := db.Get(headBlockKey)
 	if len(data) == 0 {
 		return common.Hash{}
@@ -113,7 +121,7 @@ func GetHeadBlockHash(db kusddb.Database) common.Hash {
 // fast synchronization. The difference between this and GetHeadBlockHash is that
 // whereas the last block hash is only updated upon a full block import, the last
 // fast hash is updated when importing pre-processed blocks.
-func GetHeadFastBlockHash(db kusddb.Database) common.Hash {
+func GetHeadFastBlockHash(db DatabaseReader) common.Hash {
 	data, _ := db.Get(headFastKey)
 	if len(data) == 0 {
 		return common.Hash{}
@@ -123,14 +131,14 @@ func GetHeadFastBlockHash(db kusddb.Database) common.Hash {
 
 // GetHeaderRLP retrieves a block header in its raw RLP database encoding, or nil
 // if the header's not found.
-func GetHeaderRLP(db kusddb.Database, hash common.Hash, number uint64) rlp.RawValue {
-	data, _ := db.Get(append(append(headerPrefix, encodeBlockNumber(number)...), hash.Bytes()...))
+func GetHeaderRLP(db DatabaseReader, hash common.Hash, number uint64) rlp.RawValue {
+	data, _ := db.Get(headerKey(hash, number))
 	return data
 }
 
 // GetHeader retrieves the block header corresponding to the hash, nil if none
 // found.
-func GetHeader(db kusddb.Database, hash common.Hash, number uint64) *types.Header {
+func GetHeader(db DatabaseReader, hash common.Hash, number uint64) *types.Header {
 	data := GetHeaderRLP(db, hash, number)
 	if len(data) == 0 {
 		return nil
@@ -144,14 +152,22 @@ func GetHeader(db kusddb.Database, hash common.Hash, number uint64) *types.Heade
 }
 
 // GetBodyRLP retrieves the block body (transactions) in RLP encoding.
-func GetBodyRLP(db kusddb.Database, hash common.Hash, number uint64) rlp.RawValue {
-	data, _ := db.Get(append(append(bodyPrefix, encodeBlockNumber(number)...), hash.Bytes()...))
+func GetBodyRLP(db DatabaseReader, hash common.Hash, number uint64) rlp.RawValue {
+	data, _ := db.Get(blockBodyKey(hash, number))
 	return data
+}
+
+func headerKey(hash common.Hash, number uint64) []byte {
+	return append(append(headerPrefix, encodeBlockNumber(number)...), hash.Bytes()...)
+}
+
+func blockBodyKey(hash common.Hash, number uint64) []byte {
+	return append(append(bodyPrefix, encodeBlockNumber(number)...), hash.Bytes()...)
 }
 
 // GetBody retrieves the block body (transactons) corresponding to the
 // hash, nil if none found.
-func GetBody(db kusddb.Database, hash common.Hash, number uint64) *types.Body {
+func GetBody(db DatabaseReader, hash common.Hash, number uint64) *types.Body {
 	data := GetBodyRLP(db, hash, number)
 	if len(data) == 0 {
 		return nil
@@ -170,7 +186,7 @@ func GetBody(db kusddb.Database, hash common.Hash, number uint64) *types.Body {
 //
 // Note, due to concurrent download of header and block body the header and thus
 // canonical hash can be stored in the database but the body data not (yet).
-func GetBlock(db kusddb.Database, hash common.Hash, number uint64) *types.Block {
+func GetBlock(db DatabaseReader, hash common.Hash, number uint64) *types.Block {
 	// Retrieve the block header and body contents
 	header := GetHeader(db, hash, number)
 	if header == nil {
@@ -186,7 +202,7 @@ func GetBlock(db kusddb.Database, hash common.Hash, number uint64) *types.Block 
 
 // GetBlockReceipts retrieves the receipts generated by the transactions included
 // in a block given by its hash.
-func GetBlockReceipts(db kusddb.Database, hash common.Hash, number uint64) types.Receipts {
+func GetBlockReceipts(db DatabaseReader, hash common.Hash, number uint64) types.Receipts {
 	data, _ := db.Get(append(append(blockReceiptsPrefix, encodeBlockNumber(number)...), hash[:]...))
 	if len(data) == 0 {
 		return nil
@@ -205,14 +221,14 @@ func GetBlockReceipts(db kusddb.Database, hash common.Hash, number uint64) types
 
 // GetTxLookupEntry retrieves the positional metadata associated with a transaction
 // hash to allow retrieving the transaction or receipt by hash.
-func GetTxLookupEntry(db kusddb.Database, hash common.Hash) (common.Hash, uint64, uint64) {
+func GetTxLookupEntry(db DatabaseReader, hash common.Hash) (common.Hash, uint64, uint64) {
 	// Load the positional metadata from disk and bail if it fails
 	data, _ := db.Get(append(lookupPrefix, hash.Bytes()...))
 	if len(data) == 0 {
 		return common.Hash{}, 0, 0
 	}
 	// Parse and return the contents of the lookup entry
-	var entry txLookupEntry
+	var entry TxLookupEntry
 	if err := rlp.DecodeBytes(data, &entry); err != nil {
 		log.Error("Invalid lookup entry RLP", "hash", hash, "err", err)
 		return common.Hash{}, 0, 0
@@ -222,7 +238,7 @@ func GetTxLookupEntry(db kusddb.Database, hash common.Hash) (common.Hash, uint64
 
 // GetTransaction retrieves a specific transaction from the database, along with
 // its added positional metadata.
-func GetTransaction(db kusddb.Database, hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
+func GetTransaction(db DatabaseReader, hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
 	// Retrieve the lookup metadata and resolve the transaction from the body
 	blockHash, blockNumber, txIndex := GetTxLookupEntry(db, hash)
 
@@ -248,7 +264,7 @@ func GetTransaction(db kusddb.Database, hash common.Hash) (*types.Transaction, c
 	if len(data) == 0 {
 		return nil, common.Hash{}, 0, 0
 	}
-	var entry txLookupEntry
+	var entry TxLookupEntry
 	if err := rlp.DecodeBytes(data, &entry); err != nil {
 		return nil, common.Hash{}, 0, 0
 	}
@@ -257,7 +273,7 @@ func GetTransaction(db kusddb.Database, hash common.Hash) (*types.Transaction, c
 
 // GetReceipt retrieves a specific transaction receipt from the database, along with
 // its added positional metadata.
-func GetReceipt(db kusddb.Database, hash common.Hash) (*types.Receipt, common.Hash, uint64, uint64) {
+func GetReceipt(db DatabaseReader, hash common.Hash) (*types.Receipt, common.Hash, uint64, uint64) {
 	// Retrieve the lookup metadata and resolve the receipt from the receipts
 	blockHash, blockNumber, receiptIndex := GetTxLookupEntry(db, hash)
 
@@ -282,8 +298,19 @@ func GetReceipt(db kusddb.Database, hash common.Hash) (*types.Receipt, common.Ha
 	return (*types.Receipt)(&receipt), common.Hash{}, 0, 0
 }
 
+// GetBloomBits retrieves the compressed bloom bit vector belonging to the given
+// section and bit index from the.
+func GetBloomBits(db DatabaseReader, bit uint, section uint64, head common.Hash) ([]byte, error) {
+	key := append(append(bloomBitsPrefix, make([]byte, 10)...), head.Bytes()...)
+
+	binary.BigEndian.PutUint16(key[1:], uint16(bit))
+	binary.BigEndian.PutUint64(key[3:], section)
+
+	return db.Get(key)
+}
+
 // WriteCanonicalHash stores the canonical hash for the given block number.
-func WriteCanonicalHash(db kusddb.Database, hash common.Hash, number uint64) error {
+func WriteCanonicalHash(db kusddb.Putter, hash common.Hash, number uint64) error {
 	key := append(append(headerPrefix, encodeBlockNumber(number)...), numSuffix...)
 	if err := db.Put(key, hash.Bytes()); err != nil {
 		log.Crit("Failed to store number to hash mapping", "err", err)
@@ -292,7 +319,7 @@ func WriteCanonicalHash(db kusddb.Database, hash common.Hash, number uint64) err
 }
 
 // WriteHeadHeaderHash stores the head header's hash.
-func WriteHeadHeaderHash(db kusddb.Database, hash common.Hash) error {
+func WriteHeadHeaderHash(db kusddb.Putter, hash common.Hash) error {
 	if err := db.Put(headHeaderKey, hash.Bytes()); err != nil {
 		log.Crit("Failed to store last header's hash", "err", err)
 	}
@@ -300,7 +327,7 @@ func WriteHeadHeaderHash(db kusddb.Database, hash common.Hash) error {
 }
 
 // WriteHeadBlockHash stores the head block's hash.
-func WriteHeadBlockHash(db kusddb.Database, hash common.Hash) error {
+func WriteHeadBlockHash(db kusddb.Putter, hash common.Hash) error {
 	if err := db.Put(headBlockKey, hash.Bytes()); err != nil {
 		log.Crit("Failed to store last block's hash", "err", err)
 	}
@@ -308,7 +335,7 @@ func WriteHeadBlockHash(db kusddb.Database, hash common.Hash) error {
 }
 
 // WriteHeadFastBlockHash stores the fast head block's hash.
-func WriteHeadFastBlockHash(db kusddb.Database, hash common.Hash) error {
+func WriteHeadFastBlockHash(db kusddb.Putter, hash common.Hash) error {
 	if err := db.Put(headFastKey, hash.Bytes()); err != nil {
 		log.Crit("Failed to store last fast block's hash", "err", err)
 	}
@@ -316,7 +343,7 @@ func WriteHeadFastBlockHash(db kusddb.Database, hash common.Hash) error {
 }
 
 // WriteHeader serializes a block header into the database.
-func WriteHeader(db kusddb.Database, header *types.Header) error {
+func WriteHeader(db kusddb.Putter, header *types.Header) error {
 	data, err := rlp.EncodeToBytes(header)
 	if err != nil {
 		return err
@@ -336,7 +363,7 @@ func WriteHeader(db kusddb.Database, header *types.Header) error {
 }
 
 // WriteBody serializes the body of a block into the database.
-func WriteBody(db kusddb.Database, hash common.Hash, number uint64, body *types.Body) error {
+func WriteBody(db kusddb.Putter, hash common.Hash, number uint64, body *types.Body) error {
 	data, err := rlp.EncodeToBytes(body)
 	if err != nil {
 		return err
@@ -345,7 +372,7 @@ func WriteBody(db kusddb.Database, hash common.Hash, number uint64, body *types.
 }
 
 // WriteBodyRLP writes a serialized body of a block into the database.
-func WriteBodyRLP(db kusddb.Database, hash common.Hash, number uint64, rlp rlp.RawValue) error {
+func WriteBodyRLP(db kusddb.Putter, hash common.Hash, number uint64, rlp rlp.RawValue) error {
 	key := append(append(bodyPrefix, encodeBlockNumber(number)...), hash.Bytes()...)
 	if err := db.Put(key, rlp); err != nil {
 		log.Crit("Failed to store block body", "err", err)
@@ -354,7 +381,7 @@ func WriteBodyRLP(db kusddb.Database, hash common.Hash, number uint64, rlp rlp.R
 }
 
 // WriteBlock serializes a block into the database, header and body separately.
-func WriteBlock(db kusddb.Database, block *types.Block) error {
+func WriteBlock(db kusddb.Putter, block *types.Block) error {
 	// Store the body first to retain database consistency
 	if err := WriteBody(db, block.Hash(), block.NumberU64(), block.Body()); err != nil {
 		return err
@@ -369,7 +396,7 @@ func WriteBlock(db kusddb.Database, block *types.Block) error {
 // WriteBlockReceipts stores all the transaction receipts belonging to a block
 // as a single receipt slice. This is used during chain reorganisations for
 // rescheduling dropped transactions.
-func WriteBlockReceipts(db kusddb.Database, hash common.Hash, number uint64, receipts types.Receipts) error {
+func WriteBlockReceipts(db kusddb.Putter, hash common.Hash, number uint64, receipts types.Receipts) error {
 	// Convert the receipts into their storage form and serialize them
 	storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
 	for i, receipt := range receipts {
@@ -389,12 +416,10 @@ func WriteBlockReceipts(db kusddb.Database, hash common.Hash, number uint64, rec
 
 // WriteTxLookupEntries stores a positional metadata for every transaction from
 // a block, enabling hash based transaction and receipt lookups.
-func WriteTxLookupEntries(db kusddb.Database, block *types.Block) error {
-	batch := db.NewBatch()
-
+func WriteTxLookupEntries(db kusddb.Putter, block *types.Block) error {
 	// Iterate over each transaction and encode its metadata
 	for i, tx := range block.Transactions() {
-		entry := txLookupEntry{
+		entry := TxLookupEntry{
 			BlockHash:  block.Hash(),
 			BlockIndex: block.NumberU64(),
 			Index:      uint64(i),
@@ -403,40 +428,49 @@ func WriteTxLookupEntries(db kusddb.Database, block *types.Block) error {
 		if err != nil {
 			return err
 		}
-		if err := batch.Put(append(lookupPrefix, tx.Hash().Bytes()...), data); err != nil {
+		if err := db.Put(append(lookupPrefix, tx.Hash().Bytes()...), data); err != nil {
 			return err
 		}
-	}
-	// Write the scheduled data into the database
-	if err := batch.Write(); err != nil {
-		log.Crit("Failed to store lookup entries", "err", err)
 	}
 	return nil
 }
 
+// WriteBloomBits writes the compressed bloom bits vector belonging to the given
+// section and bit index.
+func WriteBloomBits(db kusddb.Putter, bit uint, section uint64, head common.Hash, bits []byte) {
+	key := append(append(bloomBitsPrefix, make([]byte, 10)...), head.Bytes()...)
+
+	binary.BigEndian.PutUint16(key[1:], uint16(bit))
+	binary.BigEndian.PutUint64(key[3:], section)
+
+	if err := db.Put(key, bits); err != nil {
+		log.Crit("Failed to store bloom bits", "err", err)
+	}
+}
+
 // DeleteCanonicalHash removes the number to hash canonical mapping.
-func DeleteCanonicalHash(db kusddb.Database, number uint64) {
+func DeleteCanonicalHash(db DatabaseDeleter, number uint64) {
 	db.Delete(append(append(headerPrefix, encodeBlockNumber(number)...), numSuffix...))
 }
 
 // DeleteHeader removes all block header data associated with a hash.
-func DeleteHeader(db kusddb.Database, hash common.Hash, number uint64) {
+func DeleteHeader(db DatabaseDeleter, hash common.Hash, number uint64) {
 	db.Delete(append(blockHashPrefix, hash.Bytes()...))
 	db.Delete(append(append(headerPrefix, encodeBlockNumber(number)...), hash.Bytes()...))
 }
 
 // DeleteBody removes all block body data associated with a hash.
-func DeleteBody(db kusddb.Database, hash common.Hash, number uint64) {
+func DeleteBody(db DatabaseDeleter, hash common.Hash, number uint64) {
 	db.Delete(append(append(bodyPrefix, encodeBlockNumber(number)...), hash.Bytes()...))
 }
 
 // DeleteTd removes all block total difficulty data associated with a hash.
-func DeleteTd(db kusddb.Database, hash common.Hash, number uint64) {
+func DeleteTd(db DatabaseDeleter, hash common.Hash, number uint64) {
 	db.Delete(append(append(append(headerPrefix, encodeBlockNumber(number)...), hash.Bytes()...), tdSuffix...))
 }
 
 // DeleteBlock removes all block data associated with a hash.
-func DeleteBlock(db kusddb.Database, hash common.Hash, number uint64) {
+func DeleteBlock(db DatabaseDeleter, hash common.Hash, number uint64) {
 	DeleteBlockReceipts(db, hash, number)
 	DeleteHeader(db, hash, number)
 	DeleteBody(db, hash, number)
@@ -444,55 +478,13 @@ func DeleteBlock(db kusddb.Database, hash common.Hash, number uint64) {
 }
 
 // DeleteBlockReceipts removes all receipt data associated with a block hash.
-func DeleteBlockReceipts(db kusddb.Database, hash common.Hash, number uint64) {
+func DeleteBlockReceipts(db DatabaseDeleter, hash common.Hash, number uint64) {
 	db.Delete(append(append(blockReceiptsPrefix, encodeBlockNumber(number)...), hash.Bytes()...))
 }
 
 // DeleteTxLookupEntry removes all transaction data associated with a hash.
-func DeleteTxLookupEntry(db kusddb.Database, hash common.Hash) {
+func DeleteTxLookupEntry(db DatabaseDeleter, hash common.Hash) {
 	db.Delete(append(lookupPrefix, hash.Bytes()...))
-}
-
-// returns a formatted MIP mapped key by adding prefix, canonical number and level
-//
-// ex. fn(98, 1000) = (prefix || 1000 || 0)
-func mipmapKey(num, level uint64) []byte {
-	lkey := make([]byte, 8)
-	binary.BigEndian.PutUint64(lkey, level)
-	key := new(big.Int).SetUint64(num / level * level)
-
-	return append(mipmapPre, append(lkey, key.Bytes()...)...)
-}
-
-// WriteMipmapBloom writes each address included in the receipts' logs to the
-// MIP bloom bin.
-func WriteMipmapBloom(db kusddb.Database, number uint64, receipts types.Receipts) error {
-	mipmapBloomMu.Lock()
-	defer mipmapBloomMu.Unlock()
-
-	batch := db.NewBatch()
-	for _, level := range MIPMapLevels {
-		key := mipmapKey(number, level)
-		bloomDat, _ := db.Get(key)
-		bloom := types.BytesToBloom(bloomDat)
-		for _, receipt := range receipts {
-			for _, log := range receipt.Logs {
-				bloom.Add(log.Address.Big())
-			}
-		}
-		batch.Put(key, bloom.Bytes())
-	}
-	if err := batch.Write(); err != nil {
-		return fmt.Errorf("mipmap write fail for: %d: %v", number, err)
-	}
-	return nil
-}
-
-// GetMipmapBloom returns a bloom filter using the number and level as input
-// parameters. For available levels see MIPMapLevels.
-func GetMipmapBloom(db kusddb.Database, number, level uint64) types.Bloom {
-	bloomDat, _ := db.Get(mipmapKey(number, level))
-	return types.BytesToBloom(bloomDat)
 }
 
 // PreimageTable returns a Database instance with the key prefix for preimage entries.
@@ -523,7 +515,7 @@ func WritePreimages(db kusddb.Database, number uint64, preimages map[common.Hash
 }
 
 // GetBlockChainVersion reads the version number from db.
-func GetBlockChainVersion(db kusddb.Database) int {
+func GetBlockChainVersion(db DatabaseReader) int {
 	var vsn uint
 	enc, _ := db.Get([]byte("BlockchainVersion"))
 	rlp.DecodeBytes(enc, &vsn)
@@ -531,13 +523,13 @@ func GetBlockChainVersion(db kusddb.Database) int {
 }
 
 // WriteBlockChainVersion writes vsn as the version number to db.
-func WriteBlockChainVersion(db kusddb.Database, vsn int) {
+func WriteBlockChainVersion(db kusddb.Putter, vsn int) {
 	enc, _ := rlp.EncodeToBytes(uint(vsn))
 	db.Put([]byte("BlockchainVersion"), enc)
 }
 
 // WriteChainConfig writes the chain config settings to the database.
-func WriteChainConfig(db kusddb.Database, hash common.Hash, cfg *params.ChainConfig) error {
+func WriteChainConfig(db kusddb.Putter, hash common.Hash, cfg *params.ChainConfig) error {
 	// short circuit and ignore if nil config. GetChainConfig
 	// will return a default.
 	if cfg == nil {
@@ -553,7 +545,7 @@ func WriteChainConfig(db kusddb.Database, hash common.Hash, cfg *params.ChainCon
 }
 
 // GetChainConfig will fetch the network settings based on the given hash.
-func GetChainConfig(db kusddb.Database, hash common.Hash) (*params.ChainConfig, error) {
+func GetChainConfig(db DatabaseReader, hash common.Hash) (*params.ChainConfig, error) {
 	jsonChainConfig, _ := db.Get(append(configPrefix, hash[:]...))
 	if len(jsonChainConfig) == 0 {
 		return nil, ErrChainConfigNotFound
@@ -568,7 +560,7 @@ func GetChainConfig(db kusddb.Database, hash common.Hash) (*params.ChainConfig, 
 }
 
 // FindCommonAncestor returns the last common ancestor of two block headers
-func FindCommonAncestor(db kusddb.Database, a, b *types.Header) *types.Header {
+func FindCommonAncestor(db DatabaseReader, a, b *types.Header) *types.Header {
 	for bn := b.Number.Uint64(); a.Number.Uint64() > bn; {
 		a = GetHeader(db, a.ParentHash, a.Number.Uint64()-1)
 		if a == nil {

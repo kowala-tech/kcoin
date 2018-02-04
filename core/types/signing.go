@@ -160,9 +160,9 @@ func VoteSender(signer Signer, vote *Vote) (common.Address, error) {
 type Signer interface {
 	// PubilcKey returns the public key derived from the signature
 	Sender(hash common.Hash, R, S, V *big.Int) (common.Address, error)
-	// NewSignature returns a new signature.
-	// The signature must be encoded in [R || S || V] format where V is 0 or 1.
-	NewSignature(sig []byte) (R, S, V *big.Int, err error)
+	// SignatureValues returns the raw R, S, V values corresponding to the
+	// given signature.
+	SignatureValues(sig []byte) (R, S, V *big.Int, err error)
 	// Checks for equality on the signers
 	Equal(Signer) bool
 	// Returns the current network ID
@@ -185,7 +185,7 @@ func (s UnprotectedSigner) Sender(hash common.Hash, R, S, V *big.Int) (common.Ad
 	return recoverPlain(hash, R, S, V, true)
 }
 
-func (s UnprotectedSigner) NewSignature(sig []byte) (R, S, V *big.Int, err error) {
+func (s UnprotectedSigner) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
 	if len(sig) != 65 {
 		panic(fmt.Sprintf("wrong size for signature: got %d, want 65", len(sig)))
 	}
@@ -220,10 +220,10 @@ func (s AndromedaSigner) Sender(hash common.Hash, R, S, V *big.Int) (common.Addr
 	return recoverPlain(hash, R, S, V, true)
 }
 
-// NewSignature returns a new signature. This signature
+// SignatureValues returns a new signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
-func (s AndromedaSigner) NewSignature(sig []byte) (R, S, V *big.Int, err error) {
-	R, S, V, err = UnprotectedSigner{}.NewSignature(sig)
+func (s AndromedaSigner) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
+	R, S, V, err = UnprotectedSigner{}.SignatureValues(sig)
 	if err != nil {
 		return nil, nil, nil, err
 	}

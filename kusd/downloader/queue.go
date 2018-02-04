@@ -822,7 +822,6 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 		request.Headers[i] = nil
 		delete(taskPool, header.Hash())
 	}
-
 	// Return all failed or missing fetches to the queue
 	for _, header := range request.Headers {
 		if header != nil {

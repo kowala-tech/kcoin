@@ -21,11 +21,6 @@ bootnode:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
 
-swarm:
-	build/env.sh go run build/ci.go install ./cmd/swarm
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/swarm\" to launch swarm."
-
 evm:
 	build/env.sh go run build/ci.go install ./cmd/evm
 	@echo "Done building."

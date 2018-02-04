@@ -14,6 +14,7 @@ import (
 
 	"github.com/kowala-tech/kUSD/cmd/utils"
 	"github.com/kowala-tech/kUSD/contracts/release"
+	"github.com/kowala-tech/kUSD/dashboard"
 	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/params"
@@ -56,9 +57,10 @@ var tomlSettings = toml.Config{
 }
 
 type kusdConfig struct {
-	Kowala kusd.Config
-	Node   node.Config
-	Stats  stats.Config
+	Kowala    kusd.Config
+	Node      node.Config
+	Stats     stats.Config
+	Dashboard dashboard.Config
 }
 
 func loadConfig(file string, cfg *kusdConfig) error {
@@ -89,8 +91,9 @@ func defaultNodeConfig() node.Config {
 func makeConfigNode(ctx *cli.Context) (*node.Node, kusdConfig) {
 	// Load defaults.
 	cfg := kusdConfig{
-		Kowala: kusd.DefaultConfig,
-		Node:   defaultNodeConfig(),
+		Kowala:    kusd.DefaultConfig,
+		Node:      defaultNodeConfig(),
+		Dashboard: dashboard.DefaultConfig,
 	}
 
 	// Load config file.
@@ -111,6 +114,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kusdConfig) {
 		cfg.Stats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
 	}
 
+	utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 	return stack, cfg
 }
 

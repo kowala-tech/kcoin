@@ -134,14 +134,13 @@ func (prop *Proposal) Size() common.StorageSize {
 // WithSignature returns a new proposal with the given signature.
 // This signature needs to be formatted as described in the yellow paper (v+27).
 func (proposal *Proposal) WithSignature(signer Signer, sig []byte) (*Proposal, error) {
-	cpy := &Proposal{data: proposal.data}
-	R, S, V, err := signer.NewSignature(sig)
+	r, s, v, err := signer.SignatureValues(sig)
 	if err != nil {
 		return nil, err
 	}
-	cpy.data.V = V
-	cpy.data.R = R
-	cpy.data.S = S
+
+	cpy := &Proposal{data: proposal.data}
+	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
 
 	return cpy, nil
 }

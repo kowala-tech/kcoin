@@ -44,6 +44,11 @@ var (
 		utils.DataDirFlag,
 		utils.KeyStoreDirFlag,
 		utils.NoUSBFlag,
+		utils.DashboardEnabledFlag,
+		utils.DashboardAddrFlag,
+		utils.DashboardPortFlag,
+		utils.DashboardRefreshFlag,
+		utils.DashboardAssetsFlag,
 		utils.TxPoolNoLocalsFlag,
 		utils.TxPoolJournalFlag,
 		utils.TxPoolRejournalFlag,
@@ -117,6 +122,7 @@ func init() {
 		initCommand,
 		importCommand,
 		exportCommand,
+		copydbCommand,
 		removedbCommand,
 		dumpCommand,
 		// See monitorcmd.go:
@@ -214,20 +220,26 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		for _, wallet := range stack.AccountManager().Wallets() {
 			if err := wallet.Open(""); err != nil {
 				log.Warn("Failed to open wallet", "url", wallet.URL(), "err", err)
-			} else {
-				wallet.SelfDerive(accounts.DefaultBaseDerivationPath, stateReader)
 			}
 		}
 		// Listen for wallet event till termination
 		for event := range events {
-			if event.Arrive {
+			switch event.Kind {
+			case accounts.WalletArrived:
 				if err := event.Wallet.Open(""); err != nil {
 					log.Warn("New wallet appeared, failed to open", "url", event.Wallet.URL(), "err", err)
+				}
+			case accounts.WalletOpened:
+				status, _ := event.Wallet.Status()
+				log.Info("New wallet appeared", "url", event.Wallet.URL(), "status", status)
+
+				if event.Wallet.URL().Scheme == "ledger" {
+					event.Wallet.SelfDerive(accounts.DefaultLedgerBaseDerivationPath, stateReader)
 				} else {
-					log.Info("New wallet appeared", "url", event.Wallet.URL(), "status", event.Wallet.Status())
 					event.Wallet.SelfDerive(accounts.DefaultBaseDerivationPath, stateReader)
 				}
-			} else {
+
+			case accounts.WalletDropped:
 				log.Info("Old wallet dropped", "url", event.Wallet.URL())
 				event.Wallet.Close()
 			}

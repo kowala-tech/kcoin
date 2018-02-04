@@ -262,10 +262,14 @@ func (val *Validator) init() error {
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
 
-	// @NOTE (rgeraldes) - in order to sync the nodes, the start time
-	// must be the timestamp on the block + a sync interval. Tendermint offers another
-	// option. Review
-	val.start = time.Unix(parent.Time().Int64(), 0).Add(time.Duration(params.SyncDuration) * time.Millisecond)
+	var start time.Time
+	if parent.NumberU64() == 0 {
+		start = time.Now()
+	} else {
+		start = time.Unix(parent.Time().Int64(), 0)
+	}
+	val.start = start.Add(time.Duration(params.SyncDuration) * time.Millisecond)
+
 	val.proposal = nil
 	val.block = nil
 	val.blockFragments = nil
@@ -401,6 +405,16 @@ func (val *Validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 			log.Trace("Gas limit exceeded for current block", "sender", from)
 			txs.Pop()
 
+		case core.ErrNonceTooLow:
+			// New head notification data race between the transaction pool and miner, shift
+			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+			txs.Shift()
+
+		case core.ErrNonceTooHigh:
+			// Reorg notification data race between the transaction pool and miner, skip account =
+			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			txs.Pop()
+
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
@@ -408,10 +422,10 @@ func (val *Validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 			txs.Shift()
 
 		default:
-			// Pop the current failed transaction without shifting in the next from the account
-			log.Trace("Transaction failed, will be removed", "hash", tx.Hash(), "err", err)
-			val.failedTxs = append(val.failedTxs, tx)
-			txs.Pop()
+			// Strange error, discard the transaction and get the next in line (note, the
+			// nonce-too-high clause will prevent us from executing in vain).
+			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			txs.Shift()
 		}
 	}
 
@@ -527,10 +541,6 @@ func (val *Validator) createBlock() *types.Block {
 	log.Info("Creating a new block")
 	// new block header
 	parent := val.chain.CurrentBlock()
-	state, err := val.chain.StateAt(parent.Root())
-	if err != nil {
-		log.Crit("Failed to fetch the current state", "err", err)
-	}
 	blockNumber := parent.Number()
 	tstart := time.Now()
 	tstamp := tstart.Unix()
@@ -576,24 +586,13 @@ func (val *Validator) createBlock() *types.Block {
 		log.Crit("Failed to fetch pending transactions", "err", err)
 	}
 
-	txs := types.NewTransactionsByPriceAndNonce(pending)
+	txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
 	val.commitTransactions(val.eventMux, txs, val.chain, val.account.Address)
-
-	val.backend.TxPool().RemoveBatch(val.failedTxs)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
-	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, val.receipts, commit); err != nil {
+	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, commit, val.receipts); err != nil {
 		log.Crit("Failed to finalize block for sealing", "err", err)
-	}
-
-	for _, r := range val.receipts {
-		for _, l := range r.Logs {
-			l.BlockHash = block.Hash()
-		}
-	}
-	for _, log := range state.Logs() {
-		log.BlockHash = block.Hash()
 	}
 
 	return block

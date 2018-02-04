@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package rpc
 
 import (
@@ -119,21 +103,6 @@ func isHexNum(t reflect.Type) bool {
 	return t == bigIntType
 }
 
-var blockNumberType = reflect.TypeOf((*BlockNumber)(nil)).Elem()
-
-// Indication if the given block is a BlockNumber
-func isBlockNumber(t reflect.Type) bool {
-	if t == nil {
-		return false
-	}
-
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	return t == blockNumberType
-}
-
 // suitableCallbacks iterates over the methods of the given type. It will determine if a method satisfies the criteria
 // for a RPC callback or a subscription callback and adds it to the collection of callbacks or subscriptions. See server
 // documentation for a summary of these criteria.
@@ -210,18 +179,12 @@ METHODS:
 		}
 
 		switch mtype.NumOut() {
-		case 0, 1:
-			break
-		case 2:
-			if h.errPos == -1 { // method must one return value and 1 error
+		case 0, 1, 2:
+			if mtype.NumOut() == 2 && h.errPos == -1 { // method must one return value and 1 error
 				continue METHODS
 			}
-			break
-		default:
-			continue METHODS
+			callbacks[mname] = &h
 		}
-
-		callbacks[mname] = &h
 	}
 
 	return callbacks, subscriptions

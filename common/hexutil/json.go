@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package hexutil
 
 import (
@@ -26,11 +10,10 @@ import (
 )
 
 var (
-	textZero = []byte(`0x0`)
-	bytesT   = reflect.TypeOf(Bytes(nil))
-	bigT     = reflect.TypeOf((*Big)(nil))
-	uintT    = reflect.TypeOf(Uint(0))
-	uint64T  = reflect.TypeOf(Uint64(0))
+	bytesT  = reflect.TypeOf(Bytes(nil))
+	bigT    = reflect.TypeOf((*Big)(nil))
+	uintT   = reflect.TypeOf(Uint(0))
+	uint64T = reflect.TypeOf(Uint64(0))
 )
 
 // Bytes marshals/unmarshals as a JSON string with 0x prefix.
@@ -224,7 +207,7 @@ func (b *Uint64) UnmarshalText(input []byte) error {
 			return ErrSyntax
 		}
 		dec *= 16
-		dec += uint64(nib)
+		dec += nib
 	}
 	*b = Uint64(dec)
 	return nil
