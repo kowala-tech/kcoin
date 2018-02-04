@@ -20,7 +20,7 @@ import (
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/dashboard"
 	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusd/gasprice"
@@ -155,6 +155,31 @@ var (
 	LightKDFFlag = cli.BoolFlag{
 		Name:  "lightkdf",
 		Usage: "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
+	}
+	// Dashboard settings
+	DashboardEnabledFlag = cli.BoolFlag{
+		Name:  "dashboard",
+		Usage: "Enable the dashboard",
+	}
+	DashboardAddrFlag = cli.StringFlag{
+		Name:  "dashboard.addr",
+		Usage: "Dashboard listening interface",
+		Value: dashboard.DefaultConfig.Host,
+	}
+	DashboardPortFlag = cli.IntFlag{
+		Name:  "dashboard.host",
+		Usage: "Dashboard listening port",
+		Value: dashboard.DefaultConfig.Port,
+	}
+	DashboardRefreshFlag = cli.DurationFlag{
+		Name:  "dashboard.refresh",
+		Usage: "Dashboard metrics collection refresh rate",
+		Value: dashboard.DefaultConfig.Refresh,
+	}
+	DashboardAssetsFlag = cli.StringFlag{
+		Name:  "dashboard.assets",
+		Usage: "Developer flag to serve the dashboard from the local file system",
+		Value: dashboard.DefaultConfig.Assets,
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
@@ -905,6 +930,14 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kusd.Config) {
 	}
 }
 
+// SetDashboardConfig applies dashboard related command line flags to the config.
+func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
+	cfg.Host = ctx.GlobalString(DashboardAddrFlag.Name)
+	cfg.Port = ctx.GlobalInt(DashboardPortFlag.Name)
+	cfg.Refresh = ctx.GlobalDuration(DashboardRefreshFlag.Name)
+	cfg.Assets = ctx.GlobalString(DashboardAssetsFlag.Name)
+}
+
 // RegisterKowalaService adds a Kowala client to the stack.
 func RegisterKowalaService(stack *node.Node, cfg *kusd.Config) {
 	var err error
@@ -917,6 +950,13 @@ func RegisterKowalaService(stack *node.Node, cfg *kusd.Config) {
 	if err != nil {
 		Fatalf("Failed to register the Kowala service: %v", err)
 	}
+}
+
+// RegisterDashboardService adds a dashboard to the stack.
+func RegisterDashboardService(stack *node.Node, cfg *dashboard.Config) {
+	stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		return dashboard.New(cfg)
+	})
 }
 
 // RegisterKowalaStatsService configures the Kowala Stats daemon and adds it to
@@ -983,7 +1023,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		Fatalf("%v", err)
 	}
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = core.NewBlockChain(chainDb, config, engine, new(event.TypeMux), vmcfg)
+	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}
