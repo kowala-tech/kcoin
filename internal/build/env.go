@@ -65,11 +65,11 @@ func Env() Environment {
 
 // LocalEnv returns build environment metadata gathered from git.
 func LocalEnv() Environment {
-	env := applyEnvFlags(Environment{Name: "local", Repo: "kowala-tech/kUSD"})	head := readGitFile("HEAD")
-	
+	env := applyEnvFlags(Environment{Name: "local", Repo: "kowala-tech/kUSD"})
+
 	head := readGitFile("HEAD")
 	if splits := strings.Split(head, " "); len(splits) == 2 {
-			head = splits[1]
+		head = splits[1]
 	} else {
 		return env
 	}
