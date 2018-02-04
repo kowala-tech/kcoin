@@ -37,6 +37,7 @@ import (
 
 // Kowala implements the Kowala full node service.
 type Kowala struct {
+	config      *Config
 	chainConfig *params.ChainConfig
 	// Channel for shutting down the service
 	shutdownChan chan bool // Channel for shutting down the service
@@ -89,6 +90,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	kusd := &Kowala{
+		config:         config,
 		chainDb:        chainDb,
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
@@ -142,7 +144,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	kusd.validator = validator.New(kusd, NewContractBackend(kusd.ApiBackend), kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
-	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb); err != nil {
+	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
 		return nil, err
 	}
 
@@ -355,7 +357,7 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 	s.startBloomHandlers()
 
 	// Start the RPC service
-	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.NetVersion())
+	s.netRPCService = kusdapi.NewPublicNetAPI(srvr, s.NetVersion())
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers

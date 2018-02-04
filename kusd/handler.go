@@ -68,7 +68,7 @@ type ProtocolManager struct {
 
 	eventMux             *event.TypeMux
 	txCh                 chan core.TxPreEvent
-	txSub                *event.TypeMuxSubscription
+	txSub                event.Subscription
 	minedBlockSub        *event.TypeMuxSubscription
 	proposalSub, voteSub *event.TypeMuxSubscription
 
@@ -85,7 +85,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new kowala sub protocol manager. The Kowala sub protocol manages peers capable
 // with the kowala network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, maxPeers int, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator *validator.Validator) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator *validator.Validator) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
@@ -95,7 +95,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		chaindb:     chaindb,
 		validator:   validator,
 		chainconfig: config,
-		maxPeers:    maxPeers,
 		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
 		noMorePeers: make(chan struct{}),
@@ -186,7 +185,9 @@ func (pm *ProtocolManager) removePeer(id string) {
 	}
 }
 
-func (pm *ProtocolManager) Start() {
+func (pm *ProtocolManager) Start(maxPeers int) {
+	pm.maxPeers = maxPeers
+
 	// broadcast transactions
 	pm.txCh = make(chan core.TxPreEvent, txChanSize)
 	pm.txSub = pm.txpool.SubscribeTxPreEvent(pm.txCh)
@@ -470,7 +471,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Filter out any explicitly requested bodies, deliver the rest to the downloader
 		filter := len(transactions) > 0 || len(commits) > 0
 		if filter {
-			transactions, commits = pm.fetcher.FilterBodies(transactions, commits, time.Now())
+			transactions, commits = pm.fetcher.FilterBodies(p.id, transactions, commits, time.Now())
 		}
 		if len(transactions) > 0 || len(commits) > 0 || !filter {
 			err := pm.downloader.DeliverBodies(p.id, transactions, commits)
@@ -576,7 +577,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Schedule all the unknown hashes for retrieval
 		unknown := make(newBlockHashesData, 0, len(announces))
 		for _, block := range announces {
-			if !pm.blockchain.HasBlock(block.Hash) {
+			if !pm.blockchain.HasBlock(block.Hash, block.Number) {
 				unknown = append(unknown, block)
 			}
 		}
@@ -684,7 +685,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 		return
 	}
 	// Otherwise if the block is indeed in out own chain, announce it
-	if pm.blockchain.HasBlock(hash) {
+	if pm.blockchain.HasBlock(hash, block.NumberU64()) {
 		for _, peer := range peers {
 			peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
 		}

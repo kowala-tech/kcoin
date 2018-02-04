@@ -3,10 +3,10 @@ package downloader
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/core"
+	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/kusddb"
 )
 
 // FakePeer is a mock downloader peer that operates on a local database instance
@@ -14,13 +14,13 @@ import (
 // sync commands from an xisting local database.
 type FakePeer struct {
 	id string
-	db ethdb.Database
+	db kusddb.Database
 	hc *core.HeaderChain
 	dl *Downloader
 }
 
 // NewFakePeer creates a new mock downloader peer with the given data sources.
-func NewFakePeer(id string, db ethdb.Database, hc *core.HeaderChain, dl *Downloader) *FakePeer {
+func NewFakePeer(id string, db kusddb.Database, hc *core.HeaderChain, dl *Downloader) *FakePeer {
 	return &FakePeer{id: id, db: db, hc: hc, dl: dl}
 }
 
@@ -106,16 +106,16 @@ func (p *FakePeer) RequestHeadersByNumber(number uint64, amount int, skip int, r
 // corresponding to the specified block hashes.
 func (p *FakePeer) RequestBodies(hashes []common.Hash) error {
 	var (
-		txs    [][]*types.Transaction
-		uncles [][]*types.Header
+		txs     [][]*types.Transaction
+		commits []*types.Commit
 	)
 	for _, hash := range hashes {
 		block := core.GetBlock(p.db, hash, p.hc.GetBlockNumber(hash))
 
 		txs = append(txs, block.Transactions())
-		uncles = append(uncles, block.Uncles())
+		commits = append(commits, block.LastCommit())
 	}
-	p.dl.DeliverBodies(p.id, txs, uncles)
+	p.dl.DeliverBodies(p.id, txs, commits)
 	return nil
 }
 

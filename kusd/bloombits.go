@@ -37,15 +37,15 @@ func (kusd *Kowala) startBloomHandlers() {
 		go func() {
 			for {
 				select {
-				case <-eth.shutdownChan:
+				case <-kusd.shutdownChan:
 					return
 
-				case request := <-eth.bloomRequests:
+				case request := <-kusd.bloomRequests:
 					task := <-request
 					task.Bitsets = make([][]byte, len(task.Sections))
 					for i, section := range task.Sections {
-						head := core.GetCanonicalHash(eth.chainDb, (section+1)*params.BloomBitsBlocks-1)
-						if compVector, err := core.GetBloomBits(eth.chainDb, task.Bit, section, head); err == nil {
+						head := core.GetCanonicalHash(kusd.chainDb, (section+1)*params.BloomBitsBlocks-1)
+						if compVector, err := core.GetBloomBits(kusd.chainDb, task.Bit, section, head); err == nil {
 							if blob, err := bitutil.DecompressBytes(compVector, int(params.BloomBitsBlocks)/8); err == nil {
 								task.Bitsets[i] = blob
 							} else {
