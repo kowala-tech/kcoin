@@ -262,10 +262,14 @@ func (val *Validator) init() error {
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
 
-	// @NOTE (rgeraldes) - in order to sync the nodes, the start time
-	// must be the timestamp on the block + a sync interval. Tendermint offers another
-	// option. Review
-	val.start = time.Unix(parent.Time().Int64(), 0).Add(time.Duration(params.SyncDuration) * time.Millisecond)
+	var start time.Time
+	if parent.NumberU64() == 0 {
+		start = time.Now()
+	} else {
+		start = time.Unix(parent.Time().Int64(), 0)
+	}
+	val.start = start.Add(time.Duration(params.SyncDuration) * time.Millisecond)
+
 	val.proposal = nil
 	val.block = nil
 	val.blockFragments = nil
