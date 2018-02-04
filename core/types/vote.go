@@ -133,14 +133,13 @@ func (vote *Vote) ProtectedHash(chainID *big.Int) common.Hash {
 // WithSignature returns a new vote with the given signature.
 // This signature needs to be formatted as described in the yellow paper (v+27).
 func (vote *Vote) WithSignature(signer Signer, sig []byte) (*Vote, error) {
-	cpy := &Vote{data: vote.data}
-	R, S, V, err := signer.NewSignature(sig)
+	r, s, v, err := signer.SignatureValues(sig)
 	if err != nil {
 		return nil, err
 	}
-	cpy.data.V = V
-	cpy.data.R = R
-	cpy.data.S = S
+
+	cpy := &Vote{data: vote.data}
+	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
 
 	return cpy, nil
 }

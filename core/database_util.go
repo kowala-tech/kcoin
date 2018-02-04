@@ -32,16 +32,18 @@ var (
 	headFastKey   = []byte("LastFast")
 
 	// Data item prefixes (use single byte to avoid mixing data types, avoid `i`).
-	headerPrefix        = []byte("h")   // headerPrefix + num (uint64 big endian) + hash -> header
-	tdSuffix            = []byte("t")   // headerPrefix + num (uint64 big endian) + hash + tdSuffix -> td
-	numSuffix           = []byte("n")   // headerPrefix + num (uint64 big endian) + numSuffix -> hash
-	blockHashPrefix     = []byte("H")   // blockHashPrefix + hash -> num (uint64 big endian)
-	bodyPrefix          = []byte("b")   // bodyPrefix + num (uint64 big endian) + hash -> block body
-	blockReceiptsPrefix = []byte("r")   // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
-	lookupPrefix        = []byte("l")   // lookupPrefix + hash -> transaction/receipt lookup metadata
-	preimagePrefix      = "secure-key-" // preimagePrefix + hash -> preimage
+	headerPrefix        = []byte("h") // headerPrefix + num (uint64 big endian) + hash -> header
+	tdSuffix            = []byte("t") // headerPrefix + num (uint64 big endian) + hash + tdSuffix -> td
+	numSuffix           = []byte("n") // headerPrefix + num (uint64 big endian) + numSuffix -> hash
+	blockHashPrefix     = []byte("H") // blockHashPrefix + hash -> num (uint64 big endian)
+	bodyPrefix          = []byte("b") // bodyPrefix + num (uint64 big endian) + hash -> block body
+	blockReceiptsPrefix = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
+	lookupPrefix        = []byte("l") // lookupPrefix + hash -> transaction/receipt lookup metadata
+	bloomBitsPrefix     = []byte("B") // bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
 
-	configPrefix = []byte("ethereum-config-") // config prefix for the db
+	preimagePrefix = "secure-key-"              // preimagePrefix + hash -> preimage
+	configPrefix   = []byte("ethereum-config-") // config prefix for the db
+
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
 	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
 
@@ -130,7 +132,7 @@ func GetHeadFastBlockHash(db DatabaseReader) common.Hash {
 // GetHeaderRLP retrieves a block header in its raw RLP database encoding, or nil
 // if the header's not found.
 func GetHeaderRLP(db DatabaseReader, hash common.Hash, number uint64) rlp.RawValue {
-	data, _ := db.Get(append(append(headerPrefix, encodeBlockNumber(number)...), hash.Bytes()...))
+	data, _ := db.Get(headerKey(hash, number))
 	return data
 }
 
@@ -226,7 +228,7 @@ func GetTxLookupEntry(db DatabaseReader, hash common.Hash) (common.Hash, uint64,
 		return common.Hash{}, 0, 0
 	}
 	// Parse and return the contents of the lookup entry
-	var entry txLookupEntry
+	var entry TxLookupEntry
 	if err := rlp.DecodeBytes(data, &entry); err != nil {
 		log.Error("Invalid lookup entry RLP", "hash", hash, "err", err)
 		return common.Hash{}, 0, 0
@@ -262,7 +264,7 @@ func GetTransaction(db DatabaseReader, hash common.Hash) (*types.Transaction, co
 	if len(data) == 0 {
 		return nil, common.Hash{}, 0, 0
 	}
-	var entry txLookupEntry
+	var entry TxLookupEntry
 	if err := rlp.DecodeBytes(data, &entry); err != nil {
 		return nil, common.Hash{}, 0, 0
 	}

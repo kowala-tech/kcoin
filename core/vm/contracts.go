@@ -36,7 +36,6 @@ type PrecompiledContract interface {
 	RequiredGas(input []byte) uint64  // RequiredPrice calculates the contract gas use
 	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
 }
-
 // PrecompiledContractsAndromeda contains the default set of pre-compiled Kowala
 // contracts used in the Andromeda release.
 var PrecompiledContractsAndromeda = map[common.Address]PrecompiledContract{
@@ -50,7 +49,7 @@ var PrecompiledContractsAndromeda = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
 }
 
-// RunPrecompiledContract runs and evaluate the output of a precompiled contract defined in contracts.go
+// RunPrecompiledContract runs and evaluates the output of a precompiled contract.
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, err error) {
 	gas := p.RequiredGas(input)
 	if contract.UseGas(gas) {

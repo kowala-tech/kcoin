@@ -25,8 +25,6 @@ type operation struct {
 	validateStack stackValidationFunc
 	// memorySize returns the memory size required for the operation
 	memorySize memorySizeFunc
-	// halts indicates whether the operation shoult halt further execution
-	// and return
 
 	halts   bool // indicates whether the operation should halt further execution
 	jumps   bool // indicates whether the program counter should not increment
@@ -234,7 +232,7 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		CALLDATACOPY: {
 			execute:       opCallDataCopy,
-			gasCost:       gasCalldataCopy,
+			gasCost:       gasCallDataCopy,
 			validateStack: makeStackFunc(3, 0),
 			memorySize:    memoryCallDataCopy,
 			valid:         true,
@@ -776,6 +774,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(2, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG1: {
 			execute:       makeLog(1),
@@ -783,6 +782,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(3, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG2: {
 			execute:       makeLog(2),
@@ -790,6 +790,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(4, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG3: {
 			execute:       makeLog(3),
@@ -797,6 +798,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(5, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG4: {
 			execute:       makeLog(4),
@@ -804,6 +806,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(6, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		CREATE: {
 			execute:       opCreate,
@@ -812,6 +815,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			memorySize:    memoryCreate,
 			valid:         true,
 			writes:        true,
+			returns:       true,
 		},
 		CALL: {
 			execute:       opCall,
@@ -819,6 +823,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(7, 1),
 			memorySize:    memoryCall,
 			valid:         true,
+			returns:       true,
 		},
 		CALLCODE: {
 			execute:       opCallCode,
@@ -826,6 +831,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(7, 1),
 			memorySize:    memoryCall,
 			valid:         true,
+			returns:       true,
 		},
 		RETURN: {
 			execute:       opReturn,

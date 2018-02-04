@@ -40,11 +40,9 @@ func TestHeaderVerification(t *testing.T) {
 			if valid {
 				engine := tendermint.NewFaker()
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
-				chain.Stop()
 			} else {
 				engine := ethash.NewFakeFailer(headers[i].Number.Uint64())
 				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
-				chain.Stop()
 			}
 			// Wait for the verification result
 			select {
@@ -96,11 +94,13 @@ func testHeaderConcurrentVerification(t *testing.T, threads int) {
 		var results <-chan error
 
 		if valid {
-			chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFaker(), new(event.TypeMux), vm.Config{})
+			chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFaker(), vm.Config{})
 			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
+			chain.Stop()
 		} else {
-			chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeFailer(uint64(len(headers)-1)), new(event.TypeMux), vm.Config{})
+			chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeFailer(uint64(len(headers)-1)), vm.Config{})
 			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
+			chain.Stop()
 		}
 		// Wait for all the verification results
 		checks := make(map[int]error)
@@ -163,6 +163,7 @@ func testHeaderConcurrentAbortion(t *testing.T, threads int) {
 	// Start the verifications and immediately abort
 	chain, _ := NewBlockChain(testdb, params.TestChainConfig, ethash.NewFakeDelayer(time.Millisecond), vm.Config{})
 	defer chain.Stop()
+
 	abort, results := chain.engine.VerifyHeaders(chain, headers, seals)
 	close(abort)
 

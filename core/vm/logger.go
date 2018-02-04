@@ -135,14 +135,12 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost ui
 		)
 		l.changedValues[contract.Address()][address] = value
 	}
-
 	// Copy a snapstot of the current memory state to a new buffer
 	var mem []byte
 	if !l.cfg.DisableMemory {
 		mem = make([]byte, len(memory.Data()))
 		copy(mem, memory.Data())
 	}
-
 	// Copy a snapshot of the current stack state to a new buffer
 	var stck []*big.Int
 	if !l.cfg.DisableStack {
@@ -151,7 +149,6 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost ui
 			stck[i] = new(big.Int).Set(item)
 		}
 	}
-
 	// Copy a snapshot of the current storage to a new container
 	var storage Storage
 	if !l.cfg.DisableStorage {

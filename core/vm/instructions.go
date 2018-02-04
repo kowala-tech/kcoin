@@ -252,7 +252,6 @@ func opOr(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack
 
 	evm.interpreter.intPool.put(y)
 	return nil, nil
-
 }
 
 func opXor(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -351,7 +350,7 @@ func opCallDataLoad(pc *uint64, evm *EVM, contract *Contract, memory *Memory, st
 	return nil, nil
 }
 
-func opCalldataSize(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+func opCallDataSize(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	stack.push(evm.interpreter.intPool.get().SetInt64(int64(len(contract.Input))))
 	return nil, nil
 }
@@ -577,9 +576,8 @@ func opCreate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 		input        = memory.Get(offset.Int64(), size.Int64())
 		gas          = contract.Gas
 	)
-	if evm.ChainConfig().IsEIP150(evm.BlockNumber) {
-		gas -= gas / 64
-	}
+
+	gas -= gas / 64
 
 	contract.UseGas(gas)
 	res, addr, returnGas, suberr := evm.Create(contract, input, gas, value)
@@ -587,7 +585,7 @@ func opCreate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
 	// rule) and treat as an error, if the ruleset is frontier we must
 	// ignore this error and pretend the operation was successful.
-	if evm.ChainConfig().IsHomestead(evm.BlockNumber) && suberr == ErrCodeStoreOutOfGas {
+	if suberr == ErrCodeStoreOutOfGas {
 		stack.push(new(big.Int))
 	} else if suberr != nil && suberr != ErrCodeStoreOutOfGas {
 		stack.push(new(big.Int))
@@ -621,7 +619,6 @@ func opCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Sta
 	if value.Sign() != 0 {
 		gas += params.CallStipend
 	}
-
 	ret, returnGas, err := evm.Call(contract, address, args, gas, value)
 	if err != nil {
 		stack.push(new(big.Int))
@@ -659,7 +656,6 @@ func opCallCode(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 	ret, returnGas, err := evm.CallCode(contract, address, args, gas, value)
 	if err != nil {
 		stack.push(new(big.Int))
-
 	} else {
 		stack.push(big.NewInt(1))
 	}
@@ -748,7 +744,6 @@ func opSuicide(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *
 	evm.StateDB.AddBalance(common.BigToAddress(stack.pop()), balance)
 
 	evm.StateDB.Suicide(contract.Address())
-
 	return nil, nil
 }
 

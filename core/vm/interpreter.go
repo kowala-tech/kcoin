@@ -44,7 +44,7 @@ type Config struct {
 	// Enable recording of SHA3/keccak preimages
 	EnablePreimageRecording bool
 	// JumpTable contains the EVM instruction table. This
-	// may be left uninitialised and will be set the default
+	// may be left uninitialised and will be set to the default
 	// table.
 	JumpTable [256]operation
 }
@@ -70,12 +70,8 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
 		switch {
-		case evm.ChainConfig().IsByzantium(evm.BlockNumber):
-			cfg.JumpTable = byzantiumInstructionSet
-		case evm.ChainConfig().IsHomestead(evm.BlockNumber):
-			cfg.JumpTable = homesteadInstructionSet
 		default:
-			cfg.JumpTable = frontierInstructionSet
+			cfg.JumpTable = andromedaInstructionSet
 		}
 	}
 

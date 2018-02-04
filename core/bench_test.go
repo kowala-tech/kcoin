@@ -159,8 +159,7 @@ func benchInsertChain(b *testing.B, disk bool, gen func(int, *BlockGen)) {
 
 	// Time the insertion of the new chain.
 	// State and blocks are stored in the same DB.
-	evmux := new(event.TypeMux)
-	chainman, _ := NewBlockChain(db, gspec.Config, tendermint.NewFaker(), evmux, vm.Config{})
+	chainman, _ := NewBlockChain(db, gspec.Config, tendermint.NewFaker(), vm.Config{})
 	defer chainman.Stop()
 	b.ReportAllocs()
 	b.ResetTimer()

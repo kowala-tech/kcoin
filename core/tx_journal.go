@@ -38,7 +38,7 @@ var errNoActiveJournal = errors.New("no active journal")
 type devNull struct{}
 
 func (*devNull) Write(p []byte) (n int, err error) { return len(p), nil }
-func (*devNull) Close() error
+func (*devNull) Close() error                      { return nil }
 
 // txJournal is a rotating log of transactions with the aim of storing locally
 // created transactions to allow non-executed ones to survive node restarts.

@@ -34,6 +34,10 @@ func memoryReturnDataCopy(stack *Stack) *big.Int {
 	return calcMemSize(stack.Back(0), stack.Back(2))
 }
 
+func memoryCodeCopy(stack *Stack) *big.Int {
+	return calcMemSize(stack.Back(0), stack.Back(2))
+}
+
 func memoryExtCodeCopy(stack *Stack) *big.Int {
 	return calcMemSize(stack.Back(1), stack.Back(3))
 }

@@ -321,7 +321,6 @@ func TestBlockReceiptStorage(t *testing.T) {
 
 	receipt1 := &types.Receipt{
 		Status:            types.ReceiptStatusFailed,
-		PostState:         []byte{0x01},
 		CumulativeGasUsed: big.NewInt(1),
 		Logs: []*types.Log{
 			{Address: common.BytesToAddress([]byte{0x11})},
@@ -333,7 +332,6 @@ func TestBlockReceiptStorage(t *testing.T) {
 	}
 	receipt2 := &types.Receipt{
 		PostState:         common.Hash{2}.Bytes(),
-		PostState:         []byte{0x02},
 		CumulativeGasUsed: big.NewInt(2),
 		Logs: []*types.Log{
 			{Address: common.BytesToAddress([]byte{0x22})},

@@ -63,7 +63,6 @@ func TestStoreCapture(t *testing.T) {
 	if len(logger.changedValues[contract.Address()]) == 0 {
 		t.Fatalf("expected exactly 1 changed value on address %x, got %d", contract.Address(), len(logger.changedValues[contract.Address()]))
 	}
-
 	exp := common.BigToHash(big.NewInt(1))
 	if logger.changedValues[contract.Address()][index] != exp {
 		t.Errorf("expected %x, got %x", exp, logger.changedValues[contract.Address()][index])
