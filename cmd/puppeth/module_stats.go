@@ -56,7 +56,7 @@ services:
 // deployStats deploys a new ethstats container to a remote machine via SSH,
 // docker and docker-compose. If an instance with the specified network name
 // already exists there, it will be overwritten!
-func deployStats(client *sshClient, network string, port int, secret string, vhost string, trusted []string) ([]byte, error) {
+func deployStats(client *sshClient, network string, port int, secret string, vhost string, trusted []string, banned []string) ([]byte, error) {
 	// Generate the content to upload to the server
 	workdir := fmt.Sprintf("%d", rand.Int63())
 	files := make(map[string][]byte)

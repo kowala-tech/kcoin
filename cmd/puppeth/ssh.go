@@ -27,7 +27,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/kowala-tech/kUSD/log"
 	"golang.org/x/crypto/ssh"

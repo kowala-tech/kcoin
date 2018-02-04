@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"net"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
