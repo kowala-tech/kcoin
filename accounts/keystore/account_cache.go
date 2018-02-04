@@ -30,7 +30,7 @@ import (
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/log"
-	set "gopkg.in/fatih/set.v0"
+	"gopkg.in/fatih/set.v0"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does

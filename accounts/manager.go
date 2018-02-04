@@ -46,7 +46,6 @@ func NewManager(backends ...Backend) *Manager {
 	for _, backend := range backends {
 		wallets = merge(wallets, backend.Wallets()...)
 	}
-
 	// Subscribe to wallet notifications from all backends
 	updates := make(chan WalletEvent, 4*len(backends))
 
@@ -54,7 +53,6 @@ func NewManager(backends ...Backend) *Manager {
 	for i, backend := range backends {
 		subs[i] = backend.Subscribe(updates)
 	}
-
 	// Assemble the account manager and return
 	am := &Manager{
 		backends: make(map[reflect.Type][]Backend),

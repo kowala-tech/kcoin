@@ -1,19 +1,3 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // This file contains the implementation for interacting with the Trezor hardware
 // wallets. The wire protocol spec can be found on the SatoshiLabs website:
 // https://doc.satoshilabs.com/trezor-tech/api-protobuf.html
@@ -27,13 +11,13 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/usbwallet/internal/trezor"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/golang/protobuf/proto"
+	"github.com/kowala-tech/kUSD/accounts"
+	"github.com/kowala-tech/kUSD/accounts/usbwallet/internal/trezor"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/common/hexutil"
+	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/log"
 )
 
 // ErrTrezorPINNeeded is returned if opening the trezor requires a PIN code. In
@@ -218,9 +202,9 @@ func (w *trezorDriver) trezorSign(derivationPath []uint32, tx *types.Transaction
 	// Create the correct signer and signature transform based on the chain ID
 	var signer types.Signer
 	if chainID == nil {
-		signer = new(types.HomesteadSigner)
+		signer = new(types.UnprotectedSigner)
 	} else {
-		signer = types.NewEIP155Signer(chainID)
+		signer = types.NewAndromedaSigner(chainID)
 		signature[64] = signature[64] - byte(chainID.Uint64()*2+35)
 	}
 	// Inject the final signature into the transaction and sanity check the sender
@@ -228,7 +212,7 @@ func (w *trezorDriver) trezorSign(derivationPath []uint32, tx *types.Transaction
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	sender, err := types.Sender(signer, signed)
+	sender, err := types.TxSender(signer, signed)
 	if err != nil {
 		return common.Address{}, nil, err
 	}
