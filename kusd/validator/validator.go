@@ -110,8 +110,6 @@ func (val *Validator) sync() {
 out:
 	for ev := range events.Chan() {
 		switch ev.Data.(type) {
-		case downloader.StartEvent:
-			atomic.StoreInt32(&val.shouldStart, 1)
 		case downloader.DoneEvent, downloader.FailedEvent:
 			start := atomic.LoadInt32(&val.shouldStart) == 1
 			atomic.StoreInt32(&val.canStart, 1)
