@@ -17,7 +17,6 @@ import (
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/params"
 )
@@ -47,7 +46,7 @@ func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	database, _ := kusddb.NewMemDatabase()
 	genesis := core.Genesis{Config: params.AllProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
-	blockchain, _ := core.NewBlockChain(database, genesis.Config, tendermint.NewFaker(), new(event.TypeMux), vm.Config{})
+	blockchain, _ := core.NewBlockChain(database, genesis.Config, tendermint.NewFaker(), vm.Config{})
 	backend := &SimulatedBackend{database: database, BlockChain: blockchain, config: genesis.Config}
 	backend.rollback()
 	return backend
@@ -235,7 +234,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg)
 
 // callContract implemens common code between normal and pending contract calls.
 // state is modified during execution, make sure to copy it if necessary.
-func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, *big.Int, error) {
+func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, *big.Int, bool, error) {
 	// Ensure message is initialized properly.
 	if call.GasPrice == nil {
 		call.GasPrice = big.NewInt(1)
@@ -291,7 +290,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), b.database, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := core.GenerateChain(b.config, b.BlockChain.CurrentBlock(), b.database, 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx)
 		}
