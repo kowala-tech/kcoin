@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/kusddb"
+	"github.com/kowala-tech/kUSD/kusddb"
 )
 
 func newTestLDB() (*kusddb.LDBDatabase, func()) {
