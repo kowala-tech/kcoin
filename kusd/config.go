@@ -8,7 +8,6 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusd/gasprice"
-	"github.com/kowala-tech/kUSD/params"
 )
 
 // DefaultConfig contains default settings for use on the Ethereum main net.
@@ -17,7 +16,7 @@ var DefaultConfig = Config{
 	NetworkId:     1,
 	LightPeers:    20,
 	DatabaseCache: 128,
-	GasPrice:      big.NewInt(18 * params.Shannon),
+	GasPrice:      big.NewInt(1),
 
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{

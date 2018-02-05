@@ -615,8 +615,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash())
 		}
-
-		pm.txpool.AddRemotes(txs)
+		log.Error("Adding Remotes", "remotes", "tx")
+		errors := pm.txpool.AddRemotes(txs)
+		for _, err := range errors {
+			if err != nil {
+				log.Error("Failed to add remote transaction", "err", err)
+			}
+		}
 
 	case msg.Code == ProposalMsg:
 		// @TODO (rgeraldes) - review flow (we will not need this condition)
