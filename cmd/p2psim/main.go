@@ -29,12 +29,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/simulations"
-	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kUSD/p2p"
+	"github.com/kowala-tech/kUSD/p2p/discover"
+	"github.com/kowala-tech/kUSD/p2p/simulations"
+	"github.com/kowala-tech/kUSD/p2p/simulations/adapters"
+	"github.com/kowala-tech/kUSD/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

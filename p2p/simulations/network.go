@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
+	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kUSD/p2p"
+	"github.com/kowala-tech/kUSD/p2p/discover"
+	"github.com/kowala-tech/kUSD/p2p/simulations/adapters"
 )
 
 // NetworkConfig defines configuration options for starting a Network

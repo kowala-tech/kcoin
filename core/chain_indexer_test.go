@@ -23,9 +23,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/ethdb"
 )
 
 // Runs multiple tests with randomized parameters.
