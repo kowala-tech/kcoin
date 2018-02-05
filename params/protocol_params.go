@@ -61,7 +61,7 @@ const (
 	PreVoteDeltaDuration   uint64 = 5000
 	PreCommitDuration      uint64 = 10000
 	PreCommitDeltaDuration uint64 = 5000
-	SyncDuration           uint64 = 2000
+	SyncDuration           uint64 = 15000
 )
 
 var (

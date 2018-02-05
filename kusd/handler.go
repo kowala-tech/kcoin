@@ -589,7 +589,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == NewBlockMsg:
-		log.Error("Received new block")
 		// Retrieve and decode the propagated block
 		var request newBlockData
 		if err := msg.Decode(&request); err != nil {
@@ -608,7 +607,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if request.Block.Number().Cmp(currentBlock.Number()) > 0 {
 			go pm.synchronise(p)
 		}
-		log.Error("Received new block final")
 
 	case msg.Code == TxMsg:
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
@@ -627,13 +625,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash())
 		}
-		log.Error("Adding Remotes", "remotes", "tx")
-		errors := pm.txpool.AddRemotes(txs)
-		for _, err := range errors {
-			if err != nil {
-				log.Error("Failed to add remote transaction", "err", err)
-			}
-		}
+		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == ProposalMsg:
 		// @TODO (rgeraldes) - review flow (we will not need this condition)
