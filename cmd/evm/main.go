@@ -143,7 +143,6 @@ func init() {
 		compileCommand,
 		disasmCommand,
 		runCommand,
-		stateTestCommand,
 	}
 }
 
