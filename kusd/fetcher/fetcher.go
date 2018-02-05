@@ -444,8 +444,8 @@ func (f *Fetcher) loop() {
 						announce.time = task.time
 
 						// If the block is empty (header only), short circuit into the final import queue
-						// @TODO (rgeraldes) - add commit data?
-						if header.TxHash == types.DeriveSha(types.Transactions{}) {
+						// @TODO (rgeraldes) - review commit code
+						if header.TxHash == types.DeriveSha(types.Transactions{}) && (header.LastCommitHash == common.Hash{}) {
 							log.Trace("Block empty, skipping body retrieval", "peer", announce.origin, "number", header.Number, "hash", header.Hash())
 
 							block := types.NewBlockWithHeader(header)

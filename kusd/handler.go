@@ -418,8 +418,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 		filter := len(headers) == 1
-		// @TODO (rgeraldes) - review fork logic
+		if filter {
 
+			// Irrelevant of the fork checks, send the header to the fetcher just in case
+			headers = pm.fetcher.FilterHeaders(p.id, headers, time.Now())
+		}
 		if len(headers) > 0 || !filter {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
@@ -586,6 +589,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == NewBlockMsg:
+		log.Error("Received new block")
 		// Retrieve and decode the propagated block
 		var request newBlockData
 		if err := msg.Decode(&request); err != nil {
@@ -597,6 +601,14 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Mark the peer as owning the block and schedule it for import
 		p.MarkBlock(request.Block.Hash())
 		pm.fetcher.Enqueue(p.id, request.Block)
+
+		// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
+		// a single block.
+		currentBlock := pm.blockchain.CurrentBlock()
+		if request.Block.Number().Cmp(currentBlock.Number()) > 0 {
+			go pm.synchronise(p)
+		}
+		log.Error("Received new block final")
 
 	case msg.Code == TxMsg:
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
