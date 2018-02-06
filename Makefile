@@ -21,6 +21,11 @@ bootnode:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
 
+faucet:
+	build/env.sh go run build/ci.go install ./cmd/faucet
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/faucet\" to launch faucet."
+
 evm:
 	build/env.sh go run build/ci.go install ./cmd/evm
 	@echo "Done building."
@@ -154,3 +159,6 @@ docker-build-bootnode:
 
 docker-build-kusd:
 	docker build -t kowala-tech/kusd -f kusd.Dockerfile .
+
+docker-build-faucet:
+	docker build -t kowala-tech/faucet -f faucet.Dockerfile .
