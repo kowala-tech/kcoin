@@ -262,12 +262,62 @@ func (val *Validator) init() error {
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
 
+	summary, err := val.network.VotersSummary(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+
 	var start time.Time
 	if parent.NumberU64() == 0 {
 		start = time.Now()
+
+		// first validator set
+		count, err := val.network.GetVoterCount(&bind.CallOpts{})
+		if err != nil {
+			return err
+		}
+		validators := make([]*types.Validator, count.Uint64())
+		for i := int64(0); i < count.Int64(); i++ {
+			validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
+			if err != nil {
+				return err
+			}
+			validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), big.NewInt(0))
+		}
+		val.validators = types.NewValidatorSet(validators)
+		val.validatorsSummary = summary
 	} else {
 		start = time.Unix(parent.Time().Int64(), 0)
+
+		// new validator set
+		if val.validatorsSummary != summary {
+			count, err := val.network.GetVoterCount(&bind.CallOpts{})
+			if err != nil {
+				return err
+			}
+			val.validatorsSummary = summary
+			validators := make([]*types.Validator, count.Uint64())
+			for i := int64(0); i < count.Int64(); i++ {
+				validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
+				if err != nil {
+					return err
+				}
+				var weight *big.Int
+				if val.validators.Contains(validator.Addr) {
+					// old validator
+					old := val.validators.Get(validator.Addr)
+					weight = old.Weight()
+				} else {
+					// new validator
+					weight = big.NewInt(0)
+				}	
+				validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
+			}
+			val.validators = types.NewValidatorSet(validators)
+			val.validatorsSummary = summary
+		}
 	}
+
 	val.start = start.Add(time.Duration(params.SyncDuration) * time.Millisecond)
 
 	val.proposal = nil
@@ -277,24 +327,6 @@ func (val *Validator) init() error {
 	val.lockedRound = 0
 	val.lockedBlock = nil
 	val.commitRound = -1
-
-	// @TODO (rgeraldes) - If the validator set remains the same we should not load everything again
-	// validators
-	count, err := val.network.GetVoterCount(&bind.CallOpts{})
-	if err != nil {
-		return err
-	}
-	validators := make([]*types.Validator, count.Uint64())
-	for i := int64(0); i < count.Int64(); i++ {
-		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
-		if err != nil {
-			return err
-		}
-		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64())
-	}
-
-	// @TODO (rgeraldes) - update list of trusted peers based on the validators
-	val.validators = types.NewValidatorSet(validators)
 
 	// voting system
 	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
