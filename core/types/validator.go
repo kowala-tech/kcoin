@@ -1,6 +1,7 @@
 package types
 
 import (
+	"container/heap"
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
@@ -33,11 +34,32 @@ type ValidatorSet struct {
 	proposer   *Validator
 }
 
+// @TODO (rgeraldes) - size needs to be > 0
 func NewValidatorSet(validators []*Validator) *ValidatorSet {
-	// @TODO (rgeraldes) - size needs to be > 0
-	return &ValidatorSet{
+	set := &ValidatorSet{
 		validators: validators,
 	}
+
+	set.Update()
+
+	return set
+}
+
+// Update updates the weight and the proposer based on the validator set
+func (set *ValidatorSet) Update() {
+	pq := make(common.PriorityQueue, len(set.validators))
+	heap.Init(&pq)
+
+	for _, validator := range set.validators {
+		validator.weight = validator.weight.Add(validator.weight, big.NewInt(int64(validator.deposit)))
+		heap.Push(&pq, &common.Item{Value: validator, Priority: int(validator.deposit)})
+	}
+
+	proposer := heap.Pop(&pq).(*Validator)
+	set.proposer = proposer
+
+	// decrement the validator weight since he has been selected
+	proposer.weight.Sub(proposer.weight, big.NewInt(int64(proposer.deposit)))
 }
 
 func (set *ValidatorSet) AtIndex(i int) *Validator {
@@ -49,6 +71,5 @@ func (set *ValidatorSet) Size() int {
 }
 
 func (set *ValidatorSet) Proposer() common.Address {
-	// @TODO (rgeraldes) complete - return the first validator for now
-	return set.validators[0].Address()
+	return set.proposer.address
 }
