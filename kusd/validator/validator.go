@@ -259,14 +259,10 @@ func (val *Validator) restoreLastCommit() {
 func (val *Validator) init() error {
 	parent := val.chain.CurrentBlock()
 
-	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
-	val.round = 0
-
 	summary, err := val.network.VotersSummary(&bind.CallOpts{})
 	if err != nil {
 		return err
 	}
-
 	var start time.Time
 	if parent.NumberU64() == 0 {
 		start = time.Now()
@@ -317,8 +313,11 @@ func (val *Validator) init() error {
 			val.validatorsSummary = summary
 		}
 	}
-
+	
 	val.start = start.Add(time.Duration(params.SyncDuration) * time.Millisecond)
+
+	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
+	val.round = 0
 
 	val.proposal = nil
 	val.block = nil
