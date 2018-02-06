@@ -25,9 +25,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kUSD/cmd/utils"
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/keystore"
+	"github.com/kowala-tech/kUSD/cmd/utils"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -38,7 +38,6 @@ import (
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/p2p"
 	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/p2p/discv5"
 	"github.com/kowala-tech/kUSD/p2p/nat"
 	"github.com/kowala-tech/kUSD/params"
 	"golang.org/x/net/websocket"
@@ -128,9 +127,9 @@ func main() {
 		log.Crit("Failed to parse genesis block json", "err", err)
 	}
 	// Convert the bootnodes to internal enode representations
-	var enodes []*discv5.Node
+	var enodes []*discover.Node
 	for _, boot := range strings.Split(*bootFlag, ",") {
-		if url, err := discv5.ParseNode(boot); err == nil {
+		if url, err := discover.ParseNode(boot); err == nil {
 			enodes = append(enodes, url)
 		} else {
 			log.Error("Failed to parse bootnode URL", "url", boot, "err", err)
@@ -192,19 +191,17 @@ type faucet struct {
 	lock sync.RWMutex // Lock protecting the faucet's internals
 }
 
-func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
+func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
 	// Assemble the raw devp2p protocol stack
 	stack, err := node.New(&node.Config{
 		Name:    "kusd",
 		Version: params.Version,
 		DataDir: filepath.Join(os.Getenv("HOME"), ".faucet"),
 		P2P: p2p.Config{
-			NAT:              nat.Any(),
-			NoDiscovery:      true,
-			DiscoveryV5:      true,
-			ListenAddr:       fmt.Sprintf(":%d", port),
-			MaxPeers:         25,
-			BootstrapNodesV5: enodes,
+			NAT:            nat.Any(),
+			ListenAddr:     fmt.Sprintf(":%d", port),
+			MaxPeers:       25,
+			BootstrapNodes: enodes,
 		},
 	})
 	if err != nil {
@@ -222,7 +219,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network u
 	if stats != "" {
 		utils.RegisterKowalaStatsService(stack, stats)
 	}
-	
+
 	// Boot up the client and ensure it connects to bootnodes
 	if err := stack.Start(); err != nil {
 		return nil, err
