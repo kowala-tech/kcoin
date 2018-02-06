@@ -120,6 +120,9 @@ func (val *Validator) newElectionState() stateFn {
 func (val *Validator) newRoundState() stateFn {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
+	// updates the validators weight > proposer
+	val.validators.UpdateWeight()
+
 	if val.round != 0 {
 		val.round++
 		val.proposal = nil

@@ -40,13 +40,11 @@ func NewValidatorSet(validators []*Validator) *ValidatorSet {
 		validators: validators,
 	}
 
-	set.Update()
-
 	return set
 }
 
 // Update updates the weight and the proposer based on the validator set
-func (set *ValidatorSet) Update() {
+func (set *ValidatorSet) UpdateWeight() {
 	pq := make(common.PriorityQueue, len(set.validators))
 	heap.Init(&pq)
 
