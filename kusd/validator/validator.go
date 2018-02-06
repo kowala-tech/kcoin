@@ -278,6 +278,7 @@ func (val *Validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
+	// @TODO (rgeraldes) - If the validator set remains the same we should not load everything again
 	// validators
 	count, err := val.network.GetVoterCount(&bind.CallOpts{})
 	if err != nil {
