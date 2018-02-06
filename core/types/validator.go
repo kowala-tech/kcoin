@@ -1,35 +1,36 @@
 package types
 
 import (
+	"math/big"
+
 	"github.com/kowala-tech/kUSD/common"
 )
 
-// validator represents a consensus validator
+// Validator represents a consensus validator
 type Validator struct {
 	address common.Address
-	power   uint64 // voting power
-	accum   uint64 // @TODO (rgeraldes) - overflow big.Int?
+	deposit uint64
+	weight  *big.Int
 }
 
-func NewValidator(address common.Address, power uint64) *Validator {
+// NewValidator returns a new validator instance
+func NewValidator(address common.Address, deposit uint64) *Validator {
 	return &Validator{
 		address: address,
-		power:   power,
-		accum:   0,
+		deposit: deposit,
+		weight:  big.NewInt(0),
 	}
 }
 
 func (val *Validator) Hash() common.Hash {
-	return rlpHash([]interface{}{val.address, val.power})
+	return rlpHash([]interface{}{val.address, val.deposit})
 }
 func (val *Validator) Address() common.Address { return val.address }
-func (val *Validator) Power() uint64           { return val.power }
+func (val *Validator) Deposit() uint64         { return val.deposit }
 
 type ValidatorSet struct {
 	validators []*Validator
 	proposer   *Validator
-
-	// cache
 }
 
 func NewValidatorSet(validators []*Validator) *ValidatorSet {
