@@ -23,6 +23,8 @@ contract Network {
     // minimum deposit value to participate in the consensus
     uint public minDeposit = 100000;
 
+    bytes32 public votersSummary;
+
     //event LogNewVoter(address indexed addr, uint index, uint deposit);
     //event LogDeleteVoter(address indexed addr, uint index);
 
@@ -59,6 +61,7 @@ contract Network {
     function _insertVoter(address addr, uint deposit) private {
         voters[addr].deposit = deposit;
         voters[addr].index = voterIndex.push(addr) - 1;
+        votersSummary = keccak256(voterIndex);
     }
 
     function getVoter(address addr) public view returns (uint deposit, uint index) {
@@ -72,6 +75,7 @@ contract Network {
         voterIndex[rowToDelete] = keyToMove;
         voters[keyToMove].index = rowToDelete;
         voterIndex.length--;
+        votersSummary = keccak256(voterIndex);
     }
 
     function getVoterCount() public view returns (uint count) {
