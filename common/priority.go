@@ -4,6 +4,8 @@ import (
 	"container/heap"
 )
 
+// reference: http://golang.org/pkg/container/heap/#example__priorityQueue
+
 // An Item is something we manage in a priority queue.
 type Item struct {
 	Value    interface{} // The value of the item; arbitrary.
