@@ -51,7 +51,7 @@ func NewValidatorSet(validators []*Validator) *ValidatorSet {
 
 // Update updates the weight and the proposer based on the set of validators
 func (set *ValidatorSet) UpdateWeight() {
-	pq := make(common.PriorityQueue, len(set.validators))
+	pq := make(common.PriorityQueue, 0)
 	heap.Init(&pq)
 
 	for _, validator := range set.validators {
@@ -60,11 +60,11 @@ func (set *ValidatorSet) UpdateWeight() {
 		heap.Push(&pq, &common.Item{Priority: int(validator.weight.Int64()), Value: validator})
 	}
 
-	proposer := heap.Pop(&pq).(*Validator)
-	set.proposer = proposer
+	item := heap.Pop(&pq).(*common.Item)
+	set.proposer = item.Value.(*Validator)
 
 	// decrement the validator weight since he has been selected
-	proposer.weight.Sub(proposer.weight, big.NewInt(int64(proposer.deposit)))
+	set.proposer.weight.Sub(set.proposer.weight, big.NewInt(int64(set.proposer.deposit)))
 }
 
 func (set *ValidatorSet) AtIndex(i int) *Validator {
