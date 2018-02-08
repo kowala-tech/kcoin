@@ -306,14 +306,14 @@ func (val *Validator) init() error {
 				} else {
 					// new validator
 					weight = big.NewInt(0)
-				}	
+				}
 				validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
 			}
 			val.validators = types.NewValidatorSet(validators)
 			val.validatorsSummary = summary
 		}
 	}
-	
+
 	val.start = start.Add(time.Duration(params.SyncDuration) * time.Millisecond)
 
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
@@ -639,13 +639,13 @@ func (val *Validator) propose() {
 
 	// @TODO (rgeraldes) - review int/int64; address situation where validators size might be zero (no peers)
 	// @NOTE (rgeraldes) - (for now size = block size) number of block fragments = number of validators - self
-	blockFragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
+	fragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
 	if err != nil {
 		// @TODO(rgeraldes) - analyse consequences
 		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
 	}
 
-	proposal := types.NewProposal(val.blockNumber, val.round, blockFragments.Metadata(), lockedRound, lockedBlock)
+	proposal := types.NewProposal(val.blockNumber, val.round, fragments.Metadata(), lockedRound, lockedBlock)
 
 	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
 	if err != nil {
@@ -659,11 +659,11 @@ func (val *Validator) propose() {
 
 	// post block segments events
 	// @TODO(rgeraldes) - review types int/uint
-	for i := uint(0); i < blockFragments.Size(); i++ {
+	for i := uint(0); i < fragments.Size(); i++ {
 		val.eventMux.Post(core.NewBlockFragmentEvent{
 			BlockNumber: val.blockNumber,
 			Round:       val.round,
-			Data:        blockFragments.Get(int(i)),
+			Data:        fragments.Get(int(i)),
 		})
 	}
 
