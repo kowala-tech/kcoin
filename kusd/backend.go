@@ -198,19 +198,12 @@ func (s *Kowala) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
-			Namespace: "kusd",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   NewPublicKowalaAPI(s),
 			Public:    true,
-		},
-		// @NOTE(rgeraldes) - review the miner API
-		/*{
-			Namespace: "kusd",
-			Version:   "1.0",
-			Service:   NewPublicMinerAPI(s),
-			Public:    true,
-		},*/{
-			Namespace: "kusd",
+		}, {
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
@@ -220,7 +213,7 @@ func (s *Kowala) APIs() []rpc.API {
 			Service:   NewPrivateValidatorAPI(s),
 			Public:    false,
 		}, {
-			Namespace: "kusd",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
 			Public:    true,

@@ -335,7 +335,7 @@ func (c *Client) BatchCallContext(ctx context.Context, b []BatchElem) error {
 
 // KowalaSubscribe registers a subscripion under the "kusd" namespace.
 func (c *Client) KowalaSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
-	return c.Subscribe(ctx, "kusd", channel, args...)
+	return c.Subscribe(ctx, "eth", channel, args...)
 }
 
 // ShhSubscribe registers a subscripion under the "shh" namespace.
