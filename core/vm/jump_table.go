@@ -855,6 +855,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(6, 1),
 			memorySize:    memoryDelegateCall,
 			valid:         true,
+			returns:       true,
 		},
 		STATICCALL: {
 			execute:       opStaticCall,
