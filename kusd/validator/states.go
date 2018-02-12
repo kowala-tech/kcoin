@@ -69,6 +69,16 @@ func (val *Validator) notLoggedInState() stateFn {
 			}
 		}
 	} else {
+		// sanity check
+		isVoter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
+		if err != nil {
+			log.Crit("Failed to verify the voter information", "err", err)
+			return nil
+		}
+		if !isVoter {
+			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.account.Address)
+		}
+
 		log.Info("Deposit is not necessary for a genesis validator (first block)")
 	}
 
@@ -236,7 +246,7 @@ func (val *Validator) commitState() stateFn {
 	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
 	if err != nil {
 		// @TODO (rgeraldes) - complete
-		//log.Error()
+		log.Crit("Failed to verify if the validator is a voter")
 	}
 	if !voter {
 		return val.loggedOutState
