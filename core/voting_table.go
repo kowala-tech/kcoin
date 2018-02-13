@@ -70,7 +70,7 @@ type VotingTable struct {
 	voters        *types.ValidatorSet
 	received      *common.BitArray
 	votes         []*types.Vote // Primary votes to share
-	sum           int64         // Sum of voting power for seen votes, discounting conflicts
+	sum           int           // Sum of voting power for seen votes, discounting conflicts
 	votesPerBlock map[common.Hash]*Votes
 
 	signer types.Signer
@@ -225,10 +225,10 @@ func (table *VotingTable) add(vote *types.Vote) (bool, error) {
 	} else {
 		table.votes[index] = vote
 		//table.received.Set(0)
-		// voteSet.sum += votingPower
+		table.sum++
 	}
 
-	if len(table.votes) == table.quorum {
+	if table.sum == table.quorum {
 		go table.eventMux.Post(NewMajorityEvent{})
 	}
 

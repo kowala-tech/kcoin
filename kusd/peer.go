@@ -9,7 +9,6 @@ import (
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/p2p"
 	"github.com/kowala-tech/kUSD/rlp"
 	"gopkg.in/fatih/set.v0"
@@ -173,7 +172,6 @@ func (p *peer) SendNewBlock(block *types.Block) error {
 
 // SendNewBlock propagates a proposal to a remote peer.
 func (p *peer) SendNewProposal(proposal *types.Proposal) error {
-	log.Info("Sending proposal")
 	return p2p.Send(p.rw, ProposalMsg, proposal)
 }
 

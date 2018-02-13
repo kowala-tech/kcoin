@@ -259,16 +259,32 @@ func (val *Validator) restoreLastCommit() {
 func (val *Validator) init() error {
 	parent := val.chain.CurrentBlock()
 
-	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
-	val.round = 0
+	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to access the voters checksum", "err", err)
+	}
 
 	var start time.Time
 	if parent.NumberU64() == 0 {
 		start = time.Now()
+
+		if err := val.updateValidators(checksum, true); err != nil {
+			log.Crit("Failed to update the validator set", "err", err)
+		}
 	} else {
 		start = time.Unix(parent.Time().Int64(), 0)
+
+		// new validator set
+		if val.validatorsChecksum != checksum {
+			val.updateValidators(checksum, false)
+
+		}
 	}
+
 	val.start = start.Add(time.Duration(params.SyncDuration) * time.Millisecond)
+
+	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
+	val.round = 0
 
 	val.proposal = nil
 	val.block = nil
@@ -277,23 +293,6 @@ func (val *Validator) init() error {
 	val.lockedRound = 0
 	val.lockedBlock = nil
 	val.commitRound = -1
-
-	// validators
-	count, err := val.network.GetVoterCount(&bind.CallOpts{})
-	if err != nil {
-		return err
-	}
-	validators := make([]*types.Validator, count.Uint64())
-	for i := int64(0); i < count.Int64(); i++ {
-		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
-		if err != nil {
-			return err
-		}
-		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64())
-	}
-
-	// @TODO (rgeraldes) - update list of trusted peers based on the validators
-	val.validators = types.NewValidatorSet(validators)
 
 	// voting system
 	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
@@ -607,13 +606,13 @@ func (val *Validator) propose() {
 
 	// @TODO (rgeraldes) - review int/int64; address situation where validators size might be zero (no peers)
 	// @NOTE (rgeraldes) - (for now size = block size) number of block fragments = number of validators - self
-	blockFragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
+	fragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
 	if err != nil {
 		// @TODO(rgeraldes) - analyse consequences
 		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
 	}
 
-	proposal := types.NewProposal(val.blockNumber, val.round, blockFragments.Metadata(), lockedRound, lockedBlock)
+	proposal := types.NewProposal(val.blockNumber, val.round, fragments.Metadata(), lockedRound, lockedBlock)
 
 	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
 	if err != nil {
@@ -627,11 +626,11 @@ func (val *Validator) propose() {
 
 	// post block segments events
 	// @TODO(rgeraldes) - review types int/uint
-	for i := uint(0); i < blockFragments.Size(); i++ {
+	for i := uint(0); i < fragments.Size(); i++ {
 		val.eventMux.Post(core.NewBlockFragmentEvent{
 			BlockNumber: val.blockNumber,
 			Round:       val.round,
-			Data:        blockFragments.Get(int(i)),
+			Data:        fragments.Get(int(i)),
 		})
 	}
 
@@ -805,5 +804,37 @@ func (val *Validator) makeCurrent(parent *types.Block) error {
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
 	val.work = work
+	return nil
+}
+
+func (val *Validator) updateValidators(checksum [32]byte, genesis bool) error {
+	count, err := val.network.GetVoterCount(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+
+	val.validatorsChecksum = checksum
+	validators := make([]*types.Validator, count.Uint64())
+	for i := int64(0); i < count.Int64(); i++ {
+		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
+		if err != nil {
+			return err
+		}
+
+		var weight *big.Int
+		if !genesis && val.validators.Contains(validator.Addr) {
+			// old validator
+			old := val.validators.Get(validator.Addr)
+			weight = old.Weight()
+		} else {
+			// new validator
+			weight = big.NewInt(0)
+		}
+
+		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
+	}
+	val.validators = types.NewValidatorSet(validators)
+	val.validatorsChecksum = checksum
+
 	return nil
 }
