@@ -261,56 +261,23 @@ func (val *Validator) init() error {
 
 	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
 	if err != nil {
-		return err
+		log.Crit("Failed to access the voters checksum", "err", err)
 	}
+
 	var start time.Time
 	if parent.NumberU64() == 0 {
 		start = time.Now()
 
-		// first validator set
-		count, err := val.network.GetVoterCount(&bind.CallOpts{})
-		if err != nil {
-			return err
+		if err := val.updateValidators(checksum, true); err != nil {
+			log.Crit("Failed to update the validator set", "err", err)
 		}
-		validators := make([]*types.Validator, count.Uint64())
-		for i := int64(0); i < count.Int64(); i++ {
-			validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
-			if err != nil {
-				return err
-			}
-			validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), big.NewInt(0))
-		}
-		val.validators = types.NewValidatorSet(validators)
-		val.validatorsChecksum = checksum
 	} else {
 		start = time.Unix(parent.Time().Int64(), 0)
 
 		// new validator set
 		if val.validatorsChecksum != checksum {
-			count, err := val.network.GetVoterCount(&bind.CallOpts{})
-			if err != nil {
-				return err
-			}
-			val.validatorsChecksum = checksum
-			validators := make([]*types.Validator, count.Uint64())
-			for i := int64(0); i < count.Int64(); i++ {
-				validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
-				if err != nil {
-					return err
-				}
-				var weight *big.Int
-				if val.validators.Contains(validator.Addr) {
-					// old validator
-					old := val.validators.Get(validator.Addr)
-					weight = old.Weight()
-				} else {
-					// new validator
-					weight = big.NewInt(0)
-				}
-				validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
-			}
-			val.validators = types.NewValidatorSet(validators)
-			val.validatorsChecksum = checksum
+			val.updateValidators(checksum, false)
+
 		}
 	}
 
@@ -837,5 +804,37 @@ func (val *Validator) makeCurrent(parent *types.Block) error {
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
 	val.work = work
+	return nil
+}
+
+func (val *Validator) updateValidators(checksum [32]byte, genesis bool) error {
+	count, err := val.network.GetVoterCount(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+
+	val.validatorsChecksum = checksum
+	validators := make([]*types.Validator, count.Uint64())
+	for i := int64(0); i < count.Int64(); i++ {
+		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
+		if err != nil {
+			return err
+		}
+
+		var weight *big.Int
+		if !genesis && val.validators.Contains(validator.Addr) {
+			// old validator
+			old := val.validators.Get(validator.Addr)
+			weight = old.Weight()
+		} else {
+			// new validator
+			weight = big.NewInt(0)
+		}
+
+		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
+	}
+	val.validators = types.NewValidatorSet(validators)
+	val.validatorsChecksum = checksum
+
 	return nil
 }
