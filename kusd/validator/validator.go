@@ -259,7 +259,7 @@ func (val *Validator) restoreLastCommit() {
 func (val *Validator) init() error {
 	parent := val.chain.CurrentBlock()
 
-	summary, err := val.network.VotersSummary(&bind.CallOpts{})
+	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
 	if err != nil {
 		return err
 	}
@@ -281,17 +281,17 @@ func (val *Validator) init() error {
 			validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), big.NewInt(0))
 		}
 		val.validators = types.NewValidatorSet(validators)
-		val.validatorsSummary = summary
+		val.validatorsChecksum = checksum
 	} else {
 		start = time.Unix(parent.Time().Int64(), 0)
 
 		// new validator set
-		if val.validatorsSummary != summary {
+		if val.validatorsChecksum != checksum {
 			count, err := val.network.GetVoterCount(&bind.CallOpts{})
 			if err != nil {
 				return err
 			}
-			val.validatorsSummary = summary
+			val.validatorsChecksum = checksum
 			validators := make([]*types.Validator, count.Uint64())
 			for i := int64(0); i < count.Int64(); i++ {
 				validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
@@ -310,7 +310,7 @@ func (val *Validator) init() error {
 				validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
 			}
 			val.validators = types.NewValidatorSet(validators)
-			val.validatorsSummary = summary
+			val.validatorsChecksum = checksum
 		}
 	}
 
