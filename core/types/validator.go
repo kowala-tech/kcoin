@@ -43,7 +43,7 @@ func NewValidatorSet(validators []*Validator) *ValidatorSet {
 	}
 
 	for _, validator := range validators {
-		set.membership[validator.address] = validator	
+		set.membership[validator.address] = validator
 	}
 
 	return set
