@@ -29,8 +29,8 @@ type Election struct {
 
 	commitRound int
 
-	lastCommit     *core.VotingTable // Last precommits at current block number-1
-	lastValidators *types.ValidatorSet
+	lastCommit *core.VotingTable // Last precommits at current block number-1
+	_          *types.ValidatorSet
 
 	// inputs
 	blockCh  chan *types.Block

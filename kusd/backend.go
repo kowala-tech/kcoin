@@ -33,7 +33,7 @@ import (
 	"github.com/kowala-tech/kUSD/rpc"
 )
 
-// @TODO(rgeraldes) - we may need to enable transaction syncing right from the beggining (in StartValidating - check previous version)
+// @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
 
 // Kowala implements the Kowala full node service.
 type Kowala struct {

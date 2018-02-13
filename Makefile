@@ -44,8 +44,11 @@ ios:
 	@echo "Done building."
 	@echo "Import \"$(GOBIN)/Kusd.framework\" to use the library."
 
-test: all
+test: all lint
 	build/env.sh go run build/ci.go test
+
+lint: all
+	build/env.sh go run build/ci.go lint
 
 clean:
 	rm -fr build/_workspace/pkg/ $(GOBIN)/*

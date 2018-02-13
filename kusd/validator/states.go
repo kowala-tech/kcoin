@@ -16,12 +16,11 @@ import (
 // @TODO (rgeraldes) - confirm
 // work is the proposer current environment and holds all of the current state information
 type work struct {
-	state     *state.StateDB
-	header    *types.Header
-	tcount    int
-	failedTxs types.Transactions
-	txs       []*types.Transaction
-	receipts  []*types.Receipt
+	state    *state.StateDB
+	header   *types.Header
+	tcount   int
+	txs      []*types.Transaction
+	receipts []*types.Receipt
 }
 
 // stateFn represents a state function
@@ -135,7 +134,7 @@ func (val *Validator) newRoundState() stateFn {
 }
 
 func (val *Validator) newProposalState() stateFn {
-	timeout := time.Duration(params.ProposeDuration+uint64(val.round)*params.ProposeDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
 
 	if val.isProposer() {
 		log.Info("Proposing a new block")
@@ -163,7 +162,7 @@ func (val *Validator) preVoteState() stateFn {
 
 func (val *Validator) preVoteWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-vote sub-election")
-	timeout := time.Duration(params.PreVoteDuration+uint64(val.round)*params.PreVoteDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
 
 	select {
 	case <-val.majority.Chan():
@@ -184,7 +183,7 @@ func (val *Validator) preCommitState() stateFn {
 
 func (val *Validator) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit sub-election")
-	timeout := time.Duration(params.PreCommitDuration+uint64(val.round)+params.PreCommitDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
 	// @TODO (rgeraldes) - move to a post processor state
 	defer val.majority.Unsubscribe()
 
