@@ -1,19 +1,12 @@
 package tendermint
 
 import (
-	"math/big"
-
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rpc"
-)
-
-// Tenderming proof-of-stake protocol constants.
-var (
-	blockReward *big.Int = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
 )
 
 type Tendermint struct {
