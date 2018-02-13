@@ -14,8 +14,8 @@ type Election struct {
 	blockNumber *big.Int
 	round       uint64
 
-	validators        *types.ValidatorSet
-	validatorsSummary [32]byte
+	validators         *types.ValidatorSet
+	validatorsChecksum [32]byte
 
 	proposal       *types.Proposal
 	block          *types.Block
