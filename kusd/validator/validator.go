@@ -264,16 +264,11 @@ func (val *Validator) init() error {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
 
-	var start time.Time
 	if parent.NumberU64() == 0 {
-		start = time.Now()
-
 		if err := val.updateValidators(checksum, true); err != nil {
 			log.Crit("Failed to update the validator set", "err", err)
 		}
 	} else {
-		start = time.Unix(parent.Time().Int64(), 0)
-
 		// new validator set
 		if val.validatorsChecksum != checksum {
 			val.updateValidators(checksum, false)
@@ -281,8 +276,10 @@ func (val *Validator) init() error {
 		}
 	}
 
-	val.start = start.Add(time.Duration(params.SyncDuration) * time.Millisecond)
-
+	// @NOTE (rgeraldes) - start is not relevant for the first block as the first election will
+	// wait until we have transactions
+	start := time.Unix(parent.Time().Int64(), 0)
+	val.start = start.Add(time.Duration(params.BlockTime) * time.Millisecond)
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
 
