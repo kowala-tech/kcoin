@@ -102,7 +102,7 @@ func (val *Validator) newElectionState() stateFn {
 
 	<-time.NewTimer(val.start.Sub(time.Now())).C
 
-	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, first block.
+	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
 	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
 		numTxs, _ := val.backend.TxPool().Stats() //
 		if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
