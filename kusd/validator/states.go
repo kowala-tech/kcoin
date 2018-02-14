@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"math/big"
 	"sync/atomic"
 	"time"
 
@@ -101,18 +102,17 @@ func (val *Validator) newElectionState() stateFn {
 
 	<-time.NewTimer(val.start.Sub(time.Now())).C
 
-	/*
-		// @NOTE (rgeraldes) - wait for txs to be available in the txPool for the the first block
-		if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
-			numTxs, _ := val.backend.TxPool().Stats() //
-			if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
-				log.Info("Waiting for transactions")
-				txSub := val.eventMux.Subscribe(core.TxPreEvent{})
-				defer txSub.Unsubscribe()
-				<-txSub.Chan()
-			}
+	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
+	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
+		numTxs, _ := val.backend.TxPool().Stats() //
+		if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
+			log.Info("Waiting for a TX")
+			txCh := make(chan core.TxPreEvent)
+			txSub := val.backend.TxPool().SubscribeTxPreEvent(txCh)
+			defer txSub.Unsubscribe()
+			<-txCh
 		}
-	*/
+	}
 
 	return val.newRoundState
 }

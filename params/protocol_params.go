@@ -55,13 +55,13 @@ const (
 	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
 
 	// Proof of Stake - timeouts
-	ProposeDuration        uint64 = 10000
-	ProposeDeltaDuration   uint64 = 5000
-	PreVoteDuration        uint64 = 10000
-	PreVoteDeltaDuration   uint64 = 5000
-	PreCommitDuration      uint64 = 10000
-	PreCommitDeltaDuration uint64 = 5000
-	SyncDuration           uint64 = 15000
+	ProposeDuration        uint64 = 500
+	ProposeDeltaDuration   uint64 = 25
+	PreVoteDuration        uint64 = 200
+	PreVoteDeltaDuration   uint64 = 25
+	PreCommitDuration      uint64 = 200
+	PreCommitDeltaDuration uint64 = 25
+	BlockTime              uint64 = 1000
 )
 
 var (
