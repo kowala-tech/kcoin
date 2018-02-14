@@ -107,9 +107,10 @@ func (val *Validator) newElectionState() stateFn {
 		numTxs, _ := val.backend.TxPool().Stats() //
 		if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
 			log.Info("Waiting for a TX")
-			txSub := val.eventMux.Subscribe(core.TxPreEvent{})
+			txCh := make(chan core.TxPreEvent)
+			txSub := val.backend.TxPool().SubscribeTxPreEvent(txCh)
 			defer txSub.Unsubscribe()
-			<-txSub.Chan()
+			<-txCh
 		}
 	}
 
