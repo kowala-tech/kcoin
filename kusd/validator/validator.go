@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -53,7 +52,8 @@ type Validator struct {
 	engine   consensus.Engine
 	vmConfig vm.Config // @NOTE (rgeraldes) - temporary
 
-	network *network.NetworkContract // validators contract
+	contractBackend bind.ContractBackend
+	network         *network.NetworkContract // validators contract
 
 	account accounts.Account
 	wallet  accounts.Wallet // signer
@@ -71,14 +71,15 @@ type Validator struct {
 // New returns a new consensus validator
 func New(backend Backend, contractBackend bind.ContractBackend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *Validator {
 	validator := &Validator{
-		config:   config,
-		backend:  backend,
-		chain:    backend.BlockChain(),
-		engine:   engine,
-		eventMux: eventMux,
-		signer:   types.NewAndromedaSigner(config.ChainID),
-		vmConfig: vmConfig,
-		canStart: 0,
+		config:          config,
+		backend:         backend,
+		chain:           backend.BlockChain(),
+		engine:          engine,
+		eventMux:        eventMux,
+		signer:          types.NewAndromedaSigner(config.ChainID),
+		vmConfig:        vmConfig,
+		contractBackend: contractBackend,
+		canStart:        0,
 	}
 
 	// Network contract instance
@@ -480,26 +481,13 @@ func (val *Validator) makeDeposit() error {
 		return fmt.Errorf("There are not positions available at the moment")
 	}
 
-	opts := &bind.TransactOpts{
-		From:  val.account.Address,
-		Value: min.Mul(min, big.NewInt(2)),
-		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			// @NOTE (rgeraldes) - ignore the proposed signer as by default it will be a unprotected signer.
-
-			if address != val.account.Address {
-				return nil, errors.New("not authorized to sign this account")
-			}
-
-			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
-		},
-		// @TODO (rgeraldes) - price prediction & limits
-		GasPrice: big.NewInt(25),
-		GasLimit: big.NewInt(600000),
+	opts, err := getTransactionOpts(val.contractBackend, val.account.Address, big.NewInt(val.deposit), val.config.ChainID)
+	if err != nil {
+		log.Error("Failed to assemble the transaction options", "err", err)
 	}
 
 	_, err = val.network.Deposit(opts)
 	if err != nil {
-		log.Error("Transaction failed", "err", err)
 		return fmt.Errorf("Failed to transact the deposit: %x", err)
 	}
 
@@ -507,20 +495,9 @@ func (val *Validator) makeDeposit() error {
 }
 
 func (val *Validator) withdraw() {
-	opts := &bind.TransactOpts{
-		From: val.account.Address,
-		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			// @NOTE (rgeraldes) - ignore the proposed signer as by default it will be a unprotected signer.
-
-			if address != val.account.Address {
-				return nil, errors.New("not authorized to sign this account")
-			}
-
-			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
-		},
-		// @TODO (rgeraldes) - price prediction & limits
-		GasPrice: big.NewInt(25),
-		GasLimit: big.NewInt(600000),
+	opts, err := getTransactionOpts(val.contractBackend, val.account.Address, nil, val.config.ChainID)
+	if err != nil {
+		log.Error("Failed to assemble the transaction opt", "err", err)
 	}
 	_, err := val.network.Withdraw(opts)
 	if err != nil {
