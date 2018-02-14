@@ -6,6 +6,7 @@ ADD . .
 RUN make faucet
 
 FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 WORKDIR /faucet/
 COPY --from=builder /faucet/build/bin/faucet .
 EXPOSE 80
