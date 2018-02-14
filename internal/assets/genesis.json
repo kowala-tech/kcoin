@@ -1,6 +1,6 @@
 {
   "config": {
-    "chainID": 1,
+    "chainID": 234589643825,
     "tendermint": {
       "rewarded": true
     }
