@@ -37,7 +37,7 @@ One of the quickest ways to get Kowala up and running on your machine is by usin
 ```
 docker run -d --name kusd-node -v /Users/alice/kusd:/root \
            -p 11223:11223 -p 22334:22334 \
-           kusd/client-go --fast --cache=512
+           kowalatech/kusd --fast --cache=512
 ```
 
 ## Networks
