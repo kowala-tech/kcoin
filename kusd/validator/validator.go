@@ -425,23 +425,27 @@ func (val *Validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 	}
 
 	if len(coalescedLogs) > 0 || val.tcount > 0 {
-		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
-		// logs by filling in the block hash when the block was mined by the local miner. This can
-		// cause a race condition if a log was "upgraded" before the PendingLogsEvent is processed.
-		cpy := make([]*types.Log, len(coalescedLogs))
-		for i, l := range coalescedLogs {
-			cpy[i] = new(types.Log)
-			*cpy[i] = *l
-		}
-		go func(logs []*types.Log, tcount int) {
-			if len(logs) > 0 {
-				mux.Post(core.PendingLogsEvent{Logs: logs})
-			}
-			if tcount > 0 {
-				mux.Post(core.PendingStateEvent{})
-			}
-		}(cpy, val.tcount)
+		val.copyState(coalescedLogs, mux)
 	}
+}
+
+func (val *Validator) copyState(coalescedLogs []*types.Log, mux *event.TypeMux) {
+	// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
+	// logs by filling in the block hash when the block was mined by the local miner. This can
+	// cause a race condition if a log was "upgraded" before the PendingLogsEvent is processed.
+	cpy := make([]*types.Log, len(coalescedLogs))
+	for i, l := range coalescedLogs {
+		cpy[i] = new(types.Log)
+		*cpy[i] = *l
+	}
+	go func(logs []*types.Log, tcount int) {
+		if len(logs) > 0 {
+			mux.Post(core.PendingLogsEvent{Logs: logs})
+		}
+		if tcount > 0 {
+			mux.Post(core.PendingStateEvent{})
+		}
+	}(cpy, val.tcount)
 }
 
 func (val *Validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {

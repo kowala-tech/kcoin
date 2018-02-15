@@ -28,57 +28,18 @@ type stateFn func() stateFn
 
 // @NOTE (rgeraldes) - initial state
 func (val *Validator) notLoggedInState() stateFn {
-	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.account.Address)
-	if err != nil {
-		log.Crit("Failed to verify the voter information", "err", err)
-		return nil
-	}
 
-	// @NOTE (rgeraldes) - sync was already done at this point and by default the investors will be
-	// part of the initial set of validators - no need to make a deposit if the block number is 0
-	// since these validators will be marked as voters from the start
-	if !isGenesis || (isGenesis && val.chain.CurrentBlock().NumberU64() > 0) {
-		// Subscribe events from blockchain
-		chainHeadCh := make(chan core.ChainHeadEvent)
-		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
-		defer chainHeadSub.Unsubscribe()
-
+	if val.nodeNeedsToDeposit() {
 		log.Info("Making Deposit")
 		if err := val.makeDeposit(); err != nil {
 			return nil
 		}
-
-		log.Info("Waiting confirmation to participate in the consensus")
-	L:
-		for {
-			select {
-			case _, ok := <-chainHeadCh:
-				if !ok {
-					// @TODO (rgeraldes) - log
-					return nil
-				}
-
-				confirmed, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
-				if err != nil {
-					log.Crit("Failed to verify the voter registration", "err", err)
-				}
-
-				if confirmed {
-					break L
-				}
-			}
-		}
+		val.waitToParticipate()
 	} else {
-		// sanity check
-		isVoter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
-		if err != nil {
-			log.Crit("Failed to verify the voter information", "err", err)
-			return nil
-		}
+		isVoter := val.assertGetIsVoter()
 		if !isVoter {
 			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.account.Address)
 		}
-
 		log.Info("Deposit is not necessary for a genesis validator (first block)")
 	}
 
@@ -89,6 +50,55 @@ func (val *Validator) notLoggedInState() stateFn {
 	val.restoreLastCommit()
 
 	return val.newElectionState
+}
+
+func (val *Validator) nodeNeedsToDeposit() bool {
+	// @NOTE (rgeraldes) - sync was already done at this point and by default the investors will be
+	// part of the initial set of validators - no need to make a deposit if the block number is 0
+	// since these validators will be marked as voters from the start
+	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.account.Address)
+	if err != nil {
+		log.Crit("Failed to verify the voter information", "err", err)
+	}
+	return !isGenesis || val.isGenesisRejoining(isGenesis)
+}
+
+func (val *Validator) isGenesisRejoining(isGenesis bool) bool {
+	return isGenesis && !val.isFirstBlock()
+}
+
+func (val *Validator) isFirstBlock() bool {
+	return val.chain.CurrentBlock().NumberU64() == 0
+}
+
+func (val *Validator) waitToParticipate() {
+	// Subscribe events from blockchain
+	chainHeadCh := make(chan core.ChainHeadEvent)
+	chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
+	defer chainHeadSub.Unsubscribe()
+
+	log.Info("Waiting confirmation to participate in the consensus")
+	for {
+		select {
+		case _, ok := <-chainHeadCh:
+			if !ok {
+				log.Info("Failed reading on Header channel")
+			}
+
+			isVoter := val.assertGetIsVoter()
+			if isVoter {
+				return
+			}
+		}
+	}
+}
+
+func (val *Validator) assertGetIsVoter() bool {
+	isVoter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
+	if err != nil {
+		log.Crit("Failed to verify the voter information", "err", err)
+	}
+	return isVoter
 }
 
 func (val *Validator) newElectionState() stateFn {
@@ -103,8 +113,8 @@ func (val *Validator) newElectionState() stateFn {
 
 	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
 	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
-		numTxs, _ := val.backend.TxPool().Stats() //
-		if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
+		numTxs, _ := val.backend.TxPool().Stats()
+		if val.round == 0 && numTxs == 0 {
 			log.Info("Waiting for a TX")
 			txCh := make(chan core.TxPreEvent)
 			txSub := val.backend.TxPool().SubscribeTxPreEvent(txCh)
