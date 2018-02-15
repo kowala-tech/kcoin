@@ -248,8 +248,7 @@ func (val *Validator) commitState() stateFn {
 
 	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
 	if err != nil {
-		// @TODO (rgeraldes) - complete
-		log.Crit("Failed to verify if the validator is a voter")
+		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}
 	if !voter {
 		return val.loggedOutState

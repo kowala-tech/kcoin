@@ -231,28 +231,38 @@ func (val *Validator) PendingBlock() *types.Block {
 }
 
 func (val *Validator) restoreLastCommit() {
+	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to access the voters checksum", "err", err)
+	}
+
+	if err := val.updateValidators(checksum, true); err != nil {
+		log.Crit("Failed to update the validator set", "err", err)
+	}
+
+	// @TODO (rgeraldes) - we need to request the validator vote weights
+
 	currentBlock := val.chain.CurrentBlock()
 	if currentBlock.Number().Cmp(big.NewInt(0)) == 0 {
 		return
 	}
 
-	// @TODO (rgeraldes) - review the following statement
-	lastValidators := types.NewValidatorSet([]*types.Validator{})
-
-	lastCommit := currentBlock.LastCommit()
-	lastPreCommits := core.NewVotingTable(val.eventMux, val.signer, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
-	for _, preCommit := range lastCommit.Commits() {
-		if preCommit == nil {
-			continue
+	/*
+		lastCommit := currentBlock.LastCommit()
+		lastPreCommits := core.NewVotingTable(val.eventMux, val.signer, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
+		for _, preCommit := range lastCommit.Commits() {
+			if preCommit == nil {
+				continue
+			}
+			added, err := lastPreCommits.Add(preCommit, false)
+			if !added || err != nil {
+				// @TODO (rgeraldes) - this should not happen > complete
+				log.Error("Failed to restore the latest commit")
+			}
 		}
-		added, err := lastPreCommits.Add(preCommit, false)
-		if !added || err != nil {
-			// @TODO (rgeraldes) - this should not happen > complete
-			log.Error("Failed to restore the latest commit")
-		}
-	}
 
-	val.lastCommit = lastPreCommits
+		val.lastCommit = lastPreCommits
+	*/
 }
 
 func (val *Validator) init() error {
@@ -263,15 +273,9 @@ func (val *Validator) init() error {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
 
-	if parent.NumberU64() == 0 {
+	if val.validatorsChecksum != checksum {
 		if err := val.updateValidators(checksum, true); err != nil {
 			log.Crit("Failed to update the validator set", "err", err)
-		}
-	} else {
-		// new validator set
-		if val.validatorsChecksum != checksum {
-			val.updateValidators(checksum, false)
-
 		}
 	}
 
@@ -788,14 +792,19 @@ func (val *Validator) updateValidators(checksum [32]byte, genesis bool) error {
 		}
 
 		var weight *big.Int
-		if !genesis && val.validators.Contains(validator.Addr) {
-			// old validator
-			old := val.validators.Get(validator.Addr)
-			weight = old.Weight()
-		} else {
-			// new validator
-			weight = big.NewInt(0)
-		}
+		// @TODO (rgeraldes) - weight needs to be shared
+		/*
+			if !genesis && val.validators.Contains(validator.Addr) {
+				// old validator
+				old := val.validators.Get(validator.Addr)
+				weight = old.Weight()
+			} else {
+				// new validator
+				weight = big.NewInt(0)
+			}
+		*/
+		// @TODO (rgeraldes) - remove this statement as soon as the previous one is sorted out
+		weight = big.NewInt(0)
 
 		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
 	}
