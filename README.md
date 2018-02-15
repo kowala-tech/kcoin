@@ -183,4 +183,4 @@ Prometheus endpoint address can be specified using flag `--metrics-prometheus-ad
 
 ## Contact us
 
-Feel free to email us at support@kowala.tech.
+Feel free to email us at support@kowala.tech or talk to us on [Gitter](https://gitter.im/kowala-tech/kUSD).
