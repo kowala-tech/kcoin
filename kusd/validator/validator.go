@@ -478,12 +478,9 @@ func (val *Validator) makeDeposit() error {
 		return fmt.Errorf("There are not positions available at the moment")
 	}
 
-	opts, err := getTransactionOpts(val.contractBackend, val.account.Address, big.NewInt(val.deposit), val.config.ChainID)
-	if err != nil {
-		log.Error("Failed to assemble the transaction options", "err", err)
-	}
-
-	_, err = val.network.Deposit(opts)
+	var deposit big.Int
+	options := getTransactionOpts(val.contractBackend, val.wallet, val.account, deposit.SetUint64(val.deposit), val.config.ChainID)
+	_, err = val.network.Deposit(options)
 	if err != nil {
 		return fmt.Errorf("Failed to transact the deposit: %x", err)
 	}
@@ -492,11 +489,8 @@ func (val *Validator) makeDeposit() error {
 }
 
 func (val *Validator) withdraw() {
-	opts, err := getTransactionOpts(val.contractBackend, val.account.Address, nil, val.config.ChainID)
-	if err != nil {
-		log.Error("Failed to assemble the transaction opt", "err", err)
-	}
-	_, err := val.network.Withdraw(opts)
+	options := getTransactionOpts(val.contractBackend, val.wallet, val.account, nil, val.config.ChainID)
+	_, err := val.network.Withdraw(options)
 	if err != nil {
 		log.Error("Failed to withdraw from the election", "err", err)
 	}
