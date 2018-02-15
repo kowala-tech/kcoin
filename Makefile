@@ -155,10 +155,20 @@ kusd-windows-amd64:
 ## Docker
 
 docker-build-bootnode:
-	docker build -t kowala-tech/bootnode -f bootnode.Dockerfile .
+	docker build -t kowalatech/bootnode -f bootnode.Dockerfile .
 
 docker-build-kusd:
-	docker build -t kowala-tech/kusd -f kusd.Dockerfile .
+	docker build -t kowalatech/kusd -f kusd.Dockerfile .
 
 docker-build-faucet:
-	docker build -t kowala-tech/faucet -f faucet.Dockerfile .
+	docker build -t kowalatech/faucet -f faucet.Dockerfile .
+
+
+docker-publish-bootnode:
+	docker push kowalatech/bootnode
+
+docker-publish-kusd:
+	docker push kowalatech/kusd
+
+docker-publish-faucet:
+	docker push kowalatech/faucet
