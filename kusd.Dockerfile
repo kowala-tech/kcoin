@@ -8,7 +8,6 @@ RUN make kusd
 FROM alpine:3.7
 WORKDIR /kusd/
 COPY --from=builder /kusd/build/bin/kusd .
-EXPOSE 11223
 EXPOSE 22334
 EXPOSE 22334/udp
 ADD release/kusd_with_new_account.sh .
