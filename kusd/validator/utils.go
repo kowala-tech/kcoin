@@ -11,7 +11,7 @@ import (
 )
 
 // getTransactionOpts returns a new set of transaction options
-func getTransactionOpts(contractBackend bind.ContractBackend, wallet accounts.Wallet, account accounts.Account, value *big.Int, chainID *big.Int) *bind.TransactOpts {
+func getTransactionOpts(wallet accounts.Wallet, account accounts.Account, value *big.Int, chainID *big.Int) *bind.TransactOpts {
 	opts := &bind.TransactOpts{
 		From: account.Address,
 		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {

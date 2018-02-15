@@ -52,8 +52,7 @@ type Validator struct {
 	engine   consensus.Engine
 	vmConfig vm.Config // @NOTE (rgeraldes) - temporary
 
-	contractBackend bind.ContractBackend
-	network         *network.NetworkContract // validators contract
+	network *network.NetworkContract // validators contract
 
 	account accounts.Account
 	wallet  accounts.Wallet // signer
@@ -71,15 +70,14 @@ type Validator struct {
 // New returns a new consensus validator
 func New(backend Backend, contractBackend bind.ContractBackend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *Validator {
 	validator := &Validator{
-		config:          config,
-		backend:         backend,
-		chain:           backend.BlockChain(),
-		engine:          engine,
-		eventMux:        eventMux,
-		signer:          types.NewAndromedaSigner(config.ChainID),
-		vmConfig:        vmConfig,
-		contractBackend: contractBackend,
-		canStart:        0,
+		config:   config,
+		backend:  backend,
+		chain:    backend.BlockChain(),
+		engine:   engine,
+		eventMux: eventMux,
+		signer:   types.NewAndromedaSigner(config.ChainID),
+		vmConfig: vmConfig,
+		canStart: 0,
 	}
 
 	// Network contract instance
@@ -482,7 +480,7 @@ func (val *Validator) makeDeposit() error {
 	}
 
 	var deposit big.Int
-	options := getTransactionOpts(val.contractBackend, val.wallet, val.account, deposit.SetUint64(val.deposit), val.config.ChainID)
+	options := getTransactionOpts(val.wallet, val.account, deposit.SetUint64(val.deposit), val.config.ChainID)
 	_, err = val.network.Deposit(options)
 	if err != nil {
 		return fmt.Errorf("Failed to transact the deposit: %x", err)
@@ -492,7 +490,7 @@ func (val *Validator) makeDeposit() error {
 }
 
 func (val *Validator) withdraw() {
-	options := getTransactionOpts(val.contractBackend, val.wallet, val.account, nil, val.config.ChainID)
+	options := getTransactionOpts(val.wallet, val.account, nil, val.config.ChainID)
 	_, err := val.network.Withdraw(options)
 	if err != nil {
 		log.Error("Failed to withdraw from the election", "err", err)
