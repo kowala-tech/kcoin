@@ -12,6 +12,7 @@ contract Network {
     struct Voter {
         uint deposit; // amount at stake
         uint index;
+        bool isVoter;   
     }
 
     mapping (address => uint) private genesis; // investors (genesis voters)
@@ -51,16 +52,14 @@ contract Network {
     }
 
     function isVoter(address addr) public view returns (bool isIndeed) {
-        if (voterIndex.length == 0) {
-            return false; 
-        }
-        return (voterIndex[voters[addr].index] == addr);
+        return voters[addr].isVoter;
     }
 
     
     function _insertVoter(address addr, uint deposit) private {
         voters[addr].deposit = deposit;
         voters[addr].index = voterIndex.push(addr) - 1;
+        voters[addr].isVoter = true;
         votersChecksum = keccak256(voterIndex);
     }
 
@@ -76,6 +75,7 @@ contract Network {
         voters[keyToMove].index = rowToDelete;
         voterIndex.length--;
         votersChecksum = keccak256(voterIndex);
+        voters[addr].isVoter = false;
     }
 
     function getVoterCount() public view returns (uint count) {
@@ -98,10 +98,8 @@ contract Network {
 
     function withdraw() public {
         require(isVoter(msg.sender));
-
         // withdraw locked money
         msg.sender.transfer(voters[msg.sender].deposit);
-        
         _deleteVoter(msg.sender);
     }
 
