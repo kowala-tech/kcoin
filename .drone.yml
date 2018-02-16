@@ -29,6 +29,8 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     tags: dev
     dockerfile: kusd.Dockerfile
+    username: $DOCKER_USERNAME
+    password: $DOCKER_PASSWORD
     when:
       branch: [dev]
 
