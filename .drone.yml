@@ -24,6 +24,7 @@ pipeline:
       event: tag
 
   docker_kusd_dev:
+    group: docker-deployment
     image: plugins/docker
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
@@ -33,6 +34,7 @@ pipeline:
       branch: [dev]
 
   docker_bootnode_dev:
+    group: docker-deployment
     image: plugins/docker
     repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
@@ -42,6 +44,7 @@ pipeline:
       branch: [dev]
 
   docker_faucet_dev:
+    group: docker-deployment
     image: plugins/docker
     repo: kowalatech/faucet
     secrets: [ docker_username, docker_password ]
@@ -51,29 +54,32 @@ pipeline:
       branch: [dev]
 
   docker_kusd_tag:
+    group: docker-deployment
     image: plugins/docker
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
     auto_tag: true
     dockerfile: kusd.Dockerfile
     when:
-      event: [tag]
+      event: [push,tag]
 
   docker_bootnode_tag:
+    group: docker-deployment
     image: plugins/docker
     repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
     auto_tag: true
     dockerfile: bootnode.Dockerfile
     when:
-      event: [tag]
+      event: [push,tag]
 
   docker_faucet_tag:
+    group: docker-deployment
     image: plugins/docker
     repo: kowalatech/faucet
     secrets: [ docker_username, docker_password ]
     auto_tag: true
     dockerfile: faucet.Dockerfile
     when:
-      event: [tag]
+      event: [push,tag]
 
