@@ -519,7 +519,9 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.TestnetBootnodes
 	}
 
-	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
+	if cfg.BootstrapNodes == nil {
+		cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
+	}
 	for _, url := range urls {
 		node, err := discover.ParseNode(url)
 		if err != nil {
@@ -545,7 +547,9 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 		return // already set, don't apply defaults.
 	}
 
-	cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
+	if cfg.BootstrapNodesV5 == nil {
+		cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
+	}
 	for _, url := range urls {
 		node, err := discv5.ParseNode(url)
 		if err != nil {

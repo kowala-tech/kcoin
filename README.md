@@ -1,10 +1,12 @@
+[![Gitter chat](https://badges.gitter.im/kowala/kusd.png)](https://gitter.im/kowala-tech/kUSD) [![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kUSD/status.svg)](http://ci.kowala.io/kowala-tech/kUSD) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://testnet.kowala.io)
+
 ## Kowala
 
 Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kusd`** client is the main client for the Kowala network.
 It is the entry point into the Kowala network, and is capable of running a full node. The client offers
 a gateway (Endpoints, WebSocket, IPC) to the Kowala network to other processes.
 
-## Running kusd
+## Running kUSD
 
 ### Building the source
 
@@ -37,7 +39,7 @@ One of the quickest ways to get Kowala up and running on your machine is by usin
 ```
 docker run -d --name kusd-node -v /Users/alice/kusd:/root \
            -p 11223:11223 -p 22334:22334 \
-           kusd/client-go --fast --cache=512
+           kowalatech/kusd --fast --cache=512
 ```
 
 ## Networks
@@ -181,4 +183,4 @@ Prometheus endpoint address can be specified using flag `--metrics-prometheus-ad
 
 ## Contact us
 
-Feel free to email us at support@kowala.tech.
+Feel free to email us at support@kowala.tech or talk to us on [Gitter](https://gitter.im/kowala-tech/kUSD).
