@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -126,7 +125,7 @@ out:
 }
 
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
-	if val.Started() {
+	if val.Validating() {
 		log.Warn("Failed to start the validator - the state machine is already running")
 		return
 	}
@@ -143,32 +142,23 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	val.account = account
 	val.deposit = deposit
 
-	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
-	if err != nil {
-		log.Crit("Failed to verify if the validator is registered as a voter", "err", err)
+	if atomic.LoadInt32(&val.canStart) == 0 {
+		log.Info("Network syncing, will start validator afterwards")
+		return
 	}
-
-	// @NOTE (rgeraldes) - initial genesis validators are registered as voters from the start
-	// and we can use that info to verify if we need to sync
-	if voter {
-		// terminate sync go-routine
-		val.eventMux.Post(downloader.DoneEvent{})
-	} else {
-		if atomic.LoadInt32(&val.canStart) == 0 {
-			log.Info("Network syncing, will start validator afterwards")
-			return
-		}
-	}
-
-	log.Info("Starting validation operation")
-	atomic.StoreInt32(&val.running, 1)
 
 	go val.run()
 }
 
 func (val *Validator) run() {
+	log.Info("Starting validation operation")
 	val.wg.Add(1)
-	defer val.wg.Done()
+	atomic.StoreInt32(&val.running, 1)
+	
+	defer func() {
+		val.wg.Done()
+		atomic.StoreInt32(&val.running, 0)
+	}()
 
 	log.Info("Starting the consensus state machine")
 	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
@@ -186,8 +176,6 @@ func (val *Validator) Stop() {
 	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
 	atomic.StoreInt32(&val.shouldStart, 0)
-	atomic.StoreInt32(&val.running, 0)
-
 	log.Info("Consensus validator stopped")
 }
 
@@ -195,10 +183,6 @@ func (val *Validator) SetExtra(extra []byte) error { return nil }
 
 func (val *Validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0
-}
-
-func (val *Validator) Started() bool {
-	return atomic.LoadInt32(&val.running) > 0
 }
 
 func (val *Validator) SetCoinbase(addr common.Address) {
@@ -232,28 +216,38 @@ func (val *Validator) PendingBlock() *types.Block {
 }
 
 func (val *Validator) restoreLastCommit() {
+	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to access the voters checksum", "err", err)
+	}
+
+	if err := val.updateValidators(checksum, true); err != nil {
+		log.Crit("Failed to update the validator set", "err", err)
+	}
+
+	// @TODO (rgeraldes) - we need to request the validator vote weights
+
 	currentBlock := val.chain.CurrentBlock()
 	if currentBlock.Number().Cmp(big.NewInt(0)) == 0 {
 		return
 	}
 
-	// @TODO (rgeraldes) - review the following statement
-	lastValidators := types.NewValidatorSet([]*types.Validator{})
-
-	lastCommit := currentBlock.LastCommit()
-	lastPreCommits := core.NewVotingTable(val.eventMux, val.signer, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
-	for _, preCommit := range lastCommit.Commits() {
-		if preCommit == nil {
-			continue
+	/*
+		lastCommit := currentBlock.LastCommit()
+		lastPreCommits := core.NewVotingTable(val.eventMux, val.signer, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
+		for _, preCommit := range lastCommit.Commits() {
+			if preCommit == nil {
+				continue
+			}
+			added, err := lastPreCommits.Add(preCommit, false)
+			if !added || err != nil {
+				// @TODO (rgeraldes) - this should not happen > complete
+				log.Error("Failed to restore the latest commit")
+			}
 		}
-		added, err := lastPreCommits.Add(preCommit, false)
-		if !added || err != nil {
-			// @TODO (rgeraldes) - this should not happen > complete
-			log.Error("Failed to restore the latest commit")
-		}
-	}
 
-	val.lastCommit = lastPreCommits
+		val.lastCommit = lastPreCommits
+	*/
 }
 
 func (val *Validator) init() error {
@@ -264,15 +258,9 @@ func (val *Validator) init() error {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
 
-	if parent.NumberU64() == 0 {
+	if val.validatorsChecksum != checksum {
 		if err := val.updateValidators(checksum, true); err != nil {
 			log.Crit("Failed to update the validator set", "err", err)
-		}
-	} else {
-		// new validator set
-		if val.validatorsChecksum != checksum {
-			val.updateValidators(checksum, false)
-
 		}
 	}
 
@@ -465,7 +453,10 @@ func (val *Validator) makeDeposit() error {
 		return err
 	}
 
-	if min.Cmp(big.NewInt(int64(val.deposit))) > 0 {
+	var deposit big.Int
+	if min.Cmp(deposit.SetUint64(val.deposit)) > 0 {
+		log.Warn("Current deposit is not enough", "deposit", val.deposit, "minimum required", min)
+		// @TODO (rgeraldes) - error handling?
 		return fmt.Errorf("Current deposit - %d - is not enough. The minimum required is %d", val.deposit, min)
 	}
 
@@ -477,26 +468,9 @@ func (val *Validator) makeDeposit() error {
 		return fmt.Errorf("There are not positions available at the moment")
 	}
 
-	opts := &bind.TransactOpts{
-		From:  val.account.Address,
-		Value: min.Mul(min, big.NewInt(2)),
-		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			// @NOTE (rgeraldes) - ignore the proposed signer as by default it will be a unprotected signer.
-
-			if address != val.account.Address {
-				return nil, errors.New("not authorized to sign this account")
-			}
-
-			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
-		},
-		// @TODO (rgeraldes) - price prediction & limits
-		GasPrice: big.NewInt(25),
-		GasLimit: big.NewInt(600000),
-	}
-
-	_, err = val.network.Deposit(opts)
+	options := getTransactionOpts(val.wallet, val.account, deposit.SetUint64(val.deposit), val.config.ChainID)
+	_, err = val.network.Deposit(options)
 	if err != nil {
-		log.Error("Transaction failed", "err", err)
 		return fmt.Errorf("Failed to transact the deposit: %x", err)
 	}
 
@@ -504,22 +478,8 @@ func (val *Validator) makeDeposit() error {
 }
 
 func (val *Validator) withdraw() {
-	opts := &bind.TransactOpts{
-		From: val.account.Address,
-		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			// @NOTE (rgeraldes) - ignore the proposed signer as by default it will be a unprotected signer.
-
-			if address != val.account.Address {
-				return nil, errors.New("not authorized to sign this account")
-			}
-
-			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
-		},
-		// @TODO (rgeraldes) - price prediction & limits
-		GasPrice: big.NewInt(25),
-		GasLimit: big.NewInt(600000),
-	}
-	_, err := val.network.Withdraw(opts)
+	options := getTransactionOpts(val.wallet, val.account, nil, val.config.ChainID)
+	_, err := val.network.Withdraw(options)
 	if err != nil {
 		log.Error("Failed to withdraw from the election", "err", err)
 	}
@@ -819,14 +779,19 @@ func (val *Validator) updateValidators(checksum [32]byte, genesis bool) error {
 		}
 
 		var weight *big.Int
-		if !genesis && val.validators.Contains(validator.Addr) {
-			// old validator
-			old := val.validators.Get(validator.Addr)
-			weight = old.Weight()
-		} else {
-			// new validator
-			weight = big.NewInt(0)
-		}
+		// @TODO (rgeraldes) - weight needs to be shared
+		/*
+			if !genesis && val.validators.Contains(validator.Addr) {
+				// old validator
+				old := val.validators.Get(validator.Addr)
+				weight = old.Weight()
+			} else {
+				// new validator
+				weight = big.NewInt(0)
+			}
+		*/
+		// @TODO (rgeraldes) - remove this statement as soon as the previous one is sorted out
+		weight = big.NewInt(0)
 
 		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
 	}
