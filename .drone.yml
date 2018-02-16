@@ -6,7 +6,7 @@ pipeline:
       - make
     when:
       event: [push, tag]
-      branch: [master, develop, refs/tags/*]
+      branch: [master, dev, refs/tags/*]
       
   github_release:
     image: plugins/github-release
@@ -30,7 +30,7 @@ pipeline:
     tags: dev
     dockerfile: kusd.Dockerfile
     when:
-      branch: [develop]
+      branch: [dev]
 
   docker_bootnode_dev:
     image: plugins/docker
@@ -39,7 +39,7 @@ pipeline:
     tags: dev
     dockerfile: bootnode.Dockerfile
     when:
-      branch: [develop]
+      branch: [dev]
 
   docker_faucet_dev:
     image: plugins/docker
@@ -48,5 +48,32 @@ pipeline:
     tags: dev
     dockerfile: faucet.Dockerfile
     when:
-      branch: [develop]
+      branch: [dev]
+
+  docker_kusd_tag:
+    image: plugins/docker
+    repo: kowalatech/kusd
+    secrets: [ docker_username, docker_password ]
+    auto_tag: true
+    dockerfile: kusd.Dockerfile
+    when:
+      event: [tag]
+
+  docker_bootnode_tag:
+    image: plugins/docker
+    repo: kowalatech/bootnode
+    secrets: [ docker_username, docker_password ]
+    auto_tag: true
+    dockerfile: bootnode.Dockerfile
+    when:
+      event: [tag]
+
+  docker_faucet_tag:
+    image: plugins/docker
+    repo: kowalatech/faucet
+    secrets: [ docker_username, docker_password ]
+    auto_tag: true
+    dockerfile: faucet.Dockerfile
+    when:
+      event: [tag]
 
