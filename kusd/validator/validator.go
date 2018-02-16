@@ -125,7 +125,7 @@ out:
 }
 
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
-	if val.Started() {
+	if val.Validating() {
 		log.Warn("Failed to start the validator - the state machine is already running")
 		return
 	}
@@ -142,32 +142,23 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	val.account = account
 	val.deposit = deposit
 
-	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
-	if err != nil {
-		log.Crit("Failed to verify if the validator is registered as a voter", "err", err)
+	if atomic.LoadInt32(&val.canStart) == 0 {
+		log.Info("Network syncing, will start validator afterwards")
+		return
 	}
-
-	// @NOTE (rgeraldes) - initial genesis validators are registered as voters from the start
-	// and we can use that info to verify if we need to sync
-	if voter {
-		// terminate sync go-routine
-		val.eventMux.Post(downloader.DoneEvent{})
-	} else {
-		if atomic.LoadInt32(&val.canStart) == 0 {
-			log.Info("Network syncing, will start validator afterwards")
-			return
-		}
-	}
-
-	log.Info("Starting validation operation")
-	atomic.StoreInt32(&val.running, 1)
 
 	go val.run()
 }
 
 func (val *Validator) run() {
+	log.Info("Starting validation operation")
 	val.wg.Add(1)
-	defer val.wg.Done()
+	atomic.StoreInt32(&val.running, 1)
+	
+	defer func() {
+		val.wg.Done()
+		atomic.StoreInt32(&val.running, 0)
+	}()
 
 	log.Info("Starting the consensus state machine")
 	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
@@ -185,8 +176,6 @@ func (val *Validator) Stop() {
 	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
 	atomic.StoreInt32(&val.shouldStart, 0)
-	atomic.StoreInt32(&val.running, 0)
-
 	log.Info("Consensus validator stopped")
 }
 
@@ -194,10 +183,6 @@ func (val *Validator) SetExtra(extra []byte) error { return nil }
 
 func (val *Validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0
-}
-
-func (val *Validator) Started() bool {
-	return atomic.LoadInt32(&val.running) > 0
 }
 
 func (val *Validator) SetCoinbase(addr common.Address) {
@@ -468,7 +453,10 @@ func (val *Validator) makeDeposit() error {
 		return err
 	}
 
-	if min.Cmp(big.NewInt(int64(val.deposit))) > 0 {
+	var deposit big.Int
+	if min.Cmp(deposit.SetUint64(val.deposit)) > 0 {
+		log.Warn("Current deposit is not enough", "deposit", val.deposit, "minimum required", min)
+		// @TODO (rgeraldes) - error handling?
 		return fmt.Errorf("Current deposit - %d - is not enough. The minimum required is %d", val.deposit, min)
 	}
 
@@ -480,7 +468,6 @@ func (val *Validator) makeDeposit() error {
 		return fmt.Errorf("There are not positions available at the moment")
 	}
 
-	var deposit big.Int
 	options := getTransactionOpts(val.wallet, val.account, deposit.SetUint64(val.deposit), val.config.ChainID)
 	_, err = val.network.Deposit(options)
 	if err != nil {
