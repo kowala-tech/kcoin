@@ -58,7 +58,7 @@ pipeline:
     image: plugins/docker
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
-    auto_tag: true
+    tags: latest
     dockerfile: kusd.Dockerfile
     when:
       event: [push,tag]
@@ -69,7 +69,7 @@ pipeline:
     image: plugins/docker
     repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
-    auto_tag: true
+    tags: latest
     dockerfile: bootnode.Dockerfile
     when:
       event: [push,tag]
@@ -80,7 +80,7 @@ pipeline:
     image: plugins/docker
     repo: kowalatech/faucet
     secrets: [ docker_username, docker_password ]
-    auto_tag: true
+    tags: latest
     dockerfile: faucet.Dockerfile
     when:
       event: [push,tag]
