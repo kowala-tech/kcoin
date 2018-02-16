@@ -16,10 +16,15 @@ kusd:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kusd\" to launch kusd."
 
-swarm:
-	build/env.sh go run build/ci.go install ./cmd/swarm
+bootnode:
+	build/env.sh go run build/ci.go install ./cmd/bootnode
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/swarm\" to launch swarm."
+	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
+
+faucet:
+	build/env.sh go run build/ci.go install ./cmd/faucet
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/faucet\" to launch faucet."
 
 evm:
 	build/env.sh go run build/ci.go install ./cmd/evm
@@ -145,3 +150,25 @@ kusd-windows-amd64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kusd
 	@echo "Windows amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/kusd-windows-* | grep amd64
+
+
+## Docker
+
+docker-build-bootnode:
+	docker build -t kowalatech/bootnode -f bootnode.Dockerfile .
+
+docker-build-kusd:
+	docker build -t kowalatech/kusd -f kusd.Dockerfile .
+
+docker-build-faucet:
+	docker build -t kowalatech/faucet -f faucet.Dockerfile .
+
+
+docker-publish-bootnode:
+	docker push kowalatech/bootnode
+
+docker-publish-kusd:
+	docker push kowalatech/kusd
+
+docker-publish-faucet:
+	docker push kowalatech/faucet

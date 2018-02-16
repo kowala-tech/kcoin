@@ -11,6 +11,8 @@ import (
 	"github.com/kowala-tech/kUSD/common/hexutil"
 )
 
+var _ = (*receiptMarshaling)(nil)
+
 func (r Receipt) MarshalJSON() ([]byte, error) {
 	type Receipt struct {
 		PostState         hexutil.Bytes  `json:"root"`

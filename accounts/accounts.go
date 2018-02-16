@@ -1,35 +1,19 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-// Package accounts implements high level Ethereum account management.
+// Package accounts implements high level Kowala account management.
 package accounts
 
 import (
 	"math/big"
 
-	ethereum "github.com/kowala-tech/kUSD"
+	kusd "github.com/kowala-tech/kUSD"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/event"
 )
 
-// Account represents an Ethereum account located at a specific location defined
+// Account represents a Kowala account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Address common.Address `json:"address"` // Ethereum account address derived from the key
+	Address common.Address `json:"address"` // Kowala account address derived from the key
 	URL     URL            `json:"url"`     // Optional resource locator within a backend
 }
 
@@ -42,8 +26,9 @@ type Wallet interface {
 	URL() URL
 
 	// Status returns a textual status to aid the user in the current state of the
-	// wallet.
-	Status() string
+	// wallet. It also returns an error indicating any failure the wallet might have
+	// encountered.
+	Status() (string, error)
 
 	// Open initializes access to a wallet instance. It is not meant to unlock or
 	// decrypt account keys, rather simply to establish a connection to hardware
@@ -84,7 +69,7 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
-	SelfDerive(base DerivationPath, chain ethereum.ChainStateReader)
+	SelfDerive(base DerivationPath, chain kusd.ChainStateReader)
 
 	// SignHash requests the wallet to sign the given hash.
 	//
@@ -111,6 +96,12 @@ type Wallet interface {
 	// the needed details via SignTxWithPassphrase, or by other means (e.g. unlock
 	// the account in a keystore).
 	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+
+	// SignProposal requests the wallet to sign the given proposal.
+	SignProposal(account Account, proposal *types.Proposal, chainID *big.Int) (*types.Proposal, error)
+
+	// SignVote requests the wallet to sign the given proposal.
+	SignVote(account Account, vote *types.Vote, chainID *big.Int) (*types.Vote, error)
 
 	// SignHashWithPassphrase requests the wallet to sign the given hash with the
 	// given passphrase as extra authentication information.
@@ -147,9 +138,26 @@ type Backend interface {
 	Subscribe(sink chan<- WalletEvent) event.Subscription
 }
 
+// WalletEventType represents the different event types that can be fired by
+// the wallet subscription subsystem.
+type WalletEventType int
+
+const (
+	// WalletArrived is fired when a new wallet is detected either via USB or via
+	// a filesystem event in the keystore.
+	WalletArrived WalletEventType = iota
+
+	// WalletOpened is fired when a wallet is successfully opened with the purpose
+	// of starting any background processes such as automatic key derivation.
+	WalletOpened
+
+	// WalletDropped
+	WalletDropped
+)
+
 // WalletEvent is an event fired by an account backend when a wallet arrival or
 // departure is detected.
 type WalletEvent struct {
-	Wallet Wallet // Wallet instance arrived or departed
-	Arrive bool   // Whether the wallet was added or removed
+	Wallet Wallet          // Wallet instance arrived or departed
+	Kind   WalletEventType // Event type that happened in the system
 }

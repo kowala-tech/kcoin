@@ -1,19 +1,3 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
 package main
 
 import (
@@ -30,10 +14,11 @@ import (
 
 	"github.com/kowala-tech/kUSD/cmd/utils"
 	"github.com/kowala-tech/kUSD/contracts/release"
-	"github.com/kowala-tech/kUSD/eth"
+	"github.com/kowala-tech/kUSD/dashboard"
+	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/params"
-	whisper "github.com/kowala-tech/kUSD/whisper/whisperv5"
+	"github.com/kowala-tech/kUSD/stats"
 	"github.com/naoina/toml"
 )
 
@@ -43,7 +28,7 @@ var (
 		Name:        "dumpconfig",
 		Usage:       "Show configuration values",
 		ArgsUsage:   "",
-		Flags:       append(append(nodeFlags, rpcFlags...), whisperFlags...),
+		Flags:       append(append(nodeFlags, rpcFlags...)),
 		Category:    "MISCELLANEOUS COMMANDS",
 		Description: `The dumpconfig command shows configuration values.`,
 	}
@@ -71,15 +56,11 @@ var tomlSettings = toml.Config{
 	},
 }
 
-type ethstatsConfig struct {
-	URL string `toml:",omitempty"`
-}
-
 type kusdConfig struct {
-	Eth      eth.Config
-	Shh      whisper.Config
-	Node     node.Config
-	Ethstats ethstatsConfig
+	Kowala    kusd.Config
+	Node      node.Config
+	Stats     stats.Config
+	Dashboard dashboard.Config
 }
 
 func loadConfig(file string, cfg *kusdConfig) error {
@@ -110,9 +91,9 @@ func defaultNodeConfig() node.Config {
 func makeConfigNode(ctx *cli.Context) (*node.Node, kusdConfig) {
 	// Load defaults.
 	cfg := kusdConfig{
-		Eth:  eth.DefaultConfig,
-		Shh:  whisper.DefaultConfig,
-		Node: defaultNodeConfig(),
+		Kowala:    kusd.DefaultConfig,
+		Node:      defaultNodeConfig(),
+		Dashboard: dashboard.DefaultConfig,
 	}
 
 	// Load config file.
@@ -128,47 +109,24 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kusdConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	utils.SetEthConfig(ctx, stack, &cfg.Eth)
-	if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
-		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
+	utils.SetKowalaConfig(ctx, stack, &cfg.Kowala)
+	if ctx.GlobalIsSet(utils.KowalaStatsURLFlag.Name) {
+		cfg.Stats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
 	}
 
-	utils.SetShhConfig(ctx, stack, &cfg.Shh)
-
+	utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 	return stack, cfg
-}
-
-// enableWhisper returns true in case one of the whisper flags is set.
-func enableWhisper(ctx *cli.Context) bool {
-	for _, flag := range whisperFlags {
-		if ctx.GlobalIsSet(flag.GetName()) {
-			return true
-		}
-	}
-	return false
 }
 
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	utils.RegisterEthService(stack, &cfg.Eth)
+	utils.RegisterKowalaService(stack, &cfg.Kowala)
 
-	// Whisper must be explicitly enabled by specifying at least 1 whisper flag or in dev mode
-	shhEnabled := enableWhisper(ctx)
-	shhAutoEnabled := !ctx.GlobalIsSet(utils.WhisperEnabledFlag.Name) && ctx.GlobalIsSet(utils.DevModeFlag.Name)
-	if shhEnabled || shhAutoEnabled {
-		if ctx.GlobalIsSet(utils.WhisperMaxMessageSizeFlag.Name) {
-			cfg.Shh.MaxMessageSize = uint32(ctx.Int(utils.WhisperMaxMessageSizeFlag.Name))
-		}
-		if ctx.GlobalIsSet(utils.WhisperMinPOWFlag.Name) {
-			cfg.Shh.MinimumAcceptedPOW = ctx.Float64(utils.WhisperMinPOWFlag.Name)
-		}
-		utils.RegisterShhService(stack, &cfg.Shh)
-	}
-
-	// Add the Ethereum Stats daemon if requested.
-	if cfg.Ethstats.URL != "" {
-		utils.RegisterEthStatsService(stack, cfg.Ethstats.URL)
+	// Add the Stats daemon if requested.
+	statsUrl := cfg.Stats.GetURL()
+	if statsUrl != "" {
+		utils.RegisterKowalaStatsService(stack, statsUrl)
 	}
 
 	// Add the release oracle service so it boots along with node.
@@ -193,8 +151,8 @@ func dumpConfig(ctx *cli.Context) error {
 	_, cfg := makeConfigNode(ctx)
 	comment := ""
 
-	if cfg.Eth.Genesis != nil {
-		cfg.Eth.Genesis = nil
+	if cfg.Kowala.Genesis != nil {
+		cfg.Kowala.Genesis = nil
 		comment += "# Note: this config doesn't contain the genesis block.\n\n"
 	}
 

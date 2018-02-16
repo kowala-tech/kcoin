@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package node
 
 import (
@@ -25,25 +9,15 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"syscall"
 
 	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/internal/debug"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/p2p"
 	"github.com/kowala-tech/kUSD/rpc"
-	"github.com/syndtr/goleveldb/leveldb/storage"
-)
-
-var (
-	ErrDatadirUsed    = errors.New("datadir already used")
-	ErrNodeStopped    = errors.New("node not started")
-	ErrNodeRunning    = errors.New("node already running")
-	ErrServiceUnknown = errors.New("unknown service")
-
-	datadirInUseErrnos = map[uint]bool{11: true, 32: true, 35: true}
+	"github.com/prometheus/prometheus/util/flock"
 )
 
 // Node is a container on which services can be registered.
@@ -52,8 +26,8 @@ type Node struct {
 	config   *Config
 	accman   *accounts.Manager
 
-	ephemeralKeystore string          // if non-empty, the key directory that will be removed by Stop
-	instanceDirLock   storage.Storage // prevents concurrent use of instance directory
+	ephemeralKeystore string         // if non-empty, the key directory that will be removed by Stop
+	instanceDirLock   flock.Releaser // prevents concurrent use of instance directory
 
 	serverConfig p2p.Config
 	server       *p2p.Server // Currently running P2P networking layer
@@ -197,10 +171,7 @@ func (n *Node) Start() error {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
 	if err := running.Start(); err != nil {
-		if errno, ok := err.(syscall.Errno); ok && datadirInUseErrnos[uint(errno)] {
-			return ErrDatadirUsed
-		}
-		return err
+		return convertFileLockError(err)
 	}
 	// Start each of the services
 	started := []reflect.Type{}
@@ -242,14 +213,13 @@ func (n *Node) openDataDir() error {
 	if err := os.MkdirAll(instdir, 0700); err != nil {
 		return err
 	}
-	// Try to open the instance directory as LevelDB storage. This creates a lock file
-	// which prevents concurrent use by another instance as well as accidental use of the
-	// instance directory as a database.
-	storage, err := storage.OpenFile(instdir, true)
+	// Lock the instance directory to prevent concurrent use by another instance as well as
+	// accidental use of the instance directory as a database.
+	release, _, err := flock.New(filepath.Join(instdir, "LOCK"))
 	if err != nil {
-		return err
+		return convertFileLockError(err)
 	}
-	n.instanceDirLock = storage
+	n.instanceDirLock = release
 	return nil
 }
 
@@ -275,7 +245,7 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 		n.stopInProc()
 		return err
 	}
-	if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins); err != nil {
+	if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
 		n.stopHTTP()
 		n.stopIPC()
 		n.stopInProc()
@@ -426,7 +396,7 @@ func (n *Node) stopHTTP() {
 }
 
 // startWS initializes and starts the websocket RPC endpoint.
-func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string) error {
+func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string, exposeAll bool) error {
 	// Short circuit if the WS endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
@@ -439,7 +409,7 @@ func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrig
 	// Register all the APIs exposed by the services
 	handler := rpc.NewServer()
 	for _, api := range apis {
-		if whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
+		if exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return err
 			}
@@ -455,7 +425,7 @@ func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrig
 		return err
 	}
 	go rpc.NewWSServer(wsOrigins, handler).Serve(listener)
-	log.Info(fmt.Sprintf("WebSocket endpoint opened: ws://%s", endpoint))
+	log.Info(fmt.Sprintf("WebSocket endpoint opened: ws://%s", listener.Addr()))
 
 	// All listeners booted successfully
 	n.wsEndpoint = endpoint
@@ -509,7 +479,9 @@ func (n *Node) Stop() error {
 
 	// Release instance directory lock.
 	if n.instanceDirLock != nil {
-		n.instanceDirLock.Close()
+		if err := n.instanceDirLock.Release(); err != nil {
+			log.Error("Can't release datadir lock", "err", err)
+		}
 		n.instanceDirLock = nil
 	}
 
@@ -566,6 +538,17 @@ func (n *Node) Attach() (*rpc.Client, error) {
 		return nil, ErrNodeStopped
 	}
 	return rpc.DialInProc(n.inprocHandler), nil
+}
+
+// RPCHandler returns the in-process RPC request handler.
+func (n *Node) RPCHandler() (*rpc.Server, error) {
+	n.lock.RLock()
+	defer n.lock.RUnlock()
+
+	if n.inprocHandler == nil {
+		return nil, ErrNodeStopped
+	}
+	return n.inprocHandler, nil
 }
 
 // Server retrieves the currently running P2P network layer. This method is meant
@@ -636,11 +619,11 @@ func (n *Node) EventMux() *event.TypeMux {
 // OpenDatabase opens an existing database with the given name (or creates one if no
 // previous can be found) from within the node's instance directory. If the node is
 // ephemeral, a memory database is returned.
-func (n *Node) OpenDatabase(name string, cache, handles int) (ethdb.Database, error) {
+func (n *Node) OpenDatabase(name string, cache, handles int) (kusddb.Database, error) {
 	if n.config.DataDir == "" {
-		return ethdb.NewMemDatabase()
+		return kusddb.NewMemDatabase()
 	}
-	return ethdb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
+	return kusddb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
 }
 
 // ResolvePath returns the absolute path of a resource in the instance directory.

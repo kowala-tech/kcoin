@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // package web3ext contains kusd specific web3.js extensions.
 package web3ext
 
@@ -23,7 +7,7 @@ var Modules = map[string]string{
 	"clique":     Clique_JS,
 	"debug":      Debug_JS,
 	"eth":        Eth_JS,
-	"miner":      Miner_JS,
+	"validator":  Validator_JS,
 	"net":        Net_JS,
 	"personal":   Personal_JS,
 	"rpc":        RPC_JS,
@@ -269,6 +253,16 @@ web3._extend({
 			outputFormatter: console.log
 		}),
 		new web3._extend.Method({
+			name: 'freeOSMemory',
+			call: 'debug_freeOSMemory',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'setGCPercent',
+			call: 'debug_setGCPercent',
+			params: 1,
+		}),
+		new web3._extend.Method({
 			name: 'memStats',
 			call: 'debug_memStats',
 			params: 0,
@@ -350,6 +344,18 @@ web3._extend({
 			call: 'debug_storageRangeAt',
 			params: 5,
 		}),
+		new web3._extend.Method({
+			name: 'getModifiedAccountsByNumber',
+			call: 'debug_getModifiedAccountsByNumber',
+			params: 2,
+			inputFormatter: [null, null],
+		}),
+		new web3._extend.Method({
+			name: 'getModifiedAccountsByHash',
+			call: 'debug_getModifiedAccountsByHash',
+			params: 2,
+			inputFormatter:[null, null],
+		}),
 	],
 	properties: []
 });
@@ -416,41 +422,35 @@ web3._extend({
 });
 `
 
-const Miner_JS = `
+const Validator_JS = `
 web3._extend({
-	property: 'miner',
+	property: 'validator',
 	methods:
 	[
 		new web3._extend.Method({
 			name: 'start',
-			call: 'miner_start',
-			params: 1,
-			inputFormatter: [null]
+			call: 'validator_start',
 		}),
 		new web3._extend.Method({
 			name: 'stop',
-			call: 'miner_stop'
+			call: 'validator_stop'
 		}),
 		new web3._extend.Method({
-			name: 'setEtherbase',
-			call: 'miner_setEtherbase',
+			name: 'setCoinbase',
+			call: 'validator_setCoinbase',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'setExtra',
-			call: 'miner_setExtra',
+			call: 'validator_setExtra',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'setGasPrice',
-			call: 'miner_setGasPrice',
+			call: 'validator_setGasPrice',
 			params: 1,
 			inputFormatter: [web3._extend.utils.fromDecimal]
-		}),
-		new web3._extend.Method({
-			name: 'getHashrate',
-			call: 'miner_getHashrate'
 		})
 	],
 	properties: []
@@ -493,6 +493,11 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
+			name: 'openWallet',
+			call: 'personal_openWallet',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'deriveAccount',
 			call: 'personal_deriveAccount',
 			params: 3
@@ -526,109 +531,6 @@ const Shh_JS = `
 web3._extend({
 	property: 'shh',
 	methods: [
-		new web3._extend.Method({
-			name: 'setMaxMessageLength',
-			call: 'shh_setMaxMessageLength',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'setMinimumPoW',
-			call: 'shh_setMinimumPoW',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'markTrustedPeer',
-			call: 'shh_markTrustedPeer',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'hasKeyPair',
-			call: 'shh_hasKeyPair',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'deleteKeyPair',
-			call: 'shh_deleteKeyPair',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'newKeyPair',
-			call: 'shh_newKeyPair'
-		}),
-		new web3._extend.Method({
-			name: 'getPublicKey',
-			call: 'shh_getPublicKey',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getPrivateKey',
-			call: 'shh_getPrivateKey',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'newSymKey',
-			call: 'shh_newSymKey',
-		}),
-		new web3._extend.Method({
-			name: 'addSymKey',
-			call: 'shh_addSymKey',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'generateSymKeyFromPassword',
-			call: 'shh_generateSymKeyFromPassword',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'hasSymKey',
-			call: 'shh_hasSymKey',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getSymKey',
-			call: 'shh_getSymKey',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'deleteSymKey',
-			call: 'shh_deleteSymKey',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'subscribe',
-			call: 'shh_subscribe',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'unsubscribe',
-			call: 'shh_unsubscribe',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'post',
-			call: 'shh_post',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'publicKey',
-			call: 'shh_getPublicKey',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getFilterMessages',
-			call: 'shh_getFilterMessages',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'deleteMessageFilter',
-			call: 'shh_deleteMessageFilter',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'newMessageFilter',
-			call: 'shh_newMessageFilter',
-			params: 1
-		})
 	],
 	properties:
 	[

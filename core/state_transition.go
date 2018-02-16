@@ -1,24 +1,7 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
@@ -59,8 +42,7 @@ type StateTransition struct {
 	value      *big.Int
 	data       []byte
 	state      vm.StateDB
-
-	evm *vm.EVM
+	evm        *vm.EVM
 }
 
 // Message represents a message sent to a contract.
@@ -127,11 +109,11 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, *big.Int, error) {
+func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, *big.Int, bool, error) {
 	st := NewStateTransition(evm, msg, gp)
 
-	ret, _, gasUsed, err := st.TransitionDb()
-	return ret, gasUsed, err
+	ret, _, gasUsed, failed, err := st.TransitionDb()
+	return ret, gasUsed, failed, err
 }
 
 func (st *StateTransition) from() vm.AccountRef {
@@ -198,8 +180,11 @@ func (st *StateTransition) preCheck() error {
 
 	// Make sure this transaction's nonce is correct
 	if msg.CheckNonce() {
-		if n := st.state.GetNonce(sender.Address()); n != msg.Nonce() {
-			return fmt.Errorf("invalid nonce: have %d, expected %d", msg.Nonce(), n)
+		nonce := st.state.GetNonce(sender.Address())
+		if nonce < msg.Nonce() {
+			return ErrNonceTooHigh
+		} else if nonce > msg.Nonce() {
+			return ErrNonceTooLow
 		}
 	}
 	return st.buyGas()
@@ -208,24 +193,23 @@ func (st *StateTransition) preCheck() error {
 // TransitionDb will transition the state by applying the current message and returning the result
 // including the required gas for the operation as well as the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
-func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, err error) {
+func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 	if err = st.preCheck(); err != nil {
 		return
 	}
 	msg := st.msg
 	sender := st.from() // err checked in preCheck
 
-	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic gas
 	// TODO convert to uint64
-	intrinsicGas := IntrinsicGas(st.data, contractCreation, homestead)
+	intrinsicGas := IntrinsicGas(st.data, contractCreation, true)
 	if intrinsicGas.BitLen() > 64 {
-		return nil, nil, nil, vm.ErrOutOfGas
+		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, err
 	}
 
 	var (
@@ -248,7 +232,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
 		if vmerr == vm.ErrInsufficientBalance {
-			return nil, nil, nil, vmerr
+			return nil, nil, nil, false, vmerr
 		}
 	}
 	requiredGas = new(big.Int).Set(st.gasUsed())
@@ -256,7 +240,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	st.refundGas()
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 
-	return ret, requiredGas, st.gasUsed(), err
+	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }
 
 func (st *StateTransition) refundGas() {

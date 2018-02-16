@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package vm
 
 import (
@@ -41,42 +25,22 @@ type operation struct {
 	validateStack stackValidationFunc
 	// memorySize returns the memory size required for the operation
 	memorySize memorySizeFunc
-	// halts indicates whether the operation shoult halt further execution
-	// and return
-	halts bool
-	// jumps indicates whether operation made a jump. This prevents the program
-	// counter from further incrementing.
-	jumps bool
-	// writes determines whether this a state modifying operation
-	writes bool
-	// valid is used to check whether the retrieved operation is valid and known
-	valid bool
-	// reverts determined whether the operation reverts state
-	reverts bool
+
+	halts   bool // indicates whether the operation should halt further execution
+	jumps   bool // indicates whether the program counter should not increment
+	writes  bool // determines whether this a state modifying operation
+	valid   bool // indication whether the retrieved operation is valid and known
+	reverts bool // determines whether the operation reverts state (implicitly halts)
+	returns bool // determines whether the operations sets the return data content
 }
 
 var (
-	frontierInstructionSet  = NewFrontierInstructionSet()
-	homesteadInstructionSet = NewHomesteadInstructionSet()
+	andromedaInstructionSet = NewAndromedaInstructionSet()
 )
 
-// NewHomesteadInstructionSet returns the frontier and homestead
-// instructions that can be executed during the homestead phase.
-func NewHomesteadInstructionSet() [256]operation {
-	instructionSet := NewFrontierInstructionSet()
-	instructionSet[DELEGATECALL] = operation{
-		execute:       opDelegateCall,
-		gasCost:       gasDelegateCall,
-		validateStack: makeStackFunc(6, 1),
-		memorySize:    memoryDelegateCall,
-		valid:         true,
-	}
-	return instructionSet
-}
-
-// NewFrontierInstructionSet returns the frontier instructions
-// that can be executed during the frontier phase.
-func NewFrontierInstructionSet() [256]operation {
+// NewAndromedaInstructionSet returns the andromeda instructions
+// that can be executed during the andromeda phase.
+func NewAndromedaInstructionSet() [256]operation {
 	return [256]operation{
 		STOP: {
 			execute:       opStop,
@@ -255,22 +219,22 @@ func NewFrontierInstructionSet() [256]operation {
 			valid:         true,
 		},
 		CALLDATALOAD: {
-			execute:       opCalldataLoad,
+			execute:       opCallDataLoad,
 			gasCost:       constGasFunc(GasFastestStep),
 			validateStack: makeStackFunc(1, 1),
 			valid:         true,
 		},
 		CALLDATASIZE: {
-			execute:       opCalldataSize,
+			execute:       opCallDataSize,
 			gasCost:       constGasFunc(GasQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		CALLDATACOPY: {
-			execute:       opCalldataCopy,
-			gasCost:       gasCalldataCopy,
+			execute:       opCallDataCopy,
+			gasCost:       gasCallDataCopy,
 			validateStack: makeStackFunc(3, 0),
-			memorySize:    memoryCalldataCopy,
+			memorySize:    memoryCallDataCopy,
 			valid:         true,
 		},
 		CODESIZE: {
@@ -810,6 +774,7 @@ func NewFrontierInstructionSet() [256]operation {
 			validateStack: makeStackFunc(2, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG1: {
 			execute:       makeLog(1),
@@ -817,6 +782,7 @@ func NewFrontierInstructionSet() [256]operation {
 			validateStack: makeStackFunc(3, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG2: {
 			execute:       makeLog(2),
@@ -824,6 +790,7 @@ func NewFrontierInstructionSet() [256]operation {
 			validateStack: makeStackFunc(4, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG3: {
 			execute:       makeLog(3),
@@ -831,6 +798,7 @@ func NewFrontierInstructionSet() [256]operation {
 			validateStack: makeStackFunc(5, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		LOG4: {
 			execute:       makeLog(4),
@@ -838,6 +806,7 @@ func NewFrontierInstructionSet() [256]operation {
 			validateStack: makeStackFunc(6, 0),
 			memorySize:    memoryLog,
 			valid:         true,
+			writes:        true,
 		},
 		CREATE: {
 			execute:       opCreate,
@@ -846,6 +815,7 @@ func NewFrontierInstructionSet() [256]operation {
 			memorySize:    memoryCreate,
 			valid:         true,
 			writes:        true,
+			returns:       true,
 		},
 		CALL: {
 			execute:       opCall,
@@ -853,6 +823,7 @@ func NewFrontierInstructionSet() [256]operation {
 			validateStack: makeStackFunc(7, 1),
 			memorySize:    memoryCall,
 			valid:         true,
+			returns:       true,
 		},
 		CALLCODE: {
 			execute:       opCallCode,
@@ -860,6 +831,7 @@ func NewFrontierInstructionSet() [256]operation {
 			validateStack: makeStackFunc(7, 1),
 			memorySize:    memoryCall,
 			valid:         true,
+			returns:       true,
 		},
 		RETURN: {
 			execute:       opReturn,
@@ -876,6 +848,44 @@ func NewFrontierInstructionSet() [256]operation {
 			halts:         true,
 			valid:         true,
 			writes:        true,
+		},
+		DELEGATECALL: {
+			execute:       opDelegateCall,
+			gasCost:       gasDelegateCall,
+			validateStack: makeStackFunc(6, 1),
+			memorySize:    memoryDelegateCall,
+			valid:         true,
+			returns:       true,
+		},
+		STATICCALL: {
+			execute:       opStaticCall,
+			gasCost:       gasStaticCall,
+			validateStack: makeStackFunc(6, 1),
+			memorySize:    memoryStaticCall,
+			valid:         true,
+			returns:       true,
+		},
+		RETURNDATASIZE: {
+			execute:       opReturnDataSize,
+			gasCost:       constGasFunc(GasQuickStep),
+			validateStack: makeStackFunc(0, 1),
+			valid:         true,
+		},
+		RETURNDATACOPY: {
+			execute:       opReturnDataCopy,
+			gasCost:       gasReturnDataCopy,
+			validateStack: makeStackFunc(3, 0),
+			memorySize:    memoryReturnDataCopy,
+			valid:         true,
+		},
+		REVERT: {
+			execute:       opRevert,
+			gasCost:       gasRevert,
+			validateStack: makeStackFunc(2, 0),
+			memorySize:    memoryRevert,
+			valid:         true,
+			reverts:       true,
+			returns:       true,
 		},
 	}
 }

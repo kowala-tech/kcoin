@@ -1,19 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package types
 
 import (
@@ -46,16 +30,16 @@ var (
 		big.NewInt(1),
 		common.FromHex("5544"),
 	).WithSignature(
-		HomesteadSigner{},
+		UnprotectedSigner{},
 		common.Hex2Bytes("98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4a8887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a301"),
 	)
 )
 
 func TestTransactionSigHash(t *testing.T) {
-	if emptyTx.SigHash(HomesteadSigner{}) != common.HexToHash("c775b99e7ad12f50d819fcd602390467e28141316969f4b57f0626f74fe3b386") {
+	if emptyTx.SigHash(UnprotectedSigner{}) != common.HexToHash("c775b99e7ad12f50d819fcd602390467e28141316969f4b57f0626f74fe3b386") {
 		t.Errorf("empty transaction hash mismatch, got %x", emptyTx.Hash())
 	}
-	if rightvrsTx.SigHash(HomesteadSigner{}) != common.HexToHash("fe7a79529ed5f7c3375d06b26b186a8644e0e16c373d7a12be41c62d6042b77a") {
+	if rightvrsTx.SigHash(UnprotectedSigner{}) != common.HexToHash("fe7a79529ed5f7c3375d06b26b186a8644e0e16c373d7a12be41c62d6042b77a") {
 		t.Errorf("RightVRS transaction hash mismatch, got %x", rightvrsTx.Hash())
 	}
 }
@@ -143,15 +127,15 @@ func TestTransactionPriceNonceSort(t *testing.T) {
 		}
 	}
 	// Sort the transactions and cross check the nonce ordering
-	txset := NewTransactionsByPriceAndNonce(groups)
+	txset := NewTransactionsByPriceAndNonce(signer, groups)
 
 	txs := Transactions{}
-	for {
-		if tx := txset.Peek(); tx != nil {
-			txs = append(txs, tx)
-			txset.Shift()
-		}
-		break
+	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
+		txs = append(txs, tx)
+		txset.Shift()
+	}
+	if len(txs) != 25*25 {
+		t.Errorf("expected %d transactions, found %d", 25*25, len(txs))
 	}
 	for i, txi := range txs {
 		fromi, _ := Sender(signer, txi)

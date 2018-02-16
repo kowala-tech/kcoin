@@ -65,7 +65,33 @@ func constGasFunc(gas uint64) gasFunc {
 	}
 }
 
-func gasCalldataCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func gasCallDataCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+	gas, err := memoryGasCost(mem, memorySize)
+	if err != nil {
+		return 0, err
+	}
+
+	var overflow bool
+	if gas, overflow = math.SafeAdd(gas, GasFastestStep); overflow {
+		return 0, errGasUintOverflow
+	}
+
+	words, overflow := bigUint64(stack.Back(2))
+	if overflow {
+		return 0, errGasUintOverflow
+	}
+
+	if words, overflow = math.SafeMul(toWordSize(words), params.CopyGas); overflow {
+		return 0, errGasUintOverflow
+	}
+
+	if gas, overflow = math.SafeAdd(gas, words); overflow {
+		return 0, errGasUintOverflow
+	}
+	return gas, nil
+}
+
+func gasReturnDataCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	gas, err := memoryGasCost(mem, memorySize)
 	if err != nil {
 		return 0, err
@@ -295,15 +321,12 @@ func gasCall(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem
 		gas            = gt.Calls
 		transfersValue = stack.Back(2).Sign() != 0
 		address        = common.BigToAddress(stack.Back(1))
-		eip158         = evm.ChainConfig().IsEIP158(evm.BlockNumber)
 	)
-	if eip158 {
-		if evm.StateDB.Empty(address) && transfersValue {
-			gas += params.CallNewAccountGas
-		}
-	} else if !evm.StateDB.Exist(address) {
+
+	if transfersValue && evm.StateDB.Empty(address)  {
 		gas += params.CallNewAccountGas
 	}
+
 	if transfersValue {
 		gas += params.CallValueTransferGas
 	}
@@ -370,24 +393,21 @@ func gasReturn(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, m
 	return memoryGasCost(mem, memorySize)
 }
 
+func gasRevert(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+	return memoryGasCost(mem, memorySize)
+}
+
 func gasSuicide(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var gas uint64
-	// EIP150 homestead gas reprice fork:
-	if evm.ChainConfig().IsEIP150(evm.BlockNumber) {
-		gas = gt.Suicide
-		var (
-			address = common.BigToAddress(stack.Back(0))
-			eip158  = evm.ChainConfig().IsEIP158(evm.BlockNumber)
-		)
 
-		if eip158 {
-			// if empty and transfers value
-			if evm.StateDB.Empty(address) && evm.StateDB.GetBalance(contract.Address()).Sign() != 0 {
-				gas += gt.CreateBySuicide
-			}
-		} else if !evm.StateDB.Exist(address) {
-			gas += gt.CreateBySuicide
-		}
+	gas = gt.Suicide
+	var (
+		address = common.BigToAddress(stack.Back(0))
+	)
+
+	// if empty and transfers value
+	if evm.StateDB.Empty(address) && evm.StateDB.GetBalance(contract.Address()).Sign() != 0 {
+		gas += gt.CreateBySuicide
 	}
 
 	if !evm.StateDB.HasSuicided(contract.Address()) {
@@ -397,6 +417,33 @@ func gasSuicide(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, 
 }
 
 func gasDelegateCall(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+	gas, err := memoryGasCost(mem, memorySize)
+	if err != nil {
+		return 0, err
+	}
+	var overflow bool
+	if gas, overflow = math.SafeAdd(gas, gt.Calls); overflow {
+		return 0, errGasUintOverflow
+	}
+
+	cg, err := callGas(gt, contract.Gas, gas, stack.Back(0))
+	if err != nil {
+		return 0, err
+	}
+	// Replace the stack item with the new gas calculation. This means that
+	// either the original item is left on the stack or the item is replaced by:
+	// (availableGas - gas) * 63 / 64
+	// We replace the stack item so that it's available when the opCall instruction is
+	// called.
+	stack.data[stack.len()-1] = new(big.Int).SetUint64(cg)
+
+	if gas, overflow = math.SafeAdd(gas, cg); overflow {
+		return 0, errGasUintOverflow
+	}
+	return gas, nil
+}
+
+func gasStaticCall(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	gas, err := memoryGasCost(mem, memorySize)
 	if err != nil {
 		return 0, err

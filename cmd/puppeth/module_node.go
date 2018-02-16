@@ -1,19 +1,3 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
 package main
 
 import (
@@ -40,7 +24,7 @@ ADD genesis.json /genesis.json
 RUN \
   echo '/kusd init /genesis.json' > kusd.sh && \{{if .Unlock}}
 	echo 'mkdir -p /root/.ethereum/keystore/ && cp /signer.json /root/.ethereum/keystore/' >> kusd.sh && \{{end}}
-	echo $'/kusd --networkid {{.NetworkID}} --cache 512 --port {{.Port}} --maxpeers {{.Peers}} {{.LightFlag}} --ethstats \'{{.Ethstats}}\' {{if .BootV4}}--bootnodesv4 {{.BootV4}}{{end}} {{if .BootV5}}--bootnodesv5 {{.BootV5}}{{end}} {{if .Etherbase}}--etherbase {{.Etherbase}} --mine{{end}}{{if .Unlock}}--unlock 0 --password /signer.pass --mine{{end}} --targetgaslimit {{.GasTarget}} --gasprice {{.GasPrice}}' >> kusd.sh
+	echo $'/kusd --networkid {{.NetworkID}} --cache 512 --port {{.Port}} --maxpeers {{.Peers}} {{.LightFlag}} --stats \'{{.Stats}}\' {{if .BootV4}}--bootnodesv4 {{.BootV4}}{{end}} {{if .BootV5}}--bootnodesv5 {{.BootV5}}{{end}} {{if .Coinbase}}--coinbase {{.Etherbase}} --mine{{end}}{{if .Unlock}}--unlock 0 --password /signer.pass --mine{{end}} --targetgaslimit {{.GasTarget}} --gasprice {{.GasPrice}}' >> kusd.sh
 
 ENTRYPOINT ["/bin/sh", "kusd.sh"]
 `
@@ -76,12 +60,12 @@ services:
     restart: always
 `
 
-// deployNode deploys a new Ethereum node container to a remote machine via SSH,
+// deployNode deploys a new Kowala node container to a remote machine via SSH,
 // docker and docker-compose. If an instance with the specified network name
 // already exists there, it will be overwritten!
 func deployNode(client *sshClient, network string, bootv4, bootv5 []string, config *nodeInfos) ([]byte, error) {
 	kind := "sealnode"
-	if config.keyJSON == "" && config.etherbase == "" {
+	if config.keyJSON == "" && config.coinbase == "" {
 		kind = "bootnode"
 		bootv4 = make([]string, 0)
 		bootv5 = make([]string, 0)
@@ -102,8 +86,8 @@ func deployNode(client *sshClient, network string, bootv4, bootv5 []string, conf
 		"LightFlag": lightFlag,
 		"BootV4":    strings.Join(bootv4, ","),
 		"BootV5":    strings.Join(bootv5, ","),
-		"Ethstats":  config.ethstats,
-		"Etherbase": config.etherbase,
+		"Stats":     config.stats,
+		"Coinbase":  config.coinbase,
 		"GasTarget": uint64(1000000 * config.gasTarget),
 		"GasPrice":  uint64(1000000000 * config.gasPrice),
 		"Unlock":    config.keyJSON != "",
@@ -120,15 +104,15 @@ func deployNode(client *sshClient, network string, bootv4, bootv5 []string, conf
 		"Light":      config.peersLight > 0,
 		"LightPort":  config.portFull + 1,
 		"LightPeers": config.peersLight,
-		"Ethstats":   config.ethstats[:strings.Index(config.ethstats, ":")],
-		"Etherbase":  config.etherbase,
+		"Stats":      config.stats[:strings.Index(config.stats, ":")],
+		"Coinbase":   config.coinbase,
 		"GasTarget":  config.gasTarget,
 		"GasPrice":   config.gasPrice,
 	})
 	files[filepath.Join(workdir, "docker-compose.yaml")] = composefile.Bytes()
 
 	//genesisfile, _ := json.MarshalIndent(config.genesis, "", "  ")
-	files[filepath.Join(workdir, "genesis.json")] = []byte(config.genesis)
+	files[filepath.Join(workdir, "genesis.json")] = config.genesis
 
 	if config.keyJSON != "" {
 		files[filepath.Join(workdir, "signer.json")] = []byte(config.keyJSON)
@@ -150,14 +134,14 @@ type nodeInfos struct {
 	genesis    []byte
 	network    int64
 	datadir    string
-	ethstats   string
+	stats      string
 	portFull   int
 	portLight  int
 	enodeFull  string
 	enodeLight string
 	peersTotal int
 	peersLight int
-	etherbase  string
+	coinbase   string
 	keyJSON    string
 	keyPass    string
 	gasTarget  float64
@@ -171,7 +155,7 @@ func (info *nodeInfos) String() string {
 		discv5 = fmt.Sprintf(", portv5=%d", info.portLight)
 	}
 	return fmt.Sprintf("port=%d%s, datadir=%s, peers=%d, lights=%d, ethstats=%s, gastarget=%0.3f MGas, gasprice=%0.3f GWei",
-		info.portFull, discv5, info.datadir, info.peersTotal, info.peersLight, info.ethstats, info.gasTarget, info.gasPrice)
+		info.portFull, discv5, info.datadir, info.peersTotal, info.peersLight, info.stats, info.gasTarget, info.gasPrice)
 }
 
 // checkNode does a health-check against an boot or seal node server to verify
@@ -227,8 +211,8 @@ func checkNode(client *sshClient, network string, boot bool) (*nodeInfos, error)
 		portLight:  infos.portmap[infos.envvars["LIGHT_PORT"]],
 		peersTotal: totalPeers,
 		peersLight: lightPeers,
-		ethstats:   infos.envvars["STATS_NAME"],
-		etherbase:  infos.envvars["MINER_NAME"],
+		stats:      infos.envvars["STATS_NAME"],
+		coinbase:   infos.envvars["VALIDATOR_NAME"],
 		keyJSON:    keyJSON,
 		keyPass:    keyPass,
 		gasTarget:  gasTarget,

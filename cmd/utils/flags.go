@@ -1,20 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
-// Package utils contains internal helper functions for go-ethereum commands.
 package utils
 
 import (
@@ -24,25 +7,24 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/kowala-tech/kUSD/consensus/tendermint"
+	"github.com/kowala-tech/kUSD/stats"
 
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/keystore"
 	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/eth"
-	"github.com/kowala-tech/kUSD/eth/downloader"
-	"github.com/kowala-tech/kUSD/eth/gasprice"
-	"github.com/kowala-tech/kUSD/ethdb"
-	"github.com/kowala-tech/kUSD/ethstats"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/les"
+	"github.com/kowala-tech/kUSD/dashboard"
+	"github.com/kowala-tech/kUSD/kusd"
+	"github.com/kowala-tech/kUSD/kusd/downloader"
+	"github.com/kowala-tech/kUSD/kusd/gasprice"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
@@ -52,8 +34,8 @@ import (
 	"github.com/kowala-tech/kUSD/p2p/nat"
 	"github.com/kowala-tech/kUSD/p2p/netutil"
 	"github.com/kowala-tech/kUSD/params"
-	whisper "github.com/kowala-tech/kUSD/whisper/whisperv5"
-	"gopkg.in/urfave/cli.v1"
+
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -125,16 +107,12 @@ var (
 	}
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
-		Value: eth.DefaultConfig.NetworkId,
+		Usage: "Network identifier (integer, 1=Frontier, 2=Ropsten)",
+		Value: kusd.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
 		Usage: "Ropsten network: pre-configured proof-of-work test network",
-	}
-	RinkebyFlag = cli.BoolFlag{
-		Name:  "rinkeby",
-		Usage: "Rinkeby network: pre-configured proof-of-authority test network",
 	}
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
@@ -157,7 +135,7 @@ var (
 		Name:  "light",
 		Usage: "Enable light client mode",
 	}
-	defaultSyncMode = eth.DefaultConfig.SyncMode
+	defaultSyncMode = kusd.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
@@ -178,35 +156,30 @@ var (
 		Name:  "lightkdf",
 		Usage: "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
 	}
-	// Ethash settings
-	EthashCacheDirFlag = DirectoryFlag{
-		Name:  "ethash.cachedir",
-		Usage: "Directory to store the ethash verification caches (default = inside the datadir)",
+	// Dashboard settings
+	DashboardEnabledFlag = cli.BoolFlag{
+		Name:  "dashboard",
+		Usage: "Enable the dashboard",
 	}
-	EthashCachesInMemoryFlag = cli.IntFlag{
-		Name:  "ethash.cachesinmem",
-		Usage: "Number of recent ethash caches to keep in memory (16MB each)",
-		Value: eth.DefaultConfig.EthashCachesInMem,
+	DashboardAddrFlag = cli.StringFlag{
+		Name:  "dashboard.addr",
+		Usage: "Dashboard listening interface",
+		Value: dashboard.DefaultConfig.Host,
 	}
-	EthashCachesOnDiskFlag = cli.IntFlag{
-		Name:  "ethash.cachesondisk",
-		Usage: "Number of recent ethash caches to keep on disk (16MB each)",
-		Value: eth.DefaultConfig.EthashCachesOnDisk,
+	DashboardPortFlag = cli.IntFlag{
+		Name:  "dashboard.host",
+		Usage: "Dashboard listening port",
+		Value: dashboard.DefaultConfig.Port,
 	}
-	EthashDatasetDirFlag = DirectoryFlag{
-		Name:  "ethash.dagdir",
-		Usage: "Directory to store the ethash mining DAGs (default = inside home folder)",
-		Value: DirectoryString{eth.DefaultConfig.EthashDatasetDir},
+	DashboardRefreshFlag = cli.DurationFlag{
+		Name:  "dashboard.refresh",
+		Usage: "Dashboard metrics collection refresh rate",
+		Value: dashboard.DefaultConfig.Refresh,
 	}
-	EthashDatasetsInMemoryFlag = cli.IntFlag{
-		Name:  "ethash.dagsinmem",
-		Usage: "Number of recent ethash mining DAGs to keep in memory (1+GB each)",
-		Value: eth.DefaultConfig.EthashDatasetsInMem,
-	}
-	EthashDatasetsOnDiskFlag = cli.IntFlag{
-		Name:  "ethash.dagsondisk",
-		Usage: "Number of recent ethash mining DAGs to keep on disk (1+GB each)",
-		Value: eth.DefaultConfig.EthashDatasetsOnDisk,
+	DashboardAssetsFlag = cli.StringFlag{
+		Name:  "dashboard.assets",
+		Usage: "Developer flag to serve the dashboard from the local file system",
+		Value: dashboard.DefaultConfig.Assets,
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
@@ -226,37 +199,37 @@ var (
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: eth.DefaultConfig.TxPool.PriceLimit,
+		Value: kusd.DefaultConfig.TxPool.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: eth.DefaultConfig.TxPool.PriceBump,
+		Value: kusd.DefaultConfig.TxPool.PriceBump,
 	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
 		Usage: "Minimum number of executable transaction slots guaranteed per account",
-		Value: eth.DefaultConfig.TxPool.AccountSlots,
+		Value: kusd.DefaultConfig.TxPool.AccountSlots,
 	}
 	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.globalslots",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: eth.DefaultConfig.TxPool.GlobalSlots,
+		Value: kusd.DefaultConfig.TxPool.GlobalSlots,
 	}
 	TxPoolAccountQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.accountqueue",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: eth.DefaultConfig.TxPool.AccountQueue,
+		Value: kusd.DefaultConfig.TxPool.AccountQueue,
 	}
 	TxPoolGlobalQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.globalqueue",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: eth.DefaultConfig.TxPool.GlobalQueue,
+		Value: kusd.DefaultConfig.TxPool.GlobalQueue,
 	}
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: eth.DefaultConfig.TxPool.Lifetime,
+		Value: kusd.DefaultConfig.TxPool.Lifetime,
 	}
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
@@ -269,34 +242,38 @@ var (
 		Usage: "Number of trie node generations to keep in memory",
 		Value: int(state.MaxTrieCacheGen),
 	}
-	// Miner settings
-	MiningEnabledFlag = cli.BoolFlag{
-		Name:  "mine",
-		Usage: "Enable mining",
+	// Consensus Validator settings
+	ValidationEnabledFlag = cli.BoolFlag{
+		Name:  "validate",
+		Usage: "Enable consensus validation",
 	}
-	MinerThreadsFlag = cli.IntFlag{
-		Name:  "minerthreads",
-		Usage: "Number of CPU threads to use for mining",
-		Value: runtime.NumCPU(),
+
+	ValidatorDepositFlag = cli.Uint64Flag{
+		Name:  "deposit",
+		Usage: "Deposit at stake",
+		// @TODO (rgeraldes) - default could be set to the minimum required
 	}
+
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
-		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
+		Usage: "Target gas limit sets the artificial target gas floor for the blocks to be proposed",
 		Value: params.GenesisGasLimit.Uint64(),
 	}
-	EtherbaseFlag = cli.StringFlag{
-		Name:  "etherbase",
-		Usage: "Public address for block mining rewards (default = first account created)",
+	CoinbaseFlag = cli.StringFlag{
+		Name:  "coinbase",
+		Usage: "Public address for block validation rewards (default = first account created)",
 		Value: "0",
 	}
+
+	// @TODO(rgeraldes) - review
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: eth.DefaultConfig.GasPrice,
+		Value: kusd.DefaultConfig.GasPrice,
 	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
-		Usage: "Block extra data set by the miner (default = client version)",
+		Usage: "Block extra data set by the consensus validator (default = client version)",
 	}
 	// Account settings
 	UnlockedAccountFlag = cli.StringFlag{
@@ -315,17 +292,23 @@ var (
 		Usage: "Record information useful for VM and contract debugging",
 	}
 	// Logging and debug settings
-	EthStatsURLFlag = cli.StringFlag{
-		Name:  "ethstats",
-		Usage: "Reporting URL of a ethstats service (nodename:secret@host:port)",
+	KowalaStatsURLFlag = cli.StringFlag{
+		Name:  "stats",
+		Usage: "Reporting URL of a stats service (nodename:secret@host:port)",
 	}
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  metrics.MetricsEnabledFlag,
 		Usage: "Enable metrics collection and reporting",
 	}
-	FakePoWFlag = cli.BoolFlag{
-		Name:  "fakepow",
-		Usage: "Disables proof-of-work verification",
+	MetricsPrometheusAddressFlag = cli.StringFlag{
+		Name:  metrics.MetricsPrometheusAddressFlag,
+		Usage: "Set the address for Prometheus reporting",
+		Value: ":8080",
+	}
+	MetricsPrometheusSubsystemFlag = cli.StringFlag{
+		Name:  metrics.MetricsPrometheusSubsystemFlag,
+		Usage: "Set the subsystem name for Prometheus reporting",
+		Value: "node",
 	}
 	NoCompactionFlag = cli.BoolFlag{
 		Name:  "nocompaction",
@@ -465,26 +448,12 @@ var (
 	GpoBlocksFlag = cli.IntFlag{
 		Name:  "gpoblocks",
 		Usage: "Number of recent blocks to check for gas prices",
-		Value: eth.DefaultConfig.GPO.Blocks,
+		Value: kusd.DefaultConfig.GPO.Blocks,
 	}
 	GpoPercentileFlag = cli.IntFlag{
 		Name:  "gpopercentile",
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: eth.DefaultConfig.GPO.Percentile,
-	}
-	WhisperEnabledFlag = cli.BoolFlag{
-		Name:  "shh",
-		Usage: "Enable Whisper",
-	}
-	WhisperMaxMessageSizeFlag = cli.IntFlag{
-		Name:  "shh.maxmessagesize",
-		Usage: "Max message size accepted",
-		Value: int(whisper.DefaultMaxMessageSize),
-	}
-	WhisperMinPOWFlag = cli.Float64Flag{
-		Name:  "shh.pow",
-		Usage: "Minimum POW accepted",
-		Value: whisper.DefaultMinimumPoW,
+		Value: kusd.DefaultConfig.GPO.Percentile,
 	}
 )
 
@@ -495,9 +464,6 @@ func MakeDataDir(ctx *cli.Context) string {
 	if path := ctx.GlobalString(DataDirFlag.Name); path != "" {
 		if ctx.GlobalBool(TestnetFlag.Name) {
 			return filepath.Join(path, "testnet")
-		}
-		if ctx.GlobalBool(RinkebyFlag.Name) {
-			return filepath.Join(path, "rinkeby")
 		}
 		return path
 	}
@@ -551,11 +517,11 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		}
 	case ctx.GlobalBool(TestnetFlag.Name):
 		urls = params.TestnetBootnodes
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		urls = params.RinkebyBootnodes
 	}
 
-	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
+	if cfg.BootstrapNodes == nil {
+		cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
+	}
 	for _, url := range urls {
 		node, err := discover.ParseNode(url)
 		if err != nil {
@@ -577,13 +543,13 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 		} else {
 			urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
 		}
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		urls = params.RinkebyV5Bootnodes
 	case cfg.BootstrapNodesV5 != nil:
 		return // already set, don't apply defaults.
 	}
 
-	cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
+	if cfg.BootstrapNodesV5 == nil {
+		cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
+	}
 	for _, url := range urls {
 		node, err := discv5.ParseNode(url)
 		if err != nil {
@@ -720,24 +686,30 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	return accs[index], nil
 }
 
-// setEtherbase retrieves the etherbase either from the directly specified
+// setCoinbase retrieves the coinbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
-	if ctx.GlobalIsSet(EtherbaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(EtherbaseFlag.Name))
+func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *kusd.Config) {
+	if ctx.GlobalIsSet(CoinbaseFlag.Name) {
+		account, err := MakeAddress(ks, ctx.GlobalString(CoinbaseFlag.Name))
 		if err != nil {
-			Fatalf("Option %q: %v", EtherbaseFlag.Name, err)
+			Fatalf("Option %q: %v", CoinbaseFlag.Name, err)
 		}
-		cfg.Etherbase = account.Address
+		cfg.Coinbase = account.Address
 		return
 	}
 	accounts := ks.Accounts()
-	if (cfg.Etherbase == common.Address{}) {
+	if (cfg.Coinbase == common.Address{}) {
 		if len(accounts) > 0 {
-			cfg.Etherbase = accounts[0].Address
+			cfg.Coinbase = accounts[0].Address
 		} else {
-			log.Warn("No etherbase set and no accounts found as default")
+			log.Warn("No coinbase set and no accounts found as default")
 		}
+	}
+}
+
+func setDeposit(ctx *cli.Context, cfg *kusd.Config) {
+	if ctx.GlobalIsSet(ValidatorDepositFlag.Name) {
+		cfg.Deposit = ctx.GlobalUint64(ValidatorDepositFlag.Name)
 	}
 }
 
@@ -820,8 +792,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = filepath.Join(os.TempDir(), "ethereum_dev_mode")
 	case ctx.GlobalBool(TestnetFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -877,27 +847,6 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
-func setEthash(ctx *cli.Context, cfg *eth.Config) {
-	if ctx.GlobalIsSet(EthashCacheDirFlag.Name) {
-		cfg.EthashCacheDir = ctx.GlobalString(EthashCacheDirFlag.Name)
-	}
-	if ctx.GlobalIsSet(EthashDatasetDirFlag.Name) {
-		cfg.EthashDatasetDir = ctx.GlobalString(EthashDatasetDirFlag.Name)
-	}
-	if ctx.GlobalIsSet(EthashCachesInMemoryFlag.Name) {
-		cfg.EthashCachesInMem = ctx.GlobalInt(EthashCachesInMemoryFlag.Name)
-	}
-	if ctx.GlobalIsSet(EthashCachesOnDiskFlag.Name) {
-		cfg.EthashCachesOnDisk = ctx.GlobalInt(EthashCachesOnDiskFlag.Name)
-	}
-	if ctx.GlobalIsSet(EthashDatasetsInMemoryFlag.Name) {
-		cfg.EthashDatasetsInMem = ctx.GlobalInt(EthashDatasetsInMemoryFlag.Name)
-	}
-	if ctx.GlobalIsSet(EthashDatasetsOnDiskFlag.Name) {
-		cfg.EthashDatasetsOnDisk = ctx.GlobalInt(EthashDatasetsOnDiskFlag.Name)
-	}
-}
-
 func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
 	set := make([]string, 0, 1)
 	for _, flag := range flags {
@@ -910,27 +859,17 @@ func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
 	}
 }
 
-// SetShhConfig applies shh-related command line flags to the config.
-func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
-	if ctx.GlobalIsSet(WhisperMaxMessageSizeFlag.Name) {
-		cfg.MaxMessageSize = uint32(ctx.GlobalUint(WhisperMaxMessageSizeFlag.Name))
-	}
-	if ctx.GlobalIsSet(WhisperMinPOWFlag.Name) {
-		cfg.MinimumAcceptedPOW = ctx.GlobalFloat64(WhisperMinPOWFlag.Name)
-	}
-}
-
-// SetEthConfig applies eth-related command line flags to the config.
-func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
+// SetKowalaConfig applies kowala-related command line flags to the config.
+func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kusd.Config) {
 	// Avoid conflicting network flags
-	checkExclusive(ctx, DevModeFlag, TestnetFlag, RinkebyFlag)
+	checkExclusive(ctx, DevModeFlag, TestnetFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setEtherbase(ctx, ks, cfg)
+	setCoinbase(ctx, ks, cfg)
+	setDeposit(ctx, cfg)
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
-	setEthash(ctx, cfg)
 
 	switch {
 	case ctx.GlobalIsSet(SyncModeFlag.Name):
@@ -959,9 +898,6 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	}
 	cfg.DatabaseHandles = makeDatabaseHandles()
 
-	if ctx.GlobalIsSet(MinerThreadsFlag.Name) {
-		cfg.MinerThreads = ctx.GlobalInt(MinerThreadsFlag.Name)
-	}
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
@@ -983,17 +919,13 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 			cfg.NetworkId = 3
 		}
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 4
-		}
-		cfg.Genesis = core.DefaultRinkebyGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.Genesis = core.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = new(big.Int)
 		}
-		cfg.PowTest = true
+		// @TODO(rgeraldes) - review
+		//cfg.PowTest = true
 	}
 
 	// TODO(fjl): move trie cache generations into config
@@ -1002,51 +934,46 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	}
 }
 
-// RegisterEthService adds an Ethereum client to the stack.
-func RegisterEthService(stack *node.Node, cfg *eth.Config) {
+// SetDashboardConfig applies dashboard related command line flags to the config.
+func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
+	cfg.Host = ctx.GlobalString(DashboardAddrFlag.Name)
+	cfg.Port = ctx.GlobalInt(DashboardPortFlag.Name)
+	cfg.Refresh = ctx.GlobalDuration(DashboardRefreshFlag.Name)
+	cfg.Assets = ctx.GlobalString(DashboardAssetsFlag.Name)
+}
+
+// RegisterKowalaService adds a Kowala client to the stack.
+func RegisterKowalaService(stack *node.Node, cfg *kusd.Config) {
 	var err error
-	if cfg.SyncMode == downloader.LightSync {
-		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			return les.New(ctx, cfg)
-		})
-	} else {
-		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			fullNode, err := eth.New(ctx, cfg)
-			if fullNode != nil && cfg.LightServ > 0 {
-				ls, _ := les.NewLesServer(fullNode, cfg)
-				fullNode.AddLesServer(ls)
-			}
-			return fullNode, err
-		})
-	}
+
+	err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		fullNode, err := kusd.New(ctx, cfg)
+		return fullNode, err
+	})
+
 	if err != nil {
-		Fatalf("Failed to register the Ethereum service: %v", err)
+		Fatalf("Failed to register the Kowala service: %v", err)
 	}
 }
 
-// RegisterShhService configures Whisper and adds it to the given node.
-func RegisterShhService(stack *node.Node, cfg *whisper.Config) {
-	if err := stack.Register(func(n *node.ServiceContext) (node.Service, error) {
-		return whisper.New(cfg), nil
-	}); err != nil {
-		Fatalf("Failed to register the Whisper service: %v", err)
-	}
+// RegisterDashboardService adds a dashboard to the stack.
+func RegisterDashboardService(stack *node.Node, cfg *dashboard.Config) {
+	stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		return dashboard.New(cfg)
+	})
 }
 
-// RegisterEthStatsService configures the Ethereum Stats daemon and adds it to
-// th egiven node.
-func RegisterEthStatsService(stack *node.Node, url string) {
+// RegisterKowalaStatsService configures the Kowala Stats daemon and adds it to
+// the given node.
+func RegisterKowalaStatsService(stack *node.Node, url string) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		// Retrieve both eth and les services
-		var ethServ *eth.Ethereum
-		ctx.Service(&ethServ)
+		var kowalaServ *kusd.Kowala
+		ctx.Service(&kowalaServ)
 
-		var lesServ *les.LightEthereum
-		ctx.Service(&lesServ)
-
-		return ethstats.New(url, ethServ, lesServ)
+		return stats.New(url, kowalaServ)
 	}); err != nil {
-		Fatalf("Failed to register the Ethereum Stats service: %v", err)
+		Fatalf("Failed to register the Kowala Stats service: %v", err)
 	}
 }
 
@@ -1057,7 +984,7 @@ func SetupNetwork(ctx *cli.Context) {
 }
 
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
-func MakeChainDatabase(ctx *cli.Context, stack *node.Node) ethdb.Database {
+func MakeChainDatabase(ctx *cli.Context, stack *node.Node) kusddb.Database {
 	var (
 		cache   = ctx.GlobalInt(CacheFlag.Name)
 		handles = makeDatabaseHandles()
@@ -1078,8 +1005,6 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
 		genesis = core.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		genesis = core.DefaultRinkebyGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
 		genesis = core.DevGenesisBlock()
 	}
@@ -1087,20 +1012,22 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 }
 
 // MakeChain creates a chain manager from set command line flags.
-func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb ethdb.Database) {
+func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb kusddb.Database) {
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
-	engine := ethash.NewFaker()
-	if !ctx.GlobalBool(FakePoWFlag.Name) {
-		engine = ethash.New("", 1, 0, "", 1, 0)
-	}
+	// @TODO(rgeraldes) - review
+	//engine := ethash.NewFaker()
+	//if !ctx.GlobalBool(FakePoWFlag.Name) {
+	//	engine = ethash.New("", 1, 0, "", 1, 0)
+	//}
+	engine := tendermint.New(&params.TendermintConfig{Rewarded: false})
 	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)
 	}
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = core.NewBlockChain(chainDb, config, engine, new(event.TypeMux), vmcfg)
+	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}

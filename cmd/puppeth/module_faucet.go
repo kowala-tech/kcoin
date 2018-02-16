@@ -102,7 +102,7 @@ func deployFaucet(client *sshClient, network string, bootnodes []string, config 
 	template.Must(template.New("").Parse(faucetDockerfile)).Execute(dockerfile, map[string]interface{}{
 		"NetworkID":     config.node.network,
 		"Bootnodes":     strings.Join(bootnodes, ","),
-		"Ethstats":      config.node.ethstats,
+		"Ethstats":      config.node.stats,
 		"EthPort":       config.node.portFull,
 		"GitHubUser":    config.githubUser,
 		"GitHubToken":   config.githubToken,
@@ -122,7 +122,7 @@ func deployFaucet(client *sshClient, network string, bootnodes []string, config 
 		"VHost":         config.host,
 		"ApiPort":       config.port,
 		"EthPort":       config.node.portFull,
-		"EthName":       config.node.ethstats[:strings.Index(config.node.ethstats, ":")],
+		"EthName":       config.node.stats[:strings.Index(config.node.stats, ":")],
 		"GitHubUser":    config.githubUser,
 		"GitHubToken":   config.githubToken,
 		"CaptchaToken":  config.captchaToken,
@@ -133,7 +133,7 @@ func deployFaucet(client *sshClient, network string, bootnodes []string, config 
 	})
 	files[filepath.Join(workdir, "docker-compose.yaml")] = composefile.Bytes()
 
-	files[filepath.Join(workdir, "genesis.json")] = []byte(config.node.genesis)
+	files[filepath.Join(workdir, "genesis.json")] = config.node.genesis
 	files[filepath.Join(workdir, "account.json")] = []byte(config.node.keyJSON)
 	files[filepath.Join(workdir, "account.pass")] = []byte(config.node.keyPass)
 
@@ -164,7 +164,7 @@ type faucetInfos struct {
 
 // String implements the stringer interface.
 func (info *faucetInfos) String() string {
-	return fmt.Sprintf("host=%s, api=%d, eth=%d, amount=%d, minutes=%d, tiers=%d, github=%s, captcha=%v, ethstats=%s", info.host, info.port, info.node.portFull, info.amount, info.minutes, info.tiers, info.githubUser, info.captchaToken != "", info.node.ethstats)
+	return fmt.Sprintf("host=%s, api=%d, eth=%d, amount=%d, minutes=%d, tiers=%d, github=%s, captcha=%v, stats=%s", info.host, info.port, info.node.portFull, info.amount, info.minutes, info.tiers, info.githubUser, info.captchaToken != "", info.node.stats)
 }
 
 // checkFaucet does a health-check against an faucet server to verify whether
@@ -215,7 +215,7 @@ func checkFaucet(client *sshClient, network string) (*faucetInfos, error) {
 		node: &nodeInfos{
 			datadir:  infos.volumes["/root/.faucet"],
 			portFull: infos.portmap[infos.envvars["ETH_PORT"]+"/tcp"],
-			ethstats: infos.envvars["ETH_NAME"],
+			stats:    infos.envvars["KUSD_NAME"],
 			keyJSON:  keyJSON,
 			keyPass:  keyPass,
 		},

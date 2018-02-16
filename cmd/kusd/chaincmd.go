@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
 package main
 
 import (
@@ -31,7 +15,9 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/ethdb"
+	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusd/downloader"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/trie"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -91,6 +77,21 @@ Optional second and third arguments control the first and
 last block to write. In this mode, the file will be appended
 if already existing.`,
 	}
+	copydbCommand = cli.Command{
+		Action:    utils.MigrateFlags(copyDb),
+		Name:      "copydb",
+		Usage:     "Create a local chain from a target chaindata folder",
+		ArgsUsage: "<sourceChaindataDir>",
+		Flags: []cli.Flag{
+			utils.DataDirFlag,
+			utils.CacheFlag,
+			utils.SyncModeFlag,
+			utils.TestnetFlag,
+		},
+		Category: "BLOCKCHAIN COMMANDS",
+		Description: `
+The first argument must be the directory containing the blockchain to download from`,
+	}
 	removedbCommand = cli.Command{
 		Action:    utils.MigrateFlags(removeDB),
 		Name:      "removedb",
@@ -141,7 +142,10 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	// Open an initialise both full and light databases
 	stack := makeFullNode(ctx)
-	for _, name := range []string{"chaindata", "lightchaindata"} {
+
+	// @TODO (rgeraldes) - light chain data is used by the light client
+	// which is not yet availabe
+	for _, name := range []string{"chaindata" /*"lightchaindata"*/} {
 		chaindb, err := stack.OpenDatabase(name, 0, 0)
 		if err != nil {
 			utils.Fatalf("Failed to open database: %v", err)
@@ -196,7 +200,7 @@ func importChain(ctx *cli.Context) error {
 	fmt.Printf("Import done in %v.\n\n", time.Since(start))
 
 	// Output pre-compaction stats mostly to see the import trashing
-	db := chainDb.(*ethdb.LDBDatabase)
+	db := chainDb.(*kusddb.LDBDatabase)
 
 	stats, err := db.LDB().GetProperty("leveldb.stats")
 	if err != nil {
@@ -265,6 +269,54 @@ func exportChain(ctx *cli.Context) error {
 		utils.Fatalf("Export error: %v\n", err)
 	}
 	fmt.Printf("Export done in %v", time.Since(start))
+	return nil
+}
+
+func copyDb(ctx *cli.Context) error {
+	// Ensure we have a source chain directory to copy
+	if len(ctx.Args()) != 1 {
+		utils.Fatalf("Source chaindata directory path argument missing")
+	}
+	// Initialize a new chain for the running node to sync into
+	stack := makeFullNode(ctx)
+	chain, chainDb := utils.MakeChain(ctx, stack)
+
+	syncmode := *utils.GlobalTextMarshaler(ctx, utils.SyncModeFlag.Name).(*downloader.SyncMode)
+	dl := downloader.New(syncmode, chainDb, new(event.TypeMux), chain, nil, nil)
+
+	// Create a source peer to satisfy downloader requests from
+	db, err := kusddb.NewLDBDatabase(ctx.Args().First(), ctx.GlobalInt(utils.CacheFlag.Name), 256)
+	if err != nil {
+		return err
+	}
+	hc, err := core.NewHeaderChain(db, chain.Config(), chain.Engine(), func() bool { return false })
+	if err != nil {
+		return err
+	}
+	peer := downloader.NewFakePeer("local", db, hc, dl)
+	if err = dl.RegisterPeer("local", 63, peer); err != nil {
+		return err
+	}
+	// Synchronise with the simulated peer
+	start := time.Now()
+
+	currentHeader := hc.CurrentHeader()
+	if err = dl.Synchronise("local", currentHeader.Hash(), currentHeader.Number, syncmode); err != nil {
+		return err
+	}
+	for dl.Synchronising() {
+		time.Sleep(10 * time.Millisecond)
+	}
+	fmt.Printf("Database copy done in %v\n", time.Since(start))
+
+	// Compact the entire database to remove any sync overhead
+	start = time.Now()
+	fmt.Println("Compacting entire database...")
+	if err = chainDb.(*kusddb.LDBDatabase).LDB().CompactRange(util.Range{}); err != nil {
+		utils.Fatalf("Compaction failed: %v", err)
+	}
+	fmt.Printf("Compaction done in %v.\n\n", time.Since(start))
+
 	return nil
 }
 

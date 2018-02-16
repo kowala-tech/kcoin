@@ -143,14 +143,14 @@ func (ks *KeyStore) refreshWallets() {
 	for _, account := range accs {
 		// Drop wallets while they were in front of the next account
 		for len(ks.wallets) > 0 && ks.wallets[0].URL().Cmp(account.URL) < 0 {
-			events = append(events, accounts.WalletEvent{Wallet: ks.wallets[0], Arrive: false})
+			events = append(events, accounts.WalletEvent{Wallet: ks.wallets[0], Kind: accounts.WalletDropped})
 			ks.wallets = ks.wallets[1:]
 		}
 		// If there are no more wallets or the account is before the next, wrap new wallet
 		if len(ks.wallets) == 0 || ks.wallets[0].URL().Cmp(account.URL) > 0 {
 			wallet := &keystoreWallet{account: account, keystore: ks}
 
-			events = append(events, accounts.WalletEvent{Wallet: wallet, Arrive: true})
+			events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletArrived})
 			wallets = append(wallets, wallet)
 			continue
 		}
@@ -163,7 +163,7 @@ func (ks *KeyStore) refreshWallets() {
 	}
 	// Drop any leftover wallets and set the new batch
 	for _, wallet := range ks.wallets {
-		events = append(events, accounts.WalletEvent{Wallet: wallet, Arrive: false})
+		events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletDropped})
 	}
 	ks.wallets = wallets
 	ks.mu.Unlock()
@@ -277,11 +277,36 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	if !found {
 		return nil, ErrLocked
 	}
-	// Depending on the presence of the chain ID, sign with EIP155 or homestead
-	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
+
+	return types.SignTx(tx, types.NewAndromedaSigner(chainID), unlockedKey.PrivateKey)
+}
+
+// SignVote signs the given vote with the requested account.
+func (ks *KeyStore) SignVote(a accounts.Account, vote *types.Vote, chainID *big.Int) (*types.Vote, error) {
+	// Look up the key to sign with and abort if it cannot be found
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return nil, ErrLocked
 	}
-	return types.SignTx(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey)
+
+	return types.SignVote(vote, types.NewAndromedaSigner(chainID), unlockedKey.PrivateKey)
+}
+
+// SignProposal signs the given proposal with the requested account.
+func (ks *KeyStore) SignProposal(a accounts.Account, proposal *types.Proposal, chainID *big.Int) (*types.Proposal, error) {
+	// Look up the key to sign with and abort if it cannot be found
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return nil, ErrLocked
+	}
+
+	return types.SignProposal(proposal, types.NewAndromedaSigner(chainID), unlockedKey.PrivateKey)
 }
 
 // SignHashWithPassphrase signs hash if the private key matching the given address
@@ -305,11 +330,7 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 	}
 	defer zeroKey(key.PrivateKey)
 
-	// Depending on the presence of the chain ID, sign with EIP155 or homestead
-	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
-	}
-	return types.SignTx(tx, types.HomesteadSigner{}, key.PrivateKey)
+	return types.SignTx(tx, types.NewAndromedaSigner(chainID), key.PrivateKey)
 }
 
 // Unlock unlocks the given account indefinitely.

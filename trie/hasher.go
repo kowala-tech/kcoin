@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package trie
 
 import (
@@ -76,7 +60,7 @@ func (h *hasher) hash(n node, db DatabaseWriter, force bool) (node, node, error)
 	if err != nil {
 		return hashNode{}, n, err
 	}
-	// Cache the hash of the ndoe for later reuse and remove
+	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
 	cachedHash, _ := hashed.(hashNode)

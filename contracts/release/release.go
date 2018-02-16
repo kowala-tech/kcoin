@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // Package release contains the node service that tracks client releases.
 package release
 
@@ -27,9 +11,8 @@ import (
 
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/eth"
-	"github.com/kowala-tech/kUSD/internal/ethapi"
-	"github.com/kowala-tech/kUSD/les"
+	"github.com/kowala-tech/kUSD/internal/kusdapi"
+	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/p2p"
@@ -41,7 +24,7 @@ const releaseRecheckInterval = time.Hour
 
 // Config contains the configurations of the release service.
 type Config struct {
-	Oracle common.Address // Ethereum address of the release oracle
+	Oracle common.Address // Kowala address of the release oracle
 	Major  uint32         // Major version component of the release
 	Minor  uint32         // Minor version component of the release
 	Patch  uint32         // Patch version component of the release
@@ -60,21 +43,16 @@ type ReleaseService struct {
 // NewReleaseService creates a new service to periodically check for new client
 // releases and notify the user of such.
 func NewReleaseService(ctx *node.ServiceContext, config Config) (node.Service, error) {
-	// Retrieve the Ethereum service dependency to access the blockchain
-	var apiBackend ethapi.Backend
-	var ethereum *eth.Ethereum
-	if err := ctx.Service(&ethereum); err == nil {
-		apiBackend = ethereum.ApiBackend
+	// Retrieve the Kowala service dependency to access the blockchain
+	var apiBackend kusdapi.Backend
+	var kowala *kusd.Kowala
+	if err := ctx.Service(&kowala); err == nil {
+		apiBackend = kowala.ApiBackend
 	} else {
-		var ethereum *les.LightEthereum
-		if err := ctx.Service(&ethereum); err == nil {
-			apiBackend = ethereum.ApiBackend
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 	// Construct the release service
-	contract, err := NewReleaseOracle(config.Oracle, eth.NewContractBackend(apiBackend))
+	contract, err := NewReleaseOracle(config.Oracle, kusd.NewContractBackend(apiBackend))
 	if err != nil {
 		return nil, err
 	}

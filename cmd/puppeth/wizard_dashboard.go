@@ -112,11 +112,11 @@ func (w *wizard) deployDashboard() {
 			// No service hosting for this
 		}
 	}
-	// If we have ethstats running, ask whether to make the secret public or not
+	// If we have stats running, ask whether to make the secret public or not
 	var ethstats bool
-	if w.conf.ethstats != "" {
+	if w.conf.stats != "" {
 		fmt.Println()
-		fmt.Println("Include ethstats secret on dashboard (y/n)? (default = yes)")
+		fmt.Println("Include stats secret on dashboard (y/n)? (default = yes)")
 		ethstats = w.readDefaultString("y") == "y"
 	}
 	// Try to deploy the dashboard container on the host

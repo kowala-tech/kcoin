@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kowala-tech/kUSD/accounts/keystore"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/log"
 )
@@ -33,7 +32,7 @@ func (w *wizard) deployNode(boot bool) {
 		log.Error("No genesis block configured")
 		return
 	}
-	if w.conf.ethstats == "" {
+	if w.conf.stats == "" {
 		log.Error("No ethstats server configured")
 		return
 	}
@@ -54,7 +53,7 @@ func (w *wizard) deployNode(boot bool) {
 		}
 	}
 	infos.genesis, _ = json.MarshalIndent(w.conf.genesis, "", "  ")
-	infos.network = w.conf.genesis.Config.ChainId.Int64()
+	infos.network = w.conf.genesis.Config.ChainID.Int64()
 
 	// Figure out where the user wants to store the persistent data
 	fmt.Println()
@@ -82,59 +81,32 @@ func (w *wizard) deployNode(boot bool) {
 
 	// Set a proper name to report on the stats page
 	fmt.Println()
-	if infos.ethstats == "" {
+	if infos.stats == "" {
 		fmt.Printf("What should the node be called on the stats page?\n")
-		infos.ethstats = w.readString() + ":" + w.conf.ethstats
+		infos.stats = w.readString() + ":" + w.conf.stats
 	} else {
-		fmt.Printf("What should the node be called on the stats page? (default = %s)\n", infos.ethstats)
-		infos.ethstats = w.readDefaultString(infos.ethstats) + ":" + w.conf.ethstats
+		fmt.Printf("What should the node be called on the stats page? (default = %s)\n", infos.stats)
+		infos.stats = w.readDefaultString(infos.stats) + ":" + w.conf.stats
 	}
-	// If the node is a miner/signer, load up needed credentials
+	// If the node is a validator, load up needed credentials
 	if !boot {
-		if w.conf.genesis.Config.Ethash != nil {
-			// Ethash based miners only need an etherbase to mine against
+		if w.conf.genesis.Config.Tendermint != nil {
+			// Tendermint based validators only need a coinbase to validate
 			fmt.Println()
-			if infos.etherbase == "" {
-				fmt.Printf("What address should the miner user?\n")
+			if infos.coinbase == "" {
+				fmt.Printf("What address should the validator user?\n")
 				for {
 					if address := w.readAddress(); address != nil {
-						infos.etherbase = address.Hex()
+						infos.coinbase = address.Hex()
 						break
 					}
 				}
 			} else {
-				fmt.Printf("What address should the miner user? (default = %s)\n", infos.etherbase)
-				infos.etherbase = w.readDefaultAddress(common.HexToAddress(infos.etherbase)).Hex()
-			}
-		} else if w.conf.genesis.Config.Clique != nil {
-			// If a previous signer was already set, offer to reuse it
-			if infos.keyJSON != "" {
-				if key, err := keystore.DecryptKey([]byte(infos.keyJSON), infos.keyPass); err != nil {
-					infos.keyJSON, infos.keyPass = "", ""
-				} else {
-					fmt.Println()
-					fmt.Printf("Reuse previous (%s) signing account (y/n)? (default = yes)\n", key.Address.Hex())
-					if w.readDefaultString("y") != "y" {
-						infos.keyJSON, infos.keyPass = "", ""
-					}
-				}
-			}
-			// Clique based signers need a keyfile and unlock password, ask if unavailable
-			if infos.keyJSON == "" {
-				fmt.Println()
-				fmt.Println("Please paste the signer's key JSON:")
-				infos.keyJSON = w.readJSON()
-
-				fmt.Println()
-				fmt.Println("What's the unlock password for the account? (won't be echoed)")
-				infos.keyPass = w.readPassword()
-
-				if _, err := keystore.DecryptKey([]byte(infos.keyJSON), infos.keyPass); err != nil {
-					log.Error("Failed to decrypt key with given passphrase")
-					return
-				}
+				fmt.Printf("What address should the miner user? (default = %s)\n", infos.coinbase)
+				infos.coinbase = w.readDefaultAddress(common.HexToAddress(infos.coinbase)).Hex()
 			}
 		}
+
 		// Establish the gas dynamics to be enforced by the signer
 		fmt.Println()
 		fmt.Printf("What gas limit should empty blocks target (MGas)? (default = %0.3f)\n", infos.gasTarget)

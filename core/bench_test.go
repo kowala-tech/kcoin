@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
@@ -25,12 +9,12 @@ import (
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/math"
-	"github.com/kowala-tech/kUSD/consensus/ethash"
+	"github.com/kowala-tech/kUSD/consensus/tendermint"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/ethdb"
 	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/params"
 )
 
@@ -148,16 +132,16 @@ func genUncles(i int, gen *BlockGen) {
 
 func benchInsertChain(b *testing.B, disk bool, gen func(int, *BlockGen)) {
 	// Create the database in memory or in a temporary directory.
-	var db ethdb.Database
+	var db kusddb.Database
 	if !disk {
-		db, _ = ethdb.NewMemDatabase()
+		db, _ = kusddb.NewMemDatabase()
 	} else {
 		dir, err := ioutil.TempDir("", "eth-core-bench")
 		if err != nil {
 			b.Fatalf("cannot create temporary directory: %v", err)
 		}
 		defer os.RemoveAll(dir)
-		db, err = ethdb.NewLDBDatabase(dir, 128, 128)
+		db, err = kusddb.NewLDBDatabase(dir, 128, 128)
 		if err != nil {
 			b.Fatalf("cannot create temporary database: %v", err)
 		}
@@ -175,8 +159,7 @@ func benchInsertChain(b *testing.B, disk bool, gen func(int, *BlockGen)) {
 
 	// Time the insertion of the new chain.
 	// State and blocks are stored in the same DB.
-	evmux := new(event.TypeMux)
-	chainman, _ := NewBlockChain(db, gspec.Config, ethash.NewFaker(), evmux, vm.Config{})
+	chainman, _ := NewBlockChain(db, gspec.Config, tendermint.NewFaker(), vm.Config{})
 	defer chainman.Stop()
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -224,7 +207,7 @@ func BenchmarkChainWrite_full_500k(b *testing.B) {
 
 // makeChainForBench writes a given number of headers or empty blocks/receipts
 // into a database.
-func makeChainForBench(db ethdb.Database, full bool, count uint64) {
+func makeChainForBench(db kusddb.Database, full bool, count uint64) {
 	var hash common.Hash
 	for n := uint64(0); n < count; n++ {
 		header := &types.Header{
@@ -254,7 +237,7 @@ func benchWriteChain(b *testing.B, full bool, count uint64) {
 		if err != nil {
 			b.Fatalf("cannot create temporary directory: %v", err)
 		}
-		db, err := ethdb.NewLDBDatabase(dir, 128, 1024)
+		db, err := kusddb.NewLDBDatabase(dir, 128, 1024)
 		if err != nil {
 			b.Fatalf("error opening database at %v: %v", dir, err)
 		}
@@ -271,7 +254,7 @@ func benchReadChain(b *testing.B, full bool, count uint64) {
 	}
 	defer os.RemoveAll(dir)
 
-	db, err := ethdb.NewLDBDatabase(dir, 128, 1024)
+	db, err := kusddb.NewLDBDatabase(dir, 128, 1024)
 	if err != nil {
 		b.Fatalf("error opening database at %v: %v", dir, err)
 	}
@@ -282,11 +265,11 @@ func benchReadChain(b *testing.B, full bool, count uint64) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		db, err := ethdb.NewLDBDatabase(dir, 128, 1024)
+		db, err := kusddb.NewLDBDatabase(dir, 128, 1024)
 		if err != nil {
 			b.Fatalf("error opening database at %v: %v", dir, err)
 		}
-		chain, err := NewBlockChain(db, params.TestChainConfig, ethash.NewFaker(), new(event.TypeMux), vm.Config{})
+		chain, err := NewBlockChain(db, params.TestChainConfig, tendermint.NewFaker(), vm.Config{})
 		if err != nil {
 			b.Fatalf("error creating chain: %v", err)
 		}
@@ -300,6 +283,7 @@ func benchReadChain(b *testing.B, full bool, count uint64) {
 			}
 		}
 
+		chain.Stop()
 		db.Close()
 	}
 }

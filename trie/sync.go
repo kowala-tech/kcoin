@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package trie
 
 import (
@@ -138,7 +122,7 @@ func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) 
 	if _, ok := s.membatch.batch[hash]; ok {
 		return
 	}
-	if blob, _ := s.database.Get(hash.Bytes()); blob != nil {
+	if ok, _ := s.database.Has(hash.Bytes()); ok {
 		return
 	}
 	// Assemble the new sub-trie sync request
@@ -296,8 +280,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 			if _, ok := s.membatch.batch[hash]; ok {
 				continue
 			}
-			blob, _ := s.database.Get(node)
-			if local, err := decodeNode(node[:], blob, 0); local != nil && err == nil {
+			if ok, _ := s.database.Has(node); ok {
 				continue
 			}
 			// Locally unknown node, schedule for retrieval

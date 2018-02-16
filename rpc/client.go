@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package rpc
 
 import (
@@ -46,7 +30,7 @@ const (
 	tcpKeepAliveInterval = 30 * time.Second
 	defaultDialTimeout   = 10 * time.Second // used when dialing if the context has no deadline
 	defaultWriteTimeout  = 10 * time.Second // used for calls if the context has no deadline
-	subscribeTimeout     = 5 * time.Second  // overall timeout eth_subscribe, rpc_modules calls
+	subscribeTimeout     = 5 * time.Second  // overall timeout kusd_subscribe, rpc_modules calls
 )
 
 const (
@@ -131,7 +115,7 @@ type requestOp struct {
 	ids  []json.RawMessage
 	err  error
 	resp chan *jsonrpcMessage // receives up to len(ids) responses
-	sub  *ClientSubscription  // only set for EthSubscribe requests
+	sub  *ClientSubscription  // only set for KowalaSubscribe requests
 }
 
 func (op *requestOp) wait(ctx context.Context) (*jsonrpcMessage, error) {
@@ -349,85 +333,49 @@ func (c *Client) BatchCallContext(ctx context.Context, b []BatchElem) error {
 	return err
 }
 
-// ShhSubscribe calls the "shh_subscribe" method with the given arguments,
-// registering a subscription. Server notifications for the subscription are
-// sent to the given channel. The element type of the channel must match the
-// expected type of content returned by the subscription.
-//
-// The context argument cancels the RPC request that sets up the subscription but has no
-// effect on the subscription after ShhSubscribe has returned.
-//
-// Slow subscribers will be dropped eventually. Client buffers up to 8000 notifications
-// before considering the subscriber dead. The subscription Err channel will receive
-// ErrSubscriptionQueueOverflow. Use a sufficiently large buffer on the channel or ensure
-// that the channel usually has at least one reader to prevent this issue.
-func (c *Client) ShhSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
-	// Check type of channel first.
-	chanVal := reflect.ValueOf(channel)
-	if chanVal.Kind() != reflect.Chan || chanVal.Type().ChanDir()&reflect.SendDir == 0 {
-		panic("first argument to ShhSubscribe must be a writable channel")
-	}
-	if chanVal.IsNil() {
-		panic("channel given to ShhSubscribe must not be nil")
-	}
-	if c.isHTTP {
-		return nil, ErrNotificationsUnsupported
-	}
-
-	msg, err := c.newMessage("shh"+subscribeMethodSuffix, args...)
-	if err != nil {
-		return nil, err
-	}
-	op := &requestOp{
-		ids:  []json.RawMessage{msg.ID},
-		resp: make(chan *jsonrpcMessage),
-		sub:  newClientSubscription(c, "shh", chanVal),
-	}
-
-	// Send the subscription request.
-	// The arrival and validity of the response is signaled on sub.quit.
-	if err := c.send(ctx, op, msg); err != nil {
-		return nil, err
-	}
-	if _, err := op.wait(ctx); err != nil {
-		return nil, err
-	}
-	return op.sub, nil
+// KowalaSubscribe registers a subscripion under the "kusd" namespace.
+func (c *Client) KowalaSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+	return c.Subscribe(ctx, "eth", channel, args...)
 }
 
-// EthSubscribe calls the "eth_subscribe" method with the given arguments,
+// ShhSubscribe registers a subscripion under the "shh" namespace.
+func (c *Client) ShhSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+	return c.Subscribe(ctx, "shh", channel, args...)
+}
+
+// Subscribe calls the "<namespace>_subscribe" method with the given arguments,
 // registering a subscription. Server notifications for the subscription are
 // sent to the given channel. The element type of the channel must match the
 // expected type of content returned by the subscription.
 //
 // The context argument cancels the RPC request that sets up the subscription but has no
-// effect on the subscription after EthSubscribe has returned.
+// effect on the subscription after Subscribe has returned.
 //
 // Slow subscribers will be dropped eventually. Client buffers up to 8000 notifications
 // before considering the subscriber dead. The subscription Err channel will receive
 // ErrSubscriptionQueueOverflow. Use a sufficiently large buffer on the channel or ensure
 // that the channel usually has at least one reader to prevent this issue.
-func (c *Client) EthSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+func (c *Client) Subscribe(ctx context.Context, namespace string, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
 	// Check type of channel first.
 	chanVal := reflect.ValueOf(channel)
 	if chanVal.Kind() != reflect.Chan || chanVal.Type().ChanDir()&reflect.SendDir == 0 {
-		panic("first argument to EthSubscribe must be a writable channel")
+		panic("first argument to Subscribe must be a writable channel")
 	}
 	if chanVal.IsNil() {
-		panic("channel given to EthSubscribe must not be nil")
+		panic("channel given to Subscribe must not be nil")
 	}
 	if c.isHTTP {
 		return nil, ErrNotificationsUnsupported
 	}
 
-	msg, err := c.newMessage("eth"+subscribeMethodSuffix, args...)
+	msg, err := c.newMessage(namespace+subscribeMethodSuffix, args...)
 	if err != nil {
 		return nil, err
 	}
 	op := &requestOp{
 		ids:  []json.RawMessage{msg.ID},
 		resp: make(chan *jsonrpcMessage),
-		sub:  newClientSubscription(c, "eth", chanVal),
+		sub:  newClientSubscription(c, namespace, chanVal),
 	}
 
 	// Send the subscription request.
@@ -652,7 +600,7 @@ func (c *Client) handleResponse(msg *jsonrpcMessage) {
 		return
 	}
 	// For subscription responses, start the subscription if the server
-	// indicates success. EthSubscribe gets unblocked in either case through
+	// indicates success. KowalaSubscribe gets unblocked in either case through
 	// the op.resp channel.
 	defer close(op.resp)
 	if msg.Error != nil {
@@ -698,7 +646,7 @@ func (c *Client) read(conn net.Conn) error {
 
 // Subscriptions.
 
-// A ClientSubscription represents a subscription established through EthSubscribe.
+// A ClientSubscription represents a subscription established through KowalaSubscribe.
 type ClientSubscription struct {
 	client    *Client
 	etype     reflect.Type

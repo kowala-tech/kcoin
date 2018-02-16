@@ -1,21 +1,5 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-// Package ethereum defines interfaces for interacting with Ethereum.
-package ethereum
+// Package kowala defines interfaces for interacting with Kowala.
+package kowala
 
 import (
 	"context"
@@ -102,7 +86,7 @@ type SyncProgress struct {
 	CurrentBlock  uint64 // Current block number where sync is at
 	HighestBlock  uint64 // Highest alleged block number in the chain
 	PulledStates  uint64 // Number of state trie entries already downloaded
-	KnownStates   uint64 // Total number os state trie entries known about
+	KnownStates   uint64 // Total number of state trie entries known about
 }
 
 // ChainSyncReader wraps access to the node's current sync status. If there's no
@@ -129,7 +113,7 @@ type ContractCaller interface {
 	CallContract(ctx context.Context, call CallMsg, blockNumber *big.Int) ([]byte, error)
 }
 
-// FilterQuery contains options for contact log filtering.
+// FilterQuery contains options for contract log filtering.
 type FilterQuery struct {
 	FromBlock *big.Int         // beginning of the queried range, nil means genesis block
 	ToBlock   *big.Int         // end of the range, nil means latest block
@@ -197,7 +181,7 @@ type PendingContractCaller interface {
 
 // GasEstimator wraps EstimateGas, which tries to estimate the gas needed to execute a
 // specific transaction based on the pending state. There is no guarantee that this is the
-// true gas limit requirement as other transactions may be added or removed by miners, but
+// true gas limit requirement as other transactions may be added or removed by validators, but
 // it should provide a basis for setting a reasonable default.
 type GasEstimator interface {
 	EstimateGas(ctx context.Context, call CallMsg) (usedGas *big.Int, err error)

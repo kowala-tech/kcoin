@@ -1,28 +1,14 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
-// faucet is a Ether faucet backed by a light client.
+// faucet is a kUSD faucet backed by a full node (for now)
 package main
 
 //go:generate go-bindata -nometadata -o website.go faucet.html
+//go:generate gofmt -w -s website.go
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -33,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -40,34 +27,32 @@ import (
 
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/keystore"
+	"github.com/kowala-tech/kUSD/cmd/utils"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/eth"
-	"github.com/kowala-tech/kUSD/eth/downloader"
-	"github.com/kowala-tech/kUSD/ethclient"
-	"github.com/kowala-tech/kUSD/ethstats"
-	"github.com/kowala-tech/kUSD/les"
+	"github.com/kowala-tech/kUSD/kusd"
+	"github.com/kowala-tech/kUSD/kusd/downloader"
+	"github.com/kowala-tech/kUSD/kusdclient"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/node"
 	"github.com/kowala-tech/kUSD/p2p"
 	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/p2p/discv5"
 	"github.com/kowala-tech/kUSD/p2p/nat"
 	"github.com/kowala-tech/kUSD/params"
 	"golang.org/x/net/websocket"
 )
 
 var (
-	genesisFlag = flag.String("genesis", "", "Genesis json file to seed the chain with")
-	apiPortFlag = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
-	ethPortFlag = flag.Int("ethport", 22334, "Listener port for the devp2p connection")
-	bootFlag    = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
-	netFlag     = flag.Uint64("network", 0, "Network ID to use for the Ethereum protocol")
-	statsFlag   = flag.String("ethstats", "", "Ethstats network monitoring auth string")
+	genesisFlag  = flag.String("genesis", "", "Genesis json file to seed the chain with")
+	apiPortFlag  = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
+	kusdPortFlag = flag.Int("kusdport", 30303, "Listener port for the devp2p connection")
+	bootFlag     = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
+	netFlag      = flag.Uint64("network", 0, "Network ID to use for the Kowala protocol")
+	statsFlag    = flag.String("kusdstats", "", "kUSDStats network monitoring auth string")
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
-	payoutFlag  = flag.Int("faucet.amount", 1, "Number of Ethers to pay out per user request")
+	payoutFlag  = flag.Int("faucet.amount", 1, "Number of mUSDs to pay out per user request")
 	minutesFlag = flag.Int("faucet.minutes", 1440, "Number of minutes to wait between funding rounds")
 	tiersFlag   = flag.Int("faucet.tiers", 3, "Number of funding tiers to enable (x3 time, x2.5 funds)")
 
@@ -80,11 +65,12 @@ var (
 	captchaToken  = flag.String("captcha.token", "", "Recaptcha site key to authenticate client side")
 	captchaSecret = flag.String("captcha.secret", "", "Recaptcha secret key to authenticate server side")
 
-	logFlag = flag.Int("loglevel", 3, "Log level to use for Ethereum and the faucet")
+	noauthFlag = flag.Bool("noauth", false, "Enables funding requests without authentication")
+	logFlag    = flag.Int("verbosity", 3, "Log level to use for Kowala and the faucet")
 )
 
 var (
-	ether = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	kUSD = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
 func main() {
@@ -98,7 +84,7 @@ func main() {
 	for i := 0; i < *tiersFlag; i++ {
 		// Calculate the amount for the next tier and format it
 		amount := float64(*payoutFlag) * math.Pow(2.5, float64(i))
-		amounts[i] = fmt.Sprintf("%s Ethers", strconv.FormatFloat(amount, 'f', -1, 64))
+		amounts[i] = fmt.Sprintf("%s kUSDs", strconv.FormatFloat(amount, 'f', -1, 64))
 		if amount == 1 {
 			amounts[i] = strings.TrimSuffix(amounts[i], "s")
 		}
@@ -119,16 +105,14 @@ func main() {
 		}
 	}
 	// Load up and render the faucet website
-	tmpl, err := Asset("faucet.html")
-	if err != nil {
-		log.Crit("Failed to load the faucet template", "err", err)
-	}
+	tmpl := MustAsset("faucet.html")
 	website := new(bytes.Buffer)
-	err = template.Must(template.New("").Parse(string(tmpl))).Execute(website, map[string]interface{}{
+	err := template.Must(template.New("").Parse(string(tmpl))).Execute(website, map[string]interface{}{
 		"Network":   *netnameFlag,
 		"Amounts":   amounts,
 		"Periods":   periods,
 		"Recaptcha": *captchaToken,
+		"NoAuth":    *noauthFlag,
 	})
 	if err != nil {
 		log.Crit("Failed to render the faucet template", "err", err)
@@ -143,9 +127,9 @@ func main() {
 		log.Crit("Failed to parse genesis block json", "err", err)
 	}
 	// Convert the bootnodes to internal enode representations
-	var enodes []*discv5.Node
+	var enodes []*discover.Node
 	for _, boot := range strings.Split(*bootFlag, ",") {
-		if url, err := discv5.ParseNode(boot); err == nil {
+		if url, err := discover.ParseNode(boot); err == nil {
 			enodes = append(enodes, url)
 		} else {
 			log.Error("Failed to parse bootnode URL", "url", boot, "err", err)
@@ -168,7 +152,7 @@ func main() {
 	ks.Unlock(acc, pass)
 
 	// Assemble and start the faucet light service
-	faucet, err := newFaucet(genesis, *ethPortFlag, enodes, *netFlag, *statsFlag, ks, website.Bytes())
+	faucet, err := newFaucet(genesis, *kusdPortFlag, enodes, *netFlag, *statsFlag, ks, website.Bytes())
 	if err != nil {
 		log.Crit("Failed to start faucet", "err", err)
 	}
@@ -181,17 +165,17 @@ func main() {
 
 // request represents an accepted funding request.
 type request struct {
-	Username string             `json:"username"` // GitHub user for displaying an avatar
-	Account  common.Address     `json:"account"`  // Ethereum address being funded
-	Time     time.Time          `json:"time"`     // Timestamp when te request was accepted
-	Tx       *types.Transaction `json:"tx"`       // Transaction funding the account
+	Avatar  string             `json:"avatar"`  // Avatar URL to make the UI nicer
+	Account common.Address     `json:"account"` // Kowala address being funded
+	Time    time.Time          `json:"time"`    // Timestamp when the request was accepted
+	Tx      *types.Transaction `json:"tx"`      // Transaction funding the account
 }
 
-// faucet represents a crypto faucet backed by an Ethereum light client.
+// faucet represents a crypto faucet backed by an Kowala full node.
 type faucet struct {
 	config *params.ChainConfig // Chain configurations for signing
-	stack  *node.Node          // Ethereum protocol stack
-	client *ethclient.Client   // Client connection to the Ethereum chain
+	stack  *node.Node          // Kowala protocol stack
+	client *kusdclient.Client  // Client connection to the Kowala chain
 	index  []byte              // Index page to serve up on the web
 
 	keystore *keystore.KeyStore // Keystore containing the single signer
@@ -207,45 +191,35 @@ type faucet struct {
 	lock sync.RWMutex // Lock protecting the faucet's internals
 }
 
-func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
+func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
 	// Assemble the raw devp2p protocol stack
 	stack, err := node.New(&node.Config{
 		Name:    "kusd",
 		Version: params.Version,
 		DataDir: filepath.Join(os.Getenv("HOME"), ".faucet"),
 		P2P: p2p.Config{
-			NAT:              nat.Any(),
-			NoDiscovery:      true,
-			DiscoveryV5:      true,
-			ListenAddr:       fmt.Sprintf(":%d", port),
-			DiscoveryV5Addr:  fmt.Sprintf(":%d", port+1),
-			MaxPeers:         25,
-			BootstrapNodesV5: enodes,
+			NAT:            nat.Any(),
+			ListenAddr:     fmt.Sprintf(":%d", port),
+			MaxPeers:       25,
+			BootstrapNodes: enodes,
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	// Assemble the Ethereum light client protocol
-	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		cfg := eth.DefaultConfig
-		cfg.SyncMode = downloader.LightSync
-		cfg.NetworkId = network
-		cfg.Genesis = genesis
-		return les.New(ctx, &cfg)
-	}); err != nil {
-		return nil, err
-	}
-	// Assemble the ethstats monitoring and reporting service'
+
+	// Assemble the Kowala protocol
+	cfg := kusd.DefaultConfig
+	cfg.SyncMode = downloader.FastSync
+	cfg.NetworkId = network
+	cfg.Genesis = genesis
+	utils.RegisterKowalaService(stack, &cfg)
+
+	// Assemble the kusdstats monitoring and reporting service'
 	if stats != "" {
-		if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			var serv *les.LightEthereum
-			ctx.Service(&serv)
-			return ethstats.New(stats, nil, serv)
-		}); err != nil {
-			return nil, err
-		}
+		utils.RegisterKowalaStatsService(stack, stats)
 	}
+
 	// Boot up the client and ensure it connects to bootnodes
 	if err := stack.Start(); err != nil {
 		return nil, err
@@ -260,7 +234,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network u
 		stack.Stop()
 		return nil, err
 	}
-	client := ethclient.NewClient(api)
+	client := kusdclient.NewClient(api)
 
 	return &faucet{
 		config:   genesis.Config,
@@ -274,7 +248,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network u
 	}, nil
 }
 
-// close terminates the Ethereum connection and tears down the faucet.
+// close terminates the Kowala connection and tears down the faucet.
 func (f *faucet) close() error {
 	return f.stack.Stop()
 }
@@ -296,9 +270,11 @@ func (f *faucet) webHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(f.index)
 }
 
-// apiHandler handles requests for Ether grants and transaction statuses.
+// apiHandler handles requests for kUSD grants and transaction statuses.
 func (f *faucet) apiHandler(conn *websocket.Conn) {
 	// Start tracking the connection and drop at the end
+	defer conn.Close()
+
 	f.lock.Lock()
 	f.conns = append(f.conns, conn)
 	f.lock.Unlock()
@@ -313,25 +289,50 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		}
 		f.lock.Unlock()
 	}()
-	// Send a few initial stats to the client
-	balance, _ := f.client.BalanceAt(context.Background(), f.account.Address, nil)
-	nonce, _ := f.client.NonceAt(context.Background(), f.account.Address, nil)
+	// Gather the initial stats from the network to report
+	var (
+		head    *types.Header
+		balance *big.Int
+		nonce   uint64
+		err     error
+	)
+	for {
+		// Attempt to retrieve the stats, may error on no faucet connectivity
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		head, err = f.client.HeaderByNumber(ctx, nil)
+		if err == nil {
+			balance, err = f.client.BalanceAt(ctx, f.account.Address, head.Number)
+			if err == nil {
+				nonce, err = f.client.NonceAt(ctx, f.account.Address, nil)
+			}
+		}
+		cancel()
 
-	websocket.JSON.Send(conn, map[string]interface{}{
-		"funds":    balance.Div(balance, ether),
+		// If stats retrieval failed, wait a bit and retry
+		if err != nil {
+			if err = sendError(conn, errors.New("Faucet offline: "+err.Error())); err != nil {
+				log.Warn("Failed to send faucet error to client", "err", err)
+				return
+			}
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		// Initial stats reported successfully, proceed with user interaction
+		break
+	}
+	// Send over the initial stats and the latest header
+	if err = send(conn, map[string]interface{}{
+		"funds":    balance.Div(balance, kUSD),
 		"funded":   nonce,
 		"peers":    f.stack.Server().PeerCount(),
 		"requests": f.reqs,
-	})
-	// Send the initial block to the client
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	header, err := f.client.HeaderByNumber(ctx, nil)
-	cancel()
-
-	if err != nil {
-		log.Error("Failed to retrieve latest header", "err", err)
-	} else {
-		websocket.JSON.Send(conn, header)
+	}, 3*time.Second); err != nil {
+		log.Warn("Failed to send initial stats to client", "err", err)
+		return
+	}
+	if err = send(conn, head, 3*time.Second); err != nil {
+		log.Warn("Failed to send initial header to client", "err", err)
+		return
 	}
 	// Keep reading requests from the websocket until the connection breaks
 	for {
@@ -341,18 +342,25 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 			Tier    uint   `json:"tier"`
 			Captcha string `json:"captcha"`
 		}
-		if err := websocket.JSON.Receive(conn, &msg); err != nil {
+		if err = websocket.JSON.Receive(conn, &msg); err != nil {
 			return
 		}
-		if !strings.HasPrefix(msg.URL, "https://gist.github.com/") {
-			websocket.JSON.Send(conn, map[string]string{"error": "URL doesn't link to GitHub Gists"})
+		if !*noauthFlag && !strings.HasPrefix(msg.URL, "https://gist.github.com/") && !strings.HasPrefix(msg.URL, "https://twitter.com/") &&
+			!strings.HasPrefix(msg.URL, "https://plus.google.com/") && !strings.HasPrefix(msg.URL, "https://www.facebook.com/") {
+			if err = sendError(conn, errors.New("URL doesn't link to supported services")); err != nil {
+				log.Warn("Failed to send URL error to client", "err", err)
+				return
+			}
 			continue
 		}
 		if msg.Tier >= uint(*tiersFlag) {
-			websocket.JSON.Send(conn, map[string]string{"error": "Invalid funding tier requested"})
+			if err = sendError(conn, errors.New("Invalid funding tier requested")); err != nil {
+				log.Warn("Failed to send tier error to client", "err", err)
+				return
+			}
 			continue
 		}
-		log.Info("Faucet funds requested", "gist", msg.URL, "tier", msg.Tier)
+		log.Info("Faucet funds requested", "url", msg.URL, "tier", msg.Tier)
 
 		// If captcha verifications are enabled, make sure we're not dealing with a robot
 		if *captchaToken != "" {
@@ -362,7 +370,10 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 
 			res, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify", form)
 			if err != nil {
-				websocket.JSON.Send(conn, map[string]string{"error": err.Error()})
+				if err = sendError(conn, err); err != nil {
+					log.Warn("Failed to send captcha post error to client", "err", err)
+					return
+				}
 				continue
 			}
 			var result struct {
@@ -372,109 +383,108 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 			err = json.NewDecoder(res.Body).Decode(&result)
 			res.Body.Close()
 			if err != nil {
-				websocket.JSON.Send(conn, map[string]string{"error": err.Error()})
+				if err = sendError(conn, err); err != nil {
+					log.Warn("Failed to send captcha decode error to client", "err", err)
+					return
+				}
 				continue
 			}
 			if !result.Success {
 				log.Warn("Captcha verification failed", "err", string(result.Errors))
-				websocket.JSON.Send(conn, map[string]string{"error": "Beep-bop, you're a robot!"})
+				if err = sendError(conn, errors.New("Beep-bop, you're a robot!")); err != nil {
+					log.Warn("Failed to send captcha failure to client", "err", err)
+					return
+				}
 				continue
 			}
 		}
-		// Retrieve the gist from the GitHub Gist APIs
-		parts := strings.Split(msg.URL, "/")
-		req, _ := http.NewRequest("GET", "https://api.github.com/gists/"+parts[len(parts)-1], nil)
-		if *githubUser != "" {
-			req.SetBasicAuth(*githubUser, *githubToken)
-		}
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			websocket.JSON.Send(conn, map[string]string{"error": err.Error()})
-			continue
-		}
-		var gist struct {
-			Owner struct {
-				Login string `json:"login"`
-			} `json:"owner"`
-			Files map[string]struct {
-				Content string `json:"content"`
-			} `json:"files"`
-		}
-		err = json.NewDecoder(res.Body).Decode(&gist)
-		res.Body.Close()
-		if err != nil {
-			websocket.JSON.Send(conn, map[string]string{"error": err.Error()})
-			continue
-		}
-		if gist.Owner.Login == "" {
-			websocket.JSON.Send(conn, map[string]string{"error": "Anonymous Gists not allowed"})
-			continue
-		}
-		// Iterate over all the files and look for Ethereum addresses
-		var address common.Address
-		for _, file := range gist.Files {
-			content := strings.TrimSpace(file.Content)
-			if len(content) == 2+common.AddressLength*2 {
-				address = common.HexToAddress(content)
+		// Retrieve the Ethereum address to fund, the requesting user and a profile picture
+		var (
+			username string
+			avatar   string
+			address  common.Address
+		)
+		switch {
+		case strings.HasPrefix(msg.URL, "https://gist.github.com/"):
+			if err = sendError(conn, errors.New("GitHub authentication discontinued at the official request of GitHub")); err != nil {
+				log.Warn("Failed to send GitHub deprecation to client", "err", err)
+				return
 			}
+			continue
+		case strings.HasPrefix(msg.URL, "https://twitter.com/"):
+			username, avatar, address, err = authTwitter(msg.URL)
+		case strings.HasPrefix(msg.URL, "https://plus.google.com/"):
+			username, avatar, address, err = authGooglePlus(msg.URL)
+		case strings.HasPrefix(msg.URL, "https://www.facebook.com/"):
+			username, avatar, address, err = authFacebook(msg.URL)
+		case *noauthFlag:
+			username, avatar, address, err = authNoAuth(msg.URL)
+		default:
+			err = errors.New("Something funky happened, please open an issue at https://github.com/kowala-tech/kUSD/issues")
 		}
-		if address == (common.Address{}) {
-			websocket.JSON.Send(conn, map[string]string{"error": "No Ethereum address found to fund"})
+		if err != nil {
+			if err = sendError(conn, err); err != nil {
+				log.Warn("Failed to send prefix error to client", "err", err)
+				return
+			}
 			continue
 		}
-		// Validate the user's existence since the API is unhelpful here
-		if res, err = http.Head("https://github.com/" + gist.Owner.Login); err != nil {
-			websocket.JSON.Send(conn, map[string]string{"error": err.Error()})
-			continue
-		}
-		res.Body.Close()
+		log.Info("Faucet request valid", "url", msg.URL, "tier", msg.Tier, "user", username, "address", address)
 
-		if res.StatusCode != 200 {
-			websocket.JSON.Send(conn, map[string]string{"error": "Invalid user... boom!"})
-			continue
-		}
 		// Ensure the user didn't request funds too recently
 		f.lock.Lock()
 		var (
 			fund    bool
 			timeout time.Time
 		)
-		if timeout = f.timeouts[gist.Owner.Login]; time.Now().After(timeout) {
+		if timeout = f.timeouts[username]; time.Now().After(timeout) {
 			// User wasn't funded recently, create the funding transaction
-			amount := new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), ether)
+			amount := new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), kUSD)
 			amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
 			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
 
 			tx := types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, big.NewInt(21000), f.price, nil)
-			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainId)
+			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainID)
 			if err != nil {
-				websocket.JSON.Send(conn, map[string]string{"error": err.Error()})
 				f.lock.Unlock()
+				if err = sendError(conn, err); err != nil {
+					log.Warn("Failed to send transaction creation error to client", "err", err)
+					return
+				}
 				continue
 			}
 			// Submit the transaction and mark as funded if successful
 			if err := f.client.SendTransaction(context.Background(), signed); err != nil {
-				websocket.JSON.Send(conn, map[string]string{"error": err.Error()})
 				f.lock.Unlock()
+				if err = sendError(conn, err); err != nil {
+					log.Warn("Failed to send transaction transmission error to client", "err", err)
+					return
+				}
 				continue
 			}
 			f.reqs = append(f.reqs, &request{
-				Username: gist.Owner.Login,
-				Account:  address,
-				Time:     time.Now(),
-				Tx:       signed,
+				Avatar:  avatar,
+				Account: address,
+				Time:    time.Now(),
+				Tx:      signed,
 			})
-			f.timeouts[gist.Owner.Login] = time.Now().Add(time.Duration(*minutesFlag*int(math.Pow(3, float64(msg.Tier)))) * time.Minute)
+			f.timeouts[username] = time.Now().Add(time.Duration(*minutesFlag*int(math.Pow(3, float64(msg.Tier)))) * time.Minute)
 			fund = true
 		}
 		f.lock.Unlock()
 
 		// Send an error if too frequent funding, othewise a success
 		if !fund {
-			websocket.JSON.Send(conn, map[string]string{"error": fmt.Sprintf("%s left until next allowance", common.PrettyDuration(timeout.Sub(time.Now())))})
+			if err = sendError(conn, fmt.Errorf("%s left until next allowance", common.PrettyDuration(timeout.Sub(time.Now())))); err != nil { // nolint: gosimple
+				log.Warn("Failed to send funding error to client", "err", err)
+				return
+			}
 			continue
 		}
-		websocket.JSON.Send(conn, map[string]string{"success": fmt.Sprintf("Funding request accepted for %s into %s", gist.Owner.Login, address.Hex())})
+		if err = sendSuccess(conn, fmt.Sprintf("Funding request accepted for %s into %s", username, address.Hex())); err != nil {
+			log.Warn("Failed to send funding success to client", "err", err)
+			return
+		}
 		select {
 		case f.update <- struct{}{}:
 		default:
@@ -497,11 +507,31 @@ func (f *faucet) loop() {
 		select {
 		case head := <-heads:
 			// New chain head arrived, query the current stats and stream to clients
-			balance, _ := f.client.BalanceAt(context.Background(), f.account.Address, nil)
-			balance = new(big.Int).Div(balance, ether)
+			var (
+				balance *big.Int
+				nonce   uint64
+				price   *big.Int
+				err     error
+			)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			balance, err = f.client.BalanceAt(ctx, f.account.Address, head.Number)
+			if err == nil {
+				nonce, err = f.client.NonceAt(ctx, f.account.Address, nil)
+				if err == nil {
+					price, err = f.client.SuggestGasPrice(ctx)
+				}
+			}
+			cancel()
 
-			price, _ := f.client.SuggestGasPrice(context.Background())
-			nonce, _ := f.client.NonceAt(context.Background(), f.account.Address, nil)
+			// If querying the data failed, try for the next block
+			if err != nil {
+				log.Warn("Failed to update faucet state", "block", head.Number, "hash", head.Hash(), "err", err)
+				continue
+			} else {
+				log.Info("Updated faucet state", "block", head.Number, "hash", head.Hash(), "balance", balance, "nonce", nonce, "price", price)
+			}
+			// Faucet state retrieved, update locally and send to clients
+			balance = new(big.Int).Div(balance, kUSD)
 
 			f.lock.Lock()
 			f.price, f.nonce = price, nonce
@@ -512,17 +542,17 @@ func (f *faucet) loop() {
 
 			f.lock.RLock()
 			for _, conn := range f.conns {
-				if err := websocket.JSON.Send(conn, map[string]interface{}{
+				if err := send(conn, map[string]interface{}{
 					"funds":    balance,
 					"funded":   f.nonce,
 					"peers":    f.stack.Server().PeerCount(),
 					"requests": f.reqs,
-				}); err != nil {
+				}, time.Second); err != nil {
 					log.Warn("Failed to send stats to client", "err", err)
 					conn.Close()
 					continue
 				}
-				if err := websocket.JSON.Send(conn, head); err != nil {
+				if err := send(conn, head, time.Second); err != nil {
 					log.Warn("Failed to send header to client", "err", err)
 					conn.Close()
 				}
@@ -533,7 +563,7 @@ func (f *faucet) loop() {
 			// Pending requests updated, stream to clients
 			f.lock.RLock()
 			for _, conn := range f.conns {
-				if err := websocket.JSON.Send(conn, map[string]interface{}{"requests": f.reqs}); err != nil {
+				if err := send(conn, map[string]interface{}{"requests": f.reqs}, time.Second); err != nil {
 					log.Warn("Failed to send requests to client", "err", err)
 					conn.Close()
 				}
@@ -541,4 +571,192 @@ func (f *faucet) loop() {
 			f.lock.RUnlock()
 		}
 	}
+}
+
+// sends transmits a data packet to the remote end of the websocket, but also
+// setting a write deadline to prevent waiting forever on the node.
+func send(conn *websocket.Conn, value interface{}, timeout time.Duration) error {
+	if timeout == 0 {
+		timeout = 60 * time.Second
+	}
+	conn.SetWriteDeadline(time.Now().Add(timeout))
+	return websocket.JSON.Send(conn, value)
+}
+
+// sendError transmits an error to the remote end of the websocket, also setting
+// the write deadline to 1 second to prevent waiting forever.
+func sendError(conn *websocket.Conn, err error) error {
+	return send(conn, map[string]string{"error": err.Error()}, time.Second)
+}
+
+// sendSuccess transmits a success message to the remote end of the websocket, also
+// setting the write deadline to 1 second to prevent waiting forever.
+func sendSuccess(conn *websocket.Conn, msg string) error {
+	return send(conn, map[string]string{"success": msg}, time.Second)
+}
+
+// authGitHub tries to authenticate a faucet request using GitHub gists, returning
+// the username, avatar URL and Kowala address to fund on success.
+func authGitHub(url string) (string, string, common.Address, error) {
+	// Retrieve the gist from the GitHub Gist APIs
+	parts := strings.Split(url, "/")
+	req, _ := http.NewRequest("GET", "https://api.github.com/gists/"+parts[len(parts)-1], nil)
+	if *githubUser != "" {
+		req.SetBasicAuth(*githubUser, *githubToken)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", "", common.Address{}, err
+	}
+	var gist struct {
+		Owner struct {
+			Login string `json:"login"`
+		} `json:"owner"`
+		Files map[string]struct {
+			Content string `json:"content"`
+		} `json:"files"`
+	}
+	err = json.NewDecoder(res.Body).Decode(&gist)
+	res.Body.Close()
+	if err != nil {
+		return "", "", common.Address{}, err
+	}
+	if gist.Owner.Login == "" {
+		return "", "", common.Address{}, errors.New("Anonymous Gists not allowed")
+	}
+	// Iterate over all the files and look for Kowala addresses
+	var address common.Address
+	for _, file := range gist.Files {
+		content := strings.TrimSpace(file.Content)
+		if len(content) == 2+common.AddressLength*2 {
+			address = common.HexToAddress(content)
+		}
+	}
+	if address == (common.Address{}) {
+		return "", "", common.Address{}, errors.New("No Ethereum address found to fund")
+	}
+	// Validate the user's existence since the API is unhelpful here
+	if res, err = http.Head("https://github.com/" + gist.Owner.Login); err != nil {
+		return "", "", common.Address{}, err
+	}
+	res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return "", "", common.Address{}, errors.New("Invalid user... boom!")
+	}
+	// Everything passed validation, return the gathered infos
+	return gist.Owner.Login + "@github", fmt.Sprintf("https://github.com/%s.png?size=64", gist.Owner.Login), address, nil
+}
+
+// authTwitter tries to authenticate a faucet request using Twitter posts, returning
+// the username, avatar URL and Kowala address to fund on success.
+func authTwitter(url string) (string, string, common.Address, error) {
+	// Ensure the user specified a meaningful URL, no fancy nonsense
+	parts := strings.Split(url, "/")
+	if len(parts) < 4 || parts[len(parts)-2] != "status" {
+		return "", "", common.Address{}, errors.New("Invalid Twitter status URL")
+	}
+	username := parts[len(parts)-3]
+
+	// Twitter's API isn't really friendly with direct links. Still, we don't
+	// want to do ask read permissions from users, so just load the public posts and
+	// scrape it for the Kowala address and profile URL.
+	res, err := http.Get(url)
+	if err != nil {
+		return "", "", common.Address{}, err
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", "", common.Address{}, err
+	}
+	address := common.HexToAddress(string(regexp.MustCompile("0x[0-9a-fA-F]{40}").Find(body)))
+	if address == (common.Address{}) {
+		return "", "", common.Address{}, errors.New("No Kowala address found to fund")
+	}
+	var avatar string
+	if parts = regexp.MustCompile("src=\"([^\"]+twimg.com/profile_images[^\"]+)\"").FindStringSubmatch(string(body)); len(parts) == 2 {
+		avatar = parts[1]
+	}
+	return username + "@twitter", avatar, address, nil
+}
+
+// authGooglePlus tries to authenticate a faucet request using GooglePlus posts,
+// returning the username, avatar URL and Kowala address to fund on success.
+func authGooglePlus(url string) (string, string, common.Address, error) {
+	// Ensure the user specified a meaningful URL, no fancy nonsense
+	parts := strings.Split(url, "/")
+	if len(parts) < 4 || parts[len(parts)-2] != "posts" {
+		return "", "", common.Address{}, errors.New("Invalid Google+ post URL")
+	}
+	username := parts[len(parts)-3]
+
+	// Google's API isn't really friendly with direct links. Still, we don't
+	// want to do ask read permissions from users, so just load the public posts and
+	// scrape it for the Kowala address and profile URL.
+	res, err := http.Get(url)
+	if err != nil {
+		return "", "", common.Address{}, err
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", "", common.Address{}, err
+	}
+	address := common.HexToAddress(string(regexp.MustCompile("0x[0-9a-fA-F]{40}").Find(body)))
+	if address == (common.Address{}) {
+		return "", "", common.Address{}, errors.New("No Kowala address found to fund")
+	}
+	var avatar string
+	if parts = regexp.MustCompile("src=\"([^\"]+googleusercontent.com[^\"]+photo.jpg)\"").FindStringSubmatch(string(body)); len(parts) == 2 {
+		avatar = parts[1]
+	}
+	return username + "@google+", avatar, address, nil
+}
+
+// authFacebook tries to authenticate a faucet request using Facebook posts,
+// returning the username, avatar URL and Kowala address to fund on success.
+func authFacebook(url string) (string, string, common.Address, error) {
+	// Ensure the user specified a meaningful URL, no fancy nonsense
+	parts := strings.Split(url, "/")
+	if len(parts) < 4 || parts[len(parts)-2] != "posts" {
+		return "", "", common.Address{}, errors.New("Invalid Facebook post URL")
+	}
+	username := parts[len(parts)-3]
+
+	// Facebook's Graph API isn't really friendly with direct links. Still, we don't
+	// want to do ask read permissions from users, so just load the public posts and
+	// scrape it for the Kowala address and profile URL.
+	res, err := http.Get(url)
+	if err != nil {
+		return "", "", common.Address{}, err
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", "", common.Address{}, err
+	}
+	address := common.HexToAddress(string(regexp.MustCompile("0x[0-9a-fA-F]{40}").Find(body)))
+	if address == (common.Address{}) {
+		return "", "", common.Address{}, errors.New("No Kowala address found to fund")
+	}
+	var avatar string
+	if parts = regexp.MustCompile("src=\"([^\"]+fbcdn.net[^\"]+)\"").FindStringSubmatch(string(body)); len(parts) == 2 {
+		avatar = parts[1]
+	}
+	return username + "@facebook", avatar, address, nil
+}
+
+// authNoAuth tries to interpret a faucet request as a plain Kowala address,
+// without actually performing any remote authentication. This mode is prone to
+// Byzantine attack, so only ever use for truly private networks.
+func authNoAuth(url string) (string, string, common.Address, error) {
+	address := common.HexToAddress(regexp.MustCompile("0x[0-9a-fA-F]{40}").FindString(url))
+	if address == (common.Address{}) {
+		return "", "", common.Address{}, errors.New("No Kowala address found to fund")
+	}
+	return address.Hex() + "@noauth", "", address, nil
 }

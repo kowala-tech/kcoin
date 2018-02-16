@@ -1,19 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 /*
 
 This key store behaves as KeyStorePlain with the difference that
@@ -28,6 +12,7 @@ package keystore
 import (
 	"bytes"
 	"crypto/aes"
+	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -90,6 +75,12 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 	return key, nil
 }
 
+// StoreKey generates a key, encrypts with 'auth' and stores in the given directory
+func StoreKey(dir, auth string, scryptN, scryptP int) (common.Address, error) {
+	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP}, crand.Reader, auth)
+	return a.Address, err
+}
+
 func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
 	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
@@ -140,7 +131,7 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		Cipher:       "aes-128-ctr",
 		CipherText:   hex.EncodeToString(cipherText),
 		CipherParams: cipherParamsJSON,
-		KDF:          "scrypt",
+		KDF:          keyHeaderKDF,
 		KDFParams:    scryptParamsJSON,
 		MAC:          hex.EncodeToString(mac),
 	}
@@ -275,7 +266,7 @@ func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 	}
 	dkLen := ensureInt(cryptoJSON.KDFParams["dklen"])
 
-	if cryptoJSON.KDF == "scrypt" {
+	if cryptoJSON.KDF == keyHeaderKDF {
 		n := ensureInt(cryptoJSON.KDFParams["n"])
 		r := ensureInt(cryptoJSON.KDFParams["r"])
 		p := ensureInt(cryptoJSON.KDFParams["p"])

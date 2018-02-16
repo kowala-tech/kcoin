@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package rpc
 
 import (
@@ -200,17 +184,17 @@ func TestClientSubscribeInvalidArg(t *testing.T) {
 		defer func() {
 			err := recover()
 			if shouldPanic && err == nil {
-				t.Errorf("EthSubscribe should've panicked for %#v", arg)
+				t.Errorf("KowalaSubscribe should've panicked for %#v", arg)
 			}
 			if !shouldPanic && err != nil {
-				t.Errorf("EthSubscribe shouldn't have panicked for %#v", arg)
+				t.Errorf("KowalaSubscribe shouldn't have panicked for %#v", arg)
 				buf := make([]byte, 1024*1024)
 				buf = buf[:runtime.Stack(buf, false)]
 				t.Error(err)
 				t.Error(string(buf))
 			}
 		}()
-		client.EthSubscribe(context.Background(), arg, "foo_bar")
+		client.KowalaSubscribe(context.Background(), arg, "foo_bar")
 	}
 	check(true, nil)
 	check(true, 1)
@@ -221,14 +205,14 @@ func TestClientSubscribeInvalidArg(t *testing.T) {
 }
 
 func TestClientSubscribe(t *testing.T) {
-	server := newTestServer("eth", new(NotificationTestService))
+	server := newTestServer("kusd", new(NotificationTestService))
 	defer server.Stop()
 	client := DialInProc(server)
 	defer client.Close()
 
 	nc := make(chan int)
 	count := 10
-	sub, err := client.EthSubscribe(context.Background(), nc, "someSubscription", count, 0)
+	sub, err := client.KowalaSubscribe(context.Background(), nc, "someSubscription", count, 0)
 	if err != nil {
 		t.Fatal("can't subscribe:", err)
 	}
@@ -251,14 +235,46 @@ func TestClientSubscribe(t *testing.T) {
 	}
 }
 
-// In this test, the connection drops while EthSubscribe is
+func TestClientSubscribeCustomNamespace(t *testing.T) {
+	namespace := "custom"
+	server := newTestServer(namespace, new(NotificationTestService))
+	defer server.Stop()
+	client := DialInProc(server)
+	defer client.Close()
+
+	nc := make(chan int)
+	count := 10
+	sub, err := client.Subscribe(context.Background(), namespace, nc, "someSubscription", count, 0)
+	if err != nil {
+		t.Fatal("can't subscribe:", err)
+	}
+	for i := 0; i < count; i++ {
+		if val := <-nc; val != i {
+			t.Fatalf("value mismatch: got %d, want %d", val, i)
+		}
+	}
+
+	sub.Unsubscribe()
+	select {
+	case v := <-nc:
+		t.Fatal("received value after unsubscribe:", v)
+	case err := <-sub.Err():
+		if err != nil {
+			t.Fatalf("Err returned a non-nil error after explicit unsubscribe: %q", err)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatalf("subscription not closed within 1s after unsubscribe")
+	}
+}
+
+// In this test, the connection drops while KowalaSubscribe is
 // waiting for a response.
 func TestClientSubscribeClose(t *testing.T) {
 	service := &NotificationTestService{
 		gotHangSubscriptionReq:  make(chan struct{}),
 		unblockHangSubscription: make(chan struct{}),
 	}
-	server := newTestServer("eth", service)
+	server := newTestServer("k", service)
 	defer server.Stop()
 	client := DialInProc(server)
 	defer client.Close()
@@ -270,7 +286,7 @@ func TestClientSubscribeClose(t *testing.T) {
 		err  error
 	)
 	go func() {
-		sub, err = client.EthSubscribe(context.Background(), nc, "hangSubscription", 999)
+		sub, err = client.KowalaSubscribe(context.Background(), nc, "hangSubscription", 999)
 		errc <- err
 	}()
 
@@ -281,20 +297,20 @@ func TestClientSubscribeClose(t *testing.T) {
 	select {
 	case err := <-errc:
 		if err == nil {
-			t.Errorf("EthSubscribe returned nil error after Close")
+			t.Errorf("KowalaSubscribe returned nil error after Close")
 		}
 		if sub != nil {
-			t.Error("EthSubscribe returned non-nil subscription after Close")
+			t.Error("KowalaSubscribe returned non-nil subscription after Close")
 		}
 	case <-time.After(1 * time.Second):
-		t.Fatalf("EthSubscribe did not return within 1s after Close")
+		t.Fatalf("KowalaSubscribe did not return within 1s after Close")
 	}
 }
 
 // This test checks that Client doesn't lock up when a single subscriber
 // doesn't read subscription events.
 func TestClientNotificationStorm(t *testing.T) {
-	server := newTestServer("eth", new(NotificationTestService))
+	server := newTestServer("kusd", new(NotificationTestService))
 	defer server.Stop()
 
 	doTest := func(count int, wantError bool) {
@@ -306,7 +322,7 @@ func TestClientNotificationStorm(t *testing.T) {
 		// Subscribe on the server. It will start sending many notifications
 		// very quickly.
 		nc := make(chan int)
-		sub, err := client.EthSubscribe(ctx, nc, "someSubscription", count, 0)
+		sub, err := client.KowalaSubscribe(ctx, nc, "someSubscription", count, 0)
 		if err != nil {
 			t.Fatal("can't subscribe:", err)
 		}
@@ -328,7 +344,7 @@ func TestClientNotificationStorm(t *testing.T) {
 				return
 			}
 			var r int
-			err := client.CallContext(ctx, &r, "eth_echo", i)
+			err := client.CallContext(ctx, &r, "kusd_echo", i)
 			if err != nil {
 				if !wantError {
 					t.Fatalf("(%d/%d) call error: %v", i, count, err)

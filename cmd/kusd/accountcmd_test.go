@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-
 package main
 
 import (
@@ -191,8 +175,8 @@ Passphrase: {{.InputLine "foobar"}}
 
 	wantMessages := []string{
 		"Unlocked account",
-		"=0x7ef5a6135f1fd6a02593eedc869c6d41d934aef8",
-		"=0x289d485d9771714cce91d3393d764e1311907acc",
+		"=0x7EF5A6135f1FD6a02593eEdC869c6D41D934aef8",
+		"=0x289d485D9771714CCe91D3393D764E1311907ACc",
 	}
 	for _, m := range wantMessages {
 		if !strings.Contains(kusd.StderrText(), m) {
@@ -211,8 +195,8 @@ func TestUnlockFlagPasswordFile(t *testing.T) {
 
 	wantMessages := []string{
 		"Unlocked account",
-		"=0x7ef5a6135f1fd6a02593eedc869c6d41d934aef8",
-		"=0x289d485d9771714cce91d3393d764e1311907acc",
+		"=0x7EF5A6135f1FD6a02593eEdC869c6D41D934aef8",
+		"=0x289d485D9771714CCe91D3393D764E1311907ACc",
 	}
 	for _, m := range wantMessages {
 		if !strings.Contains(kusd.StderrText(), m) {
@@ -261,7 +245,7 @@ In order to avoid this warning, you need to remove the following duplicate key f
 
 	wantMessages := []string{
 		"Unlocked account",
-		"=0xf466859ead1932d743d622cb74fc058882e8648a",
+		"=0xf466859eAD1932D743d622CB74FC058882E8648A",
 	}
 	for _, m := range wantMessages {
 		if !strings.Contains(kusd.StderrText(), m) {
