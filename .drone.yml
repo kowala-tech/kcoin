@@ -1,12 +1,5 @@
 pipeline:
 
-  debug:
-    image: kowalatech/go:1.0.1
-    secrets: [ docker_username, docker_password ]
-    commands:
-      - echo $DOCKER_PASSWORD
-      - echo ${DOCKER_PASSWORD}
-
   test-and-build:
     image: kowalatech/go:1.0.1
     commands:
