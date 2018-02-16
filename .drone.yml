@@ -29,6 +29,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     tags: dev
     dockerfile: kusd.Dockerfile
+    registry: https://index.docker.io/v1/ 
     username: $DOCKER_USERNAME
     password: $DOCKER_PASSWORD
     when:
