@@ -150,6 +150,8 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 	if peer == nil {
 		// @NOTE (rgeraldes) we are using the forced sync to allow the validator to start the validation independently
 		// 10 seconds should be more than enough to sync with a peer before it gets to a forced sync
+		// Mark initial sync done
+		atomic.StoreUint32(&pm.acceptTxs, 1) 
 		pm.eventMux.Post(downloader.DoneEvent{})
 		return
 	}
