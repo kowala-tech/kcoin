@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-## Kowala
-
-Official implementation of the Kowala protocol. The **`kusd`** client is the main client for the Kowala network.
-It is the entry point into the Kowala network, and is capable of running a full node(default). The client offers
-a gateway (Endpoints, WebSocket, IPC) to the Kowala network to other processes.
-=======
 [![Gitter chat](https://badges.gitter.im/kowala/kusd.png)](https://gitter.im/kowala-tech/kUSD) [![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kUSD/status.svg)](http://ci.kowala.io/kowala-tech/kUSD) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://testnet.kowala.io)
 
 ## Kowala
@@ -17,7 +10,7 @@ a gateway (Endpoints, WebSocket, IPC) to the Kowala network to other processes.
 
 ### Building the source
 
-    make kusd
+	make kusd
 
 ### Configuration
 
@@ -34,15 +27,9 @@ $ kusd --your-favourite-flags dumpconfig
 ```
 
 or check the [config sample](https://github.com/kowala-tech/kUSD/blob/master/sample-kowala.toml).
->>>>>>> release/1.0.0
 
 ### Client Options
 
-<<<<<<< HEAD
-### Building the source
-
-    make kusd
-=======
 [Client page]()
 
 ### Docker quick start
@@ -51,8 +38,8 @@ One of the quickest ways to get Kowala up and running on your machine is by usin
 
 ```
 docker run -d --name kusd-node -v /Users/alice/kusd:/root \
-           -p 11223:11223 -p 22334:22334 \
-           kowalatech/kusd --fast --cache=512
+		   -p 11223:11223 -p 22334:22334 \
+		   kowalatech/kusd --fast --cache=512
 ```
 
 ## Networks
@@ -68,7 +55,6 @@ http://testnet.kowala.io/
 ## Creating a Private Blockchain Network
 
 ### Genesis State
->>>>>>> release/1.0.0
 
 #### Validators
 
@@ -93,49 +79,6 @@ $ kusd --config /path/to/your_config.toml account new
 Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 ```
 
-<<<<<<< HEAD
-or check the [config sample](https://github.com/kowala-tech/kUSD/blob/master/sample-kowala.toml).
-
-### Client Options
-
-[Client page]()
-
-### Docker quick start
-
-One of the quickest ways to get Kowala up and running on your machine is by using Docker:
-
-```
-docker run -d --name kusd-node -v /Users/alice/kusd:/root \
-           -p 11223:11223 -p 22334:22334 \
-           kusd/client-go --fast --cache=512
-```
-
-## Networks
-
-There aren't public networks at the moment.
-
-## Proof-of-Stake (PoS)
-
-### Protocol
-
-[Tendermint](https://github.com/tendermint/tendermint)
-
-### Running a PoS validator
-
-Make sure that you have an unlocked account available:
-
-```
-kusd account new
-kusd --unlock "0x407d73d8a49eeb85d32cf465507dd71d507100c1"
-```
-
-To start a kusd instance for block validation, run it with all your usual flags, extended by:
-
-```
-$ kusd <usual-flags> --validate --deposit=4000 --coinbase=0x407d73d8a49eeb85d32cf465507dd71d507100c1
-```
-
-=======
 #### Network
 
 1. Set `totalSupplyWei` field present in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L5) to the correct pre-minted amount of kusd (only needed to calculate the blockcap for the reward)
@@ -151,10 +94,10 @@ $ go generate
 2. The first step consists in creating the genesis of your new network. By far, the easiest way to do it, is by running the puppeth client.
 
    1. Rebuild the puppeth client
-      `$ cd cmd $ go install ./puppeth/...`
+	  `$ cd cmd $ go install ./puppeth/...`
 
    2. Run the client
-      `$ puppeth`
+	  `$ puppeth`
 
    3. Specify a network name
 
@@ -169,9 +112,9 @@ $ go generate
    8. Select "2. Save existing genesis" and fill in the file path to save the genesis into.
 
 ```
-    $ Which file to save the genesis into? (default = test.json)
-    > /src/github.com/kowala-tech/kUSD/assets/test.json
-    INFO [01-16|16:49:37] Exported existing genesis block
+	$ Which file to save the genesis into? (default = test.json)
+	> /src/github.com/kowala-tech/kUSD/assets/test.json
+	INFO [01-16|16:49:37] Exported existing genesis block
 ```
 
 3. Initialize the blockchain based on the genesis file created on the previous step.
@@ -234,15 +177,10 @@ Start the client with `--metrics` to collect performance metrics. This will expo
 
 Prometheus endpoint address can be specified using flag `--metrics-prometheus-address`.
 
->>>>>>> release/1.0.0
 ## Core Contributors
 
 [Core Team Members](https://github.com/orgs/kowala-tech/people)
 
 ## Contact us
 
-<<<<<<< HEAD
-Feel free to email us at support@kowala.tech.
-=======
 Feel free to email us at support@kowala.tech or talk to us on [Gitter](https://gitter.im/kowala-tech/kUSD).
->>>>>>> release/1.0.0
