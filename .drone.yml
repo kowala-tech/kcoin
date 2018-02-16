@@ -1,7 +1,7 @@
 pipeline:
 
   test-and-build:
-    image: golang
+    image: kowalatech/go:1.0.1
     commands:
       - make
     when:
