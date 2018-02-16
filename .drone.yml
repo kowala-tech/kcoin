@@ -23,20 +23,30 @@ pipeline:
     when:
       event: tag
 
-  docker_kusd:
+  docker_kusd_dev:
     image: plugins/docker
-    repo: kowala-tech/kusd
+    repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
-    tags: latest
+    tags: dev
     dockerfile: kusd.Dockerfile
     when:
-      branch: [master, develop]
+      branch: [develop]
 
-  docker_bootnode:
+  docker_bootnode_dev:
     image: plugins/docker
-    repo: kowala-tech/bootnode
+    repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
-    tags: latest
+    tags: dev
     dockerfile: bootnode.Dockerfile
     when:
-      branch: [master, develop]
+      branch: [develop]
+
+  docker_faucet_dev:
+    image: plugins/docker
+    repo: kowalatech/faucet
+    secrets: [ docker_username, docker_password ]
+    tags: dev
+    dockerfile: faucet.Dockerfile
+    when:
+      branch: [develop]
+
