@@ -1,13 +1,5 @@
 pipeline:
 
-  docker_kusd_dev:
-    image: plugins/docker
-    repo: kowalatech/kusd
-    secrets: [ docker_username, docker_password ]
-    tags: dev
-    dockerfile: kusd.Dockerfile
-
-
   test-and-build:
     image: kowalatech/go:1.0.1
     commands:
@@ -37,9 +29,6 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     tags: dev
     dockerfile: kusd.Dockerfile
-    registry: https://index.docker.io/v1/ 
-    username: $DOCKER_USERNAME
-    password: $DOCKER_PASSWORD
     when:
       branch: [dev]
 
