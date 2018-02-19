@@ -2,7 +2,7 @@ A short summary.
 
 Important changes:
 - [x] Something worth noting for reviewers.
-- [] Add documentation
+- [x] Added documentation.
 
 
 Closes #
