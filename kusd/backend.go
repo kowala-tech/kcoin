@@ -58,7 +58,7 @@ type Kowala struct {
 
 	ApiBackend *KowalaApiBackend
 
-	validator *validator.Validator // consensus validator
+	validator validator.Validator // consensus validator
 	gasPrice  *big.Int
 	coinbase  common.Address
 	deposit   uint64
@@ -162,7 +162,7 @@ func makeExtraData(extra []byte) []byte {
 		})
 	}
 	if uint64(len(extra)) > params.MaximumExtraDataSize {
-		log.Warn("Validator extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
+		log.Warn("posValidator extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
 		extra = nil
 	}
 	return extra
@@ -322,9 +322,9 @@ func (s *Kowala) StartValidating() error {
 	return nil
 }
 
-func (s *Kowala) StopValidating()                 { s.validator.Stop() }
-func (s *Kowala) IsValidating() bool              { return s.validator.Validating() }
-func (s *Kowala) Validator() *validator.Validator { return s.validator }
+func (s *Kowala) StopValidating()                { s.validator.Stop() }
+func (s *Kowala) IsValidating() bool             { return s.validator.Validating() }
+func (s *Kowala) Validator() validator.Validator { return s.validator }
 
 func (s *Kowala) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Kowala) BlockChain() *core.BlockChain       { return s.blockchain }
@@ -371,7 +371,9 @@ func (s *Kowala) Stop() error {
 	// @NOTE (rgeraldes) - validator needs to be the first process
 	// otherwise it might not be able to finish an election and
 	// could be punished
-	s.validator.Stop()
+	if s.validator.Validating() {
+		s.validator.Stop()
+	}
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()

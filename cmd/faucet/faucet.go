@@ -210,7 +210,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network
 
 	// Assemble the Kowala protocol
 	cfg := kusd.DefaultConfig
-	cfg.SyncMode = downloader.FastSync
+	cfg.SyncMode = downloader.FullSync
 	cfg.NetworkId = network
 	cfg.Genesis = genesis
 	utils.RegisterKowalaService(stack, &cfg)
@@ -492,6 +492,19 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 	}
 }
 
+func (f *faucet) setNonceAndPrice() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	nonce, _ := f.client.NonceAt(ctx, f.account.Address, nil)
+	price, _ := f.client.SuggestGasPrice(ctx)
+	
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.price, f.nonce = price, nonce
+	log.Info("Updated faucet price and nonce", "nonce", f.nonce, "price", f.price)
+}
+
 // loop keeps waiting for interesting events and pushes them out to connected
 // websockets.
 func (f *faucet) loop() {
@@ -503,24 +516,18 @@ func (f *faucet) loop() {
 	}
 	defer sub.Unsubscribe()
 
+	f.setNonceAndPrice()
+
 	for {
 		select {
 		case head := <-heads:
 			// New chain head arrived, query the current stats and stream to clients
 			var (
 				balance *big.Int
-				nonce   uint64
-				price   *big.Int
 				err     error
 			)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			balance, err = f.client.BalanceAt(ctx, f.account.Address, head.Number)
-			if err == nil {
-				nonce, err = f.client.NonceAt(ctx, f.account.Address, nil)
-				if err == nil {
-					price, err = f.client.SuggestGasPrice(ctx)
-				}
-			}
 			cancel()
 
 			// If querying the data failed, try for the next block
@@ -528,13 +535,13 @@ func (f *faucet) loop() {
 				log.Warn("Failed to update faucet state", "block", head.Number, "hash", head.Hash(), "err", err)
 				continue
 			} else {
-				log.Info("Updated faucet state", "block", head.Number, "hash", head.Hash(), "balance", balance, "nonce", nonce, "price", price)
+				f.setNonceAndPrice()
+				log.Info("Updated faucet state", "block", head.Number, "hash", head.Hash(), "balance", balance)
 			}
 			// Faucet state retrieved, update locally and send to clients
 			balance = new(big.Int).Div(balance, kUSD)
 
 			f.lock.Lock()
-			f.price, f.nonce = price, nonce
 			for len(f.reqs) > 0 && f.reqs[0].Tx.Nonce() < f.nonce {
 				f.reqs = f.reqs[1:]
 			}
