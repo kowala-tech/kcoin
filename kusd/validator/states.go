@@ -245,11 +245,9 @@ func (val *Validator) commitState() stateFn {
 
 	// @TODO(rgeraldes)
 	// leaves only when it has all the pre commits
-
 	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
 	if err != nil {
-		// @TODO (rgeraldes) - complete
-		log.Crit("Failed to verify if the validator is a voter")
+		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}
 	if !voter {
 		return val.loggedOutState
@@ -260,6 +258,8 @@ func (val *Validator) commitState() stateFn {
 
 // @NOTE (rgeraldes) - end state
 func (val *Validator) loggedOutState() stateFn {
+	log.Info("Logged out")
+
 	atomic.StoreInt32(&val.validating, 0)
 
 	return nil

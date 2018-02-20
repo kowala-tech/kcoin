@@ -371,7 +371,9 @@ func (s *Kowala) Stop() error {
 	// @NOTE (rgeraldes) - validator needs to be the first process
 	// otherwise it might not be able to finish an election and
 	// could be punished
-	s.validator.Stop()
+	if s.validator.Validating() {
+		s.validator.Stop()
+	}
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()
