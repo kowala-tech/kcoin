@@ -11,9 +11,6 @@ There are two types of accounts: externally owned accounts and contract accounts
 Externally owned accounts are usually refererred to as accounts and contract accounts as contracts - contracts are covered in the contracts package.
 Accounts are used, for example, to sign transactions so that the EVM can securely validate the identity of a transaction sender.
 
-Example 1: send funds (console)
-> eth.sendTransaction({from:eth.coinbase, to:"0xcfff0fdae894be2ed95e02f514b3fbfc1bf41656", value: web3.toWei(0.05, "ether")})
-
 Account Address & Keyfiles
 
 Every account is defined by a pair of keys, a private key and a public key.
@@ -34,9 +31,6 @@ Application Binary Interface (/abi)
 
 A Kowala smart contract is bytecode deployed on the Kowala blockchain. There could be several functions in a contract.
 An ABI is necessary so that you can specify which function in the contract to invoke, as well as get a guarantee that the function will return data in the format you are expecting.
-
-Example 1: generating an abi for the network contract
-//go:generate abigen -abi build/Network.abi -bin build/Network.bin -pkg network -type NetworkContract -out gen_network.go
 */
 
 package accounts
