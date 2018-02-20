@@ -2,7 +2,7 @@
 Package accounts manages wallets and its account(s).
 Here we focus on externally owned accounts which are usually referred to as accounts - think bank account.
 Accounts play a central role in Kowala - the state of all accounts is the state of the Kowala network which is updated with every block.
-The accounts package also includes the ABI package - defines the structures and methods that you will use to interact with binary contract.
+The accounts package also includes the ABI package - defines the structures and methods that you will use to interact with a binary contract.
 
 Account
 
