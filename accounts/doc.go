@@ -2,6 +2,7 @@
 Package accounts manages wallets and its account(s).
 Here we focus on externally owned accounts which are usually referred to as accounts - think bank account.
 Accounts play a central role in Kowala - the state of all accounts is the state of the Kowala network which is updated with every block.
+The accounts package also includes the ABI package - defines the structures and methods that you will use to interact with binary contract.
 
 Account
 
@@ -28,6 +29,14 @@ Wallet
 
 A wallet represents a software or hardware wallet that might contain one or more accounts (derived from the same seed).
 The current codebase (1.73) supports the following hardware wallets: Ledger Blue & Ledger Nano S
+
+Application Binary Interface (/abi)
+
+A Kowala smart contract is bytecode deployed on the Kowala blockchain. There could be several functions in a contract.
+An ABI is necessary so that you can specify which function in the contract to invoke, as well as get a guarantee that the function will return data in the format you are expecting.
+
+Example 1: generating an abi for the network contract
+//go:generate abigen -abi build/Network.abi -bin build/Network.bin -pkg network -type NetworkContract -out gen_network.go
 */
 
 package accounts
