@@ -29,6 +29,10 @@ import (
 const (
 	softResponseLimit = 2 * 1024 * 1024 // Target maximum size of returned blocks, headers or node data.
 	estHeaderRlpSize  = 500             // Approximate size of an RLP encoded block header
+
+	// txChanSize is the size of channel listening to TxPreEvent.
+	// The number is referenced from the size of tx pool.
+	txChanSize = 4096
 )
 
 var (
@@ -63,7 +67,8 @@ type ProtocolManager struct {
 	SubProtocols []p2p.Protocol
 
 	eventMux             *event.TypeMux
-	txSub                *event.TypeMuxSubscription
+	txCh                 chan core.TxPreEvent
+	txSub                event.Subscription
 	minedBlockSub        *event.TypeMuxSubscription
 	proposalSub, voteSub *event.TypeMuxSubscription
 
@@ -80,7 +85,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new kowala sub protocol manager. The Kowala sub protocol manages peers capable
 // with the kowala network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, maxPeers int, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator *validator.Validator) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator *validator.Validator) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
@@ -90,7 +95,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		chaindb:     chaindb,
 		validator:   validator,
 		chainconfig: config,
-		maxPeers:    maxPeers,
 		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
 		noMorePeers: make(chan struct{}),
@@ -181,9 +185,12 @@ func (pm *ProtocolManager) removePeer(id string) {
 	}
 }
 
-func (pm *ProtocolManager) Start() {
+func (pm *ProtocolManager) Start(maxPeers int) {
+	pm.maxPeers = maxPeers
+
 	// broadcast transactions
-	pm.txSub = pm.eventMux.Subscribe(core.TxPreEvent{})
+	pm.txCh = make(chan core.TxPreEvent, txChanSize)
+	pm.txSub = pm.txpool.SubscribeTxPreEvent(pm.txCh)
 	go pm.txBroadcastLoop()
 	// broadcast mined blocks
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
@@ -411,8 +418,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 		filter := len(headers) == 1
-		// @TODO (rgeraldes) - review fork logic
+		if filter {
 
+			// Irrelevant of the fork checks, send the header to the fetcher just in case
+			headers = pm.fetcher.FilterHeaders(p.id, headers, time.Now())
+		}
 		if len(headers) > 0 || !filter {
 			err := pm.downloader.DeliverHeaders(p.id, headers)
 			if err != nil {
@@ -464,7 +474,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Filter out any explicitly requested bodies, deliver the rest to the downloader
 		filter := len(transactions) > 0 || len(commits) > 0
 		if filter {
-			transactions, commits = pm.fetcher.FilterBodies(transactions, commits, time.Now())
+			transactions, commits = pm.fetcher.FilterBodies(p.id, transactions, commits, time.Now())
 		}
 		if len(transactions) > 0 || len(commits) > 0 || !filter {
 			err := pm.downloader.DeliverBodies(p.id, transactions, commits)
@@ -570,7 +580,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Schedule all the unknown hashes for retrieval
 		unknown := make(newBlockHashesData, 0, len(announces))
 		for _, block := range announces {
-			if !pm.blockchain.HasBlock(block.Hash) {
+			if !pm.blockchain.HasBlock(block.Hash, block.Number) {
 				unknown = append(unknown, block)
 			}
 		}
@@ -591,6 +601,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		p.MarkBlock(request.Block.Hash())
 		pm.fetcher.Enqueue(p.id, request.Block)
 
+		// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
+		// a single block.
+		currentBlock := pm.blockchain.CurrentBlock()
+		if request.Block.Number().Cmp(currentBlock.Number()) > 0 {
+			go pm.synchronise(p)
+		}
+
 	case msg.Code == TxMsg:
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
@@ -608,7 +625,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash())
 		}
-
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == ProposalMsg:
@@ -675,9 +691,10 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 			peer.SendNewBlock(block)
 		}
 		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+		return
 	}
 	// Otherwise if the block is indeed in out own chain, announce it
-	if pm.blockchain.HasBlock(hash) {
+	if pm.blockchain.HasBlock(hash, block.NumberU64()) {
 		for _, peer := range peers {
 			peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
 		}
@@ -738,11 +755,16 @@ func (pm *ProtocolManager) voteBroadcastLoop() {
 	}
 }
 
-func (pm *ProtocolManager) txBroadcastLoop() {
-	// automatically stops if unsubscribe
-	for obj := range pm.txSub.Chan() {
-		event := obj.Data.(core.TxPreEvent)
-		pm.BroadcastTx(event.Tx.Hash(), event.Tx)
+func (self *ProtocolManager) txBroadcastLoop() {
+	for {
+		select {
+		case event := <-self.txCh:
+			self.BroadcastTx(event.Tx.Hash(), event.Tx)
+
+		// Err() channel will be closed when unsubscribing.
+		case <-self.txSub.Err():
+			return
+		}
 	}
 }
 

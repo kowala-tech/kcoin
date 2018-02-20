@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"math/big"
 	"sync/atomic"
 	"time"
 
@@ -38,8 +39,10 @@ func (val *Validator) notLoggedInState() stateFn {
 	// part of the initial set of validators - no need to make a deposit if the block number is 0
 	// since these validators will be marked as voters from the start
 	if !isGenesis || (isGenesis && val.chain.CurrentBlock().NumberU64() > 0) {
-		headSub := val.eventMux.Subscribe(core.ChainHeadEvent{})
-		defer headSub.Unsubscribe()
+		// Subscribe events from blockchain
+		chainHeadCh := make(chan core.ChainHeadEvent)
+		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
+		defer chainHeadSub.Unsubscribe()
 
 		log.Info("Making Deposit")
 		if err := val.makeDeposit(); err != nil {
@@ -50,7 +53,7 @@ func (val *Validator) notLoggedInState() stateFn {
 	L:
 		for {
 			select {
-			case _, ok := <-headSub.Chan():
+			case _, ok := <-chainHeadCh:
 				if !ok {
 					// @TODO (rgeraldes) - log
 					return nil
@@ -67,6 +70,16 @@ func (val *Validator) notLoggedInState() stateFn {
 			}
 		}
 	} else {
+		// sanity check
+		isVoter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
+		if err != nil {
+			log.Crit("Failed to verify the voter information", "err", err)
+			return nil
+		}
+		if !isVoter {
+			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.account.Address)
+		}
+
 		log.Info("Deposit is not necessary for a genesis validator (first block)")
 	}
 
@@ -89,24 +102,26 @@ func (val *Validator) newElectionState() stateFn {
 
 	<-time.NewTimer(val.start.Sub(time.Now())).C
 
-	/*
-		// @NOTE (rgeraldes) - wait for txs to be available in the txPool for the the first block
-		if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
-			numTxs, _ := val.backend.TxPool().Stats() //
-			if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
-				log.Info("Waiting for transactions")
-				txSub := val.eventMux.Subscribe(core.TxPreEvent{})
-				defer txSub.Unsubscribe()
-				<-txSub.Chan()
-			}
+	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
+	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
+		numTxs, _ := val.backend.TxPool().Stats() //
+		if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
+			log.Info("Waiting for a TX")
+			txCh := make(chan core.TxPreEvent)
+			txSub := val.backend.TxPool().SubscribeTxPreEvent(txCh)
+			defer txSub.Unsubscribe()
+			<-txCh
 		}
-	*/
+	}
 
 	return val.newRoundState
 }
 
 func (val *Validator) newRoundState() stateFn {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
+
+	// updates the validators weight > proposer
+	val.validators.UpdateWeight()
 
 	if val.round != 0 {
 		val.round++
@@ -198,14 +213,8 @@ func (val *Validator) commitState() stateFn {
 
 	work.state.CommitTo(chainDb, true)
 
-	// @NOTE (rgeraldes) - stat is not necessary (finality property - never forks)
-	_, err := val.chain.WriteBlock(block)
-	if err != nil {
-		log.Error("Failed writing block to chain", "err", err)
-		return nil
-	}
-
-	// update block hash since it is now available and not when the receipt/log of individual transactions were created
+	// update block hash since it is now available and not when
+	// the receipt/log of individual transactions were created
 	for _, r := range val.work.receipts {
 		for _, l := range r.Logs {
 			l.BlockHash = block.Hash()
@@ -215,33 +224,30 @@ func (val *Validator) commitState() stateFn {
 		log.BlockHash = block.Hash()
 	}
 
-	// This puts transactions in a extra db for rpc
-	core.WriteTxLookupEntries(chainDb, block)
-	// Write map map bloom filters
-	core.WriteMipmapBloom(chainDb, block.NumberU64(), work.receipts)
+	_, err := val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
+	if err != nil {
+		log.Error("Failed writing block to chain", "err", err)
+		return nil
+	}
 
-	go func(block *types.Block, logs []*types.Log, receipts []*types.Receipt) {
-		val.eventMux.Post(core.NewMinedBlockEvent{Block: block})
-		val.eventMux.Post(core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-
-		val.eventMux.Post(core.ChainHeadEvent{Block: block})
-		val.eventMux.Post(logs)
-
-		if err := core.WriteBlockReceipts(chainDb, block.Hash(), block.NumberU64(), receipts); err != nil {
-			log.Warn("Failed writing block receipts", "err", err)
-		}
-	}(block, work.state.Logs(), work.receipts)
+	// Broadcast the block and announce chain insertion event
+	go val.eventMux.Post(core.NewMinedBlockEvent{Block: block})
+	var (
+		events []interface{}
+		logs   = work.state.Logs()
+	)
+	events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+	events = append(events, core.ChainHeadEvent{Block: block})
+	val.chain.PostChainEvents(events, logs)
 
 	// election state updates
 	val.commitRound = int(val.round)
 
 	// @TODO(rgeraldes)
 	// leaves only when it has all the pre commits
-
 	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
 	if err != nil {
-		// @TODO (rgeraldes) - complete
-		//log.Error()
+		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}
 	if !voter {
 		return val.loggedOutState
@@ -252,6 +258,8 @@ func (val *Validator) commitState() stateFn {
 
 // @NOTE (rgeraldes) - end state
 func (val *Validator) loggedOutState() stateFn {
+	log.Info("Logged out")
+
 	atomic.StoreInt32(&val.validating, 0)
 
 	return nil

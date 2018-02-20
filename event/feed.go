@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package event
 
 import (
@@ -127,6 +111,8 @@ func (f *Feed) remove(sub *feedSub) {
 // Send delivers to all subscribed channels simultaneously.
 // It returns the number of subscribers that the value was sent to.
 func (f *Feed) Send(value interface{}) (nsent int) {
+	rvalue := reflect.ValueOf(value)
+
 	f.once.Do(f.init)
 	<-f.sendLock
 
@@ -134,14 +120,14 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 	f.mu.Lock()
 	f.sendCases = append(f.sendCases, f.inbox...)
 	f.inbox = nil
-	f.mu.Unlock()
 
-	// Set the sent value on all channels.
-	rvalue := reflect.ValueOf(value)
 	if !f.typecheck(rvalue.Type()) {
 		f.sendLock <- struct{}{}
 		panic(feedTypeError{op: "Send", got: rvalue.Type(), want: f.etype})
 	}
+	f.mu.Unlock()
+
+	// Set the sent value on all channels.
 	for i := firstSubSendCase; i < len(f.sendCases); i++ {
 		f.sendCases[i].Send = rvalue
 	}

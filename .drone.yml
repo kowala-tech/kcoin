@@ -1,12 +1,12 @@
 pipeline:
 
   test-and-build:
-    image: golang
+    image: kowalatech/go:1.0.1
     commands:
       - make
     when:
       event: [push, tag]
-      branch: [master, develop, refs/tags/*]
+      branch: [master, dev, refs/tags/*]
       
   github_release:
     image: plugins/github-release
@@ -23,20 +23,66 @@ pipeline:
     when:
       event: tag
 
-  docker_kusd:
+  docker_kusd_dev:
+    group: docker-deployment
     image: plugins/docker
-    repo: kowala-tech/kusd
+    repo: kowalatech/kusd
+    secrets: [ docker_username, docker_password ]
+    tags: dev
+    dockerfile: kusd.Dockerfile
+    when:
+      branch: [dev]
+
+  docker_bootnode_dev:
+    group: docker-deployment
+    image: plugins/docker
+    repo: kowalatech/bootnode
+    secrets: [ docker_username, docker_password ]
+    tags: dev
+    dockerfile: bootnode.Dockerfile
+    when:
+      branch: [dev]
+
+  docker_faucet_dev:
+    group: docker-deployment
+    image: plugins/docker
+    repo: kowalatech/faucet
+    secrets: [ docker_username, docker_password ]
+    tags: dev
+    dockerfile: faucet.Dockerfile
+    when:
+      branch: [dev]
+
+  docker_kusd_tag:
+    group: docker-deployment
+    image: plugins/docker
+    repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
     tags: latest
     dockerfile: kusd.Dockerfile
     when:
-      branch: [master, develop]
+      event: [push,tag]
+      branch: [master]
 
-  docker_bootnode:
+  docker_bootnode_tag:
+    group: docker-deployment
     image: plugins/docker
-    repo: kowala-tech/bootnode
+    repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
     tags: latest
     dockerfile: bootnode.Dockerfile
     when:
-      branch: [master, develop]
+      event: [push,tag]
+      branch: [master]
+
+  docker_faucet_tag:
+    group: docker-deployment
+    image: plugins/docker
+    repo: kowalatech/faucet
+    secrets: [ docker_username, docker_password ]
+    tags: latest
+    dockerfile: faucet.Dockerfile
+    when:
+      event: [push,tag]
+      branch: [master]
+

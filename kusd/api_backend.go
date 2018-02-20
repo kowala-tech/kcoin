@@ -8,6 +8,7 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/math"
 	"github.com/kowala-tech/kUSD/core"
+	"github.com/kowala-tech/kUSD/core/bloombits"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
@@ -98,12 +99,28 @@ func (b *KowalaApiBackend) GetEVM(ctx context.Context, msg core.Message, state *
 	return vm.NewEVM(context, state, b.kusd.chainConfig, vmCfg), vmError, nil
 }
 
-func (b *KowalaApiBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
-	return b.kusd.txPool.AddLocal(signedTx)
+func (b *KowalaApiBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
+	return b.kusd.BlockChain().SubscribeRemovedLogsEvent(ch)
 }
 
-func (b *KowalaApiBackend) RemoveTx(txHash common.Hash) {
-	b.kusd.txPool.Remove(txHash)
+func (b *KowalaApiBackend) SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription {
+	return b.kusd.BlockChain().SubscribeChainEvent(ch)
+}
+
+func (b *KowalaApiBackend) SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription {
+	return b.kusd.BlockChain().SubscribeChainHeadEvent(ch)
+}
+
+func (b *KowalaApiBackend) SubscribeChainSideEvent(ch chan<- core.ChainSideEvent) event.Subscription {
+	return b.kusd.BlockChain().SubscribeChainSideEvent(ch)
+}
+
+func (b *KowalaApiBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
+	return b.kusd.BlockChain().SubscribeLogsEvent(ch)
+}
+
+func (b *KowalaApiBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
+	return b.kusd.txPool.AddLocal(signedTx)
 }
 
 func (b *KowalaApiBackend) GetPoolTransactions() (types.Transactions, error) {
@@ -134,6 +151,10 @@ func (b *KowalaApiBackend) TxPoolContent() (map[common.Address]types.Transaction
 	return b.kusd.TxPool().Content()
 }
 
+func (b *KowalaApiBackend) SubscribeTxPreEvent(ch chan<- core.TxPreEvent) event.Subscription {
+	return b.kusd.TxPool().SubscribeTxPreEvent(ch)
+}
+
 func (b *KowalaApiBackend) Downloader() *downloader.Downloader {
 	return b.kusd.Downloader()
 }
@@ -156,4 +177,15 @@ func (b *KowalaApiBackend) EventMux() *event.TypeMux {
 
 func (b *KowalaApiBackend) AccountManager() *accounts.Manager {
 	return b.kusd.AccountManager()
+}
+
+func (b *KowalaApiBackend) BloomStatus() (uint64, uint64) {
+	sections, _, _ := b.kusd.bloomIndexer.Sections()
+	return params.BloomBitsBlocks, sections
+}
+
+func (b *KowalaApiBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+	for i := 0; i < bloomFilterThreads; i++ {
+		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.kusd.bloomRequests)
+	}
 }

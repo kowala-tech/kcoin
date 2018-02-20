@@ -5,11 +5,10 @@ import (
 
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/vm"
 )
 
-func NewEnv(cfg *Config, state *state.StateDB) *vm.EVM {
+func NewEnv(cfg *Config) *vm.EVM {
 	context := vm.Context{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,

@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -110,8 +109,6 @@ func (val *Validator) sync() {
 out:
 	for ev := range events.Chan() {
 		switch ev.Data.(type) {
-		case downloader.StartEvent:
-			atomic.StoreInt32(&val.shouldStart, 1)
 		case downloader.DoneEvent, downloader.FailedEvent:
 			start := atomic.LoadInt32(&val.shouldStart) == 1
 			atomic.StoreInt32(&val.canStart, 1)
@@ -128,7 +125,7 @@ out:
 }
 
 func (val *Validator) Start(coinbase common.Address, deposit uint64) {
-	if val.Started() {
+	if val.Validating() {
 		log.Warn("Failed to start the validator - the state machine is already running")
 		return
 	}
@@ -145,32 +142,23 @@ func (val *Validator) Start(coinbase common.Address, deposit uint64) {
 	val.account = account
 	val.deposit = deposit
 
-	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
-	if err != nil {
-		log.Crit("Failed to verify if the validator is registered as a voter", "err", err)
+	if atomic.LoadInt32(&val.canStart) == 0 {
+		log.Info("Network syncing, will start validator afterwards")
+		return
 	}
-
-	// @NOTE (rgeraldes) - initial genesis validators are registered as voters from the start
-	// and we can use that info to verify if we need to sync
-	if voter {
-		// terminate sync go-routine
-		val.eventMux.Post(downloader.DoneEvent{})
-	} else {
-		if atomic.LoadInt32(&val.canStart) == 0 {
-			log.Info("Network syncing, will start validator afterwards")
-			return
-		}
-	}
-
-	log.Info("Starting validation operation")
-	atomic.StoreInt32(&val.running, 1)
 
 	go val.run()
 }
 
 func (val *Validator) run() {
+	log.Info("Starting validation operation")
 	val.wg.Add(1)
-	defer val.wg.Done()
+	atomic.StoreInt32(&val.running, 1)
+	
+	defer func() {
+		val.wg.Done()
+		atomic.StoreInt32(&val.running, 0)
+	}()
 
 	log.Info("Starting the consensus state machine")
 	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
@@ -188,8 +176,6 @@ func (val *Validator) Stop() {
 	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
 	atomic.StoreInt32(&val.shouldStart, 0)
-	atomic.StoreInt32(&val.running, 0)
-
 	log.Info("Consensus validator stopped")
 }
 
@@ -197,10 +183,6 @@ func (val *Validator) SetExtra(extra []byte) error { return nil }
 
 func (val *Validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0
-}
-
-func (val *Validator) Started() bool {
-	return atomic.LoadInt32(&val.running) > 0
 }
 
 func (val *Validator) SetCoinbase(addr common.Address) {
@@ -234,40 +216,61 @@ func (val *Validator) PendingBlock() *types.Block {
 }
 
 func (val *Validator) restoreLastCommit() {
+	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to access the voters checksum", "err", err)
+	}
+
+	if err := val.updateValidators(checksum, true); err != nil {
+		log.Crit("Failed to update the validator set", "err", err)
+	}
+
+	// @TODO (rgeraldes) - we need to request the validator vote weights
+
 	currentBlock := val.chain.CurrentBlock()
 	if currentBlock.Number().Cmp(big.NewInt(0)) == 0 {
 		return
 	}
 
-	// @TODO (rgeraldes) - review the following statement
-	lastValidators := types.NewValidatorSet([]*types.Validator{})
-
-	lastCommit := currentBlock.LastCommit()
-	lastPreCommits := core.NewVotingTable(val.eventMux, val.signer, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
-	for _, preCommit := range lastCommit.Commits() {
-		if preCommit == nil {
-			continue
+	/*
+		lastCommit := currentBlock.LastCommit()
+		lastPreCommits := core.NewVotingTable(val.eventMux, val.signer, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
+		for _, preCommit := range lastCommit.Commits() {
+			if preCommit == nil {
+				continue
+			}
+			added, err := lastPreCommits.Add(preCommit, false)
+			if !added || err != nil {
+				// @TODO (rgeraldes) - this should not happen > complete
+				log.Error("Failed to restore the latest commit")
+			}
 		}
-		added, err := lastPreCommits.Add(preCommit, false)
-		if !added || err != nil {
-			// @TODO (rgeraldes) - this should not happen > complete
-			log.Error("Failed to restore the latest commit")
-		}
-	}
 
-	val.lastCommit = lastPreCommits
+		val.lastCommit = lastPreCommits
+	*/
 }
 
 func (val *Validator) init() error {
 	parent := val.chain.CurrentBlock()
 
+	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	if err != nil {
+		log.Crit("Failed to access the voters checksum", "err", err)
+	}
+
+	if val.validatorsChecksum != checksum {
+		if err := val.updateValidators(checksum, true); err != nil {
+			log.Crit("Failed to update the validator set", "err", err)
+		}
+	}
+
+	// @NOTE (rgeraldes) - start is not relevant for the first block as the first election will
+	// wait until we have transactions
+	start := time.Unix(parent.Time().Int64(), 0)
+	val.start = start.Add(time.Duration(params.BlockTime) * time.Millisecond)
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
 
-	// @NOTE (rgeraldes) - in order to sync the nodes, the start time
-	// must be the timestamp on the block + a sync interval. Tendermint offers another
-	// option. Review
-	val.start = time.Unix(parent.Time().Int64(), 0).Add(time.Duration(params.SyncDuration) * time.Millisecond)
 	val.proposal = nil
 	val.block = nil
 	val.blockFragments = nil
@@ -275,23 +278,6 @@ func (val *Validator) init() error {
 	val.lockedRound = 0
 	val.lockedBlock = nil
 	val.commitRound = -1
-
-	// validators
-	count, err := val.network.GetVoterCount(&bind.CallOpts{})
-	if err != nil {
-		return err
-	}
-	validators := make([]*types.Validator, count.Uint64())
-	for i := int64(0); i < count.Int64(); i++ {
-		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
-		if err != nil {
-			return err
-		}
-		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64())
-	}
-
-	// @TODO (rgeraldes) - update list of trusted peers based on the validators
-	val.validators = types.NewValidatorSet(validators)
 
 	// voting system
 	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
@@ -403,6 +389,16 @@ func (val *Validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 			log.Trace("Gas limit exceeded for current block", "sender", from)
 			txs.Pop()
 
+		case core.ErrNonceTooLow:
+			// New head notification data race between the transaction pool and miner, shift
+			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+			txs.Shift()
+
+		case core.ErrNonceTooHigh:
+			// Reorg notification data race between the transaction pool and miner, skip account =
+			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			txs.Pop()
+
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
@@ -410,10 +406,10 @@ func (val *Validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 			txs.Shift()
 
 		default:
-			// Pop the current failed transaction without shifting in the next from the account
-			log.Trace("Transaction failed, will be removed", "hash", tx.Hash(), "err", err)
-			val.failedTxs = append(val.failedTxs, tx)
-			txs.Pop()
+			// Strange error, discard the transaction and get the next in line (note, the
+			// nonce-too-high clause will prevent us from executing in vain).
+			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			txs.Shift()
 		}
 	}
 
@@ -457,7 +453,10 @@ func (val *Validator) makeDeposit() error {
 		return err
 	}
 
-	if min.Cmp(big.NewInt(int64(val.deposit))) > 0 {
+	var deposit big.Int
+	if min.Cmp(deposit.SetUint64(val.deposit)) > 0 {
+		log.Warn("Current deposit is not enough", "deposit", val.deposit, "minimum required", min)
+		// @TODO (rgeraldes) - error handling?
 		return fmt.Errorf("Current deposit - %d - is not enough. The minimum required is %d", val.deposit, min)
 	}
 
@@ -469,26 +468,9 @@ func (val *Validator) makeDeposit() error {
 		return fmt.Errorf("There are not positions available at the moment")
 	}
 
-	opts := &bind.TransactOpts{
-		From:  val.account.Address,
-		Value: min.Mul(min, big.NewInt(2)),
-		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			// @NOTE (rgeraldes) - ignore the proposed signer as by default it will be a unprotected signer.
-
-			if address != val.account.Address {
-				return nil, errors.New("not authorized to sign this account")
-			}
-
-			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
-		},
-		// @TODO (rgeraldes) - price prediction & limits
-		GasPrice: big.NewInt(25),
-		GasLimit: big.NewInt(600000),
-	}
-
-	_, err = val.network.Deposit(opts)
+	options := getTransactionOpts(val.wallet, val.account, deposit.SetUint64(val.deposit), val.config.ChainID)
+	_, err = val.network.Deposit(options)
 	if err != nil {
-		log.Error("Transaction failed", "err", err)
 		return fmt.Errorf("Failed to transact the deposit: %x", err)
 	}
 
@@ -496,22 +478,8 @@ func (val *Validator) makeDeposit() error {
 }
 
 func (val *Validator) withdraw() {
-	opts := &bind.TransactOpts{
-		From: val.account.Address,
-		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
-			// @NOTE (rgeraldes) - ignore the proposed signer as by default it will be a unprotected signer.
-
-			if address != val.account.Address {
-				return nil, errors.New("not authorized to sign this account")
-			}
-
-			return val.wallet.SignTx(val.account, tx, val.config.ChainID)
-		},
-		// @TODO (rgeraldes) - price prediction & limits
-		GasPrice: big.NewInt(25),
-		GasLimit: big.NewInt(600000),
-	}
-	_, err := val.network.Withdraw(opts)
+	options := getTransactionOpts(val.wallet, val.account, nil, val.config.ChainID)
+	_, err := val.network.Withdraw(options)
 	if err != nil {
 		log.Error("Failed to withdraw from the election", "err", err)
 	}
@@ -529,10 +497,6 @@ func (val *Validator) createBlock() *types.Block {
 	log.Info("Creating a new block")
 	// new block header
 	parent := val.chain.CurrentBlock()
-	state, err := val.chain.StateAt(parent.Root())
-	if err != nil {
-		log.Crit("Failed to fetch the current state", "err", err)
-	}
 	blockNumber := parent.Number()
 	tstart := time.Now()
 	tstamp := tstart.Unix()
@@ -578,24 +542,13 @@ func (val *Validator) createBlock() *types.Block {
 		log.Crit("Failed to fetch pending transactions", "err", err)
 	}
 
-	txs := types.NewTransactionsByPriceAndNonce(pending)
+	txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
 	val.commitTransactions(val.eventMux, txs, val.chain, val.account.Address)
-
-	val.backend.TxPool().RemoveBatch(val.failedTxs)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
-	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, val.receipts, commit); err != nil {
+	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, commit, val.receipts); err != nil {
 		log.Crit("Failed to finalize block for sealing", "err", err)
-	}
-
-	for _, r := range val.receipts {
-		for _, l := range r.Logs {
-			l.BlockHash = block.Hash()
-		}
-	}
-	for _, log := range state.Logs() {
-		log.BlockHash = block.Hash()
 	}
 
 	return block
@@ -610,13 +563,13 @@ func (val *Validator) propose() {
 
 	// @TODO (rgeraldes) - review int/int64; address situation where validators size might be zero (no peers)
 	// @NOTE (rgeraldes) - (for now size = block size) number of block fragments = number of validators - self
-	blockFragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
+	fragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
 	if err != nil {
 		// @TODO(rgeraldes) - analyse consequences
 		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
 	}
 
-	proposal := types.NewProposal(val.blockNumber, val.round, blockFragments.Metadata(), lockedRound, lockedBlock)
+	proposal := types.NewProposal(val.blockNumber, val.round, fragments.Metadata(), lockedRound, lockedBlock)
 
 	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
 	if err != nil {
@@ -630,11 +583,11 @@ func (val *Validator) propose() {
 
 	// post block segments events
 	// @TODO(rgeraldes) - review types int/uint
-	for i := uint(0); i < blockFragments.Size(); i++ {
+	for i := uint(0); i < fragments.Size(); i++ {
 		val.eventMux.Post(core.NewBlockFragmentEvent{
 			BlockNumber: val.blockNumber,
 			Round:       val.round,
-			Data:        blockFragments.Get(int(i)),
+			Data:        fragments.Get(int(i)),
 		})
 	}
 
@@ -808,5 +761,42 @@ func (val *Validator) makeCurrent(parent *types.Block) error {
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
 	val.work = work
+	return nil
+}
+
+func (val *Validator) updateValidators(checksum [32]byte, genesis bool) error {
+	count, err := val.network.GetVoterCount(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+
+	val.validatorsChecksum = checksum
+	validators := make([]*types.Validator, count.Uint64())
+	for i := int64(0); i < count.Int64(); i++ {
+		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
+		if err != nil {
+			return err
+		}
+
+		var weight *big.Int
+		// @TODO (rgeraldes) - weight needs to be shared
+		/*
+			if !genesis && val.validators.Contains(validator.Addr) {
+				// old validator
+				old := val.validators.Get(validator.Addr)
+				weight = old.Weight()
+			} else {
+				// new validator
+				weight = big.NewInt(0)
+			}
+		*/
+		// @TODO (rgeraldes) - remove this statement as soon as the previous one is sorted out
+		weight = big.NewInt(0)
+
+		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
+	}
+	val.validators = types.NewValidatorSet(validators)
+	val.validatorsChecksum = checksum
+
 	return nil
 }

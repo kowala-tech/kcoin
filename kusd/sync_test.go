@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kUSD/eth/downloader"
+	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/p2p"
 	"github.com/kowala-tech/kUSD/p2p/discover"
 )

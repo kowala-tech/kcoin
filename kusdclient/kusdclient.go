@@ -4,6 +4,7 @@ package kusdclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -54,9 +55,9 @@ func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Bl
 }
 
 type rpcBlock struct {
-	Hash         common.Hash          `json:"hash"`
-	Transactions []*types.Transaction `json:"transactions"`
-	UncleHashes  []common.Hash        `json:"uncles"`
+	Hash         common.Hash      `json:"hash"`
+	Transactions []rpcTransaction `json:"transactions"`
+	Commit       *types.Commit    `json:"commit"`
 }
 
 func (ec *Client) getBlock(ctx context.Context, method string, args ...interface{}) (*types.Block, error) {
@@ -77,39 +78,26 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 		return nil, err
 	}
 	// Quick-verify transaction lists. This mostly helps with debugging the server.
+	if head.LastCommitHash == types.EmptyRootHash && body.Commit != nil {
+		return nil, fmt.Errorf("server returned non-nil commit but block header indicates no commit")
+	}
+	if head.LastCommitHash != types.EmptyRootHash && body.Commit == nil {
+		return nil, fmt.Errorf("server returned nil commit but block header indicates a commit ")
+	}
 	if head.TxHash == types.EmptyRootHash && len(body.Transactions) > 0 {
 		return nil, fmt.Errorf("server returned non-empty transaction list but block header indicates no transactions")
 	}
 	if head.TxHash != types.EmptyRootHash && len(body.Transactions) == 0 {
 		return nil, fmt.Errorf("server returned empty transaction list but block header indicates transactions")
 	}
-	// Load uncles because they are not included in the block response.
-	var uncles []*types.Header
-	if len(body.UncleHashes) > 0 {
-		uncles = make([]*types.Header, len(body.UncleHashes))
-		reqs := make([]rpc.BatchElem, len(body.UncleHashes))
-		for i := range reqs {
-			reqs[i] = rpc.BatchElem{
-				Method: "eth_getUncleByBlockHashAndIndex",
-				Args:   []interface{}{body.Hash, hexutil.EncodeUint64(uint64(i))},
-				Result: &uncles[i],
-			}
-		}
-		if err := ec.c.BatchCallContext(ctx, reqs); err != nil {
-			return nil, err
-		}
-		for i := range reqs {
-			if reqs[i].Error != nil {
-				return nil, reqs[i].Error
-			}
-			if uncles[i] == nil {
-				return nil, fmt.Errorf("got null header for uncle %d of block %x", i, body.Hash[:])
-			}
-		}
-	}
 
-	// @TODO (rgeraldes) - replace the statement below with the last commit data
-	return types.NewBlockWithHeader(head).WithBody(body.Transactions, nil /*body.Lastcommit*/), nil
+	// Fill the sender cache of transactions in the block.
+	txs := make([]*types.Transaction, len(body.Transactions))
+	for i, tx := range body.Transactions {
+		setSenderFromServer(tx.tx, tx.From, body.Hash)
+		txs[i] = tx.tx
+	}
+	return types.NewBlockWithHeader(head).WithBody(txs, body.Commit), nil
 }
 
 // HeaderByHash returns the block header with the given hash.
@@ -133,25 +121,62 @@ func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 	return head, err
 }
 
+type rpcTransaction struct {
+	tx *types.Transaction
+	txExtraInfo
+}
+
+type txExtraInfo struct {
+	BlockNumber *string
+	BlockHash   common.Hash
+	From        common.Address
+}
+
+func (tx *rpcTransaction) UnmarshalJSON(msg []byte) error {
+	if err := json.Unmarshal(msg, &tx.tx); err != nil {
+		return err
+	}
+	return json.Unmarshal(msg, &tx.txExtraInfo)
+}
+
 // TransactionByHash returns the transaction with the given hash.
 func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error) {
-	var raw json.RawMessage
-	err = ec.c.CallContext(ctx, &raw, "eth_getTransactionByHash", hash)
+	var json *rpcTransaction
+	err = ec.c.CallContext(ctx, &json, "eth_getTransactionByHash", hash)
 	if err != nil {
 		return nil, false, err
-	} else if len(raw) == 0 {
+	} else if json == nil {
 		return nil, false, kowala.NotFound
-	}
-	if err := json.Unmarshal(raw, &tx); err != nil {
-		return nil, false, err
-	} else if _, r, _ := tx.RawSignatureValues(); r == nil {
+	} else if _, r, _ := json.tx.RawSignatureValues(); r == nil {
 		return nil, false, fmt.Errorf("server returned transaction without signature")
 	}
-	var block struct{ BlockNumber *string }
-	if err := json.Unmarshal(raw, &block); err != nil {
-		return nil, false, err
+	setSenderFromServer(json.tx, json.From, json.BlockHash)
+	return json.tx, json.BlockNumber == nil, nil
+}
+
+// TransactionSender returns the sender address of the given transaction. The transaction
+// must be known to the remote node and included in the blockchain at the given block and
+// index. The sender is the one derived by the protocol at the time of inclusion.
+//
+// There is a fast-path for transactions retrieved by TransactionByHash and
+// TransactionInBlock. Getting their sender address can be done without an RPC interaction.
+func (ec *Client) TransactionSender(ctx context.Context, tx *types.Transaction, block common.Hash, index uint) (common.Address, error) {
+	// Try to load the address from the cache.
+	sender, err := types.TxSender(&senderFromServer{blockhash: block}, tx)
+	if err == nil {
+		return sender, nil
 	}
-	return tx, block.BlockNumber == nil, nil
+	var meta struct {
+		Hash common.Hash
+		From common.Address
+	}
+	if err = ec.c.CallContext(ctx, &meta, "eth_getTransactionByBlockHashAndIndex", block, hexutil.Uint64(index)); err != nil {
+		return common.Address{}, err
+	}
+	if meta.Hash == (common.Hash{}) || meta.Hash != tx.Hash() {
+		return common.Address{}, errors.New("wrong inclusion block/index")
+	}
+	return meta.From, nil
 }
 
 // TransactionCount returns the total number of transactions in the given block.
@@ -163,16 +188,17 @@ func (ec *Client) TransactionCount(ctx context.Context, blockHash common.Hash) (
 
 // TransactionInBlock returns a single transaction at index in the given block.
 func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
-	var tx *types.Transaction
-	err := ec.c.CallContext(ctx, &tx, "eth_getTransactionByBlockHashAndIndex", blockHash, hexutil.Uint64(index))
+	var json *rpcTransaction
+	err := ec.c.CallContext(ctx, &json, "eth_getTransactionByBlockHashAndIndex", blockHash, hexutil.Uint64(index))
 	if err == nil {
-		if tx == nil {
+		if json == nil {
 			return nil, kowala.NotFound
-		} else if _, r, _ := tx.RawSignatureValues(); r == nil {
+		} else if _, r, _ := json.tx.RawSignatureValues(); r == nil {
 			return nil, fmt.Errorf("server returned transaction without signature")
 		}
 	}
-	return tx, err
+	setSenderFromServer(json.tx, json.From, json.BlockHash)
+	return json.tx, err
 }
 
 // TransactionReceipt returns the receipt of a transaction by transaction hash.
@@ -231,10 +257,23 @@ func (ec *Client) SyncProgress(ctx context.Context) (*kowala.SyncProgress, error
 // SubscribeNewHead subscribes to notifications about the current blockchain head
 // on the given channel.
 func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kowala.Subscription, error) {
-	return ec.c.EthSubscribe(ctx, ch, "newHeads", map[string]struct{}{})
+	return ec.c.KowalaSubscribe(ctx, ch, "newHeads", map[string]struct{}{})
 }
 
 // State Access
+
+// NetworkID returns the network ID (also known as the chain ID) for this chain.
+func (ec *Client) NetworkID(ctx context.Context) (*big.Int, error) {
+	version := new(big.Int)
+	var ver string
+	if err := ec.c.CallContext(ctx, &ver, "net_version"); err != nil {
+		return nil, err
+	}
+	if _, ok := version.SetString(ver, 10); !ok {
+		return nil, fmt.Errorf("invalid net_version result %q", ver)
+	}
+	return version, nil
+}
 
 // BalanceAt returns the wei balance of the given account.
 // The block number can be nil, in which case the balance is taken from the latest known block.
@@ -279,7 +318,7 @@ func (ec *Client) FilterLogs(ctx context.Context, q kowala.FilterQuery) ([]types
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
 func (ec *Client) SubscribeFilterLogs(ctx context.Context, q kowala.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error) {
-	return ec.c.EthSubscribe(ctx, ch, "logs", toFilterArg(q))
+	return ec.c.KowalaSubscribe(ctx, ch, "logs", toFilterArg(q))
 }
 
 func toFilterArg(q kowala.FilterQuery) interface{} {

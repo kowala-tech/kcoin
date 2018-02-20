@@ -15,6 +15,7 @@ import (
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/consensus/tendermint"
 	"github.com/kowala-tech/kUSD/core"
+	"github.com/kowala-tech/kUSD/core/bloombits"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/event"
@@ -36,6 +37,7 @@ import (
 
 // Kowala implements the Kowala full node service.
 type Kowala struct {
+	config      *Config
 	chainConfig *params.ChainConfig
 	// Channel for shutting down the service
 	shutdownChan chan bool // Channel for shutting down the service
@@ -50,6 +52,9 @@ type Kowala struct {
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
 	accountManager *accounts.Manager
+
+	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
+	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
 
 	ApiBackend *KowalaApiBackend
 
@@ -85,6 +90,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	kusd := &Kowala{
+		config:         config,
 		chainDb:        chainDb,
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
@@ -95,11 +101,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Coinbase,
 		deposit:        config.Deposit,
+		bloomRequests:  make(chan chan *bloombits.Retrieval),
+		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
 
-	if err := addMipmapBloomBins(chainDb); err != nil {
-		return nil, err
-	}
 	log.Info("Initialising Kowala protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
@@ -111,7 +116,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	kusd.blockchain, err = core.NewBlockChain(chainDb, kusd.chainConfig, kusd.engine, kusd.eventMux, vmConfig)
+	kusd.blockchain, err = core.NewBlockChain(chainDb, kusd.chainConfig, kusd.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -121,22 +126,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		kusd.blockchain.SetHead(compat.RewindTo)
 		core.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	}
+	kusd.bloomIndexer.Start(kusd.blockchain)
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	kusd.txPool = core.NewTxPool(config.TxPool, kusd.chainConfig, kusd.EventMux(), kusd.blockchain.State, kusd.blockchain.GasLimit)
-
-	maxPeers := config.MaxPeers
-	if config.LightServ > 0 {
-		// if we are running a light server, limit the number of Kowala peers so that we reserve some space for incoming LES connections
-		// temporary solution until the new peer connectivity API is finished
-		halfPeers := maxPeers / 2
-		maxPeers -= config.LightPeers
-		if maxPeers < halfPeers {
-			maxPeers = halfPeers
-		}
-	}
+	kusd.txPool = core.NewTxPool(config.TxPool, kusd.chainConfig, kusd.blockchain)
 
 	kusd.ApiBackend = &KowalaApiBackend{kusd, nil}
 	gpoParams := config.GPO
@@ -149,7 +144,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	kusd.validator = validator.New(kusd, NewContractBackend(kusd.ApiBackend), kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
-	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, maxPeers, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
+	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
 		return nil, err
 	}
 
@@ -203,21 +198,12 @@ func (s *Kowala) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
-			Namespace: "kusd",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   NewPublicKowalaAPI(s),
 			Public:    true,
-		},
-		// @NOTE(rgeraldes) - most of the methods are related to external mining.
-		// External validation does not make much sense in order to control latencies.
-		// We need to review to check if there are possible use cases.
-		/*{
-			Namespace: "kusd",
-			Version:   "1.0",
-			Service:   NewPublicMinerAPI(s),
-			Public:    true,
-		},*/{
-			Namespace: "kusd",
+		}, {
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
@@ -227,7 +213,7 @@ func (s *Kowala) APIs() []rpc.API {
 			Service:   NewPrivateValidatorAPI(s),
 			Public:    false,
 		}, {
-			Namespace: "kusd",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
 			Public:    true,
@@ -360,9 +346,22 @@ func (s *Kowala) Protocols() []p2p.Protocol {
 // Start implements node.Service, starting all internal goroutines needed by the
 // Kowala protocol implementation.
 func (s *Kowala) Start(srvr *p2p.Server) error {
+	// Start the bloom bits servicing goroutines
+	s.startBloomHandlers()
+
+	// Start the RPC service
 	s.netRPCService = kusdapi.NewPublicNetAPI(srvr, s.NetVersion())
 
-	s.protocolManager.Start()
+	// Figure out a max peers count based on the server limits
+	maxPeers := srvr.MaxPeers
+	if s.config.LightServ > 0 {
+		maxPeers -= s.config.LightPeers
+		if maxPeers < srvr.MaxPeers/2 {
+			maxPeers = srvr.MaxPeers / 2
+		}
+	}
+	// Start the networking layer and the light server if requested
+	s.protocolManager.Start(maxPeers)
 	return nil
 }
 
@@ -372,8 +371,10 @@ func (s *Kowala) Stop() error {
 	// @NOTE (rgeraldes) - validator needs to be the first process
 	// otherwise it might not be able to finish an election and
 	// could be punished
-	s.validator.Stop()
-
+	if s.validator.Validating() {
+		s.validator.Stop()
+	}
+	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()
 	s.txPool.Stop()

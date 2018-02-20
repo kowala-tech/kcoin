@@ -19,6 +19,7 @@ import (
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/kusd"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/node"
@@ -27,9 +28,27 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-// historyUpdateRange is the number of blocks a node should report upon login or
-// history request.
-const historyUpdateRange = 50
+const (
+	// historyUpdateRange is the number of blocks a node should report upon login or
+	// history request.
+	historyUpdateRange = 50
+
+	// txChanSize is the size of channel listening to TxPreEvent.
+	// The number is referenced from the size of tx pool.
+	txChanSize = 4096
+	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
+	chainHeadChanSize = 10
+)
+
+type txPool interface {
+	// SubscribeTxPreEvent should return an event subscription of
+	// TxPreEvent and send events to the given channel.
+	SubscribeTxPreEvent(chan<- core.TxPreEvent) event.Subscription
+}
+
+type blockChain interface {
+	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
+}
 
 // Service implements an Kowala netstats reporting daemon that pushes local
 // chain statistics up to a monitoring server.
@@ -97,12 +116,18 @@ func (s *Service) Stop() error {
 // until termination.
 func (s *Service) loop() {
 	// Subscribe to chain events to execute updates on
-	emux := s.kusd.EventMux()
+	var blockchain blockChain
+	var txpool txPool
 
-	headSub := emux.Subscribe(core.ChainHeadEvent{})
+	blockchain = s.kusd.BlockChain()
+	txpool = s.kusd.TxPool()
+
+	chainHeadCh := make(chan core.ChainHeadEvent, chainHeadChanSize)
+	headSub := blockchain.SubscribeChainHeadEvent(chainHeadCh)
 	defer headSub.Unsubscribe()
 
-	txSub := emux.Subscribe(core.TxPreEvent{})
+	txEventCh := make(chan core.TxPreEvent, txChanSize)
+	txSub := txpool.SubscribeTxPreEvent(txEventCh)
 	defer txSub.Unsubscribe()
 
 	// Start a goroutine that exhausts the subsciptions to avoid events piling up
@@ -114,25 +139,18 @@ func (s *Service) loop() {
 	go func() {
 		var lastTx mclock.AbsTime
 
+	HandleLoop:
 		for {
 			select {
 			// Notify of chain head events, but drop if too frequent
-			case head, ok := <-headSub.Chan():
-				if !ok { // node stopped
-					close(quitCh)
-					return
-				}
+			case head := <-chainHeadCh:
 				select {
-				case headCh <- head.Data.(core.ChainHeadEvent).Block:
+				case headCh <- head.Block:
 				default:
 				}
 
 			// Notify of new transaction events, but drop if too frequent
-			case _, ok := <-txSub.Chan():
-				if !ok { // node stopped
-					close(quitCh)
-					return
-				}
+			case <-txEventCh:
 				if time.Duration(mclock.Now()-lastTx) < time.Second {
 					continue
 				}
@@ -142,8 +160,16 @@ func (s *Service) loop() {
 				case txCh <- struct{}{}:
 				default:
 				}
+
+			// node stopped
+			case <-txSub.Err():
+				break HandleLoop
+			case <-headSub.Err():
+				break HandleLoop
 			}
 		}
+		close(quitCh)
+		return
 	}()
 	// Loop reporting until termination
 	for {
@@ -343,7 +369,6 @@ func (s *Service) login(conn *websocket.Conn) error {
 		},
 		Secret: s.pass,
 	}
-
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
 	}
@@ -462,7 +487,6 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	report := map[string][]interface{}{
 		"emit": {"block", stats},
 	}
-
 	return websocket.JSON.Send(conn, report)
 }
 

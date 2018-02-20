@@ -21,10 +21,10 @@ bootnode:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
 
-swarm:
-	build/env.sh go run build/ci.go install ./cmd/swarm
+faucet:
+	build/env.sh go run build/ci.go install ./cmd/faucet
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/swarm\" to launch swarm."
+	@echo "Run \"$(GOBIN)/faucet\" to launch faucet."
 
 evm:
 	build/env.sh go run build/ci.go install ./cmd/evm
@@ -155,7 +155,20 @@ kusd-windows-amd64:
 ## Docker
 
 docker-build-bootnode:
-	docker build -t kowala-tech/bootnode -f bootnode.Dockerfile .
+	docker build -t kowalatech/bootnode -f bootnode.Dockerfile .
 
 docker-build-kusd:
-	docker build -t kowala-tech/kusd -f kusd.Dockerfile .
+	docker build -t kowalatech/kusd -f kusd.Dockerfile .
+
+docker-build-faucet:
+	docker build -t kowalatech/faucet -f faucet.Dockerfile .
+
+
+docker-publish-bootnode:
+	docker push kowalatech/bootnode
+
+docker-publish-kusd:
+	docker push kowalatech/kusd
+
+docker-publish-faucet:
+	docker push kowalatech/faucet

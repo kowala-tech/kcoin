@@ -1,14 +1,16 @@
+[![Gitter chat](https://badges.gitter.im/kowala/kusd.png)](https://gitter.im/kowala-tech/kUSD) [![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kUSD/status.svg)](http://ci.kowala.io/kowala-tech/kUSD) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://testnet.kowala.io)
+
 ## Kowala
 
 Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kusd`** client is the main client for the Kowala network.
 It is the entry point into the Kowala network, and is capable of running a full node. The client offers
 a gateway (Endpoints, WebSocket, IPC) to the Kowala network to other processes.
 
-## Running kusd
+## Running kUSD
 
 ### Building the source
 
-    make kusd
+	make kusd
 
 ### Configuration
 
@@ -36,8 +38,8 @@ One of the quickest ways to get Kowala up and running on your machine is by usin
 
 ```
 docker run -d --name kusd-node -v /Users/alice/kusd:/root \
-           -p 11223:11223 -p 22334:22334 \
-           kusd/client-go --fast --cache=512
+		   -p 11223:11223 -p 22334:22334 \
+		   kowalatech/kusd --fast --cache=512
 ```
 
 ## Networks
@@ -92,10 +94,10 @@ $ go generate
 2. The first step consists in creating the genesis of your new network. By far, the easiest way to do it, is by running the puppeth client.
 
    1. Rebuild the puppeth client
-      `$ cd cmd $ go install ./puppeth/...`
+	  `$ cd cmd $ go install ./puppeth/...`
 
    2. Run the client
-      `$ puppeth`
+	  `$ puppeth`
 
    3. Specify a network name
 
@@ -110,9 +112,9 @@ $ go generate
    8. Select "2. Save existing genesis" and fill in the file path to save the genesis into.
 
 ```
-    $ Which file to save the genesis into? (default = test.json)
-    > /src/github.com/kowala-tech/kUSD/assets/test.json
-    INFO [01-16|16:49:37] Exported existing genesis block
+	$ Which file to save the genesis into? (default = test.json)
+	> /src/github.com/kowala-tech/kUSD/assets/test.json
+	INFO [01-16|16:49:37] Exported existing genesis block
 ```
 
 3. Initialize the blockchain based on the genesis file created on the previous step.
@@ -169,10 +171,16 @@ To start a kusd instance for block validation, run it with all your usual flags,
 $ kusd --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0xc7f1d574658e7b0f37244366c40c8002d78c734f –-coinbase 0xc7f1d574658e7b0f37244366c40c8002d78c734f
 ```
 
+## Mining client metrics
+
+Start the client with `--metrics` to collect performance metrics. This will expose a [Prometheus](https://prometheus.io/) HTTP endpoint at `/metrics` on `http://localhost:8080`.
+
+Prometheus endpoint address can be specified using flag `--metrics-prometheus-address`.
+
 ## Core Contributors
 
 [Core Team Members](https://github.com/orgs/kowala-tech/people)
 
 ## Contact us
 
-Feel free to email us at support@kowala.tech.
+Feel free to email us at support@kowala.tech or talk to us on [Gitter](https://gitter.im/kowala-tech/kUSD).

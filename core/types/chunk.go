@@ -77,6 +77,10 @@ func NewDataSetFromData(data []byte, size int) *DataSet {
 		chunk := &Chunk{
 			Index: uint64(i),
 			Data:  data[i*size : min(len(data), (i+1)*size)],
+			// @NOTE (rgeraldes) - this is temporary workaround.
+			// This is necessary for now because the fragments are not sent to peers
+			// if the data chunk doesn't have a unique summary. A repeated request is ignored.
+			Proof: rlpHash(data[i*size : min(len(data), (i+1)*size)]),
 		}
 		chunks[i] = chunk
 		membership.Set(i)

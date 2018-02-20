@@ -46,7 +46,7 @@ func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cos
 	return nil
 }
 
-func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration) error {
+func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
 	return nil
 }
 

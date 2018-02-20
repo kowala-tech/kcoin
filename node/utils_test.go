@@ -1,19 +1,3 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // Contains a batch of utility type declarations used by the tests. As the node
 // operates on unique types, a lot of them are needed to check various features.
 
@@ -41,12 +25,10 @@ func NewNoopService(*ServiceContext) (Service, error) { return new(NoopService),
 type NoopServiceA struct{ NoopService }
 type NoopServiceB struct{ NoopService }
 type NoopServiceC struct{ NoopService }
-type NoopServiceD struct{ NoopService }
 
 func NewNoopServiceA(*ServiceContext) (Service, error) { return new(NoopServiceA), nil }
 func NewNoopServiceB(*ServiceContext) (Service, error) { return new(NoopServiceB), nil }
 func NewNoopServiceC(*ServiceContext) (Service, error) { return new(NoopServiceC), nil }
-func NewNoopServiceD(*ServiceContext) (Service, error) { return new(NoopServiceD), nil }
 
 // InstrumentedService is an implementation of Service for which all interface
 // methods can be instrumented both return value as well as event hook wise.

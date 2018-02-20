@@ -61,6 +61,8 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	// Header validity is known at this point, check transactions
 	header := block.Header()
 
+	// @TODO (rgeraldes) - add commit verification + hash
+
 	if hash := types.DeriveSha(block.Transactions()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}

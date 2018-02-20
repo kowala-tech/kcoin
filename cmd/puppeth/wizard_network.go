@@ -71,22 +71,20 @@ func (w *wizard) makeServer() string {
 	fmt.Println()
 	fmt.Println("Please enter remote server's address:")
 
-	for {
-		// Read and fial the server to ensure docker is present
-		input := w.readString()
+	// Read and dial the server to ensure docker is present
+	input := w.readString()
 
-		client, err := dial(input, nil)
-		if err != nil {
-			log.Error("Server not ready for puppeth", "err", err)
-			return ""
-		}
-		// All checks passed, start tracking the server
-		w.servers[input] = client
-		w.conf.Servers[input] = client.pubkey
-		w.conf.flush()
-
-		return input
+	client, err := dial(input, nil)
+	if err != nil {
+		log.Error("Server not ready for puppeth", "err", err)
+		return ""
 	}
+	// All checks passed, start tracking the server
+	w.servers[input] = client
+	w.conf.Servers[input] = client.pubkey
+	w.conf.flush()
+
+	return input
 }
 
 // selectServer lists the user all the currnetly known servers to choose from,
@@ -182,7 +180,7 @@ func (w *wizard) deployComponent() {
 
 	switch w.read() {
 	case "1":
-		w.deployEthstats()
+		w.deployStats()
 	case "2":
 		w.deployNode(true)
 	case "3":

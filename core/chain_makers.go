@@ -9,7 +9,6 @@ import (
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/event"
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/params"
 )
@@ -221,7 +220,7 @@ func newCanonical(n int, full bool) (kusddb.Database, *BlockChain, error) {
 	db, _ := kusddb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, params.AllProtocolChanges, tendermint.NewFaker(), new(event.TypeMux), vm.Config{})
+	blockchain, _ := NewBlockChain(db, params.AllProtocolChanges, tendermint.NewFaker(), vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil

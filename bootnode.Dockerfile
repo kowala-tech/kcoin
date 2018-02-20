@@ -8,5 +8,4 @@ RUN make bootnode
 FROM alpine:3.7
 WORKDIR /bootnode/
 COPY --from=builder /bootnode/build/bin/bootnode .
-EXPOSE 33445/udp
 ENTRYPOINT ["./bootnode"] 
