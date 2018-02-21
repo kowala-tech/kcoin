@@ -34,7 +34,6 @@ type Backend interface {
 // Validator represents a consensus validator
 type Validator struct {
 	// state machine
-	electionMu     sync.Mutex
 	Election           // consensus state
 	maxTransitions int // max number of state transitions (tests) 0 - unlimited
 
@@ -154,7 +153,7 @@ func (val *Validator) run() {
 	log.Info("Starting validation operation")
 	val.wg.Add(1)
 	atomic.StoreInt32(&val.running, 1)
-	
+
 	defer func() {
 		val.wg.Done()
 		atomic.StoreInt32(&val.running, 0)
@@ -625,14 +624,14 @@ func (val *Validator) preCommit() {
 			val.lockedRound = 0
 			val.lockedBlock = nil
 		}
-	// majority pre-voted the locked block
+		// majority pre-voted the locked block
 	case winner == val.lockedBlock.Hash():
 		log.Debug("Majority of validators pre-voted the locked block")
 		// update locked block round
 		val.lockedRound = val.round
 		// vote on the pre-vote election winner
 		vote = winner
-	// majority pre-voted the proposed block
+		// majority pre-voted the proposed block
 	case winner == val.block.Hash():
 		log.Debug("Majority of validators pre-voted the proposed block")
 		// lock block
@@ -640,9 +639,9 @@ func (val *Validator) preCommit() {
 		val.lockedBlock = val.block
 		// vote on the pre-vote election winner
 		vote = winner
-	// we don't have the current block (fetch)
-	// @TODO (tendermint): in the future save the POL prevotes for justification.
-	// fetch block, unlock, precommit
+		// we don't have the current block (fetch)
+		// @TODO (tendermint): in the future save the POL prevotes for justification.
+		// fetch block, unlock, precommit
 	default:
 		// unlock locked block
 		val.lockedRound = 0
