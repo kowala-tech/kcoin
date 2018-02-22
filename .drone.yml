@@ -68,31 +68,37 @@ pipeline:
 
   docker_kusd_tag:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
+    privileged: true
     auto_tag: true
     dockerfile: kusd.Dockerfile
     when:
-      event: tag
+      event: [push]
+      branch: [master]
 
   docker_bootnode_tag:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
     repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
+    privileged: true
     auto_tag: true
     dockerfile: bootnode.Dockerfile
     when:
-      event: tag
+      event: [push]
+      branch: [master]
 
   docker_faucet_tag:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
     repo: kowalatech/faucet
     secrets: [ docker_username, docker_password ]
+    privileged: true
     auto_tag: true
     dockerfile: faucet.Dockerfile
-    when:
-      event: tag
+    #when:
+    #  event: [push]
+    #  branch: [master]
 
