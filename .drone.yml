@@ -103,7 +103,7 @@ pipeline:
     privileged: true
     auto_tag: true
     dockerfile: faucet.Dockerfile
-    #when:
-    #  event: [push]
-    #  branch: [master]
+    when:
+      event: [push]
+      branch: [master]
 
