@@ -2,6 +2,11 @@ workspace:
   base: /go
   path: src/github.com/kowala-tech/kUSD
 
+clone:
+  git:
+    image: plugins/git
+    tags: true
+
 pipeline:
 
   test:
