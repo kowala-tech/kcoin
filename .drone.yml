@@ -1,13 +1,26 @@
+workspace:
+  base: /go
+  path: src/github.com/kowala-tech/kUSD
+
 pipeline:
 
-  test-and-build:
+  test:
+    image: kowalatech/go:1.0.1
+    commands:
+      - make test
+      - make lint
+    when:
+      event: [push]
+      branch: [feature/*, hotfix/*]
+
+  build:
     image: kowalatech/go:1.0.1
     commands:
       - make
     when:
       event: [push, tag]
       branch: [master, dev, refs/tags/*]
-      
+
   github_release:
     image: plugins/github-release
     secrets: [ github_release_api_key ] 

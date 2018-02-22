@@ -122,6 +122,15 @@ var (
 	// Note: wily is unsupported because it was officially deprecated on lanchpad.
 	// Note: yakkety is unsupported because it was officially deprecated on lanchpad.
 	debDistros = []string{"trusty", "xenial", "zesty", "artful"}
+
+	// stablePackages is a list of packages known to be stable to do full test and linters
+	stablePackages = []string{
+		"./consensus",
+		"./consensus/tendermint",
+		"./kusd/validator",
+	}
+
+	allPackages = []string{"./..."}
 )
 
 var GOBIN, _ = filepath.Abs(filepath.Join("build", "bin"))
@@ -282,13 +291,10 @@ func goToolArch(arch string, subcmd string, args ...string) *exec.Cmd {
 // "tests" also includes static analysis tools such as vet.
 
 func doTest(cmdline []string) {
-	var (
-		coverage = flag.Bool("coverage", false, "Whether to record code coverage")
-	)
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
 
-	packages := []string{"./..."}
+	packages := stablePackages
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}
@@ -301,10 +307,7 @@ func doTest(cmdline []string) {
 	gotest := goTool("test", buildFlags(env)...)
 	// Test a single package at a time. CI builders are slow
 	// and some tests run into timeouts under load.
-	gotest.Args = append(gotest.Args, "-p", "1")
-	if *coverage {
-		gotest.Args = append(gotest.Args, "-covermode=atomic", "-cover")
-	}
+	gotest.Args = append(gotest.Args, "-p", "1", "-race", "-v", "-cover")
 
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
@@ -312,25 +315,26 @@ func doTest(cmdline []string) {
 
 // runs gometalinter on requested packages
 func doLint(cmdline []string) {
+	metalinterCmd := getMetalinterCommand()
+
 	flag.CommandLine.Parse(cmdline)
 
-	packages := []string{"./..."}
+	packages := stablePackages
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}
-	// Get metalinter and install all supported linters
-	build.MustRun(goTool("get", "gopkg.in/alecthomas/gometalinter.v1"))
-	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v1"), "--install")
 
 	// Run fast linters batched together
-	configs := []string{"--vendor", "--disable-all", "--enable=vet", "--enable=gofmt", "--enable=misspell"}
-	build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v1"), append(configs, packages...)...)
+	configs := []string{"--config", "build/.gometalinter.json"}
+	build.MustRunCommand(filepath.Join(GOBIN, metalinterCmd), append(configs, packages...)...)
+}
 
-	// Run slow linters one by one
-	for _, linter := range []string{"unconvert"} {
-		configs = []string{"--vendor", "--deadline=10m", "--disable-all", "--enable=" + linter}
-		build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v1"), append(configs, packages...)...)
-	}
+func getMetalinterCommand() string {
+	metalinter := "gometalinter.v2"
+	// Get metalinter and install all supported linters
+	build.MustRun(goTool("get", "gopkg.in/alecthomas/"+metalinter))
+	build.MustRunCommand(filepath.Join(GOBIN, metalinter), "--install")
+	return metalinter
 }
 
 // Release Packaging
@@ -684,7 +688,7 @@ func doWindowsInstaller(cmdline []string) {
 		"/DMAJORVERSION="+version[0],
 		"/DMINORVERSION="+version[1],
 		"/DBUILDVERSION="+version[2],
-		"/DARCH="+*arch,
+		"/DARCH=" + *arch,
 		filepath.Join(*workdir, "kusd.nsi"),
 	)
 
