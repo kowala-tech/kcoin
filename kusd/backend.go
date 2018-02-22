@@ -314,6 +314,11 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	}
 }
 
+// GetMinimumDeposit return minimum amount required to join the validators
+func (s *Kowala) GetMinimumDeposit() uint64 {
+	return s.config.Deposit
+}
+
 // set in js console via admin interface or wrapper from cli flags
 func (s *Kowala) SetDeposit(deposit uint64) {
 	s.lock.Lock()
