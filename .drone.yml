@@ -80,8 +80,7 @@ pipeline:
     auto_tag: true
     dockerfile: kusd.Dockerfile
     when:
-      event: [push]
-      branch: [master]
+      event: tag
 
   docker_bootnode_tag:
     group: docker-deployment
@@ -92,8 +91,7 @@ pipeline:
     auto_tag: true
     dockerfile: bootnode.Dockerfile
     when:
-      event: [push]
-      branch: [master]
+      event: tag
 
   docker_faucet_tag:
     group: docker-deployment
@@ -104,6 +102,5 @@ pipeline:
     auto_tag: true
     dockerfile: faucet.Dockerfile
     when:
-      event: [push]
-      branch: [master]
+      event: tag
 
