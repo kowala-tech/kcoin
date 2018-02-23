@@ -1,4 +1,4 @@
-// faucet is a kUSD faucet backed by a full node (for now)
+// faucet is a kUSD faucet backed by a fast node (for now)
 package main
 
 //go:generate go-bindata -nometadata -o website.go faucet.html
@@ -210,7 +210,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network
 
 	// Assemble the Kowala protocol
 	cfg := kusd.DefaultConfig
-	cfg.SyncMode = downloader.FullSync
+	cfg.SyncMode = downloader.FastSync
 	cfg.NetworkId = network
 	cfg.Genesis = genesis
 	utils.RegisterKowalaService(stack, &cfg)
@@ -495,10 +495,10 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 func (f *faucet) setNonceAndPrice() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	nonce, _ := f.client.NonceAt(ctx, f.account.Address, nil)
 	price, _ := f.client.SuggestGasPrice(ctx)
-	
+
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	f.price, f.nonce = price, nonce
