@@ -186,13 +186,17 @@ func doInstall(cmdline []string) {
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
 
-	// Check Go version. People regularly open issues about compilation
-	// failure with outdated Go. This should save them the trouble.
-	if runtime.Version() < "go1.7" && !strings.Contains(runtime.Version(), "devel") {
-		log.Println("You have Go version", runtime.Version())
-		log.Println("kUSD requires at least Go version 1.7 and cannot")
-		log.Println("be compiled with an earlier version. Please upgrade your Go installation.")
-		os.Exit(1)
+	if !strings.Contains(runtime.Version(), "devel") {
+		// Figure out the minor version number since we can't textually compare (1.10 < 1.7)
+		var minor int
+		fmt.Sscanf(strings.TrimPrefix(runtime.Version(), "go1."), "%d", &minor)
+
+		if minor < 7 {
+			log.Println("You have Go version", runtime.Version())
+			log.Println("go-ethereum requires at least Go version 1.7 and cannot")
+			log.Println("be compiled with an earlier version. Please upgrade your Go installation.")
+			os.Exit(1)
+		}
 	}
 	// Compile packages given as arguments, or everything if there are no arguments.
 	packages := []string{"./..."}
@@ -688,7 +692,7 @@ func doWindowsInstaller(cmdline []string) {
 		"/DMAJORVERSION="+version[0],
 		"/DMINORVERSION="+version[1],
 		"/DBUILDVERSION="+version[2],
-		"/DARCH=" + *arch,
+		"/DARCH="+*arch,
 		filepath.Join(*workdir, "kusd.nsi"),
 	)
 
