@@ -1,0 +1,19 @@
+{
+  "Vendor": true,
+  "Deadline": "2m",
+  "Sort": ["linter", "severity", "path", "line"],
+  "EnableGC": true,
+  "WarnUnmatchedDirective": true,
+  "DisableAll": true,
+  "Enable": [
+    "deadcode",
+    "gocyclo",
+    "gofmt",
+    "misspell",
+    "unconvert",
+    "unused",
+    "vet"
+  ],
+  "Cyclo": 13,
+  "LineLength": 100
+}

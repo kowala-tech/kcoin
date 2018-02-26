@@ -1,27 +1,30 @@
+workspace:
+  base: /go
+  path: src/github.com/kowala-tech/kUSD
+
+clone:
+  git:
+    image: plugins/git
+    tags: true
+
 pipeline:
 
-  test-and-build:
+  test:
+    image: kowalatech/go:1.0.1
+    commands:
+      - make test
+      - make lint
+    when:
+      event: [push]
+      branch: [feature/*, hotfix/*]
+
+  build:
     image: kowalatech/go:1.0.1
     commands:
       - make
     when:
       event: [push, tag]
       branch: [master, dev, refs/tags/*]
-      
-  github_release:
-    image: plugins/github-release
-    secrets: [ github_release_api_key ] 
-    files:
-      - build/bin/kusd
-    checksum:
-      - md5
-      - sha1
-      - sha256
-      - sha512
-      - adler32
-      - crc32
-    when:
-      event: tag
 
   docker_kusd_dev:
     group: docker-deployment
@@ -55,34 +58,34 @@ pipeline:
 
   docker_kusd_tag:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
-    tags: latest
+    privileged: true
+    auto_tag: true
     dockerfile: kusd.Dockerfile
     when:
-      event: [push,tag]
-      branch: [master]
+      event: tag
 
   docker_bootnode_tag:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
     repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
-    tags: latest
+    privileged: true
+    auto_tag: true
     dockerfile: bootnode.Dockerfile
     when:
-      event: [push,tag]
-      branch: [master]
+      event: tag
 
   docker_faucet_tag:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
     repo: kowalatech/faucet
     secrets: [ docker_username, docker_password ]
-    tags: latest
+    privileged: true
+    auto_tag: true
     dockerfile: faucet.Dockerfile
     when:
-      event: [push,tag]
-      branch: [master]
+      event: tag
 
