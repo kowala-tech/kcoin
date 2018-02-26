@@ -31,6 +31,7 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rlp"
 	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kUSD/contracts/network"
 )
 
 // @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
@@ -141,7 +142,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	kusd.ApiBackend.gpo = gasprice.NewOracle(kusd.ApiBackend, gpoParams)
 
 	// consensus validator
-	kusd.validator = validator.New(kusd, NewContractBackend(kusd.ApiBackend), kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
+	networkContract := getNetworkContract(kusd.BlockChain(), NewContractBackend(kusd.ApiBackend))
+	kusd.validator = validator.New(kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
@@ -149,6 +151,22 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 
 	return kusd, nil
+}
+
+func getNetworkContract(blockChain *core.BlockChain, backend *ContractBackend) *network.NetworkContract {
+	state, err := blockChain.State()
+	if err != nil {
+		log.Crit("Failed to fetch the current state", "err", err)
+	}
+	contracts, err := network.GetContracts(state)
+	if err != nil {
+		log.Crit("Failed to access the network contracts", "err", err)
+	}
+	contract, err := network.NewNetworkContract(contracts.Network, backend)
+	if err != nil {
+		log.Crit("Failed to load the network contract", "err", err)
+	}
+	return contract
 }
 
 func makeExtraData(extra []byte) []byte {
