@@ -1,3 +1,4 @@
+// nolint
 package core
 
 // Constants containing the genesis allocation of built-in genesis blocks.
