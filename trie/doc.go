@@ -14,8 +14,8 @@ transactions. We don't need the entire set of transactions!
 It's possible to build a blockchain without merkle trees, for example, by
 creating giant block headers with all the transactions but this option does not
 scale, especially for devices such as smartphones. One of the biggest challenges
-of running a blockchain node on a smartphone is the bandwidth that is required.
-If we had the download the full set of transactions, this would required a lot
+of running a blockchain node on a smartphone is the bandwidth required.
+If we had to the download the full set of transactions, this would required a lot
 of bandwidth, especially in peak transactions times.
 
 The merkle trees can also help ensure that data blocks received from other peers
@@ -55,3 +55,4 @@ References:
 * https://blog.ethereum.org/2015/11/15/merkling-in-ethereum/
 */
 
+package trie
