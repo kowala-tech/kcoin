@@ -59,7 +59,7 @@ type Kowala struct {
 
 	ApiBackend *KowalaApiBackend
 
-	validator *validator.Validator // consensus validator
+	validator validator.Validator // consensus validator
 	gasPrice  *big.Int
 	coinbase  common.Address
 	deposit   uint64
@@ -309,7 +309,9 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	s.coinbase = coinbase
 	s.lock.Unlock()
 
-	s.validator.SetCoinbase(coinbase)
+	if err := s.validator.SetCoinbase(coinbase); err != nil {
+		log.Error("Error setting Coinbase on validator", "err", err)
+	}
 }
 
 // set in js console via admin interface or wrapper from cli flags
@@ -353,9 +355,14 @@ func (s *Kowala) StartValidating() error {
 	return nil
 }
 
-func (s *Kowala) StopValidating()                 { s.validator.Stop() }
-func (s *Kowala) IsValidating() bool              { return s.validator.Validating() }
-func (s *Kowala) Validator() *validator.Validator { return s.validator }
+func (s *Kowala) StopValidating() {
+	if err := s.validator.Stop(); err != nil {
+		log.Error("Error stopping Consensus", "err", err)
+	}
+}
+
+func (s *Kowala) IsValidating() bool             { return s.validator.Validating() }
+func (s *Kowala) Validator() validator.Validator { return s.validator }
 
 func (s *Kowala) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Kowala) BlockChain() *core.BlockChain       { return s.blockchain }
@@ -402,9 +409,7 @@ func (s *Kowala) Stop() error {
 	// @NOTE (rgeraldes) - validator needs to be the first process
 	// otherwise it might not be able to finish an election and
 	// could be punished
-	if s.validator.Validating() {
-		s.validator.Stop()
-	}
+	s.StopValidating()
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()
