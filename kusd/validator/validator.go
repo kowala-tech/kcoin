@@ -67,32 +67,18 @@ type Validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, contractBackend bind.ContractBackend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *Validator {
+func New(backend Backend, contract *network.NetworkContract, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *Validator {
 	validator := &Validator{
 		config:   config,
 		backend:  backend,
 		chain:    backend.BlockChain(),
 		engine:   engine,
+		network:  contract,
 		eventMux: eventMux,
 		signer:   types.NewAndromedaSigner(config.ChainID),
 		vmConfig: vmConfig,
 		canStart: 0,
 	}
-
-	// Network contract instance
-	state, err := validator.chain.State()
-	if err != nil {
-		log.Crit("Failed to fetch the current state", "err", err)
-	}
-	contracts, err := network.GetContracts(state)
-	if err != nil {
-		log.Crit("Failed to access the network contracts", "err", err)
-	}
-	contract, err := network.NewNetworkContract(contracts.Network, contractBackend)
-	if err != nil {
-		log.Crit("Failed to load the network contract", "err", err)
-	}
-	validator.network = contract
 
 	go validator.sync()
 
