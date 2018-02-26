@@ -292,7 +292,7 @@ func (s *Service) readLoop(conn *websocket.Conn) {
 			// Make sure the request is valid and doesn't crash us
 			request, ok := msg["emit"][1].(map[string]interface{})
 			if !ok {
-				log.Warn("Invalid stats history request", "msg", msg["emit"][1])
+				log.Debug("Invalid stats history request", "msg", msg["emit"][1])
 				s.histCh <- nil
 				continue // Kowalastats sometime sends invalid history requests, ignore those
 			}
