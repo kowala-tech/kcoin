@@ -53,7 +53,7 @@ validators. If there are no positions available he will have to deposit a value
 bigger than the current lowest deposit to guarantee a place in the validator
 set. On the other hand, if the proposer wants to leave the election he will
 submit a transaction, calling the withdraw method of the network smart contract
-and the funds will be transfered back to his account. We're actively improving
+and the funds will be transferred back to his account. We're actively improving
 this scenario.
 
 
