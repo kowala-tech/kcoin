@@ -26,6 +26,11 @@ Kowala JSRE uses the Otto VM which has some limitations:
 * The regular expression engine (re2/regexp) is not fully compatible with the
 ECMA5 specification.
 
+Kowala
+
+* We've replaced the miner module with the validator module - contains
+additional methods such as setDeposit.
+
 */
 
 package console
