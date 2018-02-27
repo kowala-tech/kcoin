@@ -144,14 +144,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 
 	// consensus validator
 	networkContract := getNetworkContract(kusd.BlockChain(), NewContractBackend(kusd.ApiBackend))
-
 	walletAccount, err := getWalletAccount(kusd.coinbase, kusd.AccountManager())
 	if err != nil {
 		return nil, err
 	}
-
 	kusd.validator = validator.New(walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
-	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
 		return nil, err
@@ -160,25 +157,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	return kusd, nil
 }
 
-func getConsensusValidator() *validator.Validator {
-	networkContract := getNetworkContract(kusd.BlockChain(), NewContractBackend(kusd.ApiBackend))
-
-	walletAccount, err := getWalletAccount(kusd.coinbase, kusd.AccountManager())
-	if err != nil {
-		return nil, err
-	}
-
-	validator = validator.New(walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
-	validator.SetExtra(makeExtraData(config.ExtraData))
-	return validator
-}
-
 func getWalletAccount(address common.Address, accountManager *accounts.Manager) (accounts.WalletAccount, error) {
 	wallet, err := accountManager.Find(accounts.Account{Address:address})
 	if err != nil {
 		return nil, err
 	}
-
 	return accounts.NewWalletAccount(wallet, address)
 }
 
