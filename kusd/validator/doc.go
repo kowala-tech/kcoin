@@ -18,6 +18,7 @@ change in the future).
 * non-genesis validators or just validators - join the elections after the
 genesis block.
 
+
 Validator Selection
 
 The kowala network will have a limited number of positions (to be defined)
@@ -42,6 +43,7 @@ have delegators to operate at their own risk.
 * by implementing sharding and adding new shards - a new set of validators would
 be necessary.
 
+
 Registering a Validator
 
 In order to join the elections, a validator needs to send a transaction, calling
@@ -53,6 +55,7 @@ set. On the other hand, if the proposer wants to leave the election he will
 submit a transaction, calling the withdraw method of the network smart contract
 and the funds will be transfered back to his account. We're actively improving
 this scenario.
+
 
 Proposer
 
@@ -67,6 +70,7 @@ Since Kowala has a dynamic validator set, we set the voting power of all
 validators to 0 every time the validator set changes - the new validators are
 not aware of the previous voting weights. We're actively looking at this
 scenario.
+
 
 Sync
 
@@ -86,6 +90,7 @@ enough to connect to peers, if they exist.
 
 In order to speedup the sync times, there's a mechanism that disables accepting
 transactions until there's a successful sync.
+
 
 Consensus States
 
