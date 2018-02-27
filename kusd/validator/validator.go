@@ -17,7 +17,6 @@ import (
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/vm"
 	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
@@ -67,59 +66,38 @@ type Validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, contractBackend bind.ContractBackend, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *Validator {
+func New(backend Backend, contract *network.NetworkContract, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *Validator {
 	validator := &Validator{
 		config:   config,
 		backend:  backend,
 		chain:    backend.BlockChain(),
 		engine:   engine,
+		network:  contract,
 		eventMux: eventMux,
 		signer:   types.NewAndromedaSigner(config.ChainID),
 		vmConfig: vmConfig,
 		canStart: 0,
 	}
 
-	// Network contract instance
-	state, err := validator.chain.State()
-	if err != nil {
-		log.Crit("Failed to fetch the current state", "err", err)
-	}
-	contracts, err := network.GetContracts(state)
-	if err != nil {
-		log.Crit("Failed to access the network contracts", "err", err)
-	}
-	contract, err := network.NewNetworkContract(contracts.Network, contractBackend)
-	if err != nil {
-		log.Crit("Failed to load the network contract", "err", err)
-	}
-	validator.network = contract
-
 	go validator.sync()
 
 	return validator
 }
 
-// sync keeps track of the downloader events. Please be aware that this is a one shot type of update loop.
-// It's entered once and as soon as `Done` or `Failed` has been broadcasted the events are unregistered and
-// the loop is exited. This to prevent a major security vuln where external parties can DOS you with blocks
-// and halt your validation operation for as long as the DOS continues.
 func (val *Validator) sync() {
-	events := val.eventMux.Subscribe(downloader.StartEvent{}, downloader.DoneEvent{}, downloader.FailedEvent{})
-out:
-	for ev := range events.Chan() {
-		switch ev.Data.(type) {
-		case downloader.DoneEvent, downloader.FailedEvent:
-			start := atomic.LoadInt32(&val.shouldStart) == 1
-			atomic.StoreInt32(&val.canStart, 1)
-			atomic.StoreInt32(&val.shouldStart, 0)
-			if start {
-				val.Start(val.account.Address, val.deposit)
-			}
-			// unsubscribe. we're only interested in this event once
-			events.Unsubscribe()
-			// stop immediately and ignore all further pending events
-			break out
-		}
+	if err := SyncWaiter(val.eventMux); err != nil {
+		log.Warn("Failed to sync with network", "err", err)
+	} else {
+		val.finishedSync()
+	}
+}
+
+func (val *Validator) finishedSync() {
+	start := atomic.LoadInt32(&val.shouldStart) == 1
+	atomic.StoreInt32(&val.canStart, 1)
+	atomic.StoreInt32(&val.shouldStart, 0)
+	if start {
+		val.Start(val.account.Address, val.deposit)
 	}
 }
 
