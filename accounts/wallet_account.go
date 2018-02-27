@@ -12,7 +12,7 @@ type WalletAccount interface {
 }
 
 type walletAccount struct {
-	wallet  Wallet
+	Wallet
 	account Account
 }
 
@@ -26,7 +26,7 @@ func NewWalletAccount(wallet Wallet, accountAddress common.Address) (*walletAcco
 	if !wallet.Contains(account) {
 		return nil, errInvalidAccountAddress
 	}
-	return &walletAccount{wallet: wallet, account: account}, nil
+	return &walletAccount{Wallet: wallet, account: account}, nil
 }
 
 func (account *walletAccount) Account() Account {

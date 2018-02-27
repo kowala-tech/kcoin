@@ -28,7 +28,7 @@ type stateFn func() stateFn
 
 // @NOTE (rgeraldes) - initial state
 func (val *Validator) notLoggedInState() stateFn {
-	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.account.Address)
+	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify the voter information", "err", err)
 		return nil
@@ -58,7 +58,7 @@ func (val *Validator) notLoggedInState() stateFn {
 					return nil
 				}
 
-				confirmed, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
+				confirmed, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 				if err != nil {
 					log.Crit("Failed to verify the voter registration", "err", err)
 				}
@@ -70,13 +70,13 @@ func (val *Validator) notLoggedInState() stateFn {
 		}
 	} else {
 		// sanity check
-		isVoter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
+		isVoter, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 		if err != nil {
 			log.Crit("Failed to verify the voter information", "err", err)
 			return nil
 		}
 		if !isVoter {
-			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.account.Address)
+			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.walletAccount.Account().Address)
 		}
 
 		log.Info("Deposit is not necessary for a genesis validator (first block)")
@@ -244,7 +244,7 @@ func (val *Validator) commitState() stateFn {
 
 	// @TODO(rgeraldes)
 	// leaves only when it has all the pre commits
-	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.account.Address)
+	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}
