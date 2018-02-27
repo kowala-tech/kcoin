@@ -8,6 +8,7 @@ included the non-core protocols (swarm, whisper) yet. We are probably going to
 use this package to provide compact inclusion proofs to prove that the block
 fragments sent during a consensus election round are part of the proposed block.
 
+
 Binary Merkle Tree Hash
 
 Hash function over arbitrary datachunks of limited size.

@@ -1,6 +1,6 @@
 /*
 
-The params package implements system variables
+The params package implements the system variables
 
 | File               | Description                                   |
 |--------------------|-----------------------------------------------|

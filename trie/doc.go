@@ -26,6 +26,7 @@ Example: The consensus proposal includes a summary of all the block fragments
 that are going to be sent. The non-proposer validators verify if the block
 fragments are the ones expected.
 
+
 Block Header
 
 The block header contains three trees:
@@ -38,6 +39,7 @@ This allows the following queries(examples):
 - Tell me all instances of an event of type X (eg. a crowdfunding contract
 reaching its goal) emitted by this address in the past 30 days (2)
 - What is the current balance of my account? Does this account exist? (3)
+
 
 Patricia Trees
 

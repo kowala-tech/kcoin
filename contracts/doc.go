@@ -6,6 +6,7 @@ of the Kowala network which is updated with every block.
 The Kowala dev team is currently focused and actively improving contracts
 concerned with the consensus validation, price stabilisation and rewards.
 
+
 Smart Contracts
 
 The best way to describe smart contracts is to compare the technology to a
@@ -16,6 +17,7 @@ whatever drops into your account. More so, smart contracts not only define the
 rules and penalties around an agreement in the same way that a traditional
 contract does, but also automatically enforce those obligations.
 
+
 Smart contracts can:
 
 * Function as 'multi-signature' accounts, so that funds are spent only when a
@@ -23,6 +25,7 @@ required percentage of people agree.
 * Manage agreements between users, say, if one buys insurance from the other.
 * Store information about an application, such as domain registration
 information or membership records (Ex: consensus validators).
+
 
 Kowala Network contracts:
 
@@ -32,6 +35,7 @@ Kowala Network contracts:
 | mtoken.sol       | mtoken contract                                |
 | kUSD.sol         | kUSD contract                                  |
 | price_oracle.sol | oracle prices                                  |
+
 
 References
 

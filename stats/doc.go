@@ -1,37 +1,41 @@
 /*
 Package stats implements the network stats reporting service.
 
-We're actively improving the stats.
-The current implementation contains elements and terms based on the
-proof-of-work protocol - it's a goal of ours to modify the stats to monitor
-metrics relevant in proof-of-stake.
+We're actively improving the stats. The current implementation contains elements
+and terms based on the proof-of-work protocol - it's a goal of ours to modify
+the stats to monitor metrics relevant in proof-of-stake.
+
 
 Service
 
 The service relies on a netstats url. If the url is not present in the
 configuration, the service is not enabled. The url has the following format:
 
-<hostname>:<security_token>@domain:port
+<hostname>:<security_token>@<domain>:<port>
 
 Example:
 "Ricardo's node:DVagynuHLdn9sK6c@testnet.kowala.io:80"
 
-The stats reporting service depends on the kusd service and changes
-in the reports content must be followed with an update in the netstats,
-otherwise, the reporting will not work.
+The stats reporting service depends on the kusd service and changes in the
+reports content must be followed with an update in the netstats, otherwise, the
+reporting will not work.
+
 
 Netstats
 
-Kowala has a slighty modified version of netstats - https://github.com/kowala-tech/kUSD-netstats.
+Kowala has a slighty modified version of netstats -
+https://github.com/kowala-tech/kUSD-netstats.
+
 
 Events
 
 The reporting service subscribes chain head events for block reports and
-transaction events to report the current tx pool stats.
-Every 15 seconds, there's also a status update that includes all possible data to
-report - includes latencies, block, tx pool, and local node stats.
-There's also a history report that retrieves the most recent batch of blocks and
-reports it to the stats server.
+transaction events to report the current tx pool stats. Every 15 seconds,
+there's also a status update that includes all possible data to report -
+includes latencies, block, tx pool, and local node stats. There's also a history
+report that retrieves the most recent batch of blocks and reports it to the
+stats server.
+
 
 Reports
 

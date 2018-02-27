@@ -17,6 +17,7 @@ accounts and contract accounts as contracts - contracts are covered in the
 contracts package. Accounts are used, for example, to sign transactions so that
 the EVM can securely validate the identity of a transaction sender.
 
+
 Account Address & Keyfiles
 
 Every account is defined by a pair of keys, a private key and a public key.
@@ -26,16 +27,19 @@ keyfile - JSON text file that can be found in the keystore subdirectory of your
 Kowala's node data directory (default: .kowala/keystore). Make sure you backup
 your keyfiles regularly!
 
+
 Creating an account
 
 Once you have the kusd client installed, creating an account is merely a case of
 executing the "kusd account new" command in a terminal.
+
 
 Wallet
 
 A wallet represents a software or hardware wallet that might contain one or more
 accounts (derived from the same seed). The current codebase (1.73) supports the
 following hardware wallets: Ledger Blue & Ledger Nano S.
+
 
 Application Binary Interface (/abi)
 
