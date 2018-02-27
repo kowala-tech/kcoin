@@ -1,8 +1,17 @@
 /*
 Package bmt provides a binary merkle tree implementation
 
-Binary Merkle Tree Hash is a hash function over arbitrary datachunks of limited
-size It is defined as the root hash of the binary merkle tree built over fixed
+Kowala & Binary Merkle Tree
+
+The current codebase is currently not using this package since we have not
+included the non-core protocols (swarm, whisper) yet. We are probably going to
+use this package to provide compact inclusion proofs to prove that the block
+fragments sent during a consensus election round are part of the proposed block.
+
+Binary Merkle Tree Hash
+
+Hash function over arbitrary datachunks of limited size.
+It is defined as the root hash of the binary merkle tree built over fixed
 size segments of the underlying chunk using any base hash function (e.g keccak
 256 SHA3).
 
@@ -25,7 +34,6 @@ implementation.
 minimalistic  control structure to coordinate the concurrent routines  It
 implements the ChunkHash interface as well as the go standard hash.Hash
 interface.
-
 */
 
 package bmt
