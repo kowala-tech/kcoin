@@ -9,14 +9,12 @@ concerned with the consensus validation, price stabilisation and rewards.
 Smart Contracts
 
 The best way to describe smart contracts is to compare the technology to a
-vending machine.
-Ordinarily, you would go to a lawyer or a notary, pay them, and wait while you
-get the document.
-With smart contracts, you simply drop a bitcoin into the vending machine (i.e.
-ledger), and your escrow, driver’s license, or whatever drops into your
-account. More so, smart contracts not only define the rules and penalties around
-an agreement in the same way that a traditional contract does, but also
-automatically enforce those obligations.
+vending machine. Ordinarily, you would go to a lawyer or a notary, pay them, and
+wait while you get the document. With smart contracts, you simply drop a bitcoin
+into the vending machine (i.e. ledger), and your escrow, driver’s license, or
+whatever drops into your account. More so, smart contracts not only define the
+rules and penalties around an agreement in the same way that a traditional
+contract does, but also automatically enforce those obligations.
 
 Smart contracts can:
 
@@ -36,8 +34,8 @@ Kowala Network contracts:
 | price_oracle.sol | oracle prices                                  |
 
 References
-* https://blockgeeks.com/guides/smart-contracts/
 
+* https://blockgeeks.com/guides/smart-contracts/
 */
 
 package contracts

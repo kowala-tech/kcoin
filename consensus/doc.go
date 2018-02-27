@@ -20,6 +20,9 @@ less than one third of the validators are Byzantine, Tendermint guarantees that
 safety will never be violated. Block finality(every block is final) in
 Tendermint can be achieved in 1 second.
 
+References
+* https://github.com/tendermint/tendermint
+
 */
 
 package consensus
