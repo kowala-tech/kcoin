@@ -40,7 +40,6 @@ type Validator struct {
 	validating int32
 	deposit    uint64
 
-	// signer
 	signer types.Signer
 
 	// blockchain
@@ -52,8 +51,7 @@ type Validator struct {
 
 	network *network.NetworkContract // validators contract
 
-	account accounts.Account
-	wallet  accounts.Wallet // signer
+	walletAccount accounts.WalletAccount
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
@@ -66,17 +64,18 @@ type Validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, contract *network.NetworkContract, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *Validator {
+func New(walletAccount accounts.WalletAccount, backend Backend, contract *network.NetworkContract, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *Validator {
 	validator := &Validator{
-		config:   config,
-		backend:  backend,
-		chain:    backend.BlockChain(),
-		engine:   engine,
-		network:  contract,
-		eventMux: eventMux,
-		signer:   types.NewAndromedaSigner(config.ChainID),
-		vmConfig: vmConfig,
-		canStart: 0,
+		config:        config,
+		backend:       backend,
+		chain:         backend.BlockChain(),
+		engine:        engine,
+		network:       contract,
+		eventMux:      eventMux,
+		signer:        types.NewAndromedaSigner(config.ChainID),
+		vmConfig:      vmConfig,
+		canStart:      0,
+		walletAccount: walletAccount,
 	}
 
 	go validator.sync()
@@ -97,28 +96,19 @@ func (val *Validator) finishedSync() {
 	atomic.StoreInt32(&val.canStart, 1)
 	atomic.StoreInt32(&val.shouldStart, 0)
 	if start {
-		val.Start(val.account.Address, val.deposit)
+		val.Start(val.deposit)
 	}
 }
 
-func (val *Validator) Start(coinbase common.Address, deposit uint64) {
+func (val *Validator) Start(deposit uint64) {
 	if val.Validating() {
 		log.Warn("Failed to start the validator - the state machine is already running")
 		return
 	}
 
-	account := accounts.Account{Address: coinbase}
-	wallet, err := val.backend.AccountManager().Find(account)
-	if err != nil {
-		log.Crit("Failed to find a wallet", "err", err, "account", account.Address)
-	}
-
-	atomic.StoreInt32(&val.shouldStart, 1)
-
-	val.wallet = wallet
-	val.account = account
 	val.deposit = deposit
 
+	atomic.StoreInt32(&val.shouldStart, 1)
 	if atomic.LoadInt32(&val.canStart) == 0 {
 		log.Info("Network syncing, will start validator afterwards")
 		return
@@ -163,7 +153,11 @@ func (val *Validator) Validating() bool {
 }
 
 func (val *Validator) SetCoinbase(addr common.Address) {
-	val.account.Address = addr
+	newWalletAccount, err := accounts.NewWalletAccount(val.walletAccount, addr)
+	if err != nil {
+		log.Error("cant set coinbase", "err", err)
+	}
+	val.walletAccount = newWalletAccount
 }
 
 func (val *Validator) SetDeposit(deposit uint64) {
@@ -276,7 +270,7 @@ func (val *Validator) init() error {
 }
 
 func (val *Validator) isProposer() bool {
-	return val.validators.Proposer() == val.account.Address
+	return val.validators.Proposer() == val.walletAccount.Account().Address
 }
 
 func (val *Validator) AddProposal(proposal *types.Proposal) {
@@ -445,7 +439,7 @@ func (val *Validator) makeDeposit() error {
 		return fmt.Errorf("There are not positions available at the moment")
 	}
 
-	options := getTransactionOpts(val.wallet, val.account, deposit.SetUint64(val.deposit), val.config.ChainID)
+	options := getTransactionOpts(val.walletAccount, deposit.SetUint64(val.deposit), val.config.ChainID)
 	_, err = val.network.Deposit(options)
 	if err != nil {
 		return fmt.Errorf("Failed to transact the deposit: %x", err)
@@ -455,7 +449,7 @@ func (val *Validator) makeDeposit() error {
 }
 
 func (val *Validator) withdraw() {
-	options := getTransactionOpts(val.wallet, val.account, nil, val.config.ChainID)
+	options := getTransactionOpts(val.walletAccount, nil, val.config.ChainID)
 	_, err := val.network.Withdraw(options)
 	if err != nil {
 		log.Error("Failed to withdraw from the election", "err", err)
@@ -482,7 +476,7 @@ func (val *Validator) createBlock() *types.Block {
 	}
 	header := &types.Header{
 		ParentHash: parent.Hash(),
-		Coinbase:   val.account.Address,
+		Coinbase:   val.walletAccount.Account().Address,
 		Number:     blockNumber.Add(blockNumber, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent),
 		GasUsed:    new(big.Int),
@@ -520,7 +514,7 @@ func (val *Validator) createBlock() *types.Block {
 	}
 
 	txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
-	val.commitTransactions(val.eventMux, txs, val.chain, val.account.Address)
+	val.commitTransactions(val.eventMux, txs, val.chain, val.walletAccount.Account().Address)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
@@ -548,7 +542,7 @@ func (val *Validator) propose() {
 
 	proposal := types.NewProposal(val.blockNumber, val.round, fragments.Metadata(), lockedRound, lockedBlock)
 
-	signedProposal, err := val.wallet.SignProposal(val.account, proposal, val.config.ChainID)
+	signedProposal, err := val.walletAccount.SignProposal(val.walletAccount.Account(), proposal, val.config.ChainID)
 	if err != nil {
 		log.Crit("Failed to sign the proposal", "err", err)
 	}
@@ -635,7 +629,7 @@ func (val *Validator) preCommit() {
 }
 
 func (val *Validator) vote(vote *types.Vote) {
-	signedVote, err := val.wallet.SignVote(val.account, vote, val.config.ChainID)
+	signedVote, err := val.walletAccount.SignVote(val.walletAccount.Account(), vote, val.config.ChainID)
 	if err != nil {
 		log.Crit("Failed to sign the vote", "err", err)
 	}

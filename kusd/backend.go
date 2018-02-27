@@ -32,6 +32,7 @@ import (
 	"github.com/kowala-tech/kUSD/rlp"
 	"github.com/kowala-tech/kUSD/rpc"
 	"github.com/kowala-tech/kUSD/contracts/network"
+	"github.com/prometheus/common/config"
 )
 
 // @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
@@ -143,7 +144,13 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 
 	// consensus validator
 	networkContract := getNetworkContract(kusd.BlockChain(), NewContractBackend(kusd.ApiBackend))
-	kusd.validator = validator.New(kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
+
+	walletAccount, err := getWalletAccount(kusd.coinbase, kusd.AccountManager())
+	if err != nil {
+		return nil, err
+	}
+
+	kusd.validator = validator.New(walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
@@ -152,6 +159,29 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 
 	return kusd, nil
 }
+
+func getConsensusValidator() *validator.Validator {
+	networkContract := getNetworkContract(kusd.BlockChain(), NewContractBackend(kusd.ApiBackend))
+
+	walletAccount, err := getWalletAccount(kusd.coinbase, kusd.AccountManager())
+	if err != nil {
+		return nil, err
+	}
+
+	validator = validator.New(walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
+	validator.SetExtra(makeExtraData(config.ExtraData))
+	return validator
+}
+
+func getWalletAccount(address common.Address, accountManager *accounts.Manager) (accounts.WalletAccount, error) {
+	wallet, err := accountManager.Find(accounts.Account{Address:address})
+	if err != nil {
+		return nil, err
+	}
+
+	return accounts.NewWalletAccount(wallet, address)
+}
+
 
 func getNetworkContract(blockChain *core.BlockChain, backend *ContractBackend) *network.NetworkContract {
 	state, err := blockChain.State()
@@ -309,24 +339,7 @@ func (s *Kowala) SetDeposit(deposit uint64) {
 }
 
 func (s *Kowala) StartValidating() error {
-	cb, err := s.Coinbase()
-	if err != nil {
-		log.Error("Cannot start consensus validation without coinbase", "err", err)
-		return fmt.Errorf("coinbase missing: %v", err)
-	}
-
-	/*
-		if clique, ok := s.engine.(*clique.Clique); ok {
-			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-			if wallet == nil || err != nil {
-				log.Error("Etherbase account unavailable locally", "err", err)
-				return fmt.Errorf("signer missing: %v", err)
-			}
-			clique.Authorize(eb, wallet.SignHash)
-		}
-	*/
-
-	dep, err := s.Deposit()
+	deposit, err := s.Deposit()
 	if err != nil {
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
 		return fmt.Errorf("insufficient funds: %v", err)
@@ -336,7 +349,7 @@ func (s *Kowala) StartValidating() error {
 	// @TODO (rgeraldes) - review (does it make sense to have a list of transactions before the election or not)
 	atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
-	go s.validator.Start(cb, dep)
+	go s.validator.Start(deposit)
 	return nil
 }
 
