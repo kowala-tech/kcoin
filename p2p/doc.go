@@ -17,16 +17,6 @@ Kowala uses a kademlia-like system to discover further peers.
 The current codebase supports two peer discovery mechanisms: v4 and v5.
 The v5 version enables discovery based on topics - protocols that the
 node has enabled (matching protocols).
-
-Pre-configured Connections
-
-The p2p server supports two types of pre-configured connections:
-
-* Static nodes - pre-configured connections which are always
-maintained and re-connected on disconnects.
-
-* Trusted nodes - pre-configured connections which are always
-allowed to connect, even above the peer limit.
 */
 
 package p2p
