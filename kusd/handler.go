@@ -61,7 +61,7 @@ type ProtocolManager struct {
 
 	downloader *downloader.Downloader
 	fetcher    *fetcher.Fetcher
-	validator  *validator.Validator
+	validator  validator.Validator
 	peers      *peerSet
 
 	SubProtocols []p2p.Protocol
@@ -85,7 +85,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new kowala sub protocol manager. The Kowala sub protocol manages peers capable
 // with the kowala network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator *validator.Validator) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator validator.Validator) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
@@ -628,35 +628,35 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == ProposalMsg:
-		// @TODO (rgeraldes) - review flow (we will not need this condition)
 		if !pm.validator.Validating() {
 			break
 		}
-
 		// Retrieve and decode the propagated proposal
 		var proposal types.Proposal
 		if err := msg.Decode(&proposal); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		pm.validator.AddProposal(&proposal)
-
-	case msg.Code == VoteMsg:
-		// @TODO (rgeraldes) - review flow (we will not need this condition)
-		if !pm.validator.Validating() {
+		if err := pm.validator.AddProposal(&proposal); err != nil {
+			// ignore
 			break
 		}
 
+	case msg.Code == VoteMsg:
+		if !pm.validator.Validating() {
+			break
+		}
 		// Retrieve and decode the propagated vote
 		var vote types.Vote
 		if err := msg.Decode(&vote); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-
+		if err := pm.validator.AddVote(&vote); err != nil {
+			// ignore
+			break
+		}
 		p.MarkVote(vote.Hash())
-		pm.validator.AddVote(&vote)
 
 	case msg.Code == BlockFragmentMsg:
-		// @TODO (rgeraldes) - review flow (we will not need this condition)
 		if !pm.validator.Validating() {
 			break
 		}
@@ -666,8 +666,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-
-		// @TODO (rgerades) - fragment hash?
+		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data); err != nil {
+			// ignore
+			break
+		}
 		p.MarkFragment(request.Data.Proof)
 		pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data)
 
