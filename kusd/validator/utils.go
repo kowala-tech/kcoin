@@ -11,7 +11,8 @@ import (
 )
 
 // getTransactionOpts returns a new set of transaction options
-func getTransactionOpts(wallet accounts.Wallet, account accounts.Account, value *big.Int, chainID *big.Int) *bind.TransactOpts {
+func getTransactionOpts(walletAccount accounts.WalletAccount, value *big.Int, chainID *big.Int) *bind.TransactOpts {
+	account := walletAccount.Account()
 	opts := &bind.TransactOpts{
 		From: account.Address,
 		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
@@ -19,7 +20,7 @@ func getTransactionOpts(wallet accounts.Wallet, account accounts.Account, value 
 			if address != account.Address {
 				return nil, errors.New("not authorized to sign this account")
 			}
-			return wallet.SignTx(account, tx, chainID)
+			return walletAccount.SignTx(account, tx, chainID)
 		},
 	}
 	if value != nil {
