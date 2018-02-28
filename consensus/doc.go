@@ -21,12 +21,6 @@ safety will never be violated. Block finality(every block is final) in
 Tendermint can be achieved in 1 second.
 
 
-Post-Transaction State Modifications
-
-Block Rewards
-@TODO (rgeraldes)
-
-
 References
 * https://github.com/tendermint/tendermint
 
