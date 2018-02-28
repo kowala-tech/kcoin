@@ -25,7 +25,7 @@ type Election struct {
 	lockedRound uint64
 	lockedBlock *types.Block
 
-	start time.Time // used to sync the validator nodes
+	start time.Time // used to sync the validating nodes
 
 	commitRound int
 

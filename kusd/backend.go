@@ -147,8 +147,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if err != nil {
 		log.Warn("failed to get wallet account", "err", err)
 	}
-	kusd.validator = validator.New(walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
-	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
+
+	extraData := makeExtraData(config.ExtraData)
+	context := validator.NewValidatorContext(extraData, 0, walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
+	kusd.validator = validator.NewValidator(context)
 
 	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
 		return nil, err
