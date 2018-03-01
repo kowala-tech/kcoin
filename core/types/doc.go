@@ -17,7 +17,7 @@ light-client friendly in as many ways as possible - for more information on the
 topic, please check the third reference (Ethereum - Design Rationale).
 
 * Number - Number of ancestor blocks. The genesis block has a number of zero.
-The number is particularly important fo for the sync operations - we rely on it to
+The number is particularly important for the sync operations - we rely on it to
 know if synchronisations are necessary. The number assumes more relevance in proof-
 of-stake compared to proof-of-work because the last one relies on difficulty, which
 means that there isn't block finality and the blockchain can fork.
