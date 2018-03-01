@@ -257,13 +257,12 @@ func (val *validator) restoreLastCommit() {
 func (val *validator) init() error {
 	parent := val.chain.CurrentBlock()
 
-	oldValidators := parent.ValidatorsHash()
 	newValidators, err := val.network.VotersChecksum(&bind.CallOpts{})
 	if err != nil {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
 
-	if newValidators != oldValidators {
+	if newValidators != val.validatorsChecksum {
 		if err := val.updateValidators(newValidators, true); err != nil {
 			log.Crit("Failed to update the validator set", "err", err)
 		}
