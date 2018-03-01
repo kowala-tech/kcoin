@@ -3,6 +3,11 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
@@ -16,10 +21,6 @@ import (
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
-	"math/big"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (
@@ -256,13 +257,14 @@ func (val *validator) restoreLastCommit() {
 func (val *validator) init() error {
 	parent := val.chain.CurrentBlock()
 
-	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	oldValidators := parent.ValidatorsHash()
+	newValidators, err := val.network.VotersChecksum(&bind.CallOpts{})
 	if err != nil {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
 
-	if val.validatorsChecksum != checksum {
-		if err := val.updateValidators(checksum, true); err != nil {
+	if newValidators != oldValidators {
+		if err := val.updateValidators(newValidators, true); err != nil {
 			log.Crit("Failed to update the validator set", "err", err)
 		}
 	}
@@ -518,12 +520,13 @@ func (val *validator) createBlock() *types.Block {
 		tstamp = parent.Time().Int64() + 1
 	}
 	header := &types.Header{
-		ParentHash: parent.Hash(),
-		Coinbase:   val.walletAccount.Account().Address,
-		Number:     blockNumber.Add(blockNumber, common.Big1),
-		GasLimit:   core.CalcGasLimit(parent),
-		GasUsed:    new(big.Int),
-		Time:       big.NewInt(tstamp),
+		ParentHash:     parent.Hash(),
+		Coinbase:       val.walletAccount.Account().Address,
+		Number:         blockNumber.Add(blockNumber, common.Big1),
+		GasLimit:       core.CalcGasLimit(parent),
+		GasUsed:        new(big.Int),
+		Time:           big.NewInt(tstamp),
+		ValidatorsHash: val.validatorsChecksum,
 	}
 	val.header = header
 
@@ -785,7 +788,6 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 		return err
 	}
 
-	val.validatorsChecksum = checksum
 	validators := make([]*types.Validator, count.Uint64())
 	for i := int64(0); i < count.Int64(); i++ {
 		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
@@ -810,6 +812,8 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 
 		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
 	}
+
+	// state updates
 	val.validators = types.NewValidatorSet(validators)
 	val.validatorsChecksum = checksum
 
