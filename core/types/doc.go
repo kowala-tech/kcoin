@@ -85,6 +85,30 @@ Instead, because the ERC20 specification shoot of a log for every transfer, you
 can just search the blockchain for these logs!
 
 
+Block Body
+
+
+Transaction
+
+
+
+Proposal
+
+* Block Number -
+* Round
+* Signature -
+
+
+Vote
+
+* Block Hash - the vote itself - it can be either the block or nil.
+* Block Number - the block number under voting.
+* Round - the consensus election round.
+* Signature - the signature based on the validator's account.
+* Type - the type refers to what kind of sub election does this vote belong to.
+Either pre-vote or pre-commit.
+
+
 References
 
 * Ethereum Yellow Paper - https://github.com/ethereum/yellowpaper
