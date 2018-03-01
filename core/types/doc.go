@@ -1,6 +1,10 @@
 /*
 Package types implements the blockchain core types
 
+Specifications
+
+This section contains the specifications of the main blockchain types.
+
 Block
 
 A block represents the atomic unit of a blockchain. The block in Kowala is the
@@ -71,7 +75,7 @@ needs to keep track of the validator set in order to verify block headers.
 * Time - time at the block inception. Kowala is currently using this value to
 synchronise the validators' start time for a new election round.
 
-* Bloom - the bloom filter (space-efficient probabilistic data structure) for
+* Bloom - the bloom filter(space-efficient probabilistic data structure) for
 the logs of the block - allows anyone to efficiently search the blockchain for
 certain transactions (or watch new blocks for certain transactions). Example:
 User who wants to know every single transfer of some specific ERC20 token.
