@@ -94,7 +94,7 @@ pipeline:
     image: plugins/slack
     secrets: [ slack_webhook ] 
     channel: dev
-    username: kowala-tech/core drone
+    username: kowala-tech/kUSD drone
     template: >
         *CI build #{{build.number}}* on branch {{build.branch}} *{{#success build.status}}successful{{else}}failed{{/success}}* in {{since build.started}}
 
