@@ -594,18 +594,24 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
+
+		block := request.Block
 		request.Block.ReceivedAt = msg.ReceivedAt
 		request.Block.ReceivedFrom = p
 
 		// Mark the peer as owning the block and schedule it for import
-		p.MarkBlock(request.Block.Hash())
-		pm.fetcher.Enqueue(p.id, request.Block)
+		p.MarkBlock(block.Hash())
+		pm.fetcher.Enqueue(p.id, block)
 
-		// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
-		// a single block.
-		currentBlock := pm.blockchain.CurrentBlock()
-		if request.Block.Number().Cmp(currentBlock.Number()) > 0 {
-			go pm.synchronise(p)
+		if _, peerBlockNumber := p.Head(); block.Number().Cmp(peerBlockNumber) > 0 {
+			p.SetHead(block.Hash(), block.Number())
+			localBlock := pm.blockchain.CurrentBlock()
+
+			// @NOTE (rgeraldes) Schedule a sync if above ours. Note, this will not fire a sync for
+			// a gap of a single block
+			if block.Number().Cmp(localBlock.Number()) > 0 {
+				go pm.synchronise(p)
+			}
 		}
 
 	case msg.Code == TxMsg:
