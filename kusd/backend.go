@@ -31,6 +31,7 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rlp"
 	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kUSD/contracts/network"
 )
 
 // @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
@@ -58,7 +59,7 @@ type Kowala struct {
 
 	ApiBackend *KowalaApiBackend
 
-	validator *validator.Validator // consensus validator
+	validator validator.Validator // consensus validator
 	gasPrice  *big.Int
 	coinbase  common.Address
 	deposit   uint64
@@ -141,7 +142,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	kusd.ApiBackend.gpo = gasprice.NewOracle(kusd.ApiBackend, gpoParams)
 
 	// consensus validator
-	kusd.validator = validator.New(kusd, NewContractBackend(kusd.ApiBackend), kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
+	networkContract := getNetworkContract(kusd.BlockChain(), NewContractBackend(kusd.ApiBackend))
+	walletAccount, err := getWalletAccount(ctx.AccountManager, kusd.coinbase)
+	if err != nil {
+		log.Crit("failed to get wallet account", "err", err)
+	}
+	kusd.validator = validator.New(walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
@@ -149,6 +155,31 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 
 	return kusd, nil
+}
+
+func getWalletAccount(accountManager *accounts.Manager, address common.Address) (accounts.WalletAccount, error) {
+	account := accounts.Account{Address: address}
+	wallet, err := accountManager.Find(account)
+	if err != nil {
+		return nil, err
+	}
+	return accounts.NewWalletAccount(wallet, account)
+}
+
+func getNetworkContract(blockChain *core.BlockChain, backend *ContractBackend) *network.NetworkContract {
+	state, err := blockChain.State()
+	if err != nil {
+		log.Crit("Failed to fetch the current state", "err", err)
+	}
+	contracts, err := network.GetContracts(state)
+	if err != nil {
+		log.Crit("Failed to access the network contracts", "err", err)
+	}
+	contract, err := network.NewNetworkContract(contracts.Network, backend)
+	if err != nil {
+		log.Crit("Failed to load the network contract", "err", err)
+	}
+	return contract
 }
 
 func makeExtraData(extra []byte) []byte {
@@ -278,7 +309,9 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	s.coinbase = coinbase
 	s.lock.Unlock()
 
-	s.validator.SetCoinbase(coinbase)
+	if err := s.validator.SetCoinbase(coinbase); err != nil {
+		log.Error("Error setting Coinbase on validator", "err", err)
+	}
 }
 
 // set in js console via admin interface or wrapper from cli flags
@@ -322,9 +355,14 @@ func (s *Kowala) StartValidating() error {
 	return nil
 }
 
-func (s *Kowala) StopValidating()                 { s.validator.Stop() }
-func (s *Kowala) IsValidating() bool              { return s.validator.Validating() }
-func (s *Kowala) Validator() *validator.Validator { return s.validator }
+func (s *Kowala) StopValidating() {
+	if err := s.validator.Stop(); err != nil {
+		log.Error("Error stopping Consensus", "err", err)
+	}
+}
+
+func (s *Kowala) IsValidating() bool             { return s.validator.Validating() }
+func (s *Kowala) Validator() validator.Validator { return s.validator }
 
 func (s *Kowala) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Kowala) BlockChain() *core.BlockChain       { return s.blockchain }
@@ -371,9 +409,7 @@ func (s *Kowala) Stop() error {
 	// @NOTE (rgeraldes) - validator needs to be the first process
 	// otherwise it might not be able to finish an election and
 	// could be punished
-	if s.validator.Validating() {
-		s.validator.Stop()
-	}
+	s.StopValidating()
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()

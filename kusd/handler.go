@@ -61,7 +61,7 @@ type ProtocolManager struct {
 
 	downloader *downloader.Downloader
 	fetcher    *fetcher.Fetcher
-	validator  *validator.Validator
+	validator  validator.Validator
 	peers      *peerSet
 
 	SubProtocols []p2p.Protocol
@@ -85,7 +85,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new kowala sub protocol manager. The Kowala sub protocol manages peers capable
 // with the kowala network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator *validator.Validator) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator validator.Validator) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
@@ -594,18 +594,24 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
+
+		block := request.Block
 		request.Block.ReceivedAt = msg.ReceivedAt
 		request.Block.ReceivedFrom = p
 
 		// Mark the peer as owning the block and schedule it for import
-		p.MarkBlock(request.Block.Hash())
-		pm.fetcher.Enqueue(p.id, request.Block)
+		p.MarkBlock(block.Hash())
+		pm.fetcher.Enqueue(p.id, block)
 
-		// Schedule a sync if above ours. Note, this will not fire a sync for a gap of
-		// a single block.
-		currentBlock := pm.blockchain.CurrentBlock()
-		if request.Block.Number().Cmp(currentBlock.Number()) > 0 {
-			go pm.synchronise(p)
+		if _, peerBlockNumber := p.Head(); block.Number().Cmp(peerBlockNumber) > 0 {
+			p.SetHead(block.Hash(), block.Number())
+			localBlock := pm.blockchain.CurrentBlock()
+
+			// @NOTE (rgeraldes) Schedule a sync if above ours. Note, this will not fire a sync for
+			// a gap of a single block
+			if block.Number().Cmp(localBlock.Number()) > 0 {
+				go pm.synchronise(p)
+			}
 		}
 
 	case msg.Code == TxMsg:
@@ -628,35 +634,35 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == ProposalMsg:
-		// @TODO (rgeraldes) - review flow (we will not need this condition)
 		if !pm.validator.Validating() {
 			break
 		}
-
 		// Retrieve and decode the propagated proposal
 		var proposal types.Proposal
 		if err := msg.Decode(&proposal); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		pm.validator.AddProposal(&proposal)
-
-	case msg.Code == VoteMsg:
-		// @TODO (rgeraldes) - review flow (we will not need this condition)
-		if !pm.validator.Validating() {
+		if err := pm.validator.AddProposal(&proposal); err != nil {
+			// ignore
 			break
 		}
 
+	case msg.Code == VoteMsg:
+		if !pm.validator.Validating() {
+			break
+		}
 		// Retrieve and decode the propagated vote
 		var vote types.Vote
 		if err := msg.Decode(&vote); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-
+		if err := pm.validator.AddVote(&vote); err != nil {
+			// ignore
+			break
+		}
 		p.MarkVote(vote.Hash())
-		pm.validator.AddVote(&vote)
 
 	case msg.Code == BlockFragmentMsg:
-		// @TODO (rgeraldes) - review flow (we will not need this condition)
 		if !pm.validator.Validating() {
 			break
 		}
@@ -666,8 +672,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-
-		// @TODO (rgerades) - fragment hash?
+		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data); err != nil {
+			// ignore
+			break
+		}
 		p.MarkFragment(request.Data.Proof)
 		pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data)
 
