@@ -88,19 +88,3 @@ pipeline:
     dockerfile: faucet.Dockerfile
     when:
       event: tag
-
-  notify-dev:
-    group: notify
-    image: plugins/slack
-    secrets: [ slack_webhook ] 
-    channel: dev
-    username: kowala-tech/core drone
-    template: >
-        *CI build #{{build.number}}* on branch {{build.branch}} *{{#success build.status}}successful{{else}}failed{{/success}}* in {{since build.started}}
-
-        > ${DRONE_COMMIT_MESSAGE}
-        
-        {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}>
-    when:
-      event: [push, tag]
-      branch: [master, dev, refs/tags/*]
