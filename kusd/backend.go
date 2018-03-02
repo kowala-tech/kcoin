@@ -14,6 +14,7 @@ import (
 	"github.com/kowala-tech/kUSD/common/hexutil"
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/consensus/tendermint"
+	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/bloombits"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -31,7 +32,6 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 	"github.com/kowala-tech/kUSD/rlp"
 	"github.com/kowala-tech/kUSD/rpc"
-	"github.com/kowala-tech/kUSD/contracts/network"
 )
 
 // @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
@@ -145,7 +145,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	networkContract := getNetworkContract(kusd.BlockChain(), NewContractBackend(kusd.ApiBackend))
 	walletAccount, err := getWalletAccount(ctx.AccountManager, kusd.coinbase)
 	if err != nil {
-		log.Crit("failed to get wallet account", "err", err)
+		log.Warn("failed to get wallet account", "err", err)
 	}
 	kusd.validator = validator.New(walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
