@@ -129,7 +129,12 @@ func (val *validator) Start(coinbase common.Address, deposit uint64) {
 
 	atomic.StoreInt32(&val.shouldStart, 1)
 
-	newWalletAccount, _ := accounts.NewWalletAccount(val.walletAccount, accounts.Account{Address: coinbase})
+	newWalletAccount, err := accounts.NewWalletAccount(val.walletAccount, accounts.Account{Address: coinbase})
+	if err != nil {
+		log.Warn("error setting coinbase on validator start", "err", err)
+		return
+	}
+
 	val.walletAccount = newWalletAccount
 	val.deposit = deposit
 
