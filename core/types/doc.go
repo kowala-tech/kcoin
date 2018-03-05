@@ -54,16 +54,6 @@ used in the clique consensus (currently not available in this codebase) to inclu
 a signature. Kowala is not using this field at the moment but it can be useful in
 the future.
 
-* GasLimit - current limit of gas expenditure per block. This limit defines the
-maximum amount of gas (computational effort) that all the trasactions included in
-the block can consume. Its purpose is to keep block propagation and processing
-time low. Note that this value in bitcoin is constant but it's variable in
-Ethereum.
-
-* GasUsed - total gas used in transactions in this block. The fact that the block
-can handle a certain limit does not mean that we will have enough transactions
-to fill the block.
-
 * ValidatorsHash - contains a hash of the current set of validators for the
 block. Tracking changes in the validator set can be a time consuming task -
 especially for a high number of validators - and with this hash we can compare
@@ -85,28 +75,54 @@ Instead, because the ERC20 specification shoot of a log for every transfer, you
 can just search the blockchain for these logs!
 
 
+Pending Confirmation
+
+* GasLimit - current limit of gas expenditure per block. This limit defines the
+maximum amount of gas (computational effort) that all the trasactions included in
+the block can consume. Its purpose is to keep block propagation and processing
+time low. Note that this value in bitcoin is constant but it's variable in
+Ethereum.
+
+* GasUsed - total gas used in transactions in this block. The fact that the block
+can handle a certain limit does not mean that we will have enough transactions
+to fill the block.
+
+
 Block Body
+
+The block body contains the set of transactions that were mined.
 
 
 Transaction
 
+Transaction refers to the signed data package that stores a message to be sent
+from an externally owned account to another account on the blockchain. When you
+interact with the  Kowala blockchain, you are executing transactions and
+updating its state.
+
+* AccountNonce - represents the number of transactions sent from a given address. The
+nonce increases by 1 each time you send a transaction. The nonce is used to
+enforce some rules such as: Transactions must be in order. This field prevents
+double-spends as the nonce is the order transactions go in. The transaction with
+a nonce value of 3 cannot be mined before a transaction with a nonce value of 2.
+
+* Recipient - The address to which we are directing this message.
+
+* Amount - Total kUSD that you want to send. If you are executing a transaction to send
+kUSD to another person or a contract, you set this value.
+
+* Payload - is the data field in a transaction - Either a byte string containing the
+associated data of the message, on in the case of a contract-creation transaction, the
+initialisation code.
 
 
-Proposal
+Pending Confirmation
 
-* Block Number -
-* Round
-* Signature -
+* GasLimit - The maximum amount of gas that this transaction can consume.
 
-
-Vote
-
-* Block Hash - the vote itself - it can be either the block or nil.
-* Block Number - the block number under voting.
-* Round - the consensus election round.
-* Signature - the signature based on the validator's account.
-* Type - the type refers to what kind of sub election does this vote belong to.
-Either pre-vote or pre-commit.
+* Price - If you want to spend less on a transaction, you can do so by lowering the amount
+you pay per unit of gas. The price you pay for each unit increases or decreases
+how quickly your transaction will be mined.
 
 
 References
