@@ -4,10 +4,11 @@ The validator package implements a consensus state machine.
 
 Validator (think miner in proof-of-work)
 
-Validators are the consensus protocol participants and they are responsible for
-committing new blocks in the blockchain. The validators participate in the
-consensus protocol by proposing blocks (proposer) and by broadcasting signed
-votes.
+Validators are users with accounts that have coins locked in a consensus
+contract. Validators are the consensus protocol participants and they are
+responsible for committing new blocks in the blockchain. The validators
+participate in the consensus protocol by proposing blocks (proposer) and by
+broadcasting signed votes.
 
 There are two types of validators:
 
@@ -90,6 +91,17 @@ enough to connect to peers, if they exist.
 
 In order to speedup the sync times, there's a mechanism that disables accepting
 transactions until there's a successful sync.
+
+
+Validator Timeouts
+
+Validators that haven't signed for x blocks in a row (where 1 <= X <= unbonding
+period) are considered to have timed-out and are implicitly unbonded.
+Validators that need to go offline temporarily must sign an explicit unbonding
+transaction as opposed to timing out - the validator set is adjusted
+automatically. Timeouts could result in a small penalty fee in proportion to the
+ammount of bonded coins. Validators can become active once again by submitting
+another bond transaction before the unbonding period is over.
 
 
 Consensus States
