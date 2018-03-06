@@ -34,8 +34,6 @@ import (
 	"github.com/kowala-tech/kUSD/rpc"
 )
 
-// @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
-
 // Kowala implements the Kowala full node service.
 type Kowala struct {
 	config      *Config
@@ -311,7 +309,12 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	s.coinbase = coinbase
 	s.lock.Unlock()
 
-	if err := s.validator.SetCoinbase(coinbase); err != nil {
+	walletAccount, err := getWalletAccount(s.AccountManager(), s.coinbase)
+	if err != nil {
+		log.Warn("failed to get wallet account", "err", err)
+	}
+
+	if err := s.validator.SetCoinbase(walletAccount); err != nil {
 		log.Error("Error setting Coinbase on validator", "err", err)
 	}
 }
@@ -340,8 +343,13 @@ func (s *Kowala) StartValidating() error {
 
 	atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
+	walletAccount, err := getWalletAccount(s.AccountManager(), coinbase)
+	if err != nil {
+		log.Warn("failed to get wallet account", "err", err)
+	}
+
 	s.validator.SetDeposit(deposit)
-	err = s.validator.SetCoinbase(coinbase)
+	err = s.validator.SetCoinbase(walletAccount)
 	if err != nil {
 		return err
 	}

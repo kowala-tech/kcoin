@@ -2,24 +2,45 @@ package validator
 
 import (
 	"math/big"
-	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/state"
+	"github.com/kowala-tech/kUSD/log"
+	"errors"
+)
+
+var (
+	ErrCantStartValidatingSyncing = errors.New("can't start validating, syncing")
 )
 
 // syncing state of the consensus validator when just syncing and not starting
 type syncing struct {
 	*context
+	synced bool
+	start  bool
 }
 
 func newSyncing(context *context) *syncing {
-	return &syncing{context}
+	syncing := &syncing{context: context, synced: false, start: false}
+	go syncing.sync()
+	return syncing
+}
+
+func (sync *syncing) sync() {
+	if err := SyncWaiter(sync.eventMux); err != nil {
+		log.Warn("Failed to sync with network", "err", err)
+		return
+	}
+	sync.synced = true
 }
 
 func (sync *syncing) Start() (Validator, error) {
-	// check if has finished syncing
-	return newAwaitingSync(sync.context), nil
+	sync.start = true
+	
+	if sync.synced == true {
+		return newValidating(sync.context), nil
+	}
+	return sync, ErrCantStartValidatingSyncing
 }
 
 func (sync *syncing) Stop() (Validator, error) {
@@ -35,12 +56,8 @@ func (sync *syncing) Validating() bool {
 	return false
 }
 
-func (sync *syncing) SetCoinbase(address common.Address) error {
-	newWalletAccount, err := accounts.NewWalletAccount(sync.walletAccount, accounts.Account{Address: address})
-	if err != nil {
-		return err
-	}
-	sync.walletAccount = newWalletAccount
+func (sync *syncing) SetCoinbase(walletAccount accounts.WalletAccount) error {
+	sync.walletAccount = walletAccount
 	return nil
 }
 

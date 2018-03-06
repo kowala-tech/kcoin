@@ -14,6 +14,7 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 	"sync"
 	"time"
+	"github.com/kowala-tech/kUSD/accounts"
 )
 
 // validating represents a consensus validating state
@@ -28,7 +29,9 @@ type validating struct {
 
 // NewValidating returns a new consensus validating
 func newValidating(context *context) *validating {
-	return &validating{context: context}
+	validating := &validating{context: context}
+	validating.Start()
+	return validating
 }
 
 func (val *validating) Start() (Validator, error) {
@@ -67,7 +70,7 @@ func (val *validating) Validating() bool {
 	return true
 }
 
-func (val *validating) SetCoinbase(address common.Address) error {
+func (val *validating) SetCoinbase(walletAccount accounts.WalletAccount) error {
 	return ErrCantSetCoinbaseOnStartedValidator
 }
 

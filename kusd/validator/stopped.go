@@ -2,7 +2,6 @@ package validator
 
 import (
 	"math/big"
-	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/core/state"
@@ -18,7 +17,7 @@ func newStopped(context *context) *stopped {
 }
 
 func (st *stopped) Start() (Validator, error) {
-	return newAwaitingSync(st.context), nil
+	return newValidating(st.context), nil
 }
 
 func (st *stopped) Stop() (Validator, error) {
@@ -34,12 +33,8 @@ func (st *stopped) Validating() bool {
 	return false
 }
 
-func (st *stopped) SetCoinbase(address common.Address) error {
-	newWalletAccount, err := accounts.NewWalletAccount(st.walletAccount, accounts.Account{Address: address})
-	if err != nil {
-		return err
-	}
-	st.walletAccount = newWalletAccount
+func (st *stopped) SetCoinbase(walletAccount accounts.WalletAccount) error {
+	st.walletAccount = walletAccount
 	return nil
 }
 

@@ -3,7 +3,6 @@ package validator
 import (
 	"errors"
 	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -21,7 +20,6 @@ var (
 
 // Backend wraps all methods required for mining.
 type Backend interface {
-	AccountManager() *accounts.Manager
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() kusddb.Database
@@ -32,7 +30,7 @@ type Validator interface {
 	Stop() (Validator, error)
 	SetExtra(extra []byte) error
 	Validating() bool
-	SetCoinbase(address common.Address) error
+	SetCoinbase(walletAccount accounts.WalletAccount) error
 	SetDeposit(deposit uint64) error
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
