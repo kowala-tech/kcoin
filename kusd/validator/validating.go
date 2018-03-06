@@ -71,18 +71,18 @@ func (val *validating) SetCoinbase(address common.Address) error {
 	return ErrCantSetCoinbaseOnStartedValidator
 }
 
-func (val *validating) SetDeposit(deposit uint64) {
-	val.deposit = deposit
+func (val *validating) SetDeposit(deposit uint64) error {
+	return ErrCantSetDepositOnStartedValidator
 }
 
 // Pending returns the currently pending block and associated state.
 func (val *validating) Pending() (*types.Block, *state.StateDB) {
-	state, err := val.chain.State()
+	curState, err := val.chain.State()
 	if err != nil {
 		log.Crit("Failed to fetch the latest state", "err", err)
 	}
 
-	return val.chain.CurrentBlock(), state
+	return val.chain.CurrentBlock(), curState
 }
 
 func (val *validating) PendingBlock() *types.Block {

@@ -61,8 +61,9 @@ func (as *awaitingSync) SetCoinbase(address common.Address) error {
 	return nil
 }
 
-func (as *awaitingSync) SetDeposit(deposit uint64) {
+func (as *awaitingSync) SetDeposit(deposit uint64) error {
 	as.deposit = deposit
+	return nil
 }
 
 func (as *awaitingSync) Pending() (*types.Block, *state.StateDB) {

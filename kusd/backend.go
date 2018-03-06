@@ -326,41 +326,41 @@ func (s *Kowala) SetDeposit(deposit uint64) {
 }
 
 func (s *Kowala) StartValidating() error {
-	cb, err := s.Coinbase()
+	coinbase, err := s.Coinbase()
 	if err != nil {
 		log.Error("Cannot start consensus validation without coinbase", "err", err)
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
-	/*
-		if clique, ok := s.engine.(*clique.Clique); ok {
-			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-			if wallet == nil || err != nil {
-				log.Error("Etherbase account unavailable locally", "err", err)
-				return fmt.Errorf("signer missing: %v", err)
-			}
-			clique.Authorize(eb, wallet.SignHash)
-		}
-	*/
-
-	dep, err := s.Deposit()
+	deposit, err := s.Deposit()
 	if err != nil {
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
 		return fmt.Errorf("insufficient funds: %v", err)
 	}
 
-	// @NOTE (rgeraldes) - ignored transaction rejection mechanism introduced to speed sync times
-	// @TODO (rgeraldes) - review (does it make sense to have a list of transactions before the election or not)
 	atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
-	go s.validator.Start(cb, dep)
+	s.validator.SetDeposit(deposit)
+	err = s.validator.SetCoinbase(coinbase)
+	if err != nil {
+		return err
+	}
+
+	newValidator, err := s.validator.Start()
+	if err != nil {
+		return err
+	}
+	s.validator = newValidator
+
 	return nil
 }
 
 func (s *Kowala) StopValidating() {
-	if err := s.validator.Stop(); err != nil {
+	newValidator, err := s.validator.Stop()
+	if err != nil {
 		log.Error("Error stopping Consensus", "err", err)
 	}
+	s.validator = newValidator
 }
 
 func (s *Kowala) IsValidating() bool             { return s.validator.Validating() }
@@ -372,7 +372,7 @@ func (s *Kowala) TxPool() *core.TxPool               { return s.txPool }
 func (s *Kowala) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Kowala) Engine() consensus.Engine           { return s.engine }
 func (s *Kowala) ChainDb() kusddb.Database           { return s.chainDb }
-func (s *Kowala) IsListening() bool                  { return true } // Always listening
+func (s *Kowala) IsListening() bool                  { return true }
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkId }
 func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }

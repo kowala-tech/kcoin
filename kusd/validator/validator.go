@@ -14,6 +14,7 @@ import (
 var (
 	ErrCantVoteNotValidating             = errors.New("can't vote, not validating")
 	ErrCantSetCoinbaseOnStartedValidator = errors.New("can't set coinbase, already started validating")
+	ErrCantSetDepositOnStartedValidator  = errors.New("can't set deposit, already started validating")
 	ErrCantAddProposalNotValidating      = errors.New("can't add proposal, not validating")
 	ErrCantAddBlockFragmentNotValidating = errors.New("can't add block fragment, not validating")
 )
@@ -32,7 +33,7 @@ type Validator interface {
 	SetExtra(extra []byte) error
 	Validating() bool
 	SetCoinbase(address common.Address) error
-	SetDeposit(deposit uint64)
+	SetDeposit(deposit uint64) error
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
 	AddProposal(proposal *types.Proposal) error

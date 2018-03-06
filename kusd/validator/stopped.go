@@ -43,8 +43,9 @@ func (st *stopped) SetCoinbase(address common.Address) error {
 	return nil
 }
 
-func (st *stopped) SetDeposit(deposit uint64) {
+func (st *stopped) SetDeposit(deposit uint64) error {
 	st.deposit = deposit
+	return nil
 }
 
 func (st *stopped) Pending() (*types.Block, *state.StateDB) {

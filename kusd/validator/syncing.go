@@ -44,8 +44,9 @@ func (sync *syncing) SetCoinbase(address common.Address) error {
 	return nil
 }
 
-func (sync *syncing) SetDeposit(deposit uint64) {
+func (sync *syncing) SetDeposit(deposit uint64) error {
 	sync.deposit = deposit
+	return nil
 }
 
 func (sync *syncing) Pending() (*types.Block, *state.StateDB) {
