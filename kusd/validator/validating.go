@@ -161,10 +161,6 @@ func (val *validating) isProposer() bool {
 }
 
 func (val *validating) AddProposal(proposal *types.Proposal) error {
-	if !val.Validating() {
-		return ErrCantAddProposalNotValidating
-	}
-
 	log.Info("Received Proposal")
 
 	val.proposal = proposal
@@ -174,10 +170,6 @@ func (val *validating) AddProposal(proposal *types.Proposal) error {
 }
 
 func (val *validating) AddVote(vote *types.Vote) error {
-	if !val.Validating() {
-		return ErrCantVoteNotValidating
-	}
-
 	if err := val.addVote(vote); err != nil {
 		switch err {
 		}

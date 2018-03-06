@@ -36,7 +36,6 @@ func (sync *syncing) sync() {
 
 func (sync *syncing) Start() (Validator, error) {
 	sync.start = true
-	
 	if sync.synced == true {
 		return newValidating(sync.context), nil
 	}
