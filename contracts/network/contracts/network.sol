@@ -1,15 +1,68 @@
 pragma solidity ^0.4.18;
 
-contract Network is Ownable {
+import "./ownable.sol";
 
+contract Network is Ownable {
+    // minimum deposit that a candidate has to do in order to 
+    // secure a place in the elections (if there are positions available)
+    uint public minDeposit;       
+    
+    // minimum deposit hard limits (safety)
+    uint public minDepositUpperBound;
+    uint public minDepositLowerBound;
+
+    // @NOTE (rgeraldes) - this field is used to know the address of the 
+    // genesis validator (does not need to make a deposit)
+    address public genesis;
+
+    // onlyWithMinDeposit requires a minimum deposit to proceed
+    modifier onlyWithMinDeposit {
+        require(msg.value >= minDeposit);
+        _;
+    } 
+
+    // setMinDepositUpperBound sets the upper bound of the minimum deposit operation
+    function setMinDepositUpperBound(uint max) public onlyOwner {
+        require(max >= minDepositLowerBound);
+        minDepositUpperBound = max;
+    }
+
+    // setMinDepositLowerBound sets the lower bound of the minimum deposit operation
+    function setMinDepositLowerBound(uint min) public onlyOwner {
+        require(min <= minDepositUpperBound);
+        minDepositLowerBound = min;
+    }
+
+    // setMinDeposit sets the minimum deposit accepted by the network to join the consensus
+    // elections.
+    function setMinDeposit(uint deposit) public onlyOwner {
+        require(deposit >= minDepositLowerBound && deposit <= minDepositUpperBound);
+        minDeposit = deposit;
+    }
+
+    function Network(uint _minDeposit, address _genesis) public {
+        // initial minimum deposit values
+        minDeposit = _minDeposit;
+        minDepositLowerBound = minDeposit / 2;
+        minDepositUpperBound = minDeposit * 2;
+
+        // initial validator
+        genesis = _genesis;
+        // @TODO (register the genesis validator)
+    }
+}
+
+    /*
     // Total supply of wei. Must be updated every block and initialized to the correct value.
     uint256 public totalSupplyWei = 1 ether;
     // Reward calculated for the last block. Must be updated every block.
     uint256 public lastBlockReward = 0;
     // Price established by the price oracle for the last block. Must be updated every block.
     uint256 public lastPrice = 0;
+    
 
-    // predetermined period of time that coins remain locked
+    // unbondingPeriod is a predetermined period of time that coins remain locked
+    // from the moment a validator leaves the consensus elections
     uint public unbondingPeriod = 4 weeks;
 
     // @NOTE (rgeraldes) - easy and efficient way to identify changes in the contract
@@ -46,12 +99,7 @@ contract Network is Ownable {
     // maximum number of validators at one time
     uint public maxValidators = 100;
 
-    // minimum deposit - hard limits 
-    uint public minDepositUpperBound = 2000000 ether;
-    uint public minDepositLowerBound = 500000 ether;
-
-    // minimum deposit
-    uint public minDeposit = 1000000 ether;
+    
 
 
     function Network() public {
@@ -67,11 +115,6 @@ contract Network is Ownable {
 
     // modifiers
 
-    // onlyWithMinDeposit requires a minimum deposit
-    modifier onlyWithMinDeposit {
-        require(msg.value >= minDeposit);
-        _;
-    }
 
     // onlyValidator requires the sender to be a validator
     modifier onlyValidator {
@@ -160,17 +203,7 @@ contract Network is Ownable {
         }
     }
 
-    function setMinDepositUpperBound(uint max) public onlyOwner {
-        require(max >= minDepositLowerBound);
-    }
-
-    function setMinDepositLowerBound(uint min) public onlyOwner {
-        require(min <= minDepositUpperBound);
-    }
-
-    function setMinDeposit(uint deposit) public onlyOwner {
-        require(deposit >= minDepositLowerBound && deposit <= minDepositUpperBound);
-    }
+    
 
     // transactions
 
@@ -232,6 +265,4 @@ contract Network is Ownable {
     function getVoterAtIndex(uint index) public view returns (address addr, uint deposit) {
         addr = voterIndex[index];
         deposit = voters[addr].deposit;
-    }
-
-}
+    } */
