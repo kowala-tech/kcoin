@@ -1,6 +1,7 @@
 pragma solidity ^0.4.18;
 
-contract Network {
+contract Network is Ownable {
+
     // Total supply of wei. Must be updated every block and initialized to the correct value.
     uint256 public totalSupplyWei = 1 ether;
     // Reward calculated for the last block. Must be updated every block.
@@ -8,26 +9,50 @@ contract Network {
     // Price established by the price oracle for the last block. Must be updated every block.
     uint256 public lastPrice = 0;
 
-    // Voter represents a consensus validator      
-    struct Voter {
-        uint deposit; // amount at stake
+    // predetermined period of time that coins remain locked
+    uint public unbondingPeriod = 4 weeks;
+
+    // @NOTE (rgeraldes) - easy and efficient way to identify changes in the contract
+    // current checksum of the validatorsChecksum
+    bytes32 public validatorsChecksum;
+
+    address public genesis;
+
+    // Validator represents a consensus validator      
+    struct Validator {
         uint index;
-        bool isVoter;   
+        bool isValidator;
+
+        // @NOTE (rgeraldes) - users can have more than one collateral
+        // Example: user leaves and re-enters the election. At this point
+        // the initial collateral will have a release date and the validator 
+        // will have a new collateral for the current election.
+        Collateral[] collaterals; 
     }
 
-    mapping (address => uint) private genesis; // investors (genesis voters)
-    mapping (address => Voter) private voters;
-    address[] private voterIndex; 
+    // Collateral - staking tokens bonded
+    struct Collateral {
+        uint deposit;
+        uint releasedAt;
+    }
 
-    // maximum number of voters at one time
-    uint public constant MAX_VOTERS = 100;
-    // minimum deposit value to participate in the consensus
-    uint public minDeposit = 100000;
-    // current checksum of the voters
-    bytes32 public votersChecksum;
+    mapping (address => Validator) private validators;
+    address[] private validatorIndex; 
 
-    //event LogNewVoter(address indexed addr, uint index, uint deposit);
-    //event LogDeleteVoter(address indexed addr, uint index);
+    // maxValidators - hard limits 
+    uint public maxValidatorsUpperBound = 500;
+    uint public maxValidatorsLowerBound = 100;
+
+    // maximum number of validators at one time
+    uint public maxValidators = 100;
+
+    // minimum deposit - hard limits 
+    uint public minDepositUpperBound = 2000000 ether;
+    uint public minDepositLowerBound = 500000 ether;
+
+    // minimum deposit
+    uint public minDeposit = 1000000 ether;
+
 
     function Network() public {
         address investor1 = 0xd6e579085c82329c89fca7a9f012be59028ed53f;
@@ -37,38 +62,167 @@ contract Network {
         genesis[investor1] = investment1;
 
         // @NOTE(rgeraldes) - be able to vote from the start
-        _insertVoter(investor1, investment1);
+        _registerValidator(investor1, investment1);
     }
 
-    function isGenesisVoter(address addr) public view returns (bool isIndeed) {
-        return genesis[addr] > 0;
+    // modifiers
+
+    // onlyWithMinDeposit requires a minimum deposit
+    modifier onlyWithMinDeposit {
+        require(msg.value >= minDeposit);
+        _;
     }
 
-    function isVoter(address addr) public view returns (bool isIndeed) {
-        return voters[addr].isVoter;
+    // onlyValidator requires the sender to be a validator
+    modifier onlyValidator {
+        require(isValidator(msg.sender));
+        _;
     }
 
     
-    function _insertVoter(address addr, uint deposit) private {
-        voters[addr].deposit = deposit;
-        voters[addr].index = voterIndex.push(addr) - 1;
-        voters[addr].isVoter = true;
-        votersChecksum = keccak256(voterIndex);
+
+    
+
+    
+
+    function _updateCollateral(address account, uint deposit) private {
+
     }
 
-    function getVoter(address addr) public view returns (uint deposit, uint index) {
-        require(isVoter(addr));
-        return (voters[addr].deposit, voters[addr].index);
+    function _updateValidatorsChecksum() private {
+        validatorsChecksum = keccak256(validatorIndex);
     }
 
+    
+    // _deleteVoter removes the record from the voterIndex
+    // @NOTE (rgeraldes) - the record in the voters map still exists - contains info on the locked collateral.
     function _deleteVoter(address addr) private {
         uint rowToDelete = voters[addr].index;
         address keyToMove = voterIndex[voterIndex.length - 1];
         voterIndex[rowToDelete] = keyToMove;
         voters[keyToMove].index = rowToDelete;
         voterIndex.length--;
-        votersChecksum = keccak256(voterIndex);
         voters[addr].isVoter = false;
+    }
+
+    // _insertVoter adds a new voter record to the voterIndex array and voters map
+    function _insertVoter(address account, uint deposit) private {
+        voters[addr].collateral.push();
+        voters[addr].index = voterIndex.push(addr) - 1;
+        voters[addr].isVoter = true;
+    }
+
+    function _registerVoter(address account, uint deposit) private onlyWithMinDeposit {
+        _insertVoter(account, deposit);
+        _updateVotersChecksum();
+    }
+
+    function _unbondCollateral(address account) private {
+        // @NOTE (rgeraldes) - the current active collateral is the last one.
+        // Note that the validator can have multiple collaterals since he could
+        // have left the 
+        voters[account].collaterals[0].releasedAt = now + unbondingPeriod;
+    }
+
+    function _releaseCollateral(address account, uint index) private {
+        account.transfer(voters[account].deposit);
+    }
+
+    function _deregisterVoter(address account) private {
+        _deleteVoter(account);
+        _unbondCollateral(account);
+        _updateVotersChecksum();
+    }   
+
+
+    // functions restricted to the owner
+
+    function setMaxVotersUpperBound(uint max) public onlyOwner {
+        require(max >= maxVotersLowerBound);
+        maxVotersUpperBound = max;
+    }
+
+    function setMaxVotersLowerBound(uint min) public onlyOwner {
+        require(max <= maxVotersUpperBound);
+        maxVotersLowerBound = min;
+    }
+
+    function setMaxVoters(uint max) public onlyOwner(owner) {
+        require(max >= maxVotersLowerBound && max <= maxVotersUpperBound);
+
+        if (max > maxVoters) {
+            maxVoters = max;
+        } else {
+            // @NOTE (rgeraldes) - if the new max if smaller than the current one
+            // we will have to remove (old - new) validators from the election if 
+            // all the validator positions are occupied 
+            
+        }
+    }
+
+    function setMinDepositUpperBound(uint max) public onlyOwner {
+        require(max >= minDepositLowerBound);
+    }
+
+    function setMinDepositLowerBound(uint min) public onlyOwner {
+        require(min <= minDepositUpperBound);
+    }
+
+    function setMinDeposit(uint deposit) public onlyOwner {
+        require(deposit >= minDepositLowerBound && deposit <= minDepositUpperBound);
+    }
+
+    // transactions
+
+    // deposit increments the stake of a voter or registers a new candidate
+    function deposit() public payable {
+        if (isVoter(msg.sender)) {
+            // @NOTE (rgeraldes) - validator wants to increase its stake
+            _updateCollateral(msg.sender, msg.value);
+        } else {
+            // @NOTE (rgeraldes) - new candidate
+            require(msg.value >= minDeposit && (voterIndex.length < maxVoters || voters));
+            _registerVoter(msg.sender, msg.value);
+        }
+    }
+
+    // leave deregisters the voter 
+    function leave() public onlyVoter {
+        _deregisterVoter(msg.sender);
+    }
+
+    // withdraw refunds the user account with a collateral(s).
+    function withdraw() public onlyVoter {
+        collaterals = voters[msg.sender].collaterals;
+        for (uint i = 0; i < collaterals.length && collaterals[i].releasedAt != 0; i++) {
+            if (now < collaterals[i].releasedAt) {
+                // @NOTE (rgeraldes) - no need to iterate further since the 
+                // release date of the following collaterals will always be
+                // bigger than the current one.
+                break;
+            }
+            _releaseCollateral(msg.sender, i);
+        }
+    }
+
+    // helpers
+
+    // availability provides information on the current number of positions available
+    function availability() public view returns (bool available) {
+        return voterIndex.length < maxVoters;
+    }
+
+    function isGenesisVoter(address account) public view returns (bool isIndeed) {
+        return account = genesis;
+    }
+
+    function isVoter(address addr) public view returns (bool isIndeed) {
+        return voters[addr].isVoter;
+    }
+
+    function getVoter(address addr) public view returns (uint deposit, uint index) {
+        require(isVoter(addr));
+        return (voters[addr].deposit, voters[addr].index);
     }
 
     function getVoterCount() public view returns (uint count) {
@@ -78,26 +232,6 @@ contract Network {
     function getVoterAtIndex(uint index) public view returns (address addr, uint deposit) {
         addr = voterIndex[index];
         deposit = voters[addr].deposit;
-    }
-
-    function deposit() public payable {
-        require(!isVoter(msg.sender));
-        require(msg.value >= minDeposit);
-        if (!isGenesisVoter(msg.sender)) {
-            require(voterIndex.length < MAX_VOTERS);
-        } 
-        _insertVoter(msg.sender, msg.value);
-    }
-
-    function withdraw() public {
-        require(isVoter(msg.sender));
-        // withdraw locked money
-        msg.sender.transfer(voters[msg.sender].deposit);
-        _deleteVoter(msg.sender);
-    }
-
-    function availability() public view returns (bool available) {
-        return voterIndex.length < MAX_VOTERS;
     }
 
 }
