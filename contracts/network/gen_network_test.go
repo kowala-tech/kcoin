@@ -14,46 +14,50 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var (
-	// minimum deposit
-	minDeposit = big.NewInt(100000)
-	// genesis address
-
-)
-
 // NetworkContractSuite contains the test suite of the network contract
 type NetworkContractSuite struct {
 	suite.Suite
-	owner    *ecdsa.PrivateKey
-	contract *NetworkContract
+	minDeposit      *big.Int
+	owner, notOwner *ecdsa.PrivateKey
+	contract        *NetworkContract
 }
 
 func TestNetworkContractSuite(t *testing.T) {
 	suite.Run(t, new(NetworkContractSuite))
 }
 
+// SetupSuite is executed once for every suite
+func (s *NetworkContractSuite) SetupSuite() {
+	require := s.Require()
+
+	// contract owners
+	owner, err := crypto.GenerateKey()
+	require.NoError(err)
+	require.NotNil(owner)
+	notOwner, err := crypto.GenerateKey()
+	require.NoError(err)
+	require.NotNil(notOwner)
+	s.owner, s.notOwner = owner, notOwner
+
+	// minimum deposit
+	s.minDeposit = big.NewInt(100000)
+}
+
 // SetupTest is executed once for every test
 func (s *NetworkContractSuite) SetupTest() {
 	require := s.Require()
 
-	// generate a new owner
-	owner, err := crypto.GenerateKey()
-	require.NoError(err)
-	require.NotNil(owner)
-	s.owner = owner
-
 	// @NOTE (rgeraldes) - fund the owner account with enough balance to
 	// deploy the contract and to cover the genesis validator deposit
-	ownerAddr := crypto.PubkeyToAddress(owner.PublicKey)
+	ownerAddr := crypto.PubkeyToAddress(s.owner.PublicKey)
+	notOwnerAddr := crypto.PubkeyToAddress(s.notOwner.PublicKey)
 	simulatedBackend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		ownerAddr: core.GenesisAccount{
-			// 100 ether
-			Balance: new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.Ether)),
-		},
+		ownerAddr:    core.GenesisAccount{Balance: new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.Ether))},
+		notOwnerAddr: core.GenesisAccount{Balance: new(big.Int).Mul(big.NewInt(100), new(big.Int).SetUint64(params.Ether))},
 	})
 
 	// deploy the network
-	_, _, contract, err := DeployNetworkContract(bind.NewKeyedTransactor(owner), simulatedBackend, minDeposit, common.Address{})
+	_, _, contract, err := DeployNetworkContract(bind.NewKeyedTransactor(s.owner), simulatedBackend, s.minDeposit, common.Address{})
 	require.NoError(err)
 	require.NotZero(contract)
 	s.contract = contract
@@ -67,7 +71,7 @@ func (s *NetworkContractSuite) TestConstructor() {
 
 	deployedMinDeposit, err := s.contract.MinDeposit(&bind.CallOpts{})
 	require.NoError(err)
-	require.Equal(minDeposit, deployedMinDeposit)
+	require.Equal(s.minDeposit, deployedMinDeposit)
 
 	deployedMinDepositUB, err := s.contract.MinDepositUpperBound(&bind.CallOpts{})
 	require.NoError(err)
@@ -80,29 +84,148 @@ func (s *NetworkContractSuite) TestConstructor() {
 func (s *NetworkContractSuite) TestSetMinDeposit() {
 	require := s.Require()
 
+	deployedMinDepositLB, err := s.contract.MinDepositLowerBound(&bind.CallOpts{})
+	require.NoError(err)
+
+	deployedMinDepositUB, err := s.contract.MinDepositUpperBound(&bind.CallOpts{})
+	require.NoError(err)
+
 	testCases := []struct {
 		name          string
-		input         *big.Int
+		user          *ecdsa.PrivateKey
+		deposit       *big.Int
 		expectedError error
 	}{
 		{
 			"user is not the contract owner",
-			big.NewInt(1),
+			s.notOwner,
+			nil,
+			nil,
+		},
+		{
+			"user is the contract owner but the new minimum deposit value is lower then the lower bound",
+			s.owner,
+			deployedMinDepositLB.Sub(deployedMinDepositLB, big.NewInt(1)),
+			nil,
+		},
+		{
+			"user is the contract owner but the new minimum deposit value is bigger then the upper bound",
+			s.owner,
+			deployedMinDepositUB.Add(deployedMinDepositUB, big.NewInt(1)),
+			nil,
+		},
+		{
+			"user is the contract owner and the new deposit minimum is within the valid range",
+			s.owner,
+			nil,
+			nil,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.name, func(*testing.T) {
-			reply, err := s.backend.addComment(tc.comment, tc.userID)
-			s.EqualValues(tc.expectedError, err)
+			_, err := s.contract.SetMinDeposit(bind.NewKeyedTransactor(testCase.user), testCase.deposit)
+			s.EqualValues(testCase.expectedError, err)
+
 			if err == nil {
-				s.NotNil(reply)
-				s.NotZero(reply.CommentID)
+				// make sure that the value was modified
+
+				// make sure that the bounds were not modified
+				currentMinDepositLB, err := s.contract.MinDepositLowerBound(&bind.CallOpts{})
+				require.NoError(err)
+				currentMinDepositUB, err := s.contract.MinDepositUpperBound(&bind.CallOpts{})
+				require.NoError(err)
+				s.EqualValues(deployedMinDepositLB, currentMinDepositLB)
+				s.EqualValues(deployedMinDepositUB, currentMinDepositUB)
 			}
 		})
 	}
 }
 
-func (s *NetworkContractSuite) TestSetMinDepositUpperBound() {}
+func (s *NetworkContractSuite) TestSetMinDepositLowerBound() {
+	require := s.Require()
 
-func (s *NetworkContractSuite) TestSetMinDepositLowerBound() {}
+	deployedMinDepositUB, err := s.contract.MinDepositUpperBound(&bind.CallOpts{})
+	require.NoError(err)
+
+	testCases := []struct {
+		name          string
+		user          *ecdsa.PrivateKey
+		limit         *big.Int
+		expectedError error
+	}{
+		{
+			"user is not the contract owner",
+			s.notOwner,
+			nil,
+			nil,
+		},
+		{
+			"user is the contract owner but the new lower bound is not smaller than the current upper bound",
+			s.owner,
+			deployedMinDepositUB,
+			nil,
+		},
+		{
+			"user is the contract owner and the limit is valid",
+			s.owner,
+			deployedMinDepositUB.Sub(deployedMinDepositUB, big.NewInt(1)),
+			nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		s.T().Run(testCase.name, func(*testing.T) {
+			_, err := s.contract.SetMinDepositLowerBound(bind.NewKeyedTransactor(testCase.user), testCase.limit)
+			s.EqualValues(testCase.expectedError, err)
+
+			if err == nil {
+				// make sure that the value was updated
+			}
+		})
+	}
+}
+
+func (s *NetworkContractSuite) TestSetMinDepositUpperBound() {
+	require := s.Require()
+
+	deployedMinDepositLB, err := s.contract.MinDepositLowerBound(&bind.CallOpts{})
+	require.NoError(err)
+
+	testCases := []struct {
+		name          string
+		user          *ecdsa.PrivateKey
+		limit         *big.Int
+		expectedError error
+	}{
+		{
+			"user is not the contract owner",
+			s.notOwner,
+			nil,
+			nil,
+		},
+		{
+			"user is the contract owner but the new upper bound is not bigger than the current lower bound",
+			s.owner,
+			deployedMinDepositLB,
+			nil,
+		},
+		{
+			"user is the contract owner and the limit is valid",
+			s.owner,
+			deployedMinDepositLB.Add(deployedMinDepositLB, big.NewInt(1)),
+			nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		s.T().Run(testCase.name, func(*testing.T) {
+			_, err := s.contract.SetMinDepositUpperBound(bind.NewKeyedTransactor(testCase.user), testCase.limit)
+			s.EqualValues(testCase.expectedError, err)
+
+			if err == nil {
+				// make sure that the value was updated
+			}
+		})
+	}
+}
