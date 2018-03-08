@@ -3,6 +3,11 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
@@ -16,10 +21,6 @@ import (
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
-	"math/big"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (
@@ -219,9 +220,9 @@ func (val *validator) PendingBlock() *types.Block {
 }
 
 func (val *validator) restoreLastCommit() {
-	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	checksum, err := val.network.ValidatorsChecksum(&bind.CallOpts{})
 	if err != nil {
-		log.Crit("Failed to access the voters checksum", "err", err)
+		log.Crit("Failed to access the validators checksum", "err", err)
 	}
 
 	if err := val.updateValidators(checksum, true); err != nil {
@@ -256,9 +257,9 @@ func (val *validator) restoreLastCommit() {
 func (val *validator) init() error {
 	parent := val.chain.CurrentBlock()
 
-	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	checksum, err := val.network.ValidatorsChecksum(&bind.CallOpts{})
 	if err != nil {
-		log.Crit("Failed to access the voters checksum", "err", err)
+		log.Crit("Failed to access the validators checksum", "err", err)
 	}
 
 	if val.validatorsChecksum != checksum {
@@ -478,7 +479,7 @@ func (val *validator) makeDeposit() error {
 	if err != nil {
 		return err
 	}
-	if !availability {
+	if availability.Cmp(big.NewInt(0)) == 0 {
 		return fmt.Errorf("There are not positions available at the moment")
 	}
 
