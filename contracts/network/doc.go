@@ -92,7 +92,8 @@ References
 - Vitalik Buterin
 * https://ethereum.stackexchange.com/questions/38387/contract-address-transfer-method-gas-cost
 - medvedev1088
-
+* https://ethereum.stackexchange.com/questions/8615/child-contract-vs-struct
+- Matthew Schmidt
 
 */
 

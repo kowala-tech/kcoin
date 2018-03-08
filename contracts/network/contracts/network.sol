@@ -3,6 +3,17 @@ pragma solidity ^0.4.18;
 import "./ownable.sol";
 
 contract Network is Ownable {
+
+    // @NOTE (rgeraldes) - to be confirmed by Hélio
+    /*
+    // Total supply of wei. Must be updated every block and initialized to the correct value.
+    uint256 public totalSupplyWei = 1 ether;
+    // Reward calculated for the last block. Must be updated every block.
+    uint256 public lastBlockReward = 0;
+    // Price established by the price oracle for the last block. Must be updated every block.
+    uint256 public lastPrice = 0;
+    */
+
     // minimum deposit that a candidate has to do in order to 
     // secure a place in the elections (if there are positions available)
     uint public minDeposit;       
@@ -15,11 +26,67 @@ contract Network is Ownable {
     // genesis validator (does not need to make a deposit)
     address public genesis;
 
+    struct Deposit {
+        uint amount;
+        uint releasedAt;
+    }
+
+    // Validator represents a consensus validator      
+    struct Validator {
+        uint index;
+        bool isValidator;
+
+        // @NOTE (rgeraldes) - users can have more than one deposit
+        // Example: user leaves and re-enters the election. At this point
+        // the initial deposit will have a release date and the validator 
+        // will have a new deposit for the current election.
+        Deposit[] deposits; 
+    }
+
+    // validators contains the information of the validators
+    mapping (address => Validator) private validators;
+
+    // validatorIndex is used in order to have an ordered insert
+    address[] private validatorIndex; 
+
+    // validatorsChecksum is a representation of the current set of validators.
+    bytes32 public validatorsChecksum;
+
+    // maximum number of validators at one time
+    uint public maxValidators;
+
+    // maxValidators hard limits (safety)
+    uint public maxValidatorsUpperBound;
+    uint public maxValidatorsLowerBound;
+
+    // unbondingPeriod is a predetermined period of time that coins remain locked
+    // starting from the moment a validator leaves the consensus elections
+    uint public unbondingPeriod;
+
     // onlyWithMinDeposit requires a minimum deposit to proceed
     modifier onlyWithMinDeposit {
         require(msg.value >= minDeposit);
         _;
     } 
+
+    // onlyValidator requires the sender to be a validator
+    modifier onlyValidator {
+        require(isValidator(msg.sender));
+        _;
+    }
+
+    // onlyWithinMaxValidatorBounds requires the new value to be within valid bounds
+    modifier onlyWithinMaxValidatorBounds(uint max) {
+        require(max >= maxValidatorsLowerBound && max <= maxValidatorsUpperBound);
+        _;
+    }
+
+    // onlyWithinMinDepositBounds requires the new value to be within valid bounds
+    modifier onlyWithinMinDepositBounds(uint deposit) {
+        require(deposit >= minDepositLowerBound && deposit <= minDepositUpperBound);
+        _;
+    }
+
 
     // setMinDepositUpperBound sets the upper bound of the minimum deposit operation
     function setMinDepositUpperBound(uint max) public onlyOwner {
@@ -35,234 +102,184 @@ contract Network is Ownable {
 
     // setMinDeposit sets the minimum deposit accepted by the network to join the consensus
     // elections.
-    function setMinDeposit(uint deposit) public onlyOwner {
-        require(deposit >= minDepositLowerBound && deposit <= minDepositUpperBound);
+    function setMinDeposit(uint deposit) public onlyOwner onlyWithinMinDepositBounds(deposit) {
         minDeposit = deposit;
     }
 
-    function Network(uint _minDeposit, address _genesis) public {
-        // initial minimum deposit values
+    function Network(uint _minDeposit, address _genesis, uint _maxValidators, uint _unbondingPeriod) public {
         minDeposit = _minDeposit;
         minDepositLowerBound = minDeposit / 2;
         minDepositUpperBound = minDeposit * 2;
-
-        // initial validator
+        maxValidators = _maxValidators;
+        maxValidatorsLowerBound = maxValidators / 2;
+        maxValidatorsUpperBound = maxValidators * 2;
         genesis = _genesis;
+        unbondingPeriod = _unbondingPeriod;
         // @TODO (register the genesis validator)
+        //  _registerValidator(investor1, investment1);
     }
-}
 
-    /*
-    // Total supply of wei. Must be updated every block and initialized to the correct value.
-    uint256 public totalSupplyWei = 1 ether;
-    // Reward calculated for the last block. Must be updated every block.
-    uint256 public lastBlockReward = 0;
-    // Price established by the price oracle for the last block. Must be updated every block.
-    uint256 public lastPrice = 0;
+    function isGenesisValidator(address code) public view returns (bool isIndeed) {
+        return code == genesis;
+    }
+
+    function isValidator(address code) public view returns (bool isIndeed) {
+        return validators[code].isValidator;
+    }
+
+    function getValidatorCount() public view returns (uint count) {
+        return validatorIndex.length;
+    }
+
+    // availability returns the number of positions available
+    function availability() public view returns (uint available) {
+        return maxValidators - validatorIndex.length;
+    }
+
+    function setMaxValidatorsUpperBound(uint max) public onlyOwner {
+        require(max >= maxValidatorsLowerBound);
+        maxValidatorsUpperBound = max;
+    }
+
+    function setMaxValidatorsLowerBound(uint min) public onlyOwner {
+        require(min <= maxValidatorsUpperBound);
+        maxValidatorsLowerBound = min;
+    }
+
+    function setMaxValidators(uint max) public onlyOwner onlyWithinMaxValidatorBounds(max) { 
+        if (max < maxValidators) {
+            // @NOTE (rgeraldes) - if the new max if smaller than the current one
+            // we will have to remove (maxValidators - max) validators from the election if 
+            // all the validator positions are occupied. We start by removing the validators
+            // which appear in the last positions as it represents the validators with 
+            // the smallest stake at play. 
+            uint toRemove = (maxValidators - max);
+            for (uint i = 0; i < toRemove; i++) {
+                _deregisterLastValidator();
+            }
+        }
+        maxValidators = max;
+    }
+
+    // deposit increments the deposit of a validator/registers a new candidate
+    function deposit() public payable {
+        if (isValidator(msg.sender)) {
+            _updateDepositAmount();
+        } else {
+            _newCandidate();
+        }
+    }
+
+    function _updateDepositAmount() private {
+        Deposit deposit = validators[msg.sender].collaterals[validatorIndex.length - 1];
+        deposit.amount += msg.value;
+    }
+
+    function _newCandidate() private onlyWithMinDeposit {
+        // there are no positions available
+        if (validatorIndex.length == maxValidators) {
+            // value needs to be bigger than the smallest deposit
+            // the smallest deposit corresponds to the current deposit 
+            // of the last validator in validatorIndex array
+            Validator lastValidator = validators[validatorIndex.length];               
+            uint smallestDeposit = lastValidator.Deposits[lastValidator.Deposits.length - 1];
+            require(msg.value > smallestDeposit);
+            _deregisterValidator();
+        }
+        _registerCandidate(msg.sender, msg.value);
+    }
+
+
+    function _deregisterLastValidator() private {
+        lastValidator = validatorIndex[validatorIndex.length - 1];
+        _deregisterValidator(lastValidator);
+    }
+
+    // leave deregisters the validator
+    function leave() public onlyValidator {
+        _deregisterValidator(msg.sender);
+    }
+
+    // withdraw returns the locked deposit(s) (if they are past the unbonding period) 
+    // to the user account.
+    function withdraw() public onlyValidator {
+        Validator validator = validators[msg.sender];
+
+        for (uint i = 0; i < validator.deposits.length && validator.deposits[i].releasedAt != 0;) {
+            if (now < validator.deposits[i].releasedAt) {
+                // @NOTE (rgeraldes) - no need to iterate further since the 
+                // release date (if is different than 0) of the following deposits
+                // will always be bigger than the current one.
+                break;
+            } 
+            _releaseDeposit(validator);
+        }
+    }
+
+    function getValidator(address account) public view returns (uint deposit, uint index) {
+        require(isValidator(account));
+        return (voters[addr].deposit, voters[addr].index);
+    }
+
     
-
-    // unbondingPeriod is a predetermined period of time that coins remain locked
-    // from the moment a validator leaves the consensus elections
-    uint public unbondingPeriod = 4 weeks;
-
-    // @NOTE (rgeraldes) - easy and efficient way to identify changes in the contract
-    // current checksum of the validatorsChecksum
-    bytes32 public validatorsChecksum;
-
-    address public genesis;
-
-    // Validator represents a consensus validator      
-    struct Validator {
-        uint index;
-        bool isValidator;
-
-        // @NOTE (rgeraldes) - users can have more than one collateral
-        // Example: user leaves and re-enters the election. At this point
-        // the initial collateral will have a release date and the validator 
-        // will have a new collateral for the current election.
-        Collateral[] collaterals; 
+    function getValidatorAtIndex(uint index) public view returns (address addr, uint deposit) {
+        addr = validatorIndex[index];
+        deposit = validators[addr].deposit;
     }
 
-    // Collateral - staking tokens bonded
-    struct Collateral {
-        uint deposit;
-        uint releasedAt;
-    }
-
-    mapping (address => Validator) private validators;
-    address[] private validatorIndex; 
-
-    // maxValidators - hard limits 
-    uint public maxValidatorsUpperBound = 500;
-    uint public maxValidatorsLowerBound = 100;
-
-    // maximum number of validators at one time
-    uint public maxValidators = 100;
-
-    
-
-
-    function Network() public {
-        address investor1 = 0xd6e579085c82329c89fca7a9f012be59028ed53f;
-        uint investment1 = 100;
-
-        // genesis validators
-        genesis[investor1] = investment1;
-
-        // @NOTE(rgeraldes) - be able to vote from the start
-        _registerValidator(investor1, investment1);
-    }
-
-    // modifiers
-
-
-    // onlyValidator requires the sender to be a validator
-    modifier onlyValidator {
-        require(isValidator(msg.sender));
-        _;
-    }
-
-    
-
-    
-
-    
-
-    function _updateCollateral(address account, uint deposit) private {
-
-    }
-
-    function _updateValidatorsChecksum() private {
+    function _updateChecksum() private {
         validatorsChecksum = keccak256(validatorIndex);
     }
 
-    
-    // _deleteVoter removes the record from the voterIndex
-    // @NOTE (rgeraldes) - the record in the voters map still exists - contains info on the locked collateral.
-    function _deleteVoter(address addr) private {
-        uint rowToDelete = voters[addr].index;
-        address keyToMove = voterIndex[voterIndex.length - 1];
-        voterIndex[rowToDelete] = keyToMove;
-        voters[keyToMove].index = rowToDelete;
-        voterIndex.length--;
-        voters[addr].isVoter = false;
+
+    function _deregisterLastValidator(address code) private {
+        _deleteValidator(code);
+        _setDepositReleaseDate(code);
+        _updateVotersChecksum();
+    }   
+
+    function _registerCandidate(address account, uint deposit) {
+        _insertValidator(account, deposit);
+        _updateVotersChecksum();
+    }
+
+    function _setDepositReleaseDate(address account) private {
+        // @NOTE (rgeraldes) - the current active collateral is the last one.
+        // Note that the validator can have multiple collaterals since he could
+        // have left the 
+        validators[account].deposits[0].releasedAt = now + unbondingPeriod;
+    }
+
+    function _transfer(address account, uint index) private {
+        account.transfer(validators[account].deposit);
+    }
+
+    function _deleteValidator(address account) private {
+        uint rowToDelete = validators[account].index;
+        address keyToMove = validatorIndex[validatorIndex.length - 1];
+        validatorIndex[rowToDelete] = keyToMove;
+        validators[keyToMove].index = rowToDelete;
+        validatorIndex.length--;
+        validators[account].isVoter = false;
     }
 
     // _insertVoter adds a new voter record to the voterIndex array and voters map
-    function _insertVoter(address account, uint deposit) private {
+    function _insertValidator(address account, uint deposit) private {
         voters[addr].collateral.push();
         voters[addr].index = voterIndex.push(addr) - 1;
         voters[addr].isVoter = true;
     }
-
-    function _registerVoter(address account, uint deposit) private onlyWithMinDeposit {
-        _insertVoter(account, deposit);
-        _updateVotersChecksum();
-    }
-
-    function _unbondCollateral(address account) private {
-        // @NOTE (rgeraldes) - the current active collateral is the last one.
-        // Note that the validator can have multiple collaterals since he could
-        // have left the 
-        voters[account].collaterals[0].releasedAt = now + unbondingPeriod;
-    }
-
-    function _releaseCollateral(address account, uint index) private {
-        account.transfer(voters[account].deposit);
-    }
-
-    function _deregisterVoter(address account) private {
-        _deleteVoter(account);
-        _unbondCollateral(account);
-        _updateVotersChecksum();
-    }   
-
-
-    // functions restricted to the owner
-
-    function setMaxVotersUpperBound(uint max) public onlyOwner {
-        require(max >= maxVotersLowerBound);
-        maxVotersUpperBound = max;
-    }
-
-    function setMaxVotersLowerBound(uint min) public onlyOwner {
-        require(max <= maxVotersUpperBound);
-        maxVotersLowerBound = min;
-    }
-
-    function setMaxVoters(uint max) public onlyOwner(owner) {
-        require(max >= maxVotersLowerBound && max <= maxVotersUpperBound);
-
-        if (max > maxVoters) {
-            maxVoters = max;
-        } else {
-            // @NOTE (rgeraldes) - if the new max if smaller than the current one
-            // we will have to remove (old - new) validators from the election if 
-            // all the validator positions are occupied 
-            
-        }
-    }
-
     
+    /*
+    function remove(uint index)  returns(uint[]) {
+        if (index < array.length) return;
 
-    // transactions
-
-    // deposit increments the stake of a voter or registers a new candidate
-    function deposit() public payable {
-        if (isVoter(msg.sender)) {
-            // @NOTE (rgeraldes) - validator wants to increase its stake
-            _updateCollateral(msg.sender, msg.value);
-        } else {
-            // @NOTE (rgeraldes) - new candidate
-            require(msg.value >= minDeposit && (voterIndex.length < maxVoters || voters));
-            _registerVoter(msg.sender, msg.value);
+        for (uint i = index; i<array.length-1; i++){
+            array[i] = array[i+1];
         }
+        array.length--;
+        return array;
     }
+    */
 
-    // leave deregisters the voter 
-    function leave() public onlyVoter {
-        _deregisterVoter(msg.sender);
-    }
-
-    // withdraw refunds the user account with a collateral(s).
-    function withdraw() public onlyVoter {
-        collaterals = voters[msg.sender].collaterals;
-        for (uint i = 0; i < collaterals.length && collaterals[i].releasedAt != 0; i++) {
-            if (now < collaterals[i].releasedAt) {
-                // @NOTE (rgeraldes) - no need to iterate further since the 
-                // release date of the following collaterals will always be
-                // bigger than the current one.
-                break;
-            }
-            _releaseCollateral(msg.sender, i);
-        }
-    }
-
-    // helpers
-
-    // availability provides information on the current number of positions available
-    function availability() public view returns (bool available) {
-        return voterIndex.length < maxVoters;
-    }
-
-    function isGenesisVoter(address account) public view returns (bool isIndeed) {
-        return account = genesis;
-    }
-
-    function isVoter(address addr) public view returns (bool isIndeed) {
-        return voters[addr].isVoter;
-    }
-
-    function getVoter(address addr) public view returns (uint deposit, uint index) {
-        require(isVoter(addr));
-        return (voters[addr].deposit, voters[addr].index);
-    }
-
-    function getVoterCount() public view returns (uint count) {
-        return voterIndex.length;
-    }
-
-    function getVoterAtIndex(uint index) public view returns (address addr, uint deposit) {
-        addr = voterIndex[index];
-        deposit = voters[addr].deposit;
-    } */
+}

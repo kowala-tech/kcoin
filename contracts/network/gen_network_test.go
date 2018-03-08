@@ -69,16 +69,17 @@ func (s *NetworkContractSuite) SetupTest() {
 func (s *NetworkContractSuite) TestConstructor() {
 	require := s.Require()
 
-	deployedMinDeposit, err := s.contract.MinDeposit(&bind.CallOpts{})
+	deployedMinDeposit, err := s.contract.MinDeposit(&bind.CallOpts{From: crypto.PubkeyToAddress(s.owner.PublicKey)})
 	require.NoError(err)
 	require.Equal(s.minDeposit, deployedMinDeposit)
 
-	deployedMinDepositUB, err := s.contract.MinDepositUpperBound(&bind.CallOpts{})
+	deployedMinDepositUB, err := s.contract.MinDepositUpperBound(&bind.CallOpts{From: crypto.PubkeyToAddress(s.owner.PublicKey)})
 	require.NoError(err)
+	require.EqualValues(deployedMinDeposit.Mul(deployedMinDeposit, big.NewInt(2)), deployedMinDepositUB)
 
-	deployedMinDepositLB, err := s.contract.MinDepositLowerBound(&bind.CallOpts{})
+	deployedMinDepositLB, err := s.contract.MinDepositLowerBound(&bind.CallOpts{From: crypto.PubkeyToAddress(s.owner.PublicKey)})
 	require.NoError(err)
-
+	require.EqualValues(deployedMinDeposit.Div(deployedMinDeposit, big.NewInt(2)), deployedMinDepositLB)
 }
 
 func (s *NetworkContractSuite) TestSetMinDeposit() {
@@ -141,6 +142,8 @@ func (s *NetworkContractSuite) TestSetMinDeposit() {
 		})
 	}
 }
+
+/*
 
 func (s *NetworkContractSuite) TestSetMinDepositLowerBound() {
 	require := s.Require()
@@ -229,3 +232,4 @@ func (s *NetworkContractSuite) TestSetMinDepositUpperBound() {
 		})
 	}
 }
+*/
