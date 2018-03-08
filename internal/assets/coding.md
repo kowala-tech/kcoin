@@ -14,7 +14,7 @@ Style is easiest due to go gofmt. We follow gofmt style so make sure you gofmt y
 
 ### Column limit: 100
 
-Our line length should be limited to 100, CI should fail if above that level
+Line length should be limited to 100, CI should fail if above that level
 
 
 ### File size lines: 200
