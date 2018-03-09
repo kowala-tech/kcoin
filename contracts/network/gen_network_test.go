@@ -143,8 +143,6 @@ func (s *NetworkContractSuite) TestSetMinDeposit() {
 	}
 }
 
-/*
-
 func (s *NetworkContractSuite) TestSetMinDepositLowerBound() {
 	require := s.Require()
 
@@ -232,4 +230,3 @@ func (s *NetworkContractSuite) TestSetMinDepositUpperBound() {
 		})
 	}
 }
-*/

@@ -167,7 +167,7 @@ func (val *validator) Stop() error {
 	}
 	log.Info("Stopping consensus validator")
 
-	val.withdraw()
+	val.leave()
 	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
 	atomic.StoreInt32(&val.shouldStart, 0)
@@ -463,7 +463,7 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 }
 
 func (val *validator) makeDeposit() error {
-	min, err := val.network.MinDeposit(&bind.CallOpts{})
+	min, err := val.network.GetMinimumDeposit(&bind.CallOpts{})
 	if err != nil {
 		return err
 	}
@@ -475,14 +475,6 @@ func (val *validator) makeDeposit() error {
 		return fmt.Errorf("Current deposit - %d - is not enough. The minimum required is %d", val.deposit, min)
 	}
 
-	availability, err := val.network.Availability(&bind.CallOpts{})
-	if err != nil {
-		return err
-	}
-	if availability.Cmp(big.NewInt(0)) == 0 {
-		return fmt.Errorf("There are not positions available at the moment")
-	}
-
 	options := getTransactionOpts(val.walletAccount, deposit.SetUint64(val.deposit), val.config.ChainID)
 	_, err = val.network.Deposit(options)
 	if err != nil {
@@ -492,11 +484,11 @@ func (val *validator) makeDeposit() error {
 	return nil
 }
 
-func (val *validator) withdraw() {
+func (val *validator) leave() {
 	options := getTransactionOpts(val.walletAccount, nil, val.config.ChainID)
-	_, err := val.network.Withdraw(options)
+	_, err := val.network.Leave(options)
 	if err != nil {
-		log.Error("Failed to withdraw from the election", "err", err)
+		log.Error("Failed to leave the election", "err", err)
 	}
 }
 
@@ -781,7 +773,7 @@ func (val *validator) makeCurrent(parent *types.Block) error {
 }
 
 func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
-	count, err := val.network.GetVoterCount(&bind.CallOpts{})
+	count, err := val.network.GetValidatorCount(&bind.CallOpts{})
 	if err != nil {
 		return err
 	}
@@ -789,7 +781,7 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 	val.validatorsChecksum = checksum
 	validators := make([]*types.Validator, count.Uint64())
 	for i := int64(0); i < count.Int64(); i++ {
-		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
+		validator, err := val.network.GetValidatorAtIndex(&bind.CallOpts{}, big.NewInt(i))
 		if err != nil {
 			return err
 		}
@@ -809,7 +801,7 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 		// @TODO (rgeraldes) - remove this statement as soon as the previous one is sorted out
 		weight = big.NewInt(0)
 
-		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
+		validators[i] = types.NewValidator(validator.Code, validator.Deposit.Uint64(), weight)
 	}
 	val.validators = types.NewValidatorSet(validators)
 	val.validatorsChecksum = checksum
