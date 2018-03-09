@@ -84,14 +84,12 @@ contract Network is Ownable {
         if (availability() == 0) {
             uint toRemove = (maxValidators - max);
             for (uint i = 0; i < toRemove; i++) {
-                // @TODO (rgeraldes)
-                //_deregisterLastValidator();
+                _deleteLastValidator();
             }
         }
         maxValidators = max;
     }
 
-    
     // Deposit represents the collateral - staked tokens
     struct Deposit {
         uint amount;
@@ -110,7 +108,28 @@ contract Network is Ownable {
         Deposit[] deposits; 
     }
 
+    function getDepositCount() public view returns (uint count) {
+        return validators[msg.sender].deposits.length; 
+    }
+
+    function getDepositAtIndex(uint index) public view returns (uint amount, uint releasedAt) {
+        // @TODO (rgeraldes) index bounds
+        Deposit deposit = validators[msg.sender].deposits[index];
+        return (deposit.amount, deposit.releasedAt);
+    }
+
     mapping (address => Validator) private validators;
+
+    function getValidatorCount() public view returns (uint count) {
+        return validatorIndex.length;
+    }
+
+    function getValidatorAtIndex(uint index) public view returns (address code, uint deposit) {
+        // @TODO (rgeraldes) index bounds
+        code = validatorIndex[index];
+        Validator validator = validators[code];
+        deposit = validator.deposits[validator.deposits.length - 1].amount;
+    }
 
     // @NOTE (rgeraldes) - event filtering is a possibility in the future (issue #140)
     // validatorsChecksum is a representation of the current set of validators
@@ -121,18 +140,23 @@ contract Network is Ownable {
     }
 
     function _insertValidator(address code, uint deposit) private {
-        validators[code].deposits.push(Deposit({amount:deposit, releasedAt: 0}));
-        validators[code].isValidator = true;
+        Validator sender = validators[code];
+        sender.index = validatorIndex.push(code) - 1;
+        sender.isValidator = true;
+        sender.deposits.push(Deposit({amount:deposit, releasedAt: 0}));
 
-        // @TODO (rgeraldes) - complete        
-        // ordered insert based on the deposit value
-        validators[code].index = validatorIndex.push(code) - 1;
-
+        // @TODO (rgeraldes) - complete
+        /*      
+        for (index = val.index; index > 0; index--) {
+            if (deposit > oldDeposit) {
+                // replace
+                validatorIndex[index] = old validator
+                validatorIndex[index-1] = code
+            }
+        }
+        */
+        
         _updateChecksum();
-    }
-
-    function _registerCandidate(address code, uint deposit) private {
-        _insertValidator(code, deposit);
     }
 
     // genesis stores the registration code of the genesis validator
@@ -141,7 +165,6 @@ contract Network is Ownable {
     // unbondingPeriod is a predetermined period of time that coins remain locked
     // starting from the moment a validator leaves the consensus elections
     uint public unbondingPeriod;
-
 
     function Network(uint _baseDeposit, address _genesis, uint _maxValidators, uint _unbondingPeriod) public payable {
         require(msg.value >= _baseDeposit);
@@ -159,10 +182,9 @@ contract Network is Ownable {
         maxValidatorsLowerBound = maxValidators / 2;
         maxValidatorsUpperBound = maxValidators * 2;
 
-        _registerCandidate(_genesis, msg.value);
+        _insertValidator(_genesis, msg.value);
     }
 
-    
     // getMinimumDeposit returns the base deposit if there are positions available or
     // the current smallest deposit required if there aren't positions availabe.
     function getMinimumDeposit() public view returns (uint deposit) {
@@ -181,14 +203,33 @@ contract Network is Ownable {
         _;
     }
 
+    function _deleteValidator(address account) private {
+        // left shifts
+        Validator validator = validators[account];
+        for (uint index = validator.index; index < validatorIndex.length - 1; index++) {
+            validatorIndex[index] = validatorIndex[index + 1];
+        }
+        
+        // resize array
+        validatorIndex.length--;
+
+        // update status
+        validator.isValidator = false;
+        // update the release date of the current deposit
+        validator.deposits[validator.deposits.length - 1].releasedAt = now + unbondingPeriod;
+    }
+
+    // _deleteLastValidator removes the validator with the smallest deposit
+    function _deleteLastValidator() private {
+        _deleteValidator(validatorIndex[validatorIndex.length - 1]);
+    }
+
     // deposit registers a new candidate as validator
     function deposit() public payable onlyWithMinDeposit {
         if (availability() == 0) {
-            // @TODO (rgeraldes) - pick a name for the validator that is going
-            // to exit the validation
-            // _deregisterValidator();
+            _deleteLastValidator();
         }
-        _registerCandidate(msg.sender, msg.value);
+        _insertValidator(msg.sender, msg.value);
     }
 
     function isValidator(address code) public view returns (bool isIndeed) {
@@ -203,92 +244,50 @@ contract Network is Ownable {
 
     // leave deregisters the msg sender from the validator set
     function leave() public onlyValidator {
-        // @TODO (rgeraldes) - pick a name for the validator that is going
-        // to exit the validation
-        // _deregisterValidator();
-        // In this case it's a specific validator
-        //_deregisterValidator(msg.sender);
+        _deleteValidator(msg.sender);
+    }
+
+    function _removeDeposits(Validator validator, uint index) private {
+        if (index == 0) return;
+        // left shifts
+        uint lo = 0;
+        uint hi = index;
+        // @TODO (rgeraldes) - review
+        while (hi < validator.deposits.length) {
+             validator.deposits[lo] = validator.deposits[hi];
+             lo++;
+             hi++;
+        }
+        // resize array
+        // @TODO (rgeraldes)
+        // validator.deposits.length--;
     }
 
     // withdraw transfer locked deposit(s) back the user account if they
     // are past the unbonding period
     function withdraw() public onlyValidator {
-        //@TODO (rgeraldes) - 
-        /*
+        uint refund = 0;
+        uint i = 0;
         Validator validator = validators[msg.sender];
-
-        for (uint i = 0; i < validator.deposits.length && validator.deposits[i].releasedAt != 0;) {
+        for (; i < validator.deposits.length && validator.deposits[i].releasedAt != 0; i++) {
             if (now < validator.deposits[i].releasedAt) {
                 // @NOTE (rgeraldes) - no need to iterate further since the 
                 // release date (if is different than 0) of the following deposits
-                // will always be bigger than the current one.
+                // will always be past than the current one.
                 break;
-            } 
-            _releaseDeposit(validator);
+            }
+            refund += validator.deposits[i].amount;
         }
-        */
+        
+        _removeDeposits(validator, i);
+
+        if (refund > 0) {
+            msg.sender.transfer(refund);
+        }
     }
 
     function isGenesisValidator(address code) public view returns (bool isIndeed) {
         return code == genesis;
     }
-
-    function getValidatorCount() public view returns (uint count) {
-        return validatorIndex.length;
-    }
-
-    function getValidatorAtIndex(uint index) public view returns (address code, uint deposit) {
-        code = validatorIndex[index];
-        Validator validator = validators[code];
-        deposit = validator.deposits[validator.deposits.length - 1].amount;
-    }
-
-   /*
-
-    function getValidator(address account) public view returns (uint deposit, uint index) {
-        require(isValidator(account));
-        return (voters[addr].deposit, voters[addr].index);
-    }
     
-    function _deregisterLastValidator() private {
-        lastValidator = validatorIndex[validatorIndex.length - 1];
-        _deregisterValidator(lastValidator);
-    }
-
-    function _deregisterLastValidator(address code) private {
-        _deleteValidator(code);
-        _setDepositReleaseDate(code);
-        _updateVotersChecksum();
-    }   
-
-    function _setDepositReleaseDate(address account) private {
-        // @NOTE (rgeraldes) - the current active collateral is the last one.
-        // Note that the validator can have multiple collaterals since he could
-        // have left the 
-        validators[account].deposits[0].releasedAt = now + unbondingPeriod;
-    }
-
-    function _transfer(address account, uint index) private {
-        account.transfer(validators[account].deposit);
-    }
-
-    function _deleteValidator(address account) private {
-        uint rowToDelete = validators[account].index;
-        address keyToMove = validatorIndex[validatorIndex.length - 1];
-        validatorIndex[rowToDelete] = keyToMove;
-        validators[keyToMove].index = rowToDelete;
-        validatorIndex.length--;
-        validators[account].isVoter = false;
-    }
-
-    function remove(uint index)  returns(uint[]) {
-        if (index < array.length) return;
-
-        for (uint i = index; i<array.length-1; i++){
-            array[i] = array[i+1];
-        }
-        array.length--;
-        return array;
-    }
-    */
 }
