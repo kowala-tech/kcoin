@@ -159,6 +159,24 @@ func (api *PrivateValidatorAPI) SetCoinbase(coinbase common.Address) bool {
 	return true
 }
 
+// @TODO (rgeraldes) - complete
+// GetDeposits returns the deposits of the validator
+func (api *PrivateValidatorAPI) GetDeposits() error {
+	if err := api.kusd.Validator().Deposits(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// @TODO (rgeraldes) - complete
+// WithdrawFunds 
+func (api *PrivateValidatorAPI) WithdrawFunds() (bool, error) {
+	if err := api.kusd.Validator().WithdrawFunds(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // PrivateAdminAPI is the collection of Kowala full node-related APIs
 // exposed over the private admin endpoint.
 type PrivateAdminAPI struct {
