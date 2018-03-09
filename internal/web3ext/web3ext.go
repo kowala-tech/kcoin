@@ -451,6 +451,14 @@ web3._extend({
 			call: 'validator_setGasPrice',
 			params: 1,
 			inputFormatter: [web3._extend.utils.fromDecimal]
+		}),
+		new web3._extend.Method({
+			name: 'getDeposits',
+			call: 'validator_getDeposits'
+		}),
+		new web3._extend.Method({
+			name: 'withdrawFunds',
+			call: 'validator_withdrawFunds'
 		})
 	],
 	properties: []
