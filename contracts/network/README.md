@@ -1,24 +1,31 @@
 # mUSD
 
-## Simple ERC20
-
-The implementation of mToken is based on the simplified version of an ERC20 token, it excludes the (considered sy some, deprecated) `approve` and `transferFrom` methods and the (related) `Approval` event.
-
 ## mToken as mUSD
 
-The contract mUSD simply uses all functionality from mToken and sets the descriptive fields for the token.
+The contract mUSD simply sets the descriptive fields for the token.
 
 ## Mintable token
 
-`mToken` is also implemented as a mintable token, that is, there is a maximum amount of tokens that can be minted. `totalSupply` (from ERC20) returns the amount of minted tokens, `maximumSupply` returns the maximum amount of tokens, `mintTokens` allows the contract owner to mint tokens (dependent on `Ownable`) and the event `Mint` is triggered when new tokens are minted.
+`mToken` is implemented as a mintable token, that is, there is a maximum amount of tokens that can be minted. `totalSupply` holds the amount of minted tokens, `maximumSupply` returns the maximum amount of tokens, `mintTokens` allows the contract owner to mint tokens (dependent on `Ownable`) and the event `Mint` is triggered when new tokens are minted.
+
+## Address triplets
+
+A token holder (that has the intention of mining) needs a triplet of addresses:
+* management address - used for token management
+* mining address - used for mining
+* receiver address - used to receive funds
+
+Mining and receiver addresses can be set with a propose/accept mechanism.
+
+To set a new mining address, the management address needs to call the `proposeMiningAddress(address miningAddr)` method. This address change needs to be accepted by the mining address (by calling the `acceptMiningAddress(address ownerAddr)` method).
+
+To set a new receiver address, the process is similar. The management address proposes a new receiver (by calling the `proposeReceiverAddress(address receiverAddr)` method) and the mining address accepts the change (by calling the `acceptReceiverAddress(address receiverAddr)` method).
+
+The contract owner can also use `initializeAccount(address ownerAddr, address miningAddr, address receiverAddr)` to initialize an account.
 
 ## Delegation
 
 mTokens are also delegable in a very simplistic sense. A can delegate the control of X mTokens to B (and X "becomes" part of the balance of B). A should also be able to revoke this delegation at any time.
-
-The `DelegableInteface` interface defines two methods: `delegate` and `revoke` that are used to (respectively) delegate and revocate delegations. Two extra methods provided information about delegators and delegates: `delegatedFrom` and `delegatedTo`. The events `Delegation` and `Revocation` get triggered when a successful delegation or revocation happen.
-
-The methods `balanceOf` and `transfer` also need to reflect any delegation. The `balanceOf` method needs to account for tokens for which the address can be considered both a delegator and and a delegate.
 
 Example: A holds 100, B: 10, C: 0.
 
@@ -28,9 +35,9 @@ Example: A holds 100, B: 10, C: 0.
 
 balances:
 
-* `balanceOf(A)` returns 80 (100 - 10 - 10)
-* `balanceOf(B)` returns 15 (10 + 10 - 5)
-* `balanceOf(C)` returns 15 (10 + 15)
+* `availableTo(A)` returns 80 (100 - 10 - 10)
+* `availableTo(B)` returns 15 (10 + 10 - 5)
+* `availableTo(C)` returns 15 (10 + 15)
 
 # Contracts
 

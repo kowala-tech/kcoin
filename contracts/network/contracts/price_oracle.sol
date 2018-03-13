@@ -6,7 +6,7 @@ import "./ownable.sol";
 // and a fiat one. the smallest units are always used:
 // cryptocurrency: 1 crypto/10^cryptoDecimals
 // fiat: 1 fiat/10^fiatDecimals
-contract PriceOracleInterface {
+contract PriceOracle is Ownable {
     // Cryptocurrency name.
     string public cryptoName;
     // Cryptocurrency symbol.
@@ -19,22 +19,6 @@ contract PriceOracleInterface {
     string public fiatSymbol;
     // Fiat decimal places.
     uint8 public fiatDecimals;
-
-    // Return the amount of the crytocurrency corresponding to fiatAmount.
-    function priceForFiat(uint256 _fiatAmount) public view returns (uint256 _cryptoAmount);
-
-    // Return the amount of fiat corresponding to cryptoAmount.
-    function priceForCrypto(uint256 _cryptoAmount) public view returns (uint256 _fiatAmount);
-
-    // Set the price.
-    function setPrice(uint256 _cryptoAmount, uint256 _fiatAmount) public returns (bool success);
-
-    // Triggered when a new price is set.
-    event NewPrice(uint256 cryptoPrice, uint256 fiatPrice);
-}
-
-// Simple implementation.
-contract PriceOracle is Ownable, PriceOracleInterface {
     // Amounts of each currency to store the relationship.
     uint256 cryptoAmount;
     uint256 fiatAmount;
@@ -65,9 +49,29 @@ contract PriceOracle is Ownable, PriceOracleInterface {
         return _fiatAmount * cryptoAmount / fiatAmount;
     }
 
+    // Returns 10**fiatDecimals.
+    function oneFiat() public view returns (uint256 _fiatAmount) {
+        return uint256(10)**fiatDecimals;
+    }
+
+    // Returns the price for one fiat.
+    function priceForOneFiat() public view returns (uint256 _cryptoAmount) {
+        return priceForFiat(oneFiat());
+    }
+
     // Return the amount of fiat corresponding to cryptoAmount.
     function priceForCrypto(uint256 _cryptoAmount) public view returns (uint256 _fiatAmount) {
         return _cryptoAmount * fiatAmount / cryptoAmount;
+    }
+
+    // Returns 10**cryptoDecimals.
+    function oneCrypto() public view returns (uint256 _cryptoAmount) {
+        return uint256(10)**cryptoDecimals;
+    }
+
+    // Return the price for one crypto.
+    function priceForOneCrypto() public view returns (uint256 _fiatAmount) {
+        return priceForCrypto(oneCrypto());
     }
 
     // Set the price.
@@ -77,4 +81,7 @@ contract PriceOracle is Ownable, PriceOracleInterface {
         NewPrice(cryptoAmount, fiatAmount);
         return true;
     }
+
+    // Triggered when a new price is set.
+    event NewPrice(uint256 cryptoPrice, uint256 fiatPrice);
 }

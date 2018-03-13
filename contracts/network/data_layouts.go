@@ -21,38 +21,59 @@ type Ownable struct {
 	ContractOwner common.Address
 }
 
-// ERC20Simple data layout.
-type ERC20Simple struct {
+// MToken contract layout.
+type MToken struct {
+	Ownable
 	// Token name.
 	Name string
 	// Token symbol.
 	Symbol string
 	// Number of decimals places
 	Decimals uint8
-}
-
-// MToken contract layout.
-type MToken struct {
-	Ownable
-	ERC20Simple
-	// Owned tokens by each address.
-	OwnedTokens *state.Mapping
-	// Total supply of tokens.
-	TotalTokens *big.Int
 	// Maximum supply of tokens.
-	MaximumTokens *big.Int
+	MaximumTokenSupply *big.Int
+	// Total supply of tokens.
+	TotalTokenSupply *big.Int
+	// Owned tokens by each address.
+	OwnedBy *state.Mapping
+	// Token holders slice.
+	TokenHolders []common.Address
+	// Token holders index.
+	TokenHoldersIndex *state.Mapping
 	// Amount of tokens hold by delegates.
 	DelegatesTokens *state.Mapping
 	// Amount of tokens delegated.
 	DelegatedTokens *state.Mapping
 	// Amount of tokens delegated ( tokenDelegations[delegate][delegator] ).
 	TokenDelegations *state.Mapping
+	// Miners proposals.
+	MinersProposals *state.Mapping
+	// Miners/Owners relationship.
+	MinersOwners *state.Mapping
+	// Owners/Miners relantionship.
+	OwnersMiners *state.Mapping
+	// Receivers proposals.
+	ReceiversProposals *state.Mapping
+	// Miners/Receivers relationship.
+	MinersReceivers *state.Mapping
 }
 
-// BalanceOf returns the available balance of the address (delegations included).
-func (m *MToken) BalanceOf(addr common.Address) (*big.Int, error) {
+// AddressesOf returns the mining and receiver address for the provided owner address.
+func (m *MToken) AddressesOf(ownerAddr common.Address) (miningAddr, receiverAddr common.Address, err error) {
+	ma, ra := common.Address{}, common.Address{}
+	if err = m.OwnersMiners.Get(ownerAddr, &ma); err != nil {
+		return
+	}
+	if err = m.MinersReceivers.Get(ma, &ra); err != nil {
+		return
+	}
+	return ma, ra, nil
+}
+
+// AvailableTo returns the available balance of the address (delegations accounted for).
+func (m *MToken) AvailableTo(addr common.Address) (*big.Int, error) {
 	r := new(big.Int)
-	if err := m.OwnedTokens.Get(addr, &r); err != nil {
+	if err := m.OwnedBy.Get(addr, &r); err != nil {
 		return nil, err
 	}
 	delegatedTo := new(big.Int)
@@ -93,6 +114,7 @@ type Contracts struct {
 
 var mapAddress = common.HexToAddress("0x2a4443ec27bf5f849b2da15eb697d3ef5302f186")
 
+// GetContracts returns a map to the network contracts
 func GetContracts(state *state.StateDB) (*Contracts, error) {
 	r := &Contracts{}
 	if err := state.UnmarshalState(mapAddress, r); err != nil {
@@ -110,6 +132,7 @@ func (contracts *Contracts) GetMToken(state *state.StateDB) (*MToken, error) {
 	return r, nil
 }
 
+// SetMToken is a setter for the mToken contract local storage-
 func (contracts *Contracts) SetMToken(state *state.StateDB, mt *MToken) error {
 	return state.MarshalState(contracts.MToken, mt)
 }
@@ -123,11 +146,12 @@ func (contracts *Contracts) GetPriceOracle(state *state.StateDB) (*PriceOracle, 
 	return r, nil
 }
 
+// SetPriceOracle  is a setter for the price oracle contract local storage.
 func (contracts *Contracts) SetPriceOracle(state *state.StateDB, po *PriceOracle) error {
 	return state.MarshalState(contracts.PriceOracle, po)
 }
 
-// GetNetworkContract parses the GetNetworkContract contract local storage.
+// GetNetworkContract parses the network info contract local storage.
 func (contracts *Contracts) GetNetworkContract(state *state.StateDB) (*Network, error) {
 	r := &Network{}
 	if err := state.UnmarshalState(contracts.Network, r); err != nil {
@@ -136,6 +160,7 @@ func (contracts *Contracts) GetNetworkContract(state *state.StateDB) (*Network, 
 	return r, nil
 }
 
+// SetNetworkContract is a setter for the network info contract local storage.
 func (contracts *Contracts) SetNetworkContract(state *state.StateDB, network *Network) error {
 	return state.MarshalState(contracts.Network, network)
 }
@@ -176,6 +201,7 @@ func (po *PriceOracle) PriceForCrypto(cryptoAmount *big.Int) *big.Int {
 
 var big10 = big.NewInt(10)
 
+// OneCrypto returns 10**cryptoDecimals
 func (po *PriceOracle) OneCrypto() *big.Int {
 	return new(big.Int).Exp(big10, big.NewInt(int64(po.CryptoDecimals)), nil)
 }
@@ -191,6 +217,7 @@ func (po *PriceOracle) PriceForFiat(fiatAmount *big.Int) *big.Int {
 	return r.Div(r, po.VolFiat)
 }
 
+// OneFiat returns 10**fiatDecimals
 func (po *PriceOracle) OneFiat() *big.Int {
 	return new(big.Int).Exp(big10, big.NewInt(int64(po.FiatDecimals)), nil)
 }
@@ -208,5 +235,5 @@ type Network struct {
 	LastBlockReward *big.Int
 	// Price established by the price oracle for the last block. Must be updated every block.
 	LastPrice *big.Int
-	Gencount *big.Int
+	Gencount  *big.Int
 }
