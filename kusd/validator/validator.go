@@ -2,14 +2,12 @@ package validator
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/contracts/network"
@@ -71,9 +69,9 @@ type validator struct {
 	engine   consensus.Engine
 	vmConfig vm.Config
 
-	network *network.NetworkContract // validators contract
-
 	walletAccount accounts.WalletAccount
+
+	network ValidationNetwork
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
@@ -92,7 +90,7 @@ func New(walletAccount accounts.WalletAccount, backend Backend, contract *networ
 		backend:       backend,
 		chain:         backend.BlockChain(),
 		engine:        engine,
-		network:       contract,
+		network:       NewValidationNetwork(contract, config.ChainID),
 		eventMux:      eventMux,
 		signer:        types.NewAndromedaSigner(config.ChainID),
 		vmConfig:      vmConfig,
@@ -212,7 +210,7 @@ func (val *validator) PendingBlock() *types.Block {
 }
 
 func (val *validator) restoreLastCommit() {
-	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	checksum, err := val.network.ValidatorsChecksum()
 	if err != nil {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
@@ -230,7 +228,7 @@ func (val *validator) restoreLastCommit() {
 func (val *validator) init() error {
 	parent := val.chain.CurrentBlock()
 
-	checksum, err := val.network.VotersChecksum(&bind.CallOpts{})
+	checksum, err := val.network.ValidatorsChecksum()
 	if err != nil {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
@@ -386,39 +384,10 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 	return nil, receipt.Logs
 }
 
-func (val *validator) makeDeposit() error {
-	min, err := val.network.MinDeposit(&bind.CallOpts{})
-	if err != nil {
-		return fmt.Errorf("Failed to get the min deposit: %v", err.Error())
-	}
-
-	var deposit big.Int
-	if min.Cmp(deposit.SetUint64(val.deposit)) > 0 {
-		return fmt.Errorf("Current deposit - %d - is not enough. The minimum required is %d", val.deposit, min)
-	}
-
-	availability, err := val.network.Availability(&bind.CallOpts{})
-	if err != nil {
-		return fmt.Errorf("Failed to check availability: %v", err.Error())
-	}
-	if !availability {
-		return fmt.Errorf("There are not positions available at the moment")
-	}
-
-	options := getTransactionOpts(val.walletAccount, deposit.SetUint64(val.deposit), val.config.ChainID)
-	_, err = val.network.Deposit(options)
-	if err != nil {
-		return fmt.Errorf("Failed to transact the deposit: %v", err.Error())
-	}
-
-	return nil
-}
-
 func (val *validator) withdraw() {
-	options := getTransactionOpts(val.walletAccount, nil, val.config.ChainID)
-	_, err := val.network.Withdraw(options)
+	err := val.network.Withdraw(val.walletAccount)
 	if err != nil {
-		log.Error("Failed to withdraw from the election", "err", err)
+		log.Error("failed to withdraw from the election", "err", err)
 	}
 }
 
@@ -651,25 +620,12 @@ func (val *validator) makeCurrent(parent *types.Block) error {
 }
 
 func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
-	count, err := val.network.GetVoterCount(&bind.CallOpts{})
+	validators, err := val.network.Validators()
 	if err != nil {
 		return err
 	}
 
-	val.validatorsChecksum = checksum
-	validators := make([]*types.Validator, count.Uint64())
-	for i := int64(0); i < count.Int64(); i++ {
-		validator, err := val.network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
-		if err != nil {
-			return err
-		}
-
-		var weight *big.Int
-		weight = big.NewInt(0)
-
-		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
-	}
-	val.validators = types.NewValidatorSet(validators)
+	val.validators = validators
 	val.validatorsChecksum = checksum
 
 	return nil

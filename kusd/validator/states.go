@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -25,9 +24,9 @@ type work struct {
 type stateFn func() stateFn
 
 func (val *validator) notLoggedInState() stateFn {
-	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
+	isGenesis, err := val.network.IsGenesisVoter(val.walletAccount.Account().Address)
 	if err != nil {
-		log.Crit("Failed to verify the voter information", "err", err)
+		log.Warn("Failed to verify the voter information", "err", err)
 		return nil
 	}
 
@@ -39,9 +38,8 @@ func (val *validator) notLoggedInState() stateFn {
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
 
-		log.Info("Making Deposit")
-		if err := val.makeDeposit(); err != nil {
-			log.Error("Error making deposit", "err", err)
+		if err := val.network.Join(val.walletAccount, val.deposit); err != nil {
+			log.Error("Error joining validators network", "err", err)
 			return nil
 		}
 
@@ -54,7 +52,7 @@ func (val *validator) notLoggedInState() stateFn {
 					return nil
 				}
 
-				confirmed, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
+				confirmed, err := val.network.IsVoter(val.walletAccount.Account().Address)
 				if err != nil {
 					log.Crit("Failed to verify the voter registration", "err", err)
 				}
@@ -65,7 +63,7 @@ func (val *validator) notLoggedInState() stateFn {
 			}
 		}
 	} else {
-		isVoter, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
+		isVoter, err := val.network.IsVoter(val.walletAccount.Account().Address)
 		if err != nil {
 			log.Crit("Failed to verify the voter information", "err", err)
 			return nil
@@ -230,7 +228,7 @@ func (val *validator) commitState() stateFn {
 	// election state updates
 	val.commitRound = int(val.round)
 
-	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
+	voter, err := val.network.IsVoter(val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}
