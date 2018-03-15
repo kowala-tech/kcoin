@@ -3,6 +3,11 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
@@ -16,10 +21,6 @@ import (
 	"github.com/kowala-tech/kUSD/kusddb"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
-	"math/big"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (
@@ -464,19 +465,17 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 func (val *validator) makeDeposit() error {
 	min, err := val.network.MinDeposit(&bind.CallOpts{})
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to get the min deposit: %v", err.Error())
 	}
 
 	var deposit big.Int
 	if min.Cmp(deposit.SetUint64(val.deposit)) > 0 {
-		log.Warn("Current deposit is not enough", "deposit", val.deposit, "minimum required", min)
-		// @TODO (rgeraldes) - error handling?
 		return fmt.Errorf("Current deposit - %d - is not enough. The minimum required is %d", val.deposit, min)
 	}
 
 	availability, err := val.network.Availability(&bind.CallOpts{})
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to check availability: %v", err.Error())
 	}
 	if !availability {
 		return fmt.Errorf("There are not positions available at the moment")
@@ -485,7 +484,7 @@ func (val *validator) makeDeposit() error {
 	options := getTransactionOpts(val.walletAccount, deposit.SetUint64(val.deposit), val.config.ChainID)
 	_, err = val.network.Deposit(options)
 	if err != nil {
-		return fmt.Errorf("Failed to transact the deposit: %x", err)
+		return fmt.Errorf("Failed to transact the deposit: %v", err.Error())
 	}
 
 	return nil
