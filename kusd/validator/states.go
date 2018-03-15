@@ -45,6 +45,7 @@ func (val *validator) notLoggedInState() stateFn {
 
 		log.Info("Making Deposit")
 		if err := val.makeDeposit(); err != nil {
+			log.Error("Error making deposit", "err", err)
 			return nil
 		}
 
