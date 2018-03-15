@@ -34,8 +34,6 @@ import (
 	"github.com/kowala-tech/kUSD/rpc"
 )
 
-// @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
-
 // Kowala implements the Kowala full node service.
 type Kowala struct {
 	config      *Config
@@ -147,8 +145,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if err != nil {
 		log.Warn("failed to get wallet account", "err", err)
 	}
-	kusd.validator = validator.New(walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
-	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
+
+	extraData := makeExtraData(config.ExtraData)
+	context := validator.NewValidatorContext(extraData, 0, walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
+	kusd.validator = validator.NewValidator(context)
 
 	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
 		return nil, err
@@ -309,7 +309,12 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	s.coinbase = coinbase
 	s.lock.Unlock()
 
-	if err := s.validator.SetCoinbase(coinbase); err != nil {
+	walletAccount, err := getWalletAccount(s.AccountManager(), s.coinbase)
+	if err != nil {
+		log.Warn("failed to get wallet account", "err", err)
+	}
+
+	if err := s.validator.SetCoinbase(walletAccount); err != nil {
 		log.Error("Error setting Coinbase on validator", "err", err)
 	}
 }
@@ -329,41 +334,46 @@ func (s *Kowala) SetDeposit(deposit uint64) {
 }
 
 func (s *Kowala) StartValidating() error {
-	cb, err := s.Coinbase()
+	coinbase, err := s.Coinbase()
 	if err != nil {
 		log.Error("Cannot start consensus validation without coinbase", "err", err)
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
-	/*
-		if clique, ok := s.engine.(*clique.Clique); ok {
-			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-			if wallet == nil || err != nil {
-				log.Error("Etherbase account unavailable locally", "err", err)
-				return fmt.Errorf("signer missing: %v", err)
-			}
-			clique.Authorize(eb, wallet.SignHash)
-		}
-	*/
-
-	dep, err := s.Deposit()
+	deposit, err := s.Deposit()
 	if err != nil {
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
 		return fmt.Errorf("insufficient funds: %v", err)
 	}
 
-	// @NOTE (rgeraldes) - ignored transaction rejection mechanism introduced to speed sync times
-	// @TODO (rgeraldes) - review (does it make sense to have a list of transactions before the election or not)
 	atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
-	go s.validator.Start(cb, dep)
+	walletAccount, err := getWalletAccount(s.AccountManager(), coinbase)
+	if err != nil {
+		log.Warn("failed to get wallet account", "err", err)
+	}
+
+	s.validator.SetDeposit(deposit)
+	err = s.validator.SetCoinbase(walletAccount)
+	if err != nil {
+		return err
+	}
+
+	newValidator, err := s.validator.Start()
+	if err != nil {
+		return err
+	}
+	s.validator = newValidator
+
 	return nil
 }
 
 func (s *Kowala) StopValidating() {
-	if err := s.validator.Stop(); err != nil {
+	newValidator, err := s.validator.Stop()
+	if err != nil {
 		log.Error("Error stopping Consensus", "err", err)
 	}
+	s.validator = newValidator
 }
 
 func (s *Kowala) IsValidating() bool             { return s.validator.Validating() }
@@ -375,7 +385,7 @@ func (s *Kowala) TxPool() *core.TxPool               { return s.txPool }
 func (s *Kowala) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Kowala) Engine() consensus.Engine           { return s.engine }
 func (s *Kowala) ChainDb() kusddb.Database           { return s.chainDb }
-func (s *Kowala) IsListening() bool                  { return true } // Always listening
+func (s *Kowala) IsListening() bool                  { return true }
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkId }
 func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }

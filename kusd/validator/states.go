@@ -2,7 +2,6 @@ package validator
 
 import (
 	"math/big"
-	"sync/atomic"
 	"time"
 
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
@@ -27,8 +26,8 @@ type work struct {
 type stateFn func() stateFn
 
 // @NOTE (rgeraldes) - initial state
-func (val *validator) notLoggedInState() stateFn {
-	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
+func (val *validating) notLoggedInState() stateFn {
+	isGenesis, err := val.contract.IsGenesisVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify the voter information", "err", err)
 		return nil
@@ -58,7 +57,7 @@ func (val *validator) notLoggedInState() stateFn {
 					return nil
 				}
 
-				confirmed, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
+				confirmed, err := val.contract.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 				if err != nil {
 					log.Crit("Failed to verify the voter registration", "err", err)
 				}
@@ -70,20 +69,17 @@ func (val *validator) notLoggedInState() stateFn {
 		}
 	} else {
 		// sanity check
-		isVoter, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
+		isVoter, err := val.contract.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 		if err != nil {
 			log.Crit("Failed to verify the voter information", "err", err)
 			return nil
 		}
 		if !isVoter {
-			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.walletAccount.Account().Address)
+			log.Crit("Invalid genesis - genesis validating needs to be registered as a voter", "address", val.walletAccount.Account().Address)
 		}
 
-		log.Info("Deposit is not necessary for a genesis validator (first block)")
+		log.Info("Deposit is not necessary for a genesis validating (first block)")
 	}
-
-	log.Info("Starting validation operation")
-	atomic.StoreInt32(&val.validating, 1)
 
 	log.Info("Voter has been accepted in the election")
 	val.restoreLastCommit()
@@ -91,7 +87,7 @@ func (val *validator) notLoggedInState() stateFn {
 	return val.newElectionState
 }
 
-func (val *validator) newElectionState() stateFn {
+func (val *validating) newElectionState() stateFn {
 	log.Info("Starting a new election")
 	// update state machine based on current state
 	if err := val.init(); err != nil {
@@ -104,7 +100,7 @@ func (val *validator) newElectionState() stateFn {
 	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
 	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
 		numTxs, _ := val.backend.TxPool().Stats() //
-		if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
+		if val.round == 0 && numTxs == 0 { //!cs.needProofBlock(height)
 			log.Info("Waiting for a TX")
 			txCh := make(chan core.TxPreEvent)
 			txSub := val.backend.TxPool().SubscribeTxPreEvent(txCh)
@@ -116,7 +112,7 @@ func (val *validator) newElectionState() stateFn {
 	return val.newRoundState
 }
 
-func (val *validator) newRoundState() stateFn {
+func (val *validating) newRoundState() stateFn {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
 	// updates the validators weight > proposer
@@ -133,7 +129,7 @@ func (val *validator) newRoundState() stateFn {
 	return val.newProposalState
 }
 
-func (val *validator) newProposalState() stateFn {
+func (val *validating) newProposalState() stateFn {
 	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
 
 	if val.isProposer() {
@@ -153,14 +149,14 @@ func (val *validator) newProposalState() stateFn {
 	return val.preVoteState
 }
 
-func (val *validator) preVoteState() stateFn {
+func (val *validating) preVoteState() stateFn {
 	log.Info("Pre vote sub-election")
 	val.preVote()
 
 	return val.preVoteWaitState
 }
 
-func (val *validator) preVoteWaitState() stateFn {
+func (val *validating) preVoteWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-vote sub-election")
 	timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
 
@@ -174,14 +170,14 @@ func (val *validator) preVoteWaitState() stateFn {
 	return val.preCommitState
 }
 
-func (val *validator) preCommitState() stateFn {
+func (val *validating) preCommitState() stateFn {
 	log.Info("Pre commit sub-election")
 	val.preCommit()
 
 	return val.preCommitWaitState
 }
 
-func (val *validator) preCommitWaitState() stateFn {
+func (val *validating) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit sub-election")
 	timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
 	// @TODO (rgeraldes) - move to a post processor state
@@ -201,7 +197,7 @@ func (val *validator) preCommitWaitState() stateFn {
 	}
 }
 
-func (val *validator) commitState() stateFn {
+func (val *validating) commitState() stateFn {
 	log.Info("Commit state")
 
 	// @TODO (rgeraldes) - replace work with unconfirmed, unjustified?
@@ -244,9 +240,9 @@ func (val *validator) commitState() stateFn {
 
 	// @TODO(rgeraldes)
 	// leaves only when it has all the pre commits
-	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
+	voter, err := val.contract.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 	if err != nil {
-		log.Crit("Failed to verify if the validator is a voter", "err", err)
+		log.Crit("Failed to verify if the validating is a voter", "err", err)
 	}
 	if !voter {
 		return val.loggedOutState
@@ -256,10 +252,7 @@ func (val *validator) commitState() stateFn {
 }
 
 // @NOTE (rgeraldes) - end state
-func (val *validator) loggedOutState() stateFn {
+func (val *validating) loggedOutState() stateFn {
 	log.Info("Logged out")
-
-	atomic.StoreInt32(&val.validating, 0)
-
 	return nil
 }
