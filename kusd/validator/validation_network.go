@@ -108,7 +108,6 @@ func (network *validationNetwork) IsGenesisVoter(address common.Address) (bool, 
 	return network.NetworkContract.IsGenesisVoter(&bind.CallOpts{}, address)
 }
 
-//network.WalletAccount.Account().Address
 func (network *validationNetwork) IsVoter(address common.Address) (bool, error) {
 	return network.NetworkContract.IsVoter(&bind.CallOpts{}, address)
 }
