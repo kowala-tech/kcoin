@@ -284,7 +284,7 @@ func GenesisBlockForTesting(db kusddb.Database, addr common.Address, balance *bi
 	return g.MustCommit(db)
 }
 
-// DefaultGenesisBlock returns the Ethereum main net genesis block.
+// DefaultGenesisBlock returns the Kowala main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:    params.MainnetChainConfig,
