@@ -1,10 +1,10 @@
 package types
 
 import (
-	"container/heap"
 	"math/big"
 
 	"github.com/kowala-tech/kUSD/common"
+	"errors"
 )
 
 // Validator represents a consensus validator
@@ -27,63 +27,76 @@ func (val *Validator) Address() common.Address { return val.address }
 func (val *Validator) Deposit() uint64         { return val.deposit }
 func (val *Validator) Weight() *big.Int        { return val.weight }
 
-type ValidatorSet struct {
-	validators []*Validator
-	proposer   *Validator
-
-	//cache
-	membership map[common.Address]*Validator
+type ValidatorSet interface {
+	UpdateWeight()
+	AtIndex(i int) *Validator
+	Get(addr common.Address) *Validator
+	Size() int
+	Proposer() *Validator
+	Contains(addr common.Address) bool
 }
 
-// @TODO (rgeraldes) - size needs to be > 0
-func NewValidatorSet(validators []*Validator) *ValidatorSet {
-	set := &ValidatorSet{
+var ErrInvalidParams = errors.New("A validator set needs at leat one validator")
+
+func NewValidatorSet(validators []*Validator) (*validatorSet, error) {
+	if len(validators) == 0 {
+		return nil, ErrInvalidParams
+	}
+
+	set := &validatorSet{
 		validators: validators,
-		membership: make(map[common.Address]*Validator, len(validators)),
+		proposer:   validators[0],
 	}
 
-	for _, validator := range validators {
-		set.membership[validator.address] = validator
-	}
+	return set, nil
+}
 
-	return set
+type validatorSet struct {
+	validators []*Validator
+	proposer   *Validator
 }
 
 // Update updates the weight and the proposer based on the set of validators
-func (set *ValidatorSet) UpdateWeight() {
-	pq := make(common.PriorityQueue, 0)
-	heap.Init(&pq)
+func (set *validatorSet) UpdateWeight() {
+	proposer := set.validators[0]
 
 	for _, validator := range set.validators {
 		validator.weight = validator.weight.Add(validator.weight, big.NewInt(int64(validator.deposit)))
-		// @TODO (rgeraldes) - review types, possible overflow
-		heap.Push(&pq, &common.Item{Priority: int(validator.weight.Int64()), Value: validator})
+		if validator.weight.Cmp(proposer.weight) > 0 {
+			proposer = validator
+		}
 	}
-
-	item := heap.Pop(&pq).(*common.Item)
-	set.proposer = item.Value.(*Validator)
+	set.proposer = proposer
 
 	// decrement the validator weight since he has been selected
 	set.proposer.weight.Sub(set.proposer.weight, big.NewInt(int64(set.proposer.deposit)))
 }
 
-func (set *ValidatorSet) AtIndex(i int) *Validator {
+func (set *validatorSet) AtIndex(i int) *Validator {
+	if i > len(set.validators) {
+		return nil
+	}
 	return set.validators[i]
 }
 
-func (set *ValidatorSet) Get(addr common.Address) *Validator {
-	return set.membership[addr]
+func (set *validatorSet) Get(addr common.Address) *Validator {
+	for _, validator := range set.validators {
+		if validator.Address() == addr {
+			return validator
+		}
+	}
+	return nil
 }
 
-func (set *ValidatorSet) Size() int {
+func (set *validatorSet) Size() int {
 	return len(set.validators)
 }
 
-func (set *ValidatorSet) Proposer() common.Address {
-	return set.proposer.address
+func (set *validatorSet) Proposer() *Validator {
+	return set.proposer
 }
 
-func (set *ValidatorSet) Contains(addr common.Address) bool {
-	_, ok := set.membership[addr]
-	return ok
+func (set *validatorSet) Contains(addr common.Address) bool {
+	validator := set.Get(addr)
+	return validator != nil
 }
