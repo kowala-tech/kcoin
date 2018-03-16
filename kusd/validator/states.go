@@ -13,7 +13,6 @@ import (
 	"github.com/kowala-tech/kUSD/params"
 )
 
-// @TODO (rgeraldes) - confirm
 // work is the proposer current environment and holds all of the current state information
 type work struct {
 	state    *state.StateDB
@@ -23,10 +22,8 @@ type work struct {
 	receipts []*types.Receipt
 }
 
-// stateFn represents a state function
 type stateFn func() stateFn
 
-// @NOTE (rgeraldes) - initial state
 func (val *validator) notLoggedInState() stateFn {
 	isGenesis, err := val.network.IsGenesisVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 	if err != nil {
@@ -38,7 +35,6 @@ func (val *validator) notLoggedInState() stateFn {
 	// part of the initial set of validators - no need to make a deposit if the block number is 0
 	// since these validators will be marked as voters from the start
 	if !isGenesis || (isGenesis && val.chain.CurrentBlock().NumberU64() > 0) {
-		// Subscribe events from blockchain
 		chainHeadCh := make(chan core.ChainHeadEvent)
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
@@ -55,7 +51,6 @@ func (val *validator) notLoggedInState() stateFn {
 			select {
 			case _, ok := <-chainHeadCh:
 				if !ok {
-					// @TODO (rgeraldes) - log
 					return nil
 				}
 
@@ -70,7 +65,6 @@ func (val *validator) notLoggedInState() stateFn {
 			}
 		}
 	} else {
-		// sanity check
 		isVoter, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 		if err != nil {
 			log.Crit("Failed to verify the voter information", "err", err)
@@ -96,7 +90,6 @@ func (val *validator) newElectionState() stateFn {
 	log.Info("Starting a new election")
 	// update state machine based on current state
 	if err := val.init(); err != nil {
-		// @TODO (rgeraldes) - log
 		return nil
 	}
 
@@ -105,7 +98,7 @@ func (val *validator) newElectionState() stateFn {
 	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
 	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
 		numTxs, _ := val.backend.TxPool().Stats() //
-		if val.round == 0 && numTxs == 0 {        //!cs.needProofBlock(height)
+		if val.round == 0 && numTxs == 0 {
 			log.Info("Waiting for a TX")
 			txCh := make(chan core.TxPreEvent)
 			txSub := val.backend.TxPool().SubscribeTxPreEvent(txCh)
@@ -120,7 +113,6 @@ func (val *validator) newElectionState() stateFn {
 func (val *validator) newRoundState() stateFn {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
-	// updates the validators weight > proposer
 	val.validators.UpdateWeight()
 
 	if val.round != 0 {
@@ -130,7 +122,6 @@ func (val *validator) newRoundState() stateFn {
 		val.blockFragments = nil
 	}
 
-	//	val.votes.SetRound(val.round + 1) // also track next round (round+1) to allow round-skipping
 	return val.newProposalState
 }
 
@@ -185,7 +176,6 @@ func (val *validator) preCommitState() stateFn {
 func (val *validator) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit sub-election")
 	timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
-	// @TODO (rgeraldes) - move to a post processor state
 	defer val.majority.Unsubscribe()
 
 	select {
@@ -197,15 +187,12 @@ func (val *validator) preCommitWaitState() stateFn {
 		return val.commitState
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
-		// @TODO (rgeraldes) - confirm
 		return val.commitState
 	}
 }
 
 func (val *validator) commitState() stateFn {
 	log.Info("Commit state")
-
-	// @TODO (rgeraldes) - replace work with unconfirmed, unjustified?
 
 	block := val.block
 	work := val.work
@@ -243,8 +230,6 @@ func (val *validator) commitState() stateFn {
 	// election state updates
 	val.commitRound = int(val.round)
 
-	// @TODO(rgeraldes)
-	// leaves only when it has all the pre commits
 	voter, err := val.network.IsVoter(&bind.CallOpts{}, val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify if the validator is a voter", "err", err)
@@ -256,7 +241,6 @@ func (val *validator) commitState() stateFn {
 	return val.newElectionState
 }
 
-// @NOTE (rgeraldes) - end state
 func (val *validator) loggedOutState() stateFn {
 	log.Info("Logged out")
 

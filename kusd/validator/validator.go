@@ -199,10 +199,6 @@ func (val *validator) SetDeposit(deposit uint64) {
 
 // Pending returns the currently pending block and associated state.
 func (val *validator) Pending() (*types.Block, *state.StateDB) {
-	// @TODO (rgeraldes) - review
-	// val.currentMu.Lock()
-	// defer val.currentMu.Unlock()
-
 	state, err := val.chain.State()
 	if err != nil {
 		log.Crit("Failed to fetch the latest state", "err", err)
@@ -212,10 +208,6 @@ func (val *validator) Pending() (*types.Block, *state.StateDB) {
 }
 
 func (val *validator) PendingBlock() *types.Block {
-	// @TODO (rgeraldes) - review
-	// val.currentMu.Lock()
-	// defer val.currentMu.Unlock()
-
 	return val.chain.CurrentBlock()
 }
 
@@ -229,29 +221,10 @@ func (val *validator) restoreLastCommit() {
 		log.Crit("Failed to update the validator set", "err", err)
 	}
 
-	// @TODO (rgeraldes) - we need to request the validator vote weights
-
 	currentBlock := val.chain.CurrentBlock()
 	if currentBlock.Number().Cmp(big.NewInt(0)) == 0 {
 		return
 	}
-
-	/*
-		lastCommit := currentBlock.LastCommit()
-		lastPreCommits := core.NewVotingTable(val.eventMux, val.signer, currentBlock.Number(), lastCommit.Round(), types.PreCommit, lastValidators)
-		for _, preCommit := range lastCommit.Commits() {
-			if preCommit == nil {
-				continue
-			}
-			added, err := lastPreCommits.Add(preCommit, false)
-			if !added || err != nil {
-				// @TODO (rgeraldes) - this should not happen > complete
-				log.Error("Failed to restore the latest commit")
-			}
-		}
-
-		val.lastCommit = lastPreCommits
-	*/
 }
 
 func (val *validator) init() error {
@@ -268,8 +241,6 @@ func (val *validator) init() error {
 		}
 	}
 
-	// @NOTE (rgeraldes) - start is not relevant for the first block as the first election will
-	// wait until we have transactions
 	start := time.Unix(parent.Time().Int64(), 0)
 	val.start = start.Add(time.Duration(params.BlockTime) * time.Millisecond)
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
@@ -283,17 +254,11 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	// voting system
 	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
 
-	// @TODO (rgeraldes) - last validators
-	// val.lastValidators
-
-	// events
 	val.blockCh = make(chan *types.Block)
 	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 
-	// @TODO (rgeraldes) - review vs go-eth
 	if err = val.makeCurrent(parent); err != nil {
 		log.Error("Failed to create mining context", "err", err)
 		return nil
@@ -312,35 +277,6 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	}
 
 	log.Info("Received Proposal")
-	// @TODO (rgeraldes) - Add proposal validation
-
-	/*
-		// not relevant
-		if proposal.BlockNumber != val.blockNumber && proposal.Round != val.Round {
-			return
-		}
-
-		// proposer sent two proposals
-		if val.proposal != nil {
-			// @TODO (rgeraldes) - punish the proposer ?
-			return
-		}
-
-		// if the proposal is already known, discard it
-		hash := proposal.Hash()
-		if val.all[hash] != nil {
-			log.Trace("Discarding already known proposal", "hash", hash)
-			return false, fmt.Errorf("known transaction: %x", hash)
-		}
-
-		// if the proposal fails validation, discard it
-		if err := val.validateProposal(proposal); err != nil {
-			log.Trace("Discarding invalid proposal", "hash", hash, "err", err)
-		}
-
-
-		return
-	*/
 
 	val.proposal = proposal
 	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
@@ -361,19 +297,7 @@ func (val *validator) AddVote(vote *types.Vote) error {
 }
 
 func (val *validator) addVote(vote *types.Vote) error {
-	// @NOTE (rgeraldes) - for now just pre-vote/pre-commit for the current block number
-	added, err := val.votingSystem.Add(vote, false)
-	if err != nil {
-		// @TODO (rgeraldes)
-	}
-
-	if added {
-		switch vote.Type {
-		//case PreVote:
-		//case PreCommit:
-		}
-	}
-
+	val.votingSystem.Add(vote, false)
 	return nil
 }
 
@@ -528,7 +452,6 @@ func (val *validator) createBlock() *types.Block {
 
 	var commit *types.Commit
 
-	// @NOTE (rgeraldes) - temporary
 	first := types.NewVote(blockNumber, parent.Hash(), 0, types.PreCommit)
 
 	if blockNumber.Cmp(big.NewInt(1)) == 0 {
@@ -541,12 +464,10 @@ func (val *validator) createBlock() *types.Block {
 			PreCommits:     types.Votes{first},
 			FirstPreCommit: first,
 		}
-		//commit = val.lastCommit.Proof()
 	}
 
 	if err := val.engine.Prepare(val.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
-		// @TODO (rgeraldes) - review returning nil
 		return nil
 	}
 
@@ -570,15 +491,11 @@ func (val *validator) createBlock() *types.Block {
 func (val *validator) propose() {
 	block := val.createProposalBlock()
 
-	//lockedRound, lockedBlock := val.votes.LockingInfo()
 	lockedRound := 1
 	lockedBlock := common.Hash{}
 
-	// @TODO (rgeraldes) - review int/int64; address situation where validators size might be zero (no peers)
-	// @NOTE (rgeraldes) - (for now size = block size) number of block fragments = number of validators - self
-	fragments, err := block.AsFragments(int(block.Size().Int64()) /*/val.validators.Size() - 1 */)
+	fragments, err := block.AsFragments(int(block.Size().Int64()))
 	if err != nil {
-		// @TODO(rgeraldes) - analyse consequences
 		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
 	}
 
@@ -594,8 +511,6 @@ func (val *validator) propose() {
 
 	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
 
-	// post block segments events
-	// @TODO(rgeraldes) - review types int/uint
 	for i := uint(0); i < fragments.Size(); i++ {
 		val.eventMux.Post(core.NewBlockFragmentEvent{
 			BlockNumber: val.blockNumber,
@@ -629,7 +544,6 @@ func (val *validator) preCommit() {
 	winner := common.Hash{}
 	switch {
 	// no majority
-	//case !val.hasPolka():
 	// majority pre-voted nil
 	case winner == common.Hash{}:
 		log.Debug("Majority of validators pre-voted nil")
@@ -652,17 +566,12 @@ func (val *validator) preCommit() {
 		// vote on the pre-vote election winner
 		vote = winner
 		// we don't have the current block (fetch)
-		// @TODO (tendermint): in the future save the POL prevotes for justification.
 	default:
 		// fetch block, unlock, precommit
 		// unlock locked block
 		val.lockedRound = 0
 		val.lockedBlock = nil
-		//val.lockedBlockParts = nil
-		//if !cs.ProposalBlockParts.HasHeader(blockID.PartsHeader) {
 		val.block = nil
-		//val.ProposalBlockParts = types.NewPartSetFromHeader(blockID.PartsHeader)
-		//}
 	}
 
 	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreCommit))
@@ -683,14 +592,12 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 	}
 	val.blockFragments.Add(fragment)
 
-	// @NOTE (rgeraldes) - the whole section needs to be refactored
 	if val.blockFragments.HasAll() {
 		block, err := val.blockFragments.Assemble()
 		if err != nil {
 			log.Crit("Failed to assemble the block", "err", err)
 		}
 
-		// @TODO (rgeraldes) - refactor ; based on core/blockchain.go (InsertChain)
 		// Start the parallel header verifier
 		nBlocks := 1
 		headers := make([]*types.Header, nBlocks)
@@ -706,45 +613,12 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 			err = val.chain.Validator().ValidateBody(block)
 		}
 
-		// @NOTE(rgeraldes) - ignore for now (assume that the block is ok)
-		/*
-			if err != nil {
-				if err == ErrKnownBlock {
-					stats.ignored++
-					continue
-				}
-
-				if err == consensus.ErrFutureBlock {
-					// Allow up to MaxFuture second in the future blocks. If this limit
-					// is exceeded the chain is discarded and processed at a later time
-					// if given.
-					max := big.NewInt(time.Now().Unix() + maxTimeFutureBlocks)
-					if block.Time().Cmp(max) > 0 {
-						return i, fmt.Errorf("future block: %v > %v", block.Time(), max)
-					}
-					bc.futureBlocks.Add(block.Hash(), block)
-					stats.queued++
-					continue
-				}
-
-				if err == consensus.ErrUnknownAncestor && bc.futureBlocks.Contains(block.ParentHash()) {
-					bc.futureBlocks.Add(block.Hash(), block)
-					stats.queued++
-					continue
-				}
-
-				bc.reportBlock(block, nil, err)
-				return i, err
-			}
-		*/
 		parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
 
 		// Process block using the parent state as reference point.
 		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
 		if err != nil {
 			log.Crit("Failed to process the block", "err", err)
-			//bc.reportBlock(block, receipts, err)
-			//return i, err
 		}
 		val.receipts = receipts
 
@@ -752,8 +626,6 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
 		if err != nil {
 			log.Crit("Failed to validate the state", "err", err)
-			//bc.reportBlock(block, receipts, err)
-			//return i, err
 		}
 
 		val.block = block
@@ -793,18 +665,6 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 		}
 
 		var weight *big.Int
-		// @TODO (rgeraldes) - weight needs to be shared
-		/*
-			if !genesis && val.validators.Contains(validator.Addr) {
-				// old validator
-				old := val.validators.Get(validator.Addr)
-				weight = old.Weight()
-			} else {
-				// new validator
-				weight = big.NewInt(0)
-			}
-		*/
-		// @TODO (rgeraldes) - remove this statement as soon as the previous one is sorted out
 		weight = big.NewInt(0)
 
 		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
