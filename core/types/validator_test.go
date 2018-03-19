@@ -1,11 +1,11 @@
 package types
 
 import (
+	"fmt"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
-	"fmt"
 )
 
 func TestValidator_Properties(t *testing.T) {
