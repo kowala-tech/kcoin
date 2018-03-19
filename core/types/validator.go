@@ -87,3 +87,10 @@ func (set *ValidatorSet) Contains(addr common.Address) bool {
 	_, ok := set.membership[addr]
 	return ok
 }
+
+// Deposit represents the validator deposits at stake
+type Deposit struct {
+	amount *big.Int
+	// @TODO (rgeraldes)
+	//released
+}

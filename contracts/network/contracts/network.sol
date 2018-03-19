@@ -22,7 +22,7 @@ contract Network is Ownable {
     uint public baseDepositUpperBound;
     uint public baseDepositLowerBound;
 
-    // onlyWithinMinDepositBounds requires the new deposit value to be within valid bounds
+    // onlyWithinBaseDepositBounds requires the new deposit value to be within valid bounds
     modifier onlyWithinBaseDepositBounds(uint deposit) {
         require(deposit >= baseDepositLowerBound && deposit <= baseDepositUpperBound);
         _;
@@ -30,13 +30,13 @@ contract Network is Ownable {
 
     // setBaseDepositLowerBound sets the lower bound of the minimum deposit operation
     function setBaseDepositLowerBound(uint min) public onlyOwner {
-        require(min <= baseDepositUpperBound);
+        require(min < baseDepositUpperBound && min >= 0);
         baseDepositLowerBound = min;
     }
 
     // setBaseDepositUpperBound sets the upper bound of the minimum deposit operation
     function setBaseDepositUpperBound(uint max) public onlyOwner {
-        require(max >= baseDepositLowerBound);
+        require(max > baseDepositLowerBound);
         baseDepositUpperBound = max;
     }
 
@@ -45,7 +45,6 @@ contract Network is Ownable {
     function setBaseDeposit(uint deposit) public onlyOwner onlyWithinBaseDepositBounds(deposit) {
         baseDeposit = deposit;
     }
-
 
     // maxValidators represents the maximum number of validators allowed
     // in a consensus election at once
@@ -62,7 +61,7 @@ contract Network is Ownable {
     }
 
     function setMaxValidatorsLowerBound(uint min) public onlyOwner {
-        require(min <= maxValidatorsUpperBound);
+        require(min <= maxValidatorsUpperBound && min >= 0);
         maxValidatorsLowerBound = min;
     }
 
@@ -161,6 +160,10 @@ contract Network is Ownable {
 
     // genesis stores the registration code of the genesis validator
     address public genesis;
+
+    function isGenesisValidator(address code) public view returns (bool isIndeed) {
+        return code == genesis;
+    }
 
     // unbondingPeriod is a predetermined period of time that coins remain locked
     // starting from the moment a validator leaves the consensus elections
@@ -265,7 +268,7 @@ contract Network is Ownable {
 
     // withdraw transfer locked deposit(s) back the user account if they
     // are past the unbonding period
-    function withdraw() public onlyValidator {
+    function withdrawFunds() public onlyValidator {
         uint refund = 0;
         uint i = 0;
         Validator validator = validators[msg.sender];
@@ -284,10 +287,6 @@ contract Network is Ownable {
         if (refund > 0) {
             msg.sender.transfer(refund);
         }
-    }
-
-    function isGenesisValidator(address code) public view returns (bool isIndeed) {
-        return code == genesis;
     }
     
 }
