@@ -2,10 +2,6 @@ package types
 
 import (
 	"bytes"
-	"errors"
-	"sync"
-	"sync/atomic"
-
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/common/hexutil"
 	"github.com/kowala-tech/kUSD/rlp"
@@ -15,10 +11,6 @@ import (
 
 //go:generate gencodec -type Chunk -field-override chunkMarshalling -out gen_chunk_json.go
 //go:generate gencodec -type Metadata -field-override MetadataMarshalling -out gen_metadata_json.go
-
-var (
-	ErrInvalidIndex = errors.New("invalid index")
-)
 
 // @TODO (rgeraldes) - move to another place
 func min(x, y int) int {
@@ -33,10 +25,6 @@ type Chunk struct {
 	Index uint64      `json:"index"  gencodec:"required"`
 	Data  []byte      `json:"bytes"  gencodec:"required"`
 	Proof common.Hash `json:"proof"  gencodec:"required"`
-
-	// caches
-	hash atomic.Value
-	size atomic.Value
 }
 
 type chunkMarshalling struct {
@@ -48,11 +36,9 @@ type chunkMarshalling struct {
 type DataSet struct {
 	meta *Metadata
 
-	count      uint // number of current data chunks
-	dataMu     sync.Mutex
+	count      uint             // number of current data chunks
 	data       []*Chunk         // stores data chunks
 	membership *common.BitArray // indicates whether a data unit is present or not
-
 }
 
 func NewDataSetFromMeta(meta *Metadata) *DataSet {

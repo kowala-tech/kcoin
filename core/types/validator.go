@@ -3,8 +3,8 @@ package types
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
 	"errors"
+	"github.com/kowala-tech/kUSD/common"
 )
 
 // Validator represents a consensus validator

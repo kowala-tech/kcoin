@@ -29,8 +29,8 @@ type Header struct {
 	Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	ValidatorsHash common.Hash    `json:"validators"   	   gencodec:"required"`
-	LastCommitHash common.Hash    `json:"lastCommit"	   gencodec:"required"`
+	ValidatorsHash common.Hash    `json:"validators"       gencodec:"required"`
+	LastCommitHash common.Hash    `json:"lastCommit"       gencodec:"required"`
 	Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
 	Number         *big.Int       `json:"number"           gencodec:"required"`
 	GasLimit       *big.Int       `json:"gasLimit"         gencodec:"required"`
