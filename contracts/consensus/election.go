@@ -23,9 +23,9 @@ type Election interface {
 	RedeemFunds(walletAccount accounts.WalletAccount) error
 	ValidatorsChecksum() (ValidatorsChecksum, error)
 	Validators() (*types.ValidatorSet, error)
-	Deposits() error
-	IsGenesisVoter(address common.Address) (bool, error)
-	IsVoter(address common.Address) (bool, error)
+	Deposits(address common.Address) error
+	IsGenesisValidator(address common.Address) (bool, error)
+	IsValidator(address common.Address) (bool, error)
 }
 
 func NewElection(networkContract *network.NetworkContract, chainID *big.Int) *validationNetwork {
@@ -101,7 +101,21 @@ func (election *election) Validators() (*types.ValidatorSet, error) {
 	return types.NewValidatorSet(validators), nil
 }
 
-func (election *election) Deposits() (*types.ValidatorSet, error) {}
+func (election *election) Deposits(addr common.Address) ([]*types.Deposit, error) {
+	count, err := s.contract.GetDepositCount(&bind.CallOpts{from: addr})
+	if err != nil {
+		return nil, err
+	}
+
+	deposits := make([]*types.Deposit, count.Uint64())
+	for i := int64(0), i < count.Int64(); i++ {
+		deposit, err := election.GetDepositAtIndex(&bind.CallOpts{From: addr}, big.NewInt(i))
+		if err != nil {
+			return nil, err
+		}
+		deposits[i] = &types.Deposit{}
+	}
+}
 
 func (election *election) IsGenesisValidator(address common.Address) (bool, error) {
 	return election.IsGenesisValidator(&bind.CallOpts{}, address)

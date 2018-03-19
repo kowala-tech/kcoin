@@ -10,6 +10,7 @@ import "./ownable.sol";
 contract Election is Ownable {
     uint public baseDeposit;       
     uint public maxValidators;
+    // period in days
     uint public unbondingPeriod;
     address public genesis;
 
@@ -52,16 +53,56 @@ contract Election is Ownable {
         _;
     }
 
+    // onlyNewCandidate required the sender to be a new candidate
+    modifier onlyNewCandidate {
+        require(!isValidator(msg.sender));
+        _;
+    }
+
     function Election(uint _baseDeposit, uint _maxValidators, uint _unbondingPeriod, address _genesis) public payable {
         require(msg.value >= _baseDeposit);
         require(_maxValidators >= 1);
 
         baseDeposit = _baseDeposit;
         maxValidators = _maxValidators;
-        unbondingPeriod = _unbondingPeriod;
+        unbondingPeriod = _unbondingPeriod * 1 days;
         genesis = _genesis;
 
         _insertValidator(_genesis, msg.value);
+    }
+
+    function isGenesisValidator(address code) public view returns (bool isIndeed) {
+        return code == genesis;
+    }
+
+    function isValidator(address code) public view returns (bool isIndeed) {
+        return validators[code].isValidator;
+    }
+
+    function getValidatorCount() public view returns (uint count) {
+        return validatorIndex.length;
+    }
+
+    function getValidatorAtIndex(uint index) public view returns (address code, uint deposit) {
+        code = validatorIndex[index];
+        Validator validator = validators[code];
+        deposit = validator.deposits[validator.deposits.length - 1].amount;
+    }
+
+    function _hasAvailability() public view returns (bool available) {
+        return (maxValidators - validatorIndex.length) > 0;
+    }
+
+    // getMinimumDeposit returns the base deposit if there are positions available or
+    // the current smallest deposit required if there aren't positions availabe.
+    function getMinimumDeposit() public view returns (uint deposit) {
+        // there are positions for validator available
+        if (_hasAvailability()) {
+            return baseDeposit;
+        } else {
+            Validator smallestBidder = validators[validatorIndex[validatorIndex.length - 1]];               
+            return smallestBidder.deposits[smallestBidder.deposits.length - 1].amount + 1;
+        }
     }
 
     function _updateChecksum() private {
@@ -74,18 +115,24 @@ contract Election is Ownable {
         sender.isValidator = true;
         sender.deposits.push(Deposit({amount:deposit, releasedAt: 0}));
 
-        // ordered insert based on the deposit amount
         for (uint index = sender.index; index > 0; index--) {
             Validator target = validators[validatorIndex[index - 1]];
-            Deposit collateral = target.deposits[validatorIndex.length - 1];
+            Deposit collateral = target.deposits[target.deposits.length - 1];
             if (deposit <= collateral.amount) {
                 break;
             }
             validatorIndex[index] = validatorIndex[index - 1];
             validatorIndex[index - 1] = code; 
+            // update indexes
+            target.index = index;
+            sender.index = index - 1;
         }
 
         _updateChecksum();
+    }
+
+    function setBaseDeposit(uint deposit) public onlyOwner {
+        baseDeposit = deposit;
     }
 
     function _deleteValidator(address account) private {
@@ -106,10 +153,6 @@ contract Election is Ownable {
         _deleteValidator(validatorIndex[validatorIndex.length - 1]);
     }
 
-    function setBaseDeposit(uint deposit) public onlyOwner {
-        baseDeposit = deposit;
-    }
-
     function setMaxValidators(uint max) public onlyOwner { 
         if (max < validatorIndex.length) {
             uint toRemove = validatorIndex.length - max;
@@ -118,20 +161,6 @@ contract Election is Ownable {
             }
         }
         maxValidators = max;   
-    }
-
-    function getValidatorCount() public view returns (uint count) {
-        return validatorIndex.length;
-    }
-
-    function getValidatorAtIndex(uint index) public view returns (address code, uint deposit) {
-        code = validatorIndex[index];
-        Validator validator = validators[code];
-        deposit = validator.deposits[validator.deposits.length - 1].amount;
-    }
-
-    function isGenesisValidator(address code) public view returns (bool isIndeed) {
-        return code == genesis;
     }
 
     function getDepositCount() public view returns (uint count) {
@@ -143,35 +172,12 @@ contract Election is Ownable {
         return (deposit.amount, deposit.releasedAt);
     }
 
-    function _hasAvailability() public view returns (bool available) {
-        return (maxValidators - validatorIndex.length) > 0;
-    }
-
-    // getMinimumDeposit returns the base deposit if there are positions available or
-    // the current smallest deposit required if there aren't positions availabe.
-    function getMinimumDeposit() public view returns (uint deposit) {
-        // there are positions for validator available
-        if (_hasAvailability()) {
-            return baseDeposit;
-        } else {
-            Validator smallestBidder = validators[validatorIndex[validatorIndex.length - 1]];               
-            return smallestBidder.deposits[smallestBidder.deposits.length - 1].amount + 1;
-        }
-    }
-
     // join registers a new candidate as validator
-    function join() public payable onlyWithMinDeposit {
+    function join() public payable onlyNewCandidate onlyWithMinDeposit {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
         }
         _insertValidator(msg.sender, msg.value);
-    }
-    
-    // @NOTE (rgeraldes) - not sure if it's going to be used in the future as
-    // the transaction can fail and we need to look at the transaction status
-    // instead.
-    function isValidator(address code) public view returns (bool isIndeed) {
-        return validators[code].isValidator;
     }
 
     // leave deregisters the msg sender from the validator set
@@ -179,43 +185,73 @@ contract Election is Ownable {
         _deleteValidator(msg.sender);
     }
 
-    /*
-    function _removeDeposits(Validator validator, uint index) private {
+    function _removeDeposits(address code, uint index) private {
         if (index == 0) return;
-        // left shifts
+
+        Validator validator = validators[code];
         uint lo = 0;
         uint hi = index;
-        // @TODO (rgeraldes) - review
         while (hi < validator.deposits.length) {
-             validator.deposits[lo] = validator.deposits[hi];
-             lo++;
-             hi++;
+            validator.deposits[lo] = validator.deposits[hi];
+            lo++;
+            hi++;
         }
-        // resize array
-        // @TODO (rgeraldes)
-        // validator.deposits.length--;
+        validator.deposits.length = lo;
     }
-    */
 
-    // withdraw transfer locked deposit(s) back the user account if they
+    // redeemFunds transfers locked deposit(s) back the user account if they
     // are past the unbonding period
-    function redeemFunds() public returns {
+    function redeemFunds() public {
+        uint refund = 0;
         uint i = 0;
-        Validator validator = validators[msg.sender];
-        for (; i < validator.deposits.length && validator.deposits[i].releasedAt != 0; i++) {
-            if (now < validator.deposits[i].releasedAt) {
+        Deposit[] deposits = validators[msg.sender].deposits;
+        
+        for (; i < deposits.length && deposits[i].releasedAt != 0; i++) {
+            if (now < deposits[i].releasedAt) {
                 // @NOTE (rgeraldes) - no need to iterate further since the 
                 // release date (if is different than 0) of the following deposits
                 // will always be past than the current one.
                 break;
             }
-            refund += validator.deposits[i].amount;
+            refund += deposits[i].amount;
         }
         
-        //_removeDeposits(validator, i);
+        _removeDeposits(msg.sender, i);
 
         if (refund > 0) {
             msg.sender.transfer(refund);
         }
     }
+
+    /*
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    
+    
+
+    
+
+    
+    
+    
+
+    
+    */
 }
