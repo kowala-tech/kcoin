@@ -20,10 +20,10 @@ func TestValidator_Properties(t *testing.T) {
 }
 
 func TestValidatorSet_EmptyReturnsError(t *testing.T) {
-	validatorSet, err := NewValidatorSet(nil)
+	validatorList, err := NewValidatorList(nil)
 
 	assert.Error(t, err)
-	assert.Nil(t, validatorSet)
+	assert.Nil(t, validatorList)
 }
 
 func TestValidatorSet_One(t *testing.T) {
@@ -32,14 +32,14 @@ func TestValidatorSet_One(t *testing.T) {
 	weight := &big.Int{}
 	validator := NewValidator(address, deposit, weight)
 
-	validatorSet, err := NewValidatorSet([]*Validator{validator})
+	validatorList, err := NewValidatorList([]*Validator{validator})
 
 	assert.NoError(t, err)
-	assert.Equal(t, 1, validatorSet.Size())
-	assert.Equal(t, validator, validatorSet.AtIndex(0))
-	assert.Equal(t, validator, validatorSet.Get(address))
-	assert.Equal(t, true, validatorSet.Contains(address))
-	assert.Equal(t, validator, validatorSet.Proposer())
+	assert.Equal(t, 1, validatorList.Size())
+	assert.Equal(t, validator, validatorList.At(0))
+	assert.Equal(t, validator, validatorList.Get(address))
+	assert.Equal(t, true, validatorList.Contains(address))
+	assert.Equal(t, validator, validatorList.Proposer())
 }
 
 func TestValidatorSet_UpdateWeightChangesProposer(t *testing.T) {
@@ -47,16 +47,16 @@ func TestValidatorSet_UpdateWeightChangesProposer(t *testing.T) {
 	validator2 := makeValidator("0x6aaeb6053f3e94c9b9a09f33669435e7ef1beaed", 101, 101)
 	validator3 := makeValidator("0x7aaeb6053f3e94c9b9a09f33669435e7ef1beaed", 99, 99)
 
-	validatorSet, err := NewValidatorSet([]*Validator{validator, validator2, validator3})
+	validatorList, err := NewValidatorList([]*Validator{validator, validator2, validator3})
 	assert.NoError(t, err)
 
-	validatorSet.UpdateWeight()
-	assert.Equal(t, validator2, validatorSet.Proposer())
-	assert.Equal(t, big.NewInt(101), validatorSet.Proposer().weight)
-	assert.Equal(t, big.NewInt(200), validatorSet.AtIndex(0).weight)
-	assert.Equal(t, big.NewInt(101), validatorSet.AtIndex(1).weight)
-	assert.Equal(t, big.NewInt(198), validatorSet.AtIndex(2).weight)
-	assert.Equal(t, 3, validatorSet.Size())
+	validatorList.UpdateWeights()
+	assert.Equal(t, validator2, validatorList.Proposer())
+	assert.Equal(t, big.NewInt(101), validatorList.Proposer().weight)
+	assert.Equal(t, big.NewInt(200), validatorList.At(0).weight)
+	assert.Equal(t, big.NewInt(101), validatorList.At(1).weight)
+	assert.Equal(t, big.NewInt(198), validatorList.At(2).weight)
+	assert.Equal(t, 3, validatorList.Size())
 }
 
 func TestValidatorSet_UpdateWeightChangesProposerElections(t *testing.T) {
@@ -64,9 +64,9 @@ func TestValidatorSet_UpdateWeightChangesProposerElections(t *testing.T) {
 	validator2 := makeValidator("0x6aaeb6053f3e94c9b9a09f33669435e7ef1beaed", 101, 101)
 	validator3 := makeValidator("0x7aaeb6053f3e94c9b9a09f33669435e7ef1beaed", 99, 99)
 
-	validatorSet, err := NewValidatorSet([]*Validator{validator, validator2, validator3})
+	validatorList, err := NewValidatorList([]*Validator{validator, validator2, validator3})
 	assert.NoError(t, err)
-	assert.Equal(t, 3, validatorSet.Size())
+	assert.Equal(t, 3, validatorList.Size())
 
 	elections := []struct {
 		proposerWeight   *big.Int
@@ -82,11 +82,11 @@ func TestValidatorSet_UpdateWeightChangesProposerElections(t *testing.T) {
 
 	for round, tc := range elections {
 		t.Run(fmt.Sprintf("round %d", round), func(t *testing.T) {
-			validatorSet.UpdateWeight()
-			assert.Equal(t, tc.proposerWeight, validatorSet.Proposer().weight)
-			assert.Equal(t, tc.validator1weight, validatorSet.AtIndex(0).weight)
-			assert.Equal(t, tc.validator2weight, validatorSet.AtIndex(1).weight)
-			assert.Equal(t, tc.validator3weight, validatorSet.AtIndex(2).weight)
+			validatorList.UpdateWeights()
+			assert.Equal(t, tc.proposerWeight, validatorList.Proposer().weight)
+			assert.Equal(t, tc.validator1weight, validatorList.At(0).weight)
+			assert.Equal(t, tc.validator2weight, validatorList.At(1).weight)
+			assert.Equal(t, tc.validator3weight, validatorList.At(2).weight)
 		})
 	}
 }

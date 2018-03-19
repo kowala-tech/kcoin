@@ -27,23 +27,23 @@ func (val *Validator) Address() common.Address { return val.address }
 func (val *Validator) Deposit() uint64         { return val.deposit }
 func (val *Validator) Weight() *big.Int        { return val.weight }
 
-type ValidatorSet interface {
-	UpdateWeight()
-	AtIndex(i int) *Validator
+type ValidatorList interface {
+	UpdateWeights()
+	At(i int) *Validator
 	Get(addr common.Address) *Validator
 	Size() int
 	Proposer() *Validator
 	Contains(addr common.Address) bool
 }
 
-var ErrInvalidParams = errors.New("A validator set needs at leat one validator")
+var ErrInvalidParams = errors.New("A validator set needs at least one validator")
 
-func NewValidatorSet(validators []*Validator) (*validatorSet, error) {
+func NewValidatorList(validators []*Validator) (*validatorList, error) {
 	if len(validators) == 0 {
 		return nil, ErrInvalidParams
 	}
 
-	set := &validatorSet{
+	set := &validatorList{
 		validators: validators,
 		proposer:   validators[0],
 	}
@@ -51,13 +51,13 @@ func NewValidatorSet(validators []*Validator) (*validatorSet, error) {
 	return set, nil
 }
 
-type validatorSet struct {
+type validatorList struct {
 	validators []*Validator
 	proposer   *Validator
 }
 
 // Update updates the weight and the proposer based on the set of validators
-func (set *validatorSet) UpdateWeight() {
+func (set *validatorList) UpdateWeights() {
 	proposer := set.validators[0]
 
 	for _, validator := range set.validators {
@@ -72,14 +72,14 @@ func (set *validatorSet) UpdateWeight() {
 	set.proposer.weight.Sub(set.proposer.weight, big.NewInt(int64(set.proposer.deposit)))
 }
 
-func (set *validatorSet) AtIndex(i int) *Validator {
-	if i > len(set.validators) {
+func (set *validatorList) At(i int) *Validator {
+	if i < 0 || i > len(set.validators) {
 		return nil
 	}
 	return set.validators[i]
 }
 
-func (set *validatorSet) Get(addr common.Address) *Validator {
+func (set *validatorList) Get(addr common.Address) *Validator {
 	for _, validator := range set.validators {
 		if validator.Address() == addr {
 			return validator
@@ -88,15 +88,15 @@ func (set *validatorSet) Get(addr common.Address) *Validator {
 	return nil
 }
 
-func (set *validatorSet) Size() int {
+func (set *validatorList) Size() int {
 	return len(set.validators)
 }
 
-func (set *validatorSet) Proposer() *Validator {
+func (set *validatorList) Proposer() *Validator {
 	return set.proposer
 }
 
-func (set *validatorSet) Contains(addr common.Address) bool {
+func (set *validatorList) Contains(addr common.Address) bool {
 	validator := set.Get(addr)
 	return validator != nil
 }
