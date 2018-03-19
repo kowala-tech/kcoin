@@ -458,7 +458,7 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'withdrawFunds',
-			call: 'validator_withdrawFunds'
+			call: 'validator_redeemFunds'
 		})
 	],
 	properties: []
