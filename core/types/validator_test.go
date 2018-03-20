@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"math/big"
 	"testing"
 )
@@ -22,8 +23,30 @@ func TestValidator_Properties(t *testing.T) {
 func TestValidatorSet_EmptyReturnsError(t *testing.T) {
 	validatorList, err := NewValidatorList(nil)
 
-	assert.Error(t, err)
-	assert.Nil(t, validatorList)
+	require.Error(t, err)
+	require.Nil(t, validatorList)
+}
+
+func TestValidatorSet_GetAtNegativeIndexReturnsNil(t *testing.T) {
+	validator := makeValidator("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed", 100, 100)
+	validatorList, err := NewValidatorList([]*Validator{validator})
+	require.NoError(t, err)
+
+	validator = validatorList.At(-1)
+
+	assert.Nil(t, validator)
+}
+
+func TestValidatorSet_GetAtOverLastReturnsNil(t *testing.T) {
+	validator := makeValidator("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed", 100, 100)
+	validatorList, err := NewValidatorList([]*Validator{validator})
+	require.NoError(t, err)
+
+	validatorAt := validatorList.At(0)
+	assert.Equal(t, validator, validatorAt)
+
+	validatorAt = validatorList.At(1)
+	assert.Nil(t, validatorAt)
 }
 
 func TestValidatorSet_One(t *testing.T) {
@@ -34,7 +57,7 @@ func TestValidatorSet_One(t *testing.T) {
 
 	validatorList, err := NewValidatorList([]*Validator{validator})
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, validatorList.Size())
 	assert.Equal(t, validator, validatorList.At(0))
 	assert.Equal(t, validator, validatorList.Get(address))
@@ -48,8 +71,8 @@ func TestValidatorSet_UpdateWeightChangesProposer(t *testing.T) {
 	validator3 := makeValidator("0x7aaeb6053f3e94c9b9a09f33669435e7ef1beaed", 99, 99)
 
 	validatorList, err := NewValidatorList([]*Validator{validator, validator2, validator3})
-	assert.NoError(t, err)
 
+	require.NoError(t, err)
 	validatorList.UpdateWeights()
 	assert.Equal(t, validator2, validatorList.Proposer())
 	assert.Equal(t, big.NewInt(101), validatorList.Proposer().weight)
@@ -65,8 +88,8 @@ func TestValidatorSet_UpdateWeightChangesProposerElections(t *testing.T) {
 	validator3 := makeValidator("0x7aaeb6053f3e94c9b9a09f33669435e7ef1beaed", 99, 99)
 
 	validatorList, err := NewValidatorList([]*Validator{validator, validator2, validator3})
-	assert.NoError(t, err)
-	assert.Equal(t, 3, validatorList.Size())
+	require.NoError(t, err)
+	require.Equal(t, 3, validatorList.Size())
 
 	elections := []struct {
 		proposerWeight   *big.Int

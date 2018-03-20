@@ -73,7 +73,7 @@ func (set *validatorList) UpdateWeights() {
 }
 
 func (set *validatorList) At(i int) *Validator {
-	if i < 0 || i > len(set.validators) {
+	if i < 0 || i >= len(set.validators) {
 		return nil
 	}
 	return set.validators[i]
