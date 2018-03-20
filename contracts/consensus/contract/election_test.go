@@ -128,14 +128,14 @@ func (s *ElectionContractSuite) TestDeployDepositIsNotEnough() {
 func (s *ElectionContractSuite) TestDeployMaxValidatorsEqualZero() {
 	r := s.Require()
 
-	err := s.DeployElectionContract(s.baseDeposit, big.NewInt(0), s.unbondingPeriod)
+	err := s.DeployElectionContract(s.baseDeposit, common.Big0, s.unbondingPeriod)
 	r.Equal(errTransactionFailed, err)
 }
 
 func (s *ElectionContractSuite) TestDeployMaxValidatorsGreaterThanZero() {
 	r := s.Require()
 
-	max := big.NewInt(1)
+	max := common.Big1
 	err := s.DeployElectionContract(s.baseDeposit, max, s.unbondingPeriod)
 	r.NoError(err)
 
@@ -242,7 +242,7 @@ func (s *ElectionContractSuite) TestGetMinimumDeposit_ElectionFull() {
 	r := s.Require()
 
 	// leave margin just for the genesis validator
-	s.DeployElectionContract(s.baseDeposit, big.NewInt(1), s.unbondingPeriod)
+	s.DeployElectionContract(s.baseDeposit, common.Big1, s.unbondingPeriod)
 
 	minDeposit, err := s.contract.GetMinimumDeposit(&bind.CallOpts{})
 	r.NoError(err)
@@ -253,7 +253,7 @@ func (s *ElectionContractSuite) TestGetMinimumDeposit_ElectionFull() {
 func (s *ElectionContractSuite) TestSetBaseDepositNotOwner() {
 	r := s.Require()
 
-	_, err := s.contract.SetBaseDeposit(bind.NewKeyedTransactor(s.notOwner), big.NewInt(0))
+	_, err := s.contract.SetBaseDeposit(bind.NewKeyedTransactor(s.notOwner), common.Big0)
 	r.Equal(errTransactionFailed, err)
 }
 

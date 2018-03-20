@@ -159,6 +159,7 @@ func (api *PrivateValidatorAPI) SetCoinbase(coinbase common.Address) bool {
 	return true
 }
 
+/*
 // GetDeposits returns the validator's deposits at stake
 func (api *PrivateValidatorAPI) GetDeposits() ([]*types.Deposit, error) {
 	deposits, err := api.kusd.Validator().Deposits()
@@ -168,15 +169,15 @@ func (api *PrivateValidatorAPI) GetDeposits() ([]*types.Deposit, error) {
 	return deposits, nil
 }
 
-// WithdrawFunds requests a transfer of the deposits that are past
+// RedeemFunds requests a transfer of the deposits that are past
 // the unbonding period back to the user account.
-func (api *PrivateValidatorAPI) WithdrawFunds() (bool, error) {
-	hasFunds, err := api.kusd.Validator().WithdrawFunds()
-	if err != nil {
+func (api *PrivateValidatorAPI) RedeemFunds() (bool, error) {
+	if err := api.kusd.Validator().RedeemFunds(); err != nil {
 		return false, err
 	}
 	return hasFunds, nil
 }
+*/
 
 // PrivateAdminAPI is the collection of Kowala full node-related APIs
 // exposed over the private admin endpoint.
