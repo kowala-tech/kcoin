@@ -31,7 +31,6 @@ var (
 
 // Backend wraps all methods required for mining.
 type Backend interface {
-	AccountManager() *accounts.Manager
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() kusddb.Database
