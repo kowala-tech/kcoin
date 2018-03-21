@@ -49,6 +49,8 @@ type Validator interface {
 	AddProposal(proposal *types.Proposal) error
 	AddVote(vote *types.Vote) error
 	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
+	Deposits() ([]*types.Deposit, error)
+	RedeemDeposits() error
 }
 
 // validator represents a consensus validator
@@ -629,4 +631,12 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 	val.validatorsChecksum = checksum
 
 	return nil
+}
+
+func (val *validator) Deposits() ([]*types.Deposit, error) {
+	return val.election.Deposits(val.walletAccount.Account().Address)
+}
+
+func (val *validator) RedeemDeposits() error {
+	return val.election.RedeemDeposits(val.walletAccount)
 }

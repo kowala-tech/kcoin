@@ -99,7 +99,7 @@ func (api *PrivateValidatorAPI) SetCoinbase(coinbase common.Address) bool {
 	return true
 }
 
-// SetDeposit  sets the deposit of the validator
+// SetDeposit sets the deposit of the validator
 func (api *PrivateValidatorAPI) SetDeposit(deposit uint64) bool {
 	api.kusd.SetDeposit(deposit)
 	return true
@@ -108,6 +108,18 @@ func (api *PrivateValidatorAPI) SetDeposit(deposit uint64) bool {
 // GetMinimumDeposit gets the minimum deposit required to take a slot as a validator
 func (api *PrivateValidatorAPI) GetMinimumDeposit() uint64 {
 	return api.kusd.GetMinimumDeposit()
+}
+
+// GetDeposits returns the validator deposits
+func (api *PrivateValidatorAPI) GetDeposits() ([]*types.Deposit, error) {
+	return api.kusd.Validator().Deposits()
+}
+
+func (api *PrivateValidatorAPI) RedeemDeposits() (bool, error) {
+	if api.kusd.Validator().RedeemDeposits(); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // PrivateAdminAPI is the collection of Kowala full node-related APIs
