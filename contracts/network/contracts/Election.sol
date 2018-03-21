@@ -12,7 +12,7 @@ contract Election is Ownable {
     uint public maxValidators;
     // period in days
     uint public unbondingPeriod;
-    address public genesis;
+    address public genesisValidator;
 
     // validatorsChecksum is a representation of the current set of validators
     bytes32 public validatorsChecksum;
@@ -65,13 +65,13 @@ contract Election is Ownable {
         baseDeposit = _baseDeposit;
         maxValidators = _maxValidators;
         unbondingPeriod = _unbondingPeriod * 1 days;
-        genesis = _genesis;
+        genesisValidator = _genesis;
 
         _insertValidator(_genesis, _baseDeposit);
     }
 
     function isGenesisValidator(address code) public view returns (bool isIndeed) {
-        return code == genesis;
+        return code == genesisValidator;
     }
 
     function isValidator(address code) public view returns (bool isIndeed) {
