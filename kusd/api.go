@@ -116,7 +116,7 @@ func (api *PrivateValidatorAPI) GetDeposits() ([]*types.Deposit, error) {
 }
 
 func (api *PrivateValidatorAPI) RedeemDeposits() (bool, error) {
-	if api.kusd.Validator().RedeemDeposits(); err != nil {
+	if err := api.kusd.Validator().RedeemDeposits(); err != nil {
 		return false, err
 	}
 	return true, nil
