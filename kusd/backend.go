@@ -142,12 +142,15 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	kusd.ApiBackend.gpo = gasprice.NewOracle(kusd.ApiBackend, gpoParams)
 
 	// consensus validator
-	networkContract := getNetworkContract(kusd.BlockChain(), NewContractBackend(kusd.ApiBackend))
+	election, err := network.NewElection(network.TestnetAddress, NewContractBackend(kusd.ApiBackend), chainConfig.ChainID)
+	if err != nil {
+		log.Crit("Failed to load the network contract", "err", err)
+	}
 	walletAccount, err := getWalletAccount(ctx.AccountManager, kusd.coinbase)
 	if err != nil {
 		log.Warn("failed to get wallet account", "err", err)
 	}
-	kusd.validator = validator.New(walletAccount, kusd, networkContract, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
+	kusd.validator = validator.New(walletAccount, kusd, election, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
@@ -164,22 +167,6 @@ func getWalletAccount(accountManager *accounts.Manager, address common.Address) 
 		return nil, err
 	}
 	return accounts.NewWalletAccount(wallet, account)
-}
-
-func getNetworkContract(blockChain *core.BlockChain, backend *ContractBackend) *network.NetworkContract {
-	state, err := blockChain.State()
-	if err != nil {
-		log.Crit("Failed to fetch the current state", "err", err)
-	}
-	contracts, err := network.GetContracts(state)
-	if err != nil {
-		log.Crit("Failed to access the network contracts", "err", err)
-	}
-	contract, err := network.NewNetworkContract(contracts.Network, backend)
-	if err != nil {
-		log.Crit("Failed to load the network contract", "err", err)
-	}
-	return contract
 }
 
 func makeExtraData(extra []byte) []byte {

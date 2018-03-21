@@ -1,12 +1,8 @@
 package tendermint
 
 import (
-	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/contracts/network"
-	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/params"
 )
 
@@ -19,6 +15,7 @@ var (
 	big101    = big.NewInt(101)
 )
 
+/*
 func CalculateBlockReward(blockNumber *big.Int, state *state.StateDB) (*big.Int, error) {
 	// block 0
 	if blockNumber.Cmp(common.Big0) == 0 {
@@ -92,6 +89,7 @@ func CalculateBlockReward(blockNumber *big.Int, state *state.StateDB) (*big.Int,
 	state.SetState(contracts.Network, common.HexToHash("0x02"), common.BigToHash(r))
 	return r, nil
 }
+*/
 
 func bigMax(b1, b2 *big.Int) *big.Int {
 	if b1.Cmp(b2) < 0 {
