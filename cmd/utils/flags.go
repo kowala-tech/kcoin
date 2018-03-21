@@ -242,7 +242,7 @@ var (
 		Usage: "Number of trie node generations to keep in memory",
 		Value: int(state.MaxTrieCacheGen),
 	}
-	// Consensus Validator settings
+	// Consensus Voter settings
 	ValidationEnabledFlag = cli.BoolFlag{
 		Name:  "validate",
 		Usage: "Enable consensus validation",

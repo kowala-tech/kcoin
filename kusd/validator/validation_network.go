@@ -18,7 +18,7 @@ type ValidationNetwork interface {
 	Join(walletAccount accounts.WalletAccount, amount uint64) error
 	Withdraw(walletAccount accounts.WalletAccount) error
 	ValidatorsChecksum() (ValidatorsChecksum, error)
-	Validators() (types.ValidatorList, error)
+	Validators() (types.Voters, error)
 	IsGenesisVoter(address common.Address) (bool, error)
 	IsVoter(address common.Address) (bool, error)
 }
@@ -84,13 +84,13 @@ func (network *validationNetwork) ValidatorsChecksum() (ValidatorsChecksum, erro
 	return network.NetworkContract.VotersChecksum(&bind.CallOpts{})
 }
 
-func (network *validationNetwork) Validators() (types.ValidatorList, error) {
+func (network *validationNetwork) Validators() (types.Voters, error) {
 	count, err := network.GetVoterCount(&bind.CallOpts{})
 	if err != nil {
 		return nil, err
 	}
 
-	validators := make([]*types.Validator, count.Uint64())
+	validators := make([]*types.Voter, count.Uint64())
 	for i := int64(0); i < count.Int64(); i++ {
 		validator, err := network.GetVoterAtIndex(&bind.CallOpts{}, big.NewInt(i))
 		if err != nil {
@@ -98,10 +98,10 @@ func (network *validationNetwork) Validators() (types.ValidatorList, error) {
 		}
 
 		weight := big.NewInt(0)
-		validators[i] = types.NewValidator(validator.Addr, validator.Deposit.Uint64(), weight)
+		validators[i] = types.NewVoter(validator.Addr, validator.Deposit.Uint64(), weight)
 	}
 
-	return types.NewValidatorList(validators)
+	return types.NewVoters(validators)
 }
 
 func (network *validationNetwork) IsGenesisVoter(address common.Address) (bool, error) {

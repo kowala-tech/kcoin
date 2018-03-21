@@ -14,7 +14,7 @@ type Election struct {
 	blockNumber *big.Int
 	round       uint64
 
-	validators         types.ValidatorList
+	validators         types.Voters
 	validatorsChecksum [32]byte
 
 	proposal       *types.Proposal
@@ -40,7 +40,7 @@ type Election struct {
 // VotingTables represents the voting tables available for each election round
 type VotingTables = [2]*core.VotingTable
 
-func NewVotingTables(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, round uint64, voters types.ValidatorList) VotingTables {
+func NewVotingTables(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, round uint64, voters types.Voters) VotingTables {
 	tables := VotingTables{}
 	tables[0] = core.NewVotingTable(eventMux, signer, electionNumber, round, types.PreVote, voters)
 	tables[1] = core.NewVotingTable(eventMux, signer, electionNumber, round, types.PreCommit, voters)
@@ -49,7 +49,7 @@ func NewVotingTables(eventMux *event.TypeMux, signer types.Signer, electionNumbe
 
 // VotingSystem records the election votes since round 1
 type VotingSystem struct {
-	voters         types.ValidatorList
+	voters         types.Voters
 	electionNumber *big.Int // election number
 	round          uint64
 	votesPerRound  map[uint64]VotingTables
@@ -60,7 +60,7 @@ type VotingSystem struct {
 
 // NewVotingSystem returns a new voting system
 // @TODO (rgeraldes) - in the future replace eventMux with a subscription method
-func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters types.ValidatorList) *VotingSystem {
+func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters types.Voters) *VotingSystem {
 	system := &VotingSystem{
 		voters:         voters,
 		electionNumber: electionNumber,

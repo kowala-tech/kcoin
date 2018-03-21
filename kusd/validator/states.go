@@ -111,8 +111,6 @@ func (val *validator) newElectionState() stateFn {
 func (val *validator) newRoundState() stateFn {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
-	val.validators.UpdateWeights()
-
 	if val.round != 0 {
 		val.round++
 		val.proposal = nil
@@ -126,11 +124,12 @@ func (val *validator) newRoundState() stateFn {
 func (val *validator) newProposalState() stateFn {
 	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
 
-	if val.isProposer() {
+	proposer := val.validators.NextProposer()
+	if proposer.Address() == val.address() {
 		log.Info("Proposing a new block")
 		val.propose()
 	} else {
-		log.Info("Waiting for the proposal", "proposer", val.validators.Proposer())
+		log.Info("Waiting for the proposal", "proposer", proposer)
 		select {
 		case block := <-val.blockCh:
 			val.block = block

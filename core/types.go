@@ -24,7 +24,7 @@ import (
 	"github.com/kowala-tech/kUSD/core/vm"
 )
 
-// Validator is an interface which defines the standard for block validation. It
+// Voter is an interface which defines the standard for block validation. It
 // is only responsible for validating block contents, as the header validation is
 // done by the specific consensus engines.
 //
