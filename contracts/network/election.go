@@ -13,10 +13,12 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/contracts/network/contracts"
 	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kUSD/params"
 )
 
 var (
-	TestnetAddress = common.HexToAddress("")
+	mainnetAddr = common.HexToAddress("")
+	testnetAddr = common.HexToAddress("0x5BEAdEeA4f089c32aFeCcEbe06dD9205eCC7F61f")
 )
 
 type ValidatorsChecksum [32]byte
@@ -38,8 +40,17 @@ type election struct {
 	chainID *big.Int
 }
 
-func NewElection(contractAddr common.Address, contractBackend bind.ContractBackend, chainID *big.Int) (*election, error) {
-	contract, err := contracts.NewElectionContract(contractAddr, contractBackend)
+func getContractAddr(chainID *big.Int) common.Address {
+	switch {
+	case chainID.Cmp(params.TestnetChainConfig.ChainID) == 0:
+		return testnetAddr
+	default:
+		return mainnetAddr
+	}
+}
+
+func NewElection(contractBackend bind.ContractBackend, chainID *big.Int) (*election, error) {
+	contract, err := contracts.NewElectionContract(getContractAddr(chainID), contractBackend)
 	if err != nil {
 		return nil, err
 	}
