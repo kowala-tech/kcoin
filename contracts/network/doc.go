@@ -3,7 +3,6 @@ Package network implements the network core contracts
 
 Contracts
 
-
 Election Contract - Election.sol
 
 Package consensus implements the consensus election contract.
