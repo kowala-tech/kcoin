@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"errors"
 	"math/big"
@@ -115,6 +116,7 @@ func (suite *ElectionContractSuite) TestDeployElectionContract() {
 	req.Equal(suite.maxValidators, latestMaxValidators)
 
 	/*
+		@TODO (rgeraldes)
 		latestUnbondingPeriod, err := suite.contract.UnbondingPeriod(&bind.CallOpts{})
 		req.NoError(err)
 		req.Equal(new(big.Int).SetUint64(suite.unbondingPeriod.Int64()*time.Hour.*24), latestUnbondingPeriod)
@@ -258,6 +260,219 @@ func (suite *ElectionContractSuite) TestSetBaseDeposit_Owner() {
 	latestDeposit, err := suite.contract.BaseDeposit(&bind.CallOpts{})
 	req.NoError(err)
 	req.Equal(deposit, latestDeposit)
+}
+
+func (suite *ElectionContractSuite) TestSetMaxValidators_NotOwner() {
+	req := suite.Require()
+
+	_, err := suite.contract.SetMaxValidators(bind.NewKeyedTransactor(suite.randomUser), common.Big2)
+	req.Equal(errTransactionFailed, err)
+}
+
+func (suite *ElectionContractSuite) TestSetMaxValidators_Owner_GreaterOrEqualThanValidatorCount() {
+	req := suite.Require()
+
+	oldValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+
+	maxValidators := new(big.Int).Add(oldValidatorCount, common.Big1)
+	_, err = suite.contract.SetMaxValidators(bind.NewKeyedTransactor(suite.owner), maxValidators)
+	req.NoError(err)
+
+	suite.backend.Commit()
+
+	// value should be updated
+	latestMax, err := suite.contract.MaxValidators(&bind.CallOpts{})
+	req.NoError(err)
+	req.Equal(maxValidators, latestMax)
+
+	// number of validators should remain the same
+	latestValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.Equal(oldValidatorCount, latestValidatorCount)
+}
+
+func (suite *ElectionContractSuite) TestSetMaxValidators_Owner_LessThanValidatorCount() {
+	req := suite.Require()
+
+	oldValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+
+	maxValidators := new(big.Int).Sub(oldValidatorCount, common.Big1)
+	_, err = suite.contract.SetMaxValidators(bind.NewKeyedTransactor(suite.owner), maxValidators)
+	req.NoError(err)
+
+	suite.backend.Commit()
+
+	// value should be updated
+	latestMaxValidators, err := suite.contract.MaxValidators(&bind.CallOpts{})
+	req.NoError(err)
+	req.Equal(maxValidators, latestMaxValidators)
+
+	// validator count should be equal to the new max
+	latestValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.Equal(maxValidators, latestValidatorCount)
+
+	// validator that left the election should be the
+	// genesis validator - smallest bidder
+	// @TODO (rgeraldes)
+}
+
+func (suite *ElectionContractSuite) TestJoin_AlreadyValidator() {
+	req := suite.Require()
+
+	// genesis validator is already part of the election
+	_, err := suite.contract.Join(bind.NewKeyedTransactor(suite.genesisValidator))
+	req.Equal(errTransactionFailed, err)
+}
+
+func (suite *ElectionContractSuite) TestJoin_InsufficientDeposit() {
+	req := suite.Require()
+
+	minDeposit, err := suite.contract.GetMinimumDeposit(&bind.CallOpts{})
+	req.NoError(err)
+
+	opts := bind.NewKeyedTransactor(suite.randomUser)
+	opts.Value = new(big.Int).Sub(minDeposit, common.Big1)
+	_, err = suite.contract.Join(opts)
+	req.Equal(errTransactionFailed, err)
+}
+
+func (suite *ElectionContractSuite) TestLeave_NotValidator() {
+	req := suite.Require()
+
+	_, err := suite.contract.Leave(bind.NewKeyedTransactor(suite.randomUser))
+	req.Equal(errTransactionFailed, err)
+}
+
+func (suite *ElectionContractSuite) TestLeave_Validator() {
+	req := suite.Require()
+
+	oldValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+
+	sender := suite.genesisValidator
+	senderAddr := getAddress(sender)
+	_, err = suite.contract.Leave(bind.NewKeyedTransactor(sender))
+	req.NoError(err)
+
+	suite.backend.Commit()
+
+	// user should not be a validator anymore
+	isValidator, err := suite.contract.IsValidator(&bind.CallOpts{}, senderAddr)
+	req.NoError(err)
+	req.False(isValidator)
+
+	// number of validators should be equal to old count minus one
+	latestValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.Equal(new(big.Int).Sub(oldValidatorCount, common.Big1), latestValidatorCount)
+
+	// latest deposit should have a release date (different than 0)
+	latestDepositCount, err := suite.contract.GetDepositCount(&bind.CallOpts{From: senderAddr})
+	req.NoError(err)
+	currentDeposit, err := suite.contract.GetDepositAtIndex(&bind.CallOpts{From: senderAddr}, new(big.Int).Sub(latestDepositCount, common.Big1))
+	req.NoError(err)
+	req.NotZero(currentDeposit.Amount.Uint64())
+}
+
+func (suite *ElectionContractSuite) TestRedeemFunds_NoDeposits() {
+	req := suite.Require()
+
+	sender := suite.randomUser
+	senderAddr := getAddress(sender)
+	_, err := suite.contract.RedeemDeposits(bind.NewKeyedTransactor(sender))
+	req.NoError(err)
+
+	// deposit count should be zero
+	depositCount, err := suite.contract.GetDepositCount(&bind.CallOpts{From: senderAddr})
+	req.NoError(err)
+	req.Zero(depositCount.Uint64())
+
+	suite.backend.Commit()
+
+	// user balance should be less than the initial balance =
+	// cost of the previous transaction + no deposits
+	balance, err := suite.backend.BalanceAt(context.TODO(), senderAddr, suite.backend.CurrentBlock().Number())
+	req.NoError(err)
+	req.True(balance.Cmp(suite.initialBalance) < 0)
+}
+
+func (suite *ElectionContractSuite) TestRedeemFunds_LockedDeposit() {
+	// @NOTE (rgeraldes) - default unbonding period
+	// is 10 days - deposit will remain locked for 10 days
+	// as soon as the validator decides to leave the election.
+	req := suite.Require()
+
+	// leave the election - we will use the genesis
+	// since he has one deposit with no release date
+	sender := suite.genesisValidator
+	senderAddr := getAddress(sender)
+
+	oldDepositCount, err := suite.contract.GetDepositCount(&bind.CallOpts{From: senderAddr})
+	req.NoError(err)
+
+	opts := bind.NewKeyedTransactor(sender)
+	_, err = suite.contract.Leave(opts)
+	req.NoError(err)
+
+	suite.backend.Commit()
+
+	// redeem deposit
+	_, err = suite.contract.RedeemDeposits(opts)
+	req.NoError(err)
+
+	suite.backend.Commit()
+
+	// user balance should be less than the initial balance =
+	// cost of previous transactions + no deposit (locked deposit)
+	balance, err := suite.backend.BalanceAt(context.TODO(), senderAddr, suite.backend.CurrentBlock().Number())
+	req.NoError(err)
+	req.True(balance.Cmp(suite.initialBalance) < 0)
+
+	// user deposit should be available as before
+	depositCount, err := suite.contract.GetDepositCount(&bind.CallOpts{From: senderAddr})
+	req.NoError(err)
+	req.True(oldDepositCount.Cmp(depositCount) == 0)
+}
+
+func (suite *ElectionContractSuite) TestRedeemFunds_UnlockedDeposit() {
+	// @NOTE (rgeraldes) - default unbonding period
+	// is 10 days - deposit will remain locked for 10 days
+	// as soon as the validator decides to leave the election.
+	req := suite.Require()
+
+	// deploy a new version of the contract
+	// with an unbounding period of 0 days
+	suite.DeployElectionContract(suite.baseDeposit, suite.maxValidators, common.Big0)
+	suite.backend.Commit()
+
+	// leave the election - we will use the genesis
+	// since he has one deposit with no release date
+	sender := suite.genesisValidator
+	senderAddr := getAddress(sender)
+
+	opts := bind.NewKeyedTransactor(sender)
+	_, err := suite.contract.Leave(opts)
+	req.NoError(err)
+	suite.backend.Commit()
+
+	// redeem deposit
+	_, err = suite.contract.RedeemDeposits(opts)
+	req.NoError(err)
+	suite.backend.Commit()
+
+	// user balance should be greater than the initial balance =
+	// cost of previous transactions + unlocked deposit
+	balance, err := suite.backend.BalanceAt(context.TODO(), senderAddr, suite.backend.CurrentBlock().Number())
+	req.NoError(err)
+	req.True(balance.Cmp(suite.initialBalance) > 0)
+
+	// user deposit should not be available anymore
+	depositCount, err := suite.contract.GetDepositCount(&bind.CallOpts{From: senderAddr})
+	req.NoError(err)
+	req.Zero(depositCount.Uint64())
 }
 
 func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
