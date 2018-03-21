@@ -3,6 +3,7 @@ package types
 import (
 	"container/heap"
 	"math/big"
+	"time"
 
 	"github.com/kowala-tech/kUSD/common"
 )
@@ -88,14 +89,23 @@ func (set *ValidatorSet) Contains(addr common.Address) bool {
 	return ok
 }
 
-func NewDeposit(amount *big.Int) *Deposit {
+func NewDeposit(amount *big.Int, unixTimestamp int64) *Deposit {
 	return &Deposit{
-		amount: amount,
+		amount:     amount,
+		releasedAt: time.Unix(unixTimestamp, 0),
 	}
 }
 
 // Deposit represents the validator deposits at stake
 type Deposit struct {
-	amount *big.Int
-	//releasedAt
+	amount     *big.Int
+	releasedAt time.Time
+}
+
+func (dep *Deposit) Amount() *big.Int {
+	return dep.amount
+}
+
+func (dep *Deposit) ReleasedAt() time.Time {
+	return dep.releasedAt
 }
