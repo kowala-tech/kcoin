@@ -1,10 +1,6 @@
 package tendermint
 
-import (
-	"math/big"
-
-	"github.com/kowala-tech/kUSD/params"
-)
+/*
 
 var (
 	big42kUSD = new(big.Int).Mul(big.NewInt(42), new(big.Int).SetUint64(params.Ether))
@@ -15,7 +11,6 @@ var (
 	big101    = big.NewInt(101)
 )
 
-/*
 func CalculateBlockReward(blockNumber *big.Int, state *state.StateDB) (*big.Int, error) {
 	// block 0
 	if blockNumber.Cmp(common.Big0) == 0 {
@@ -89,7 +84,6 @@ func CalculateBlockReward(blockNumber *big.Int, state *state.StateDB) (*big.Int,
 	state.SetState(contracts.Network, common.HexToHash("0x02"), common.BigToHash(r))
 	return r, nil
 }
-*/
 
 func bigMax(b1, b2 *big.Int) *big.Int {
 	if b1.Cmp(b2) < 0 {
@@ -109,7 +103,7 @@ func blockRewardCap(totalWei *big.Int) *big.Int {
 	return bigMax(new(big.Int).Div(totalWei, big1k), big82kUSD)
 }
 
-/*
+
 Mechanism 1: Block Reward Algorithm
 
 totalCoinSupply(b) refers to the total number of coins issued as of block number b.
