@@ -175,3 +175,13 @@ docker-publish-kusd:
 
 docker-publish-faucet:
 	docker push kowalatech/faucet
+
+## E2E tests
+
+GODOG_BIN := $(shell command -v godog 2> /dev/null)
+e2e:
+ifndef DEP
+	@echo "Installing godog..."
+	@go get github.com/DATA-DOG/godog/cmd/godog
+endif
+	godog
