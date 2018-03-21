@@ -67,7 +67,7 @@ type VotingTable struct {
 	round       uint64
 	voteType    types.VoteType
 
-	voters        *types.ValidatorSet
+	voters        types.ValidatorList
 	received      *common.BitArray
 	votes         []*types.Vote // Primary votes to share
 	sum           int           // Sum of voting power for seen votes, discounting conflicts
@@ -87,7 +87,7 @@ type VotingTable struct {
 	//peerMaj23s map[string]common.Hash // Maj23 for each peer
 }
 
-func NewVotingTable(eventMux *event.TypeMux, signer types.Signer, blockNumber *big.Int, round uint64, voteType types.VoteType, voters *types.ValidatorSet) *VotingTable {
+func NewVotingTable(eventMux *event.TypeMux, signer types.Signer, blockNumber *big.Int, round uint64, voteType types.VoteType, voters types.ValidatorList) *VotingTable {
 	table := &VotingTable{
 		blockNumber:   blockNumber,
 		round:         round,
@@ -109,7 +109,7 @@ func NewVotingTable(eventMux *event.TypeMux, signer types.Signer, blockNumber *b
 
 	// cache voter index
 	for i := 0; i < table.voters.Size(); i++ {
-		table.addressToIndex[table.voters.AtIndex(i).Address()] = i
+		table.addressToIndex[table.voters.At(i).Address()] = i
 	}
 
 	return table

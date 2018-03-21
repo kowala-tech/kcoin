@@ -111,7 +111,7 @@ func (val *validator) newElectionState() stateFn {
 func (val *validator) newRoundState() stateFn {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
-	val.validators.UpdateWeight()
+	val.validators.UpdateWeights()
 
 	if val.round != 0 {
 		val.round++
