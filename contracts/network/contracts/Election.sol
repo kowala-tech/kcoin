@@ -221,4 +221,7 @@ contract Election is Ownable {
             msg.sender.transfer(refund);
         }
     }
+
+    // fallback function
+    function() payable public {}
 }
