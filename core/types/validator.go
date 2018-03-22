@@ -91,21 +91,21 @@ func (set *ValidatorSet) Contains(addr common.Address) bool {
 
 func NewDeposit(amount *big.Int, unixTimestamp int64) *Deposit {
 	return &Deposit{
-		amount:     amount,
-		releasedAt: time.Unix(unixTimestamp, 0),
+		amount:      amount,
+		availableAt: time.Unix(unixTimestamp, 0),
 	}
 }
 
 // Deposit represents the validator deposits at stake
 type Deposit struct {
-	amount     *big.Int
-	releasedAt time.Time
+	amount      *big.Int
+	availableAt time.Time
 }
 
 func (dep *Deposit) Amount() *big.Int {
 	return dep.amount
 }
 
-func (dep *Deposit) ReleasedAt() time.Time {
-	return dep.releasedAt
+func (dep *Deposit) AvailableAt() time.Time {
+	return dep.availableAt
 }

@@ -20,7 +20,7 @@ contract Election is Ownable {
     // Deposit represents the collateral - staked tokens
     struct Deposit {
         uint amount;
-        uint releasedAt;
+        uint availableAt;
     }
 
     // Validator represents a consensus validator      
@@ -112,7 +112,7 @@ contract Election is Ownable {
         Validator sender = validators[code];
         sender.index = validatorIndex.push(code) - 1;
         sender.isValidator = true;
-        sender.deposits.push(Deposit({amount:deposit, releasedAt: 0}));
+        sender.deposits.push(Deposit({amount:deposit, availableAt: 0}));
 
         for (uint index = sender.index; index > 0; index--) {
             Validator target = validators[validatorIndex[index - 1]];
@@ -142,7 +142,7 @@ contract Election is Ownable {
         validatorIndex.length--;
 
         validator.isValidator = false;
-        validator.deposits[validator.deposits.length - 1].releasedAt = now + unbondingPeriod;
+        validator.deposits[validator.deposits.length - 1].availableAt = now + unbondingPeriod;
 
         _updateChecksum();
     }
@@ -166,9 +166,9 @@ contract Election is Ownable {
         return validators[msg.sender].deposits.length; 
     }
 
-    function getDepositAtIndex(uint index) public view returns (uint amount, uint releasedAt) {
+    function getDepositAtIndex(uint index) public view returns (uint amount, uint availableAt) {
         Deposit deposit = validators[msg.sender].deposits[index];
-        return (deposit.amount, deposit.releasedAt / 1 days);
+        return (deposit.amount, deposit.availableAt / 1 days);
     }
 
     // join registers a new candidate as validator
@@ -205,8 +205,8 @@ contract Election is Ownable {
         uint i = 0;
         Deposit[] deposits = validators[msg.sender].deposits;
         
-        for (; i < deposits.length && deposits[i].releasedAt != 0; i++) {
-            if (now < deposits[i].releasedAt) {
+        for (; i < deposits.length && deposits[i].availableAt != 0; i++) {
+            if (now < deposits[i].availableAt) {
                 // @NOTE (rgeraldes) - no need to iterate further since the 
                 // release date (if is different than 0) of the following deposits
                 // will always be past than the current one.
