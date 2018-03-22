@@ -9,8 +9,8 @@ import (
 	"github.com/kowala-tech/kUSD/event"
 )
 
-// Election encapsulates the consensus state for a specific block election
-type Election struct {
+// VotingState encapsulates the consensus state for a specific block election
+type VotingState struct {
 	blockNumber *big.Int
 	round       uint64
 

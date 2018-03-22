@@ -55,7 +55,7 @@ type Validator interface {
 
 // validator represents a consensus validator
 type validator struct {
-	Election           // consensus internal state
+	VotingState        // consensus internal state
 	maxTransitions int // max number of state transitions (tests) 0 - unlimited
 
 	running    int32
