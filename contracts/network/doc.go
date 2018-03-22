@@ -1,20 +1,43 @@
 /*
-Package network implements the network core contracts
+Package network implements the network related contracts
 
-Contracts
+This package includes the consensus election contract.
 
-Election Contract - Election.sol
 
-Package consensus implements the consensus election contract.
-The contract has an owner and it's responsible for managing the consensus
-validator set.
 Glossary
+
+Validator - consensus participant
+
+Puppeth - cmdline client used to create the genesis file. It can be found under
+kUSD/cmd/puppeth.
+
 Base deposit - represents the deposit that a candidate has to do in order to
 secure a place in the elections (if there are positions available).
-Minimum deposit -
+
 Unbonding period - is a predetermined period of time that coins remain locked,
 starting from the moment a validator decides to leave the consensus elections.
-Validator - consensus participant.
+
+
+Context
+
+Right now, these contracts are included in the genesis block during the genesis
+file creation (using puppeth). The process consists on running the contract
+constructor against an empty state using the runtime.Create method and include
+the code and storage in a new genesis account. The initial deposit for the
+genesis validator is also added in the contract genesis account as balance.
+
+
+Consensus Election Contract
+
+The election contract manages the election validators. During its creation
+you are asked to provide the address of the genesis validator, a base deposit,
+a maximum number of validators and an unbonding period.
+Initially the idea was that we could call the contract constr
+
+
+
+Minimum deposit -
+
 
 Use Cases
 

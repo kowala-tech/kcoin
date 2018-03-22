@@ -48,14 +48,17 @@ creating libraries(different contract) but this option has an negative impact on
 the tx fees. It might be the best option in some cases though.
 
 
-Common Pitfals
+Common Pitfalls
 
 - The transaction sender does not have enough funds to deploy the contract and
 execute other transactions.
 - State might be inconsistent because you forgot to commit a transaction.
 - In order to transfer money to a contract without specifying a method, you must
 include a fallback function in the contract in order to be able to transfer
-funds to the contract. 
+funds to the contract.
 - The block has a gas limit block, so, that means that it's possible that an
 operation takes more gas than the limit. The limit will probably change in the
 future and it's something that we need to benchmark with e2e tests.
+*/
+
+package contracts
