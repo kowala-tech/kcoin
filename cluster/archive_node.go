@@ -87,6 +87,7 @@ func archiveNodePod(podName, networkID, bootnode string, port int32) *apiv1.Pod 
 						"--syncmode", "fast",
 						"--bootnodes", bootnode,
 						"--networkid", networkID,
+						"--gasprice", "1",
 						"--verbosity", "6",
 						"--port", fmt.Sprintf("%v", port),
 					},
