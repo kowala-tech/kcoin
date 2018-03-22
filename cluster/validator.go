@@ -3,9 +3,8 @@ package cluster
 import (
 	"fmt"
 	"log"
+	"math/big"
 	"time"
-
-	"github.com/kowala-tech/kUSD-testnet/shared"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,12 +73,12 @@ func (client *cluster) fundValidator(podName string) error {
 	}
 
 	log.Println("Waiting for funds to be available")
-	err = shared.WaitFor(2*time.Second, 1*time.Minute, func() bool {
+	err = WaitFor(2*time.Second, 1*time.Minute, func() bool {
 		balance, err := client.GetBalance(podName)
 		if err != nil {
 			return false
 		}
-		return balance > 0
+		return balance.Cmp(big.NewInt(0)) > 0
 	})
 	return err
 }
@@ -102,12 +101,12 @@ func (client *cluster) startValidation(podName string) error {
 	}
 
 	log.Println("Waiting for deposit to be accepted")
-	err = shared.WaitFor(2*time.Second, 1*time.Minute, func() bool {
+	err = WaitFor(2*time.Second, 1*time.Minute, func() bool {
 		balance, err := client.GetBalance(podName)
 		if err != nil {
 			return false
 		}
-		return balance < initialBalance
+		return balance.Cmp(initialBalance) < 0
 	})
 
 	return err

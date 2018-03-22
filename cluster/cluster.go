@@ -3,11 +3,10 @@ package cluster
 import (
 	"fmt"
 	"log"
-	"strconv"
+	"math/big"
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kUSD-testnet/shared"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -49,7 +48,7 @@ func (client *cluster) Cleanup() error {
 	if err != nil {
 		return err
 	}
-	return shared.WaitFor(1*time.Second, 20*time.Second, func() bool {
+	return WaitFor(1*time.Second, 20*time.Second, func() bool {
 		list, err := client.Clientset.CoreV1().Pods(Namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return false
@@ -102,7 +101,7 @@ func (client *cluster) createNamespace() error {
 
 func (client *cluster) waitForPod(podName string) error {
 	log.Printf("Waiting for pod `%v`...\n", podName)
-	return shared.WaitFor(2*time.Second, 1*time.Minute, func() bool {
+	return WaitFor(2*time.Second, 1*time.Minute, func() bool {
 		return client.isPodRunning(podName)
 	})
 }
@@ -117,20 +116,18 @@ func (client *cluster) isPodRunning(podName string) bool {
 
 func (client *cluster) waitForKusdPod(podName string) error {
 	log.Printf("Waiting for pod `%v`...\n", podName)
-	return shared.WaitFor(2*time.Second, 2*time.Minute, func() bool {
+	return WaitFor(2*time.Second, 2*time.Minute, func() bool {
 		return client.isKusdPodRunning(podName)
 	})
 }
 
-func (client *cluster) GetBalance(podName string) (float64, error) {
+func (client *cluster) GetBalance(podName string) (*big.Int, error) {
 	resp, err := client.Exec(podName, fmt.Sprintf(`eth.getBalance(eth.coinbase)`))
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	balance, err := strconv.ParseFloat(strings.TrimSpace(resp.StdOut), 64)
-	if err != nil {
-		return 0, err
-	}
+	balance := big.NewInt(0)
+	balance.SetString(strings.TrimSpace(resp.StdOut), 10)
 	return balance, nil
 }
 
@@ -149,7 +146,7 @@ func (client *cluster) isKusdPodRunning(podName string) bool {
 
 func (client *cluster) waitForInitialSync(podName string) error {
 	log.Printf("Waiting for pod `%v` to finish initial sync...\n", podName)
-	return shared.WaitFor(2*time.Second, 5*time.Minute, func() bool {
+	return WaitFor(2*time.Second, 5*time.Minute, func() bool {
 		resp, err := client.Exec(podName, `eth.syncing`)
 		return err == nil && resp.StdOut == "false\n"
 	})

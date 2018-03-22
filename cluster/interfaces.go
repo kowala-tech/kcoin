@@ -1,6 +1,8 @@
 package cluster
 
 import (
+	"math/big"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -38,7 +40,7 @@ type Cluster interface {
 	Exec(podName, command string) (*ExecResponse, error)
 
 	// GetBalance returns the balance of the coinbase of the specified node
-	GetBalance(podName string) (float64, error)
+	GetBalance(podName string) (*big.Int, error)
 
 	// RunArchiveNode Runs an archive nodes.
 	RunArchiveNode() (string, error)

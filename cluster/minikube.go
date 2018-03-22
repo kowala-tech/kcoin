@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/kowala-tech/kUSD-testnet/shared"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -94,7 +93,7 @@ func (cluster *minikubeCluster) assertReady() error {
 
 func (cluster *minikubeCluster) waitForCluster() error {
 	log.Println("Waiting for cluster to be up and running...")
-	return shared.WaitFor(10*time.Second, 5*time.Minute, func() bool {
+	return WaitFor(10*time.Second, 5*time.Minute, func() bool {
 		client, err := cluster.Clientset()
 		if err != nil {
 			return false

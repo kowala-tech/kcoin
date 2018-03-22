@@ -6,8 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"time"
-
-	"github.com/kowala-tech/kUSD-testnet/shared"
 )
 
 type kopsCluster struct {
@@ -92,7 +90,7 @@ func (cluster *kopsCluster) deleteCluster() error {
 
 func (cluster *kopsCluster) waitForCluster() error {
 	log.Println("Waiting for cluster to be up and running...")
-	return shared.WaitFor(10*time.Second, 5*time.Minute, func() bool {
+	return WaitFor(10*time.Second, 5*time.Minute, func() bool {
 		cmd := exec.Command("kops", "validate", "cluster", "--name", cluster.Name, "--state", "s3://"+cluster.s3Bucket)
 		cmd.Run()
 		return cmd.ProcessState.Success()
