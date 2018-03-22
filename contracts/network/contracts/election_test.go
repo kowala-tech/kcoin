@@ -339,6 +339,67 @@ func (suite *ElectionContractSuite) TestJoin_InsufficientDeposit() {
 	req.Equal(errTransactionFailed, err)
 }
 
+func (suite *ElectionContractSuite) TestJoin_InsertGreaterThan() {
+	req := suite.Require()
+
+	sender := suite.randomUser
+	senderAddr := getAddress(sender)
+
+	oldValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+
+	// make sure that the deposit is greater than the genesis deposit
+	genesisValidator, err := suite.contract.GetValidatorAtIndex(&bind.CallOpts{}, common.Big0)
+	req.NoError(err)
+	opts := bind.NewKeyedTransactor(sender)
+	opts.Value = new(big.Int).Add(genesisValidator.Deposit, common.Big1)
+	_, err = suite.contract.Join(opts)
+	req.NoError(err)
+	suite.backend.Commit()
+
+	// the election should have one more validator
+	latestValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.True(new(big.Int).Add(oldValidatorCount, common.Big1).Cmp(latestValidatorCount) == 0)
+
+	// validator at index 0 should be the new candidate
+	validator, err := suite.contract.GetValidatorAtIndex(&bind.CallOpts{}, common.Big0)
+	req.NoError(err)
+	req.Equal(validator.Code, senderAddr)
+}
+
+func (suite *ElectionContractSuite) TestJoin_InsertLessOrEqualTo() {
+	req := suite.Require()
+
+	sender := suite.randomUser
+	senderAddr := getAddress(sender)
+
+	oldValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+
+	// make sure that the deposit is equal to the genesis
+	// the deposit. In this scenario it cannot be lower than the
+	// genesis deposit because the value would be less than the
+	// base deposit
+	genesisValidator, err := suite.contract.GetValidatorAtIndex(&bind.CallOpts{}, common.Big0)
+	req.NoError(err)
+	opts := bind.NewKeyedTransactor(sender)
+	opts.Value = genesisValidator.Deposit
+	_, err = suite.contract.Join(opts)
+	req.NoError(err)
+	suite.backend.Commit()
+
+	// the election should have one more validator
+	latestValidatorCount, err := suite.contract.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.True(new(big.Int).Add(oldValidatorCount, common.Big1).Cmp(latestValidatorCount) == 0)
+
+	// validator at the end of the list should be the new candidate
+	validator, err := suite.contract.GetValidatorAtIndex(&bind.CallOpts{}, new(big.Int).Sub(latestValidatorCount, common.Big1))
+	req.NoError(err)
+	req.Equal(validator.Code, senderAddr)
+}
+
 func (suite *ElectionContractSuite) TestLeave_NotValidator() {
 	req := suite.Require()
 
