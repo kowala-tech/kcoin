@@ -96,7 +96,7 @@ func (vs *VotingSystem) Add(vote *types.Vote) error {
 		return err
 	}
 
-	go vs.eventMux.Post(core.NewVoteEvent{vote})
+	go vs.eventMux.Post(core.NewVoteEvent{Vote: vote})
 
 	return nil
 }
