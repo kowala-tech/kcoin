@@ -115,11 +115,10 @@ func (api *PrivateValidatorAPI) GetDeposits() ([]*types.Deposit, error) {
 	return api.kusd.Validator().Deposits()
 }
 
-func (api *PrivateValidatorAPI) RedeemDeposits() (bool, error) {
-	if err := api.kusd.Validator().RedeemDeposits(); err != nil {
-		return false, err
-	}
-	return true, nil
+// RedeemDeposits requests a transfer of the unlocked deposits back
+// to the validator account
+func (api *PrivateValidatorAPI) RedeemDeposits() error {
+	return api.kusd.Validator().RedeemDeposits()
 }
 
 // PrivateAdminAPI is the collection of Kowala full node-related APIs
