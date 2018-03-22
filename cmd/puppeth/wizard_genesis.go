@@ -244,10 +244,6 @@ func (w *wizard) makeGenesis() {
 
 	// Query the user for some custom extras
 	fmt.Println()
-	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
-	genesis.Config.ChainID = new(big.Int).SetUint64(uint64(w.readDefaultInt(rand.Intn(65536))))
-
-	fmt.Println()
 	fmt.Println("Anything fun to embed into the genesis block? (max 32 bytes)")
 
 	extra := w.read()
