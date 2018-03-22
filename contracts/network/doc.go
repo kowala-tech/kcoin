@@ -3,126 +3,76 @@ Package network implements the network related contracts
 
 This package includes the consensus election contract.
 
-
-Glossary
-
-Validator - consensus participant
-
-Puppeth - cmdline client used to create the genesis file. It can be found under
-kUSD/cmd/puppeth.
-
-Base deposit - represents the deposit that a candidate has to do in order to
-secure a place in the elections (if there are positions available).
-
-Unbonding period - is a predetermined period of time that coins remain locked,
-starting from the moment a validator decides to leave the consensus elections.
-
-
-Context
-
-Right now, these contracts are included in the genesis block during the genesis
-file creation (using puppeth). The process consists on running the contract
-constructor against an empty state using the runtime.Create method and include
-the code and storage in a new genesis account. The initial deposit for the
-genesis validator is also added in the contract genesis account as balance.
+Right now, these contracts are included in the genesis block via the genesis
+file creation process (using puppeth) or by using the default genesis for the
+kowala networks - pre allocated data is present in here /core/genesis_alloc.go.
+The process consists on running the contract constructor against an empty state
+using the runtime.Create method and include the resulting code and storage in a
+new genesis account. The initial deposit for the genesis validator is also added
+in the contract genesis account as balance.
 
 
 Consensus Election Contract
 
 The election contract manages the election validators. During its creation
 you are asked to provide the address of the genesis validator, a base deposit,
-a maximum number of validators and an unbonding period.
-Initially the idea was that we could call the contract constr
+the maximum number of validators and an unbonding period:
 
+Maximum Number of validators - in order to guarantee low block times, there
+needs to be a limit to the number validators. More validators mean more time
+required to achieve consensus in the Tendermint protocol.  Imagine a real
+election with 10 participants and another one with 1 million participants. It
+takes much more time to get to a conclusion on the last election. This number
+can be modified to different values as it might make sense to decrease/increase
+the number at a certain point in time due to external circumstances. In case
+that the new number is less than the current number of validators, the
+validators with the smallest deposit will be the ones leaving the election
+first. Note that the value must be greater or equal than one in order to
+accomodate the genesis validator.
 
+Base deposit - represents the deposit that a candidate has to do in order to
+secure a place in the elections (if there are positions available). The base
+deposit solves the nothing at stake problem. This value can be modified by the
+contract owner.
 
-Minimum deposit -
+Unbonding period - is a predetermined period of time that coins remain locked,
+starting from the moment a validator decides to leave the consensus elections.
+The unbonding period prevents long-range double-spend attacks. A user can avoid
+long-range attacks by syncing their blockchain periodically within the boulds of
+the unbounding period. This value should be provided in days. This value can be
+modified by the contract owner. Tendermint is aiming 4 weeks.
 
+We also must provide the address of the genesis validator in order to add that
+identity to the validator list. Initially we thought about adding the genesis
+validator deposit by calling the constructor method with a value (payable) but
+it does not make much sense for the genesis block as we start with an empty state
+and the account is included from the start. Instead the contract balance must
+cover the genesis deposit. We will probably need to revisit this topic as soon
+as the token contracts are ready.
 
-Use Cases
+The consensus election contract contains three main methods:
 
-* The contract owner should be able to specify the genesis validators and their
-initial collateral as arguments for the contract creation.
+Join - any user in the network should be able to join the election as long as it
+has the funds to cover the minimum deposit. The minimum deposit is calculated in
+the following way:
+1. If There are positions available, the minimum deposit is equal to the base
+deposit.
+2. If not, the minimum deposit is equal to the smallest bid in the election + 1.
+The only exception to the rule is that the same identity cannot be used for
+different validators.
 
-* In order to achieve short block times, there needs to be a limit to the number
-validators. More validators means more time required for block times in the
-tendermint consensus protocol. We've included a variable called maxVoters that
-can only be modified by the contract owner. It might make sense to decrease the
-number of validators at a certain point in time due to external circumstances.
-In this case, the validators with the smallest collateral will be removed from
-the election if all the validator positions are occupied. We've also included
-hard limits - that can be managed - for safety.
+Leave - allows a validator to leave the election. This call will trigger
+operations such as setting a release date for the current deposit (current time
++ unbonding time). Note that an ex-validator can join again the election as soon
+as we wants as long as he has the funds to do it. These means that even if there
+are locked funds, as soon as he joins he will have a new deposit resulting on
+multiple deposits.
 
-* Everyone in the network should be able to be a validator as long as:
-1 - There are positions available and the deposit is bigger than the minimum
-required deposit.
-2 - There are no positions available but the deposit is bigger than the current
-smallest deposit. In this case, the new candidate replaces the validator with
-the smallest collateral in the election.
-
-* Validators should be able to increase their stake at any time. In order to
-do so, they must make a deposit, and this deposit gets added to their current
-collateral.
-
-* Validators should be able to join the elections at any time, even if part of
-their tokens are under the unbond period, meaning that one can have more than one
-collateral at a time.
-
-* Validators should be able to leave an election at any time - they still need
-to wait for the confirmation! Afterwards the coins remain locked for a
-predetermined period of time called the unbonding period (4 weeks for now),
-after which the user - not a validator at this point, except if rejoined the
-elections - is free to transfer or spend those coins. The funds are not
-automatically transfered to the user account after the unbonding period - The
-user needs to send a "withdraw" transaction in order to have access to them
-again. This situation happens because future execution of events in the
-contracts does not offer guarantees of the transaction execution and for that
-reason the validator needs to submit a request to get the funds back to his
-account - lazy evaluation.
-
-* The user can withdraw multiple collaterals (staked tokens) with just one "withdraw"
-transaction. Scenario:
-1. Validator leaves the consensus elections > collateral with a release date.
-2. Validator joins the election (before the first collateral is released) > new
-collateral (with no release date) + previous collateral.
-3. Validator leaves the consensus elections > two collaterals with a release
-date.
-4. Validator joins the election (before the first collateral is released) > new
-collateral (with no release date) + previous collaterals (2).
-5. The unbonding period is over for the first two collaterals and the user can
-withdraw both.
-6. By sending an withdraw transation, his account gets refunded with the
-collaterals which unbonding period has expired.
-Note that the solidity transfer() function doesn't result in a transaction. It
-results in a message call inside the original transaction initiated by an
-external account. The blockchain will record a single transaction no matter how
-many transfer() or call() invocations there are in the code. The gas cost will
-be deducted from the external account that initiated the transaction.
-
-
-Minimum Deposit
-
-Unbonding Period
-
-Transactions
-
-* Deposit - the deposit transaction is used to register a new candidate or to
-increase the stake of a current voter.
-
-* Leave - the validator wants to leave the election - the current collateral
-gets a release date.
-
-* Withdraw - After the unbond period the validator needs to request the funds
-in order to have them back in his account.
-
-References
-
-* https://blog.ethereum.org/2014/07/05/stake/
-- Vitalik Buterin
-* https://ethereum.stackexchange.com/questions/38387/contract-address-transfer-method-gas-cost
-- medvedev1088
-* https://ethereum.stackexchange.com/questions/8615/child-contract-vs-struct
-- Matthew Schmidt
+RedeemDeposits - requests a transfer of the unlocked funds - current date is
+past the release date -  back to the validator account. The network user can
+redeem multiple deposits with just one request as long as he has those deposits
+unlocked. In order to confirm this information, an user can use the console to
+verify the current deposits of the validator.
 
 */
 
