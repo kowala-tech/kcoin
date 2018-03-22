@@ -915,15 +915,13 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kusd.Config) {
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.NetworkId = params.TestnetChainConfig.ChainID
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
+		cfg.NetworkId = cfg.Genesis.Config.ChainID.Uint64()
 	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.Genesis = core.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = new(big.Int)
 		}
-		// @TODO(rgeraldes) - review
-		//cfg.PowTest = true
 	}
 
 	// TODO(fjl): move trie cache generations into config
