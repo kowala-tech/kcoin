@@ -789,7 +789,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.DataDir = filepath.Join(os.TempDir(), "ethereum_dev_mode")
+		cfg.DataDir = filepath.Join(os.TempDir(), "kowala_dev_mode")
 	case ctx.GlobalBool(TestnetFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
 	}
@@ -915,9 +915,7 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kusd.Config) {
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
-		}
+		cfg.NetworkId = params.TestnetChainConfig.ChainID
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.Genesis = core.DevGenesisBlock()
