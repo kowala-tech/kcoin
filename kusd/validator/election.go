@@ -40,10 +40,10 @@ type Election struct {
 // VotingTables represents the voting tables available for each election round
 type VotingTables = [2]*core.VotingTable
 
-func NewVotingTables(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, round uint64, voters types.ValidatorList) VotingTables {
+func NewVotingTables(eventMux *event.TypeMux, signer types.Signer, voters types.ValidatorList) VotingTables {
 	tables := VotingTables{}
-	tables[0] = core.NewVotingTable(eventMux, signer, electionNumber, round, types.PreVote, voters)
-	tables[1] = core.NewVotingTable(eventMux, signer, electionNumber, round, types.PreCommit, voters)
+	tables[0] = core.NewVotingTable(eventMux, signer, types.PreVote, voters)
+	tables[1] = core.NewVotingTable(eventMux, signer, types.PreCommit, voters)
 	return tables
 }
 
@@ -76,7 +76,7 @@ func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumbe
 }
 
 func (vs *VotingSystem) NewRound() {
-	vs.votesPerRound[vs.round] = NewVotingTables(vs.eventMux, vs.signer, vs.electionNumber, vs.round, vs.voters)
+	vs.votesPerRound[vs.round] = NewVotingTables(vs.eventMux, vs.signer, vs.voters)
 }
 
 // Add registers a vote
