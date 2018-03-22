@@ -130,6 +130,7 @@ var (
 		"./kusd/validator",
 		"./accounts",
 		"./core/types",
+		"./cluster",
 	}
 
 	allPackages = []string{"./..."}
