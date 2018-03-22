@@ -8,6 +8,7 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"math/big"
 	"github.com/stretchr/testify/require"
+	"github.com/kowala-tech/kUSD/core/types/mocks"
 )
 
 func TestTwoThirdsPlusOneVoteQuorum(t *testing.T) {
@@ -49,7 +50,7 @@ func TestVotingTable_Add_CheckIsVoterAndVoteNotSeen_CallsQuorum(t *testing.T) {
 		},
 	)
 
-	signedVote := &types.MockSignedVote{}
+	signedVote := &mocks.SignedVote{}
 	signedVote.On("Address").Return(voterAddress)
 	signedVote.On("Vote").Return(types.NewVote(big.NewInt(1), common.HexToHash("123"), 0, types.PreCommit))
 
@@ -74,7 +75,7 @@ func TestVotingTable_Add_DoubleVoteFromAddressReturnsError(t *testing.T) {
 		func() {},
 	)
 
-	signedVote := &types.MockSignedVote{}
+	signedVote := &mocks.SignedVote{}
 	signedVote.On("Address").Return(voterAddress)
 	signedVote.On("Vote").Return(types.NewVote(big.NewInt(1), common.HexToHash("123"), 0, types.PreCommit))
 
@@ -104,7 +105,7 @@ func TestVotingTable_Add_VoteFromNonValidatorReturnsError(t *testing.T) {
 		},
 	)
 
-	signedVote := &types.MockSignedVote{}
+	signedVote := &mocks.SignedVote{}
 	signedVote.On("Address").Return(nonVoterAddress)
 	signedVote.On("Vote").Return(types.NewVote(big.NewInt(1), common.HexToHash("123"), 0, types.PreCommit))
 
