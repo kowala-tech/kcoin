@@ -159,7 +159,6 @@ func (suite *ElectionContractSuite) TestTransferOwnership_Owner() {
 	newOwner := getAddress(suite.randomUser)
 	_, err := suite.contract.TransferOwnership(bind.NewKeyedTransactor(suite.owner), newOwner)
 	req.NoError(err)
-
 	suite.backend.Commit()
 
 	latestOwner, err := suite.contract.GetOwner(&bind.CallOpts{})
@@ -254,7 +253,6 @@ func (suite *ElectionContractSuite) TestSetBaseDeposit_Owner() {
 	deposit := new(big.Int).Add(suite.baseDeposit, common.Big1)
 	_, err := suite.contract.SetBaseDeposit(bind.NewKeyedTransactor(suite.owner), deposit)
 	req.NoError(err)
-
 	suite.backend.Commit()
 
 	latestDeposit, err := suite.contract.BaseDeposit(&bind.CallOpts{})
@@ -278,7 +276,6 @@ func (suite *ElectionContractSuite) TestSetMaxValidators_Owner_GreaterOrEqualTha
 	maxValidators := new(big.Int).Add(oldValidatorCount, common.Big1)
 	_, err = suite.contract.SetMaxValidators(bind.NewKeyedTransactor(suite.owner), maxValidators)
 	req.NoError(err)
-
 	suite.backend.Commit()
 
 	// value should be updated
@@ -301,7 +298,6 @@ func (suite *ElectionContractSuite) TestSetMaxValidators_Owner_LessThanValidator
 	maxValidators := new(big.Int).Sub(oldValidatorCount, common.Big1)
 	_, err = suite.contract.SetMaxValidators(bind.NewKeyedTransactor(suite.owner), maxValidators)
 	req.NoError(err)
-
 	suite.backend.Commit()
 
 	// value should be updated
@@ -417,7 +413,6 @@ func (suite *ElectionContractSuite) TestLeave_Validator() {
 	senderAddr := getAddress(sender)
 	_, err = suite.contract.Leave(bind.NewKeyedTransactor(sender))
 	req.NoError(err)
-
 	suite.backend.Commit()
 
 	// user should not be a validator anymore
@@ -450,7 +445,6 @@ func (suite *ElectionContractSuite) TestRedeemFunds_NoDeposits() {
 	depositCount, err := suite.contract.GetDepositCount(&bind.CallOpts{From: senderAddr})
 	req.NoError(err)
 	req.Zero(depositCount.Uint64())
-
 	suite.backend.Commit()
 
 	// user balance should be less than the initial balance =
@@ -477,13 +471,11 @@ func (suite *ElectionContractSuite) TestRedeemFunds_LockedDeposit() {
 	opts := bind.NewKeyedTransactor(sender)
 	_, err = suite.contract.Leave(opts)
 	req.NoError(err)
-
 	suite.backend.Commit()
 
 	// redeem deposit
 	_, err = suite.contract.RedeemDeposits(opts)
 	req.NoError(err)
-
 	suite.backend.Commit()
 
 	// user balance should be less than the initial balance =
