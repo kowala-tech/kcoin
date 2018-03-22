@@ -127,6 +127,7 @@ var (
 	stablePackages = []string{
 		"./consensus",
 		"./consensus/tendermint",
+		"./contracts/network",
 		"./kusd/validator",
 		"./accounts",
 	}
