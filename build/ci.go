@@ -131,6 +131,7 @@ var (
 		"./accounts",
 		"./core/types",
 		"./cluster",
+		"./tests/features",
 	}
 
 	allPackages = []string{"./..."}
