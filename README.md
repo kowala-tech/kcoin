@@ -10,7 +10,7 @@ a gateway (Endpoints, WebSocket, IPC) to the Kowala network to other processes.
 
 ### Building the source
 
-    make kusd
+	make kusd
 
 ### Configuration
 
@@ -38,8 +38,8 @@ One of the quickest ways to get Kowala up and running on your machine is by usin
 
 ```
 docker run -d --name kusd-node -v /Users/alice/kusd:/root \
-           -p 11223:11223 -p 22334:22334 \
-           kowalatech/kusd --fast --cache=512
+		   -p 11223:11223 -p 22334:22334 \
+		   kowalatech/kusd --fast --cache=512
 ```
 
 ## Networks
@@ -94,10 +94,10 @@ $ go generate
 2. The first step consists in creating the genesis of your new network. By far, the easiest way to do it, is by running the puppeth client.
 
    1. Rebuild the puppeth client
-      `$ cd cmd $ go install ./puppeth/...`
+	  `$ cd cmd $ go install ./puppeth/...`
 
    2. Run the client
-      `$ puppeth`
+	  `$ puppeth`
 
    3. Specify a network name
 
@@ -112,9 +112,9 @@ $ go generate
    8. Select "2. Save existing genesis" and fill in the file path to save the genesis into.
 
 ```
-    $ Which file to save the genesis into? (default = test.json)
-    > /src/github.com/kowala-tech/kUSD/assets/test.json
-    INFO [01-16|16:49:37] Exported existing genesis block
+	$ Which file to save the genesis into? (default = test.json)
+	> /src/github.com/kowala-tech/kUSD/assets/test.json
+	INFO [01-16|16:49:37] Exported existing genesis block
 ```
 
 3. Initialize the blockchain based on the genesis file created on the previous step.
