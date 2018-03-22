@@ -1,4 +1,3 @@
-// Package trie implements Merkle Patricia Tries.
 package trie
 
 import (

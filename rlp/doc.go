@@ -14,4 +14,5 @@ RLP values are distinguished by a type tag. The type tag precedes the
 value in the input stream and defines the size and kind of the bytes
 that follow.
 */
+
 package rlp
