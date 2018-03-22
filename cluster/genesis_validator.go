@@ -50,16 +50,16 @@ func genesisValidatorPod(podName, networkID, pub_key, bootnode string, port int3
 		},
 		Spec: apiv1.PodSpec{
 			Containers: []apiv1.Container{
-				apiv1.Container{
+				{
 					Name:            podName,
 					Image:           "kowalatech/kusd:dev",
 					ImagePullPolicy: apiv1.PullAlways,
 					Ports: []apiv1.ContainerPort{
-						apiv1.ContainerPort{
+						{
 							ContainerPort: port,
 							Protocol:      apiv1.ProtocolUDP,
 						},
-						apiv1.ContainerPort{
+						{
 							ContainerPort: port,
 							Protocol:      apiv1.ProtocolTCP,
 						},

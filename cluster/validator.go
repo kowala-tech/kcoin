@@ -64,7 +64,7 @@ func (client *cluster) fundValidator(podName string) error {
 	}
 	coinbaseQuotes := resp.StdOut
 
-	log.Println("Transfering 50x min deposit to the new validator")
+	log.Println("Transferring 50x min deposit to the new validator")
 	_, err = client.Exec(
 		"genesis-validator",
 		fmt.Sprintf(`eth.sendTransaction({from:eth.coinbase, to: %v, value: 50*validator.getMinimumDeposit()})`, coinbaseQuotes))
@@ -145,16 +145,16 @@ func validatorPod(podName, networkID, bootnode string, port int32) *apiv1.Pod {
 		},
 		Spec: apiv1.PodSpec{
 			Containers: []apiv1.Container{
-				apiv1.Container{
+				{
 					Name:            podName,
 					Image:           "kowalatech/kusd:dev",
 					ImagePullPolicy: apiv1.PullAlways,
 					Ports: []apiv1.ContainerPort{
-						apiv1.ContainerPort{
+						{
 							ContainerPort: port,
 							Protocol:      apiv1.ProtocolUDP,
 						},
-						apiv1.ContainerPort{
+						{
 							ContainerPort: port,
 							Protocol:      apiv1.ProtocolTCP,
 						},

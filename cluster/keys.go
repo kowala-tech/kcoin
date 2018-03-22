@@ -43,7 +43,7 @@ func (client *cluster) addKeys() error {
 				},
 			},
 			Data: map[string]string{
-				key: string(content),
+				key: content,
 			},
 		})
 		if err != nil {

@@ -69,16 +69,16 @@ func archiveNodePod(podName, networkID, bootnode string, port int32) *apiv1.Pod 
 		},
 		Spec: apiv1.PodSpec{
 			Containers: []apiv1.Container{
-				apiv1.Container{
+				{
 					Name:            podName,
 					Image:           "kowalatech/kusd:dev",
 					ImagePullPolicy: apiv1.PullAlways,
 					Ports: []apiv1.ContainerPort{
-						apiv1.ContainerPort{
+						{
 							ContainerPort: port,
 							Protocol:      apiv1.ProtocolUDP,
 						},
-						apiv1.ContainerPort{
+						{
 							ContainerPort: port,
 							Protocol:      apiv1.ProtocolTCP,
 						},
