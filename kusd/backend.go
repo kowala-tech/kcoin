@@ -147,11 +147,13 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if err != nil {
 		log.Crit("Failed to load the network contract", "err", err)
 	}
+	kusd.election = election
+
 	walletAccount, err := getWalletAccount(ctx.AccountManager, kusd.coinbase)
 	if err != nil {
 		log.Warn("failed to get wallet account", "err", err)
 	}
-	kusd.validator = validator.New(walletAccount, kusd, election, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
+	kusd.validator = validator.New(walletAccount, kusd, kusd.election, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
@@ -303,7 +305,7 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 }
 
 // GetMinimumDeposit return minimum amount required to join the validators
-func (s *Kowala) GetMinimumDeposit() (*big.Int, error) {
+func (s *Kowala) GetMinimumDeposit() (uint64, error) {
 	return s.election.MinimumDeposit()
 }
 

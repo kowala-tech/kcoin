@@ -32,7 +32,7 @@ type Election interface {
 	Deposits(address common.Address) ([]*types.Deposit, error)
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
-	MinimumDeposit() (*big.Int, error)
+	MinimumDeposit() (uint64, error)
 }
 
 type election struct {
@@ -53,14 +53,13 @@ func NewElection(contractBackend bind.ContractBackend, chainID *big.Int) (*elect
 }
 
 func (election *election) Join(walletAccount accounts.WalletAccount, amount uint64) error {
-	min, err := election.GetMinimumDeposit(&bind.CallOpts{})
+	minDeposit, err := election.MinimumDeposit()
 	if err != nil {
 		return err
 	}
 
-	var deposit big.Int
-	if min.Cmp(deposit.SetUint64(amount)) > 0 {
-		return fmt.Errorf("current deposit - %d - is not enough. The minimum required is %d", amount, min)
+	if amount < minDeposit {
+		return fmt.Errorf("current deposit - %d - is not enough. The minimum required is %d", amount, minDeposit)
 	}
 
 	_, err = election.ElectionContract.Join(election.transactDepositOpts(walletAccount, amount))
@@ -154,8 +153,9 @@ func (election *election) transactOpts(walletAccount accounts.WalletAccount) *bi
 	return opts
 }
 
-func (election *election) MinimumDeposit() (*big.Int, error) {
-	return election.GetMinimumDeposit(&bind.CallOpts{})
+func (election *election) MinimumDeposit() (uint64, error) {
+	rawMinDeposit, err := election.GetMinimumDeposit(&bind.CallOpts{})
+	return rawMinDeposit.Uint64(), err
 }
 
 func (election *election) transactDepositOpts(walletAccount accounts.WalletAccount, amount uint64) *bind.TransactOpts {
