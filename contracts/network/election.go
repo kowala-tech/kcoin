@@ -28,7 +28,7 @@ type Election interface {
 	Leave(walletAccount accounts.WalletAccount) error
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
 	ValidatorsChecksum() (ValidatorsChecksum, error)
-	Validators() (*types.ValidatorSet, error)
+	Validators() (types.ValidatorList, error)
 	Deposits(address common.Address) ([]*types.Deposit, error)
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
@@ -93,7 +93,7 @@ func (election *election) ValidatorsChecksum() (ValidatorsChecksum, error) {
 	return election.ElectionContract.ValidatorsChecksum(&bind.CallOpts{})
 }
 
-func (election *election) Validators() (*types.ValidatorSet, error) {
+func (election *election) Validators() (types.ValidatorList, error) {
 	count, err := election.GetValidatorCount(&bind.CallOpts{})
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (election *election) Validators() (*types.ValidatorSet, error) {
 		validators[i] = types.NewValidator(validator.Code, validator.Deposit.Uint64(), weight)
 	}
 
-	return types.NewValidatorSet(validators), nil
+	return types.NewValidatorList(validators)
 }
 
 func (election *election) Deposits(addr common.Address) ([]*types.Deposit, error) {

@@ -163,7 +163,7 @@ func (w *wizard) makeGenesis() {
 	fmt.Println("Which consensus engine to use? (default = Tendermint)")
 	fmt.Println(" 1. Tendermint - proof-of-stake")
 
-	choice := w.read()
+	choice = w.read()
 	var owner *common.Address
 	switch {
 	case choice == "" || choice == "1":
