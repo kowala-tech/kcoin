@@ -106,7 +106,7 @@ func (api *PrivateValidatorAPI) SetDeposit(deposit uint64) bool {
 }
 
 // GetMinimumDeposit gets the minimum deposit required to take a slot as a validator
-func (api *PrivateValidatorAPI) GetMinimumDeposit() uint64 {
+func (api *PrivateValidatorAPI) GetMinimumDeposit() (*big.Int, error) {
 	return api.kusd.GetMinimumDeposit()
 }
 

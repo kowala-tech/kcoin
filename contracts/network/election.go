@@ -33,6 +33,7 @@ type Election interface {
 	Deposits(address common.Address) ([]*types.Deposit, error)
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
+	MinimumDeposit() (*big.Int, error)
 }
 
 type election struct {
@@ -152,6 +153,10 @@ func (election *election) transactOpts(walletAccount accounts.WalletAccount) *bi
 	}
 
 	return opts
+}
+
+func (election *election) MinimumDeposit() (*big.Int, error) {
+	return election.GetMinimumDeposit(&bind.CallOpts{})
 }
 
 func (election *election) transactDepositOpts(walletAccount accounts.WalletAccount, amount uint64) *bind.TransactOpts {

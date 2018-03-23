@@ -60,6 +60,7 @@ type Kowala struct {
 	ApiBackend *KowalaApiBackend
 
 	validator validator.Validator // consensus validator
+	election  network.Election    // consensus election
 	gasPrice  *big.Int
 	coinbase  common.Address
 	deposit   uint64
@@ -302,8 +303,8 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 }
 
 // GetMinimumDeposit return minimum amount required to join the validators
-func (s *Kowala) GetMinimumDeposit() uint64 {
-	return s.config.Deposit
+func (s *Kowala) GetMinimumDeposit() (*big.Int, error) {
+	return s.election.MinimumDeposit()
 }
 
 // set in js console via admin interface or wrapper from cli flags
