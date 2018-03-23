@@ -130,6 +130,7 @@ var (
 		"./contracts/network",
 		"./kusd/validator",
 		"./accounts",
+		"./core/types",
 	}
 
 	allPackages = []string{"./..."}

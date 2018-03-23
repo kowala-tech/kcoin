@@ -31,7 +31,6 @@ var (
 
 // Backend wraps all methods required for mining.
 type Backend interface {
-	AccountManager() *accounts.Manager
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() kusddb.Database
@@ -268,7 +267,7 @@ func (val *validator) init() error {
 }
 
 func (val *validator) isProposer() bool {
-	return val.validators.Proposer() == val.walletAccount.Account().Address
+	return val.validators.Proposer().Address() == val.walletAccount.Account().Address
 }
 
 func (val *validator) AddProposal(proposal *types.Proposal) error {
