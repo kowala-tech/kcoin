@@ -28,7 +28,7 @@ the number at a certain point in time due to external circumstances. In case
 that the new number is less than the current number of validators, the
 validators with the smallest deposit will be the ones leaving the election
 first. Note that the value must be greater or equal than one in order to
-accomodate the genesis validator.
+accommodate the genesis validator.
 
 Base deposit - represents the deposit that a candidate has to do in order to
 secure a place in the elections (if there are positions available). The base
