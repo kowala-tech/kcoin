@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"errors"
+
 	"github.com/kowala-tech/kUSD/common"
 )
 
@@ -102,7 +103,7 @@ func (set *validatorList) Contains(addr common.Address) bool {
 	return validator != nil
 }
 
-func NewDeposit(amount *big.Int, unixTimestamp int64) *Deposit {
+func NewDeposit(amount uint64, unixTimestamp int64) *Deposit {
 	return &Deposit{
 		amount:      amount,
 		availableAt: time.Unix(unixTimestamp, 0),
@@ -111,11 +112,11 @@ func NewDeposit(amount *big.Int, unixTimestamp int64) *Deposit {
 
 // Deposit represents the validator deposits at stake
 type Deposit struct {
-	amount      *big.Int
+	amount      uint64
 	availableAt time.Time
 }
 
-func (dep *Deposit) Amount() *big.Int {
+func (dep *Deposit) Amount() uint64 {
 	return dep.amount
 }
 

@@ -110,9 +110,37 @@ func (api *PrivateValidatorAPI) GetMinimumDeposit() (uint64, error) {
 	return api.kusd.GetMinimumDeposit()
 }
 
+// GetDepositsResult is the result of a validator_getDeposits API call.
+type GetDepositsResult struct {
+	Deposits []depositEntry `json:"deposits"`
+}
+
+type depositEntry struct {
+	Amount      uint64 `json:"value"`
+	AvailableAt string `json:",omitempty"`
+}
+
 // GetDeposits returns the validator deposits
-func (api *PrivateValidatorAPI) GetDeposits() ([]*types.Deposit, error) {
-	return api.kusd.Validator().Deposits()
+func (api *PrivateValidatorAPI) GetDeposits() (GetDepositsResult, error) {
+	rawDeposits, err := api.kusd.Validator().Deposits()
+	if err != nil {
+		return GetDepositsResult{}, err
+	}
+	deposits := make([]depositEntry, len(rawDeposits))
+	for i, deposit := range rawDeposits {
+		deposits[i] = depositEntry{
+			Amount: deposit.Amount(),
+		}
+		// @NOTE (rgeraldes) - time.IsZero works in a different way
+		if deposit.AvailableAt().Unix() == 0 {
+			// @NOTE (rgeraldes) - zero values are not shown for this field
+			deposits[i].AvailableAt = ""
+		} else {
+			deposits[i].AvailableAt = deposit.AvailableAt().String()
+		}
+	}
+
+	return GetDepositsResult{Deposits: deposits}, nil
 }
 
 // RedeemDeposits requests a transfer of the unlocked deposits back

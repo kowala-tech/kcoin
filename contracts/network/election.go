@@ -124,7 +124,7 @@ func (election *election) Deposits(addr common.Address) ([]*types.Deposit, error
 		if err != nil {
 			return nil, err
 		}
-		deposits[i] = types.NewDeposit(deposit.Amount, deposit.AvailableAt.Int64())
+		deposits[i] = types.NewDeposit(deposit.Amount.Uint64(), deposit.AvailableAt.Int64())
 	}
 
 	return deposits, nil

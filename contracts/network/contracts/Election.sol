@@ -168,7 +168,7 @@ contract Election is Ownable {
 
     function getDepositAtIndex(uint index) public view returns (uint amount, uint availableAt) {
         Deposit deposit = validators[msg.sender].deposits[index];
-        return (deposit.amount, deposit.availableAt / 1 days);
+        return (deposit.amount, deposit.availableAt);
     }
 
     // join registers a new candidate as validator
