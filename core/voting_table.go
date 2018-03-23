@@ -33,7 +33,7 @@ func (table *votingTable) Add(vote types.SignedVote) error {
 		return errors.New("voter address not found in voting table")
 	}
 
-	if table.seen(vote.Vote()) {
+	if table.isDuplicate(vote.Vote()) {
 		return errors.New("conflict vote seen before")
 	}
 
@@ -46,7 +46,7 @@ func (table *votingTable) Add(vote types.SignedVote) error {
 	return nil
 }
 
-func (table *votingTable) seen(vote *types.Vote) bool {
+func (table *votingTable) isDuplicate(vote *types.Vote) bool {
 	for _, vote := range table.votes {
 		if vote.Hash() == vote.Hash() {
 			return true
