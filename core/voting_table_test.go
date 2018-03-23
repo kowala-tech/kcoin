@@ -84,7 +84,7 @@ func TestVotingTable_Add_DoubleVoteFromAddressReturnsError(t *testing.T) {
 
 	err = votingTable.Add(signedVote)
 
-	assert.EqualError(t, err, "conflict vote seen before")
+	assert.EqualError(t, err, "duplicate vote")
 	assert.Equal(t, validatorList, votingTable.voters)
 	assert.Equal(t, 1, len(votingTable.votes))
 }
@@ -111,7 +111,7 @@ func TestVotingTable_Add_VoteFromNonValidatorReturnsError(t *testing.T) {
 
 	err = votingTable.Add(signedVote)
 
-	assert.EqualError(t, err, "voter address not found in voting table")
+	assert.EqualError(t, err, "voter address not found in voting table: 0x0000000000000000000000006aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 	assert.Equal(t, validatorList, votingTable.voters)
 	assert.Equal(t, 0, len(votingTable.votes))
 }

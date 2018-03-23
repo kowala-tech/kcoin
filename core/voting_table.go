@@ -4,7 +4,10 @@ import (
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/core/types"
 	"errors"
+	"fmt"
 )
+
+var ErrDuplicateVote = errors.New("duplicate vote")
 
 type VotingTable interface {
 	Add(vote types.SignedVote) error
@@ -30,11 +33,11 @@ func NewVotingTable(voteType types.VoteType, voters types.ValidatorList, majorit
 
 func (table *votingTable) Add(vote types.SignedVote) error {
 	if !table.isVoter(vote.Address()) {
-		return errors.New("voter address not found in voting table")
+		return fmt.Errorf("voter address not found in voting table: %#x", vote.Address().Hash().Str())
 	}
 
 	if table.isDuplicate(vote.Vote()) {
-		return errors.New("conflict vote seen before")
+		return ErrDuplicateVote
 	}
 
 	table.votes = append(table.votes, vote.Vote())

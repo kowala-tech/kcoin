@@ -548,7 +548,7 @@ func (val *validator) vote(vote *types.Vote) {
 
 	err = val.votingSystem.Add(signedVote)
 	if err != nil {
-		log.Crit("Failed to add own vote to voting table", "err", err)
+		log.Warn("Failed to add own vote to voting table", "err", err)
 	}
 }
 
