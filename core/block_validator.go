@@ -30,7 +30,7 @@ import (
 // BlockValidator is responsible for validating block headers, uncles and
 // processed state.
 //
-// BlockValidator implements Validator.
+// BlockValidator implements Voter.
 type BlockValidator struct {
 	config *params.ChainConfig // Chain configuration options
 	bc     *BlockChain         // Canonical block chain

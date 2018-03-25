@@ -264,8 +264,8 @@ func (val *validator) init() error {
 	return nil
 }
 
-func (val *validator) isProposer() bool {
-	return val.validators.Proposer().Address() == val.walletAccount.Account().Address
+func (val *validator) address() common.Address {
+	return val.walletAccount.Account().Address
 }
 
 func (val *validator) AddProposal(proposal *types.Proposal) error {

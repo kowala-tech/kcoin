@@ -48,9 +48,9 @@ const (
 // block. The Blockchain manages chain imports, reverts, chain reorganisations.
 //
 // Importing blocks in to the block chain happens according to the set of rules
-// defined by the two stage Validator. Processing of blocks is done using the
+// defined by the two stage Voter. Processing of blocks is done using the
 // Processor which processes the included transaction. The validation of the state
-// is done in the second part of the Validator. Failing results in aborting of
+// is done in the second part of the Voter. Failing results in aborting of
 // the import.
 //
 // The BlockChain also helps in returning blocks from **any** chain included
@@ -100,7 +100,7 @@ type BlockChain struct {
 }
 
 // NewBlockChain returns a fully initialised block chain using information
-// available in the database. It initialises the default Ethereum Validator and
+// available in the database. It initialises the default Ethereum Voter and
 // Processor.
 func NewBlockChain(chainDb kusddb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
@@ -339,7 +339,7 @@ func (bc *BlockChain) SetValidator(validator Validator) {
 	bc.validator = validator
 }
 
-// Validator returns the current validator.
+// Voter returns the current validator.
 func (bc *BlockChain) Validator() Validator {
 	bc.procmu.RLock()
 	defer bc.procmu.RUnlock()

@@ -193,7 +193,7 @@ func makeExtraData(extra []byte) []byte {
 		})
 	}
 	if uint64(len(extra)) > params.MaximumExtraDataSize {
-		log.Warn("Validator extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
+		log.Warn("Voter extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
 		extra = nil
 	}
 	return extra
