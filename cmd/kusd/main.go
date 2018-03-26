@@ -19,7 +19,7 @@ import (
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -153,6 +153,18 @@ func init() {
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
+
+		if utils.ShipLogzio.Value != "" {
+			log.Debug("attaching logzio log handler")
+			root := log.Root()
+			handler, err := log.NewLogzioHandler(ctx.GlobalString(utils.ShipLogzio.Value))
+			if err != nil {
+				log.Error("couldn't attach Logzio log handler", "err", err)
+			} else {
+				root.SetHandler(log.MultiHandler(root.GetHandler(), handler))
+			}
+		}
+
 		// Start system runtime metrics collection
 		go metrics.CollectProcessMetrics(
 			3*time.Second,
@@ -172,10 +184,6 @@ func init() {
 }
 
 func main() {
-	root := log.Root()
-	handler, _ := log.NewLogzioHandler("NzTimUDBYPdaLyEvTaopcojAmWzFVskH")
-	root.SetHandler(log.MultiHandler(root.GetHandler(), handler))
-
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
