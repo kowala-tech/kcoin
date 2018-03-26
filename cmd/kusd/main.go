@@ -173,24 +173,26 @@ func init() {
 }
 
 func setupLogging(ctx *cli.Context) {
-	if ctx.GlobalIsSet(utils.ShipLogzioFlag.Name) {
-		log.Debug("attaching logzio log handler")
+	if !ctx.GlobalIsSet(utils.ShipLogzioFlag.Name) {
+		return
+	}
 
-		root := log.Root()
-		handler, err := log.NewLogzioHandler(ctx.GlobalString(utils.ShipLogzioFlag.Name))
-		if err != nil {
-			log.Error("couldn't attach Logzio log handler", "err", err)
-		} else {
-			// filter log messages by level flag
-			filteredHandler := log.LvlFilterHandler(log.Lvl(ctx.GlobalInt(utils.VerbosityFlag.Name)), log.MultiHandler(root.GetHandler(), handler))
-			root.SetHandler(filteredHandler)
-		}
+	log.Debug("attaching logzio log handler")
 
-		// append hostname to log context from stats URL flag
-		parts := strings.Split(ctx.GlobalString(utils.KowalaStatsURLFlag.Name), ":")
-		if len(parts) > 0 {
-			log.SetContext("hostname", parts[0])
-		}
+	root := log.Root()
+	handler, err := log.NewLogzioHandler(ctx.GlobalString(utils.ShipLogzioFlag.Name))
+	if err != nil {
+		log.Error("couldn't attach Logzio log handler", "err", err)
+	} else {
+		// filter log messages by level flag
+		filteredHandler := log.LvlFilterHandler(log.Lvl(ctx.GlobalInt(utils.VerbosityFlag.Name)), log.MultiHandler(root.GetHandler(), handler))
+		root.SetHandler(filteredHandler)
+	}
+
+	// append hostname to log context from stats URL flag
+	parts := strings.Split(ctx.GlobalString(utils.KowalaStatsURLFlag.Name), ":")
+	if len(parts) > 0 {
+		log.SetContext("hostname", parts[0])
 	}
 }
 
