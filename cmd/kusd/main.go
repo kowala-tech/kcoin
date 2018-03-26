@@ -86,6 +86,7 @@ var (
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
+		utils.ShipLogzio,
 		utils.KowalaStatsURLFlag,
 		utils.MetricsEnabledFlag,
 		utils.MetricsPrometheusAddressFlag,
@@ -171,6 +172,10 @@ func init() {
 }
 
 func main() {
+	root := log.Root()
+	handler, _ := log.NewLogzioHandler("NzTimUDBYPdaLyEvTaopcojAmWzFVskH")
+	root.SetHandler(log.MultiHandler(root.GetHandler(), handler))
+
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

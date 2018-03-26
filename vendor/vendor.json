@@ -51,6 +51,12 @@
 			"revisionTime": "2017-02-10T01:56:32Z"
 		},
 		{
+			"checksumSHA1": "l8CHAH/SE2Qi80XWvU4dwlFbJ64=",
+			"path": "github.com/beeker1121/goque",
+			"revision": "4044bc29b28064db4f08e947c4972d5ca3e0f3c8",
+			"revisionTime": "2017-03-21T14:18:13Z"
+		},
+		{
 			"checksumSHA1": "spyv5/YFBjYyZLZa1U2LBfDR8PM=",
 			"path": "github.com/beorn7/perks/quantile",
 			"revision": "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9",
@@ -91,6 +97,10 @@
 			"path": "github.com/docker/docker/pkg/reexec",
 			"revision": "83ee902ecc3790c33c1e2d87334074436056bb49",
 			"revisionTime": "2017-04-22T21:51:12Z"
+		},
+		{
+			"path": "github.com/dougEfresh/logzio",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "zYnPsNAVm1/ViwCkN++dX2JQhBo=",
@@ -488,6 +498,12 @@
 			"path": "github.com/vektra/mockery",
 			"revision": "b6f6c13c25c3f0a17724553fa01580f328158d7a",
 			"revisionTime": "2017-05-22T19:38:35Z"
+		},
+		{
+			"checksumSHA1": "HedK9m8E8iyib4bIBtIX7xprOgo=",
+			"path": "go.uber.org/atomic",
+			"revision": "8474b86a5a6f79c443ce4b2992817ff32cf208b8",
+			"revisionTime": "2017-11-14T20:44:01Z"
 		},
 		{
 			"checksumSHA1": "TT1rac6kpQp2vz24m5yDGUNQ/QQ=",

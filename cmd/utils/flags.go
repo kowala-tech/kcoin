@@ -292,6 +292,11 @@ var (
 		Usage: "Record information useful for VM and contract debugging",
 	}
 	// Logging and debug settings
+	ShipLogzio = cli.StringFlag{
+		Name:  "logzioapi",
+		Usage: "Logzio API key for shipping logs",
+		Value: "",
+	}
 	KowalaStatsURLFlag = cli.StringFlag{
 		Name:  "stats",
 		Usage: "Reporting URL of a stats service (nodename:secret@host:port)",
