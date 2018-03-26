@@ -175,12 +175,14 @@ func init() {
 func setupLogging(ctx *cli.Context) {
 	if ctx.GlobalIsSet(utils.ShipLogzioFlag.Name) {
 		log.Debug("attaching logzio log handler")
+
 		root := log.Root()
 		handler, err := log.NewLogzioHandler(ctx.GlobalString(utils.ShipLogzioFlag.Name))
-		filteredHandler := log.LvlFilterHandler(log.Lvl(ctx.GlobalInt(utils.VerbosityFlag.Name)), log.MultiHandler(root.GetHandler(), handler))
 		if err != nil {
 			log.Error("couldn't attach Logzio log handler", "err", err)
 		} else {
+			// filter log messages by level flag
+			filteredHandler := log.LvlFilterHandler(log.Lvl(ctx.GlobalInt(utils.VerbosityFlag.Name)), log.MultiHandler(root.GetHandler(), handler))
 			root.SetHandler(filteredHandler)
 		}
 
