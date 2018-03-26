@@ -14,6 +14,6 @@
     "unused",
     "vet"
   ],
-  "Cyclo": 13,
+  "Cyclo": 15,
   "LineLength": 100
 }

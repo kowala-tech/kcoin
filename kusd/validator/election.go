@@ -14,7 +14,7 @@ type Election struct {
 	blockNumber *big.Int
 	round       uint64
 
-	validators         *types.ValidatorSet
+	validators         types.ValidatorList
 	validatorsChecksum [32]byte
 
 	proposal       *types.Proposal
@@ -38,18 +38,21 @@ type Election struct {
 }
 
 // VotingTables represents the voting tables available for each election round
-type VotingTables = [2]*core.VotingTable
+type VotingTables = [2]core.VotingTable
 
-func NewVotingTables(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, round uint64, voters *types.ValidatorSet) VotingTables {
+func NewVotingTables(eventMux *event.TypeMux, voters types.ValidatorList) VotingTables {
+	majorityFunc := func() {
+		go eventMux.Post(core.NewMajorityEvent{})
+	}
 	tables := VotingTables{}
-	tables[0] = core.NewVotingTable(eventMux, signer, electionNumber, round, types.PreVote, voters)
-	tables[1] = core.NewVotingTable(eventMux, signer, electionNumber, round, types.PreCommit, voters)
+	tables[0] = core.NewVotingTable(types.PreVote, voters, majorityFunc)
+	tables[1] = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
 	return tables
 }
 
 // VotingSystem records the election votes since round 1
 type VotingSystem struct {
-	voters         *types.ValidatorSet
+	voters         types.ValidatorList
 	electionNumber *big.Int // election number
 	round          uint64
 	votesPerRound  map[uint64]VotingTables
@@ -60,7 +63,7 @@ type VotingSystem struct {
 
 // NewVotingSystem returns a new voting system
 // @TODO (rgeraldes) - in the future replace eventMux with a subscription method
-func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters *types.ValidatorSet) *VotingSystem {
+func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters types.ValidatorList) *VotingSystem {
 	system := &VotingSystem{
 		voters:         voters,
 		electionNumber: electionNumber,
@@ -76,19 +79,29 @@ func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumbe
 }
 
 func (vs *VotingSystem) NewRound() {
-	vs.votesPerRound[vs.round] = NewVotingTables(vs.eventMux, vs.signer, vs.electionNumber, vs.round, vs.voters)
+	vs.votesPerRound[vs.round] = NewVotingTables(vs.eventMux, vs.voters)
 }
 
 // Add registers a vote
-func (vs *VotingSystem) Add(vote *types.Vote, local bool) (bool, error) {
-	// @TODO (rgeraldes) - validation
+func (vs *VotingSystem) Add(vote *types.Vote) error {
 	votingTable := vs.getVoteSet(vote.Round(), vote.Type())
-	votingTable.Add(vote, local)
 
-	return false, nil
+	signedVote, err := types.NewSignedVote(vs.signer, vote)
+	if err != nil {
+		return err
+	}
+
+	err = votingTable.Add(signedVote)
+	if err != nil {
+		return err
+	}
+
+	go vs.eventMux.Post(core.NewVoteEvent{Vote: vote})
+
+	return nil
 }
 
-func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) *core.VotingTable {
+func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) core.VotingTable {
 	votingTables, ok := vs.votesPerRound[round]
 	if !ok {
 		// @TODO (rgeraldes) - critical
