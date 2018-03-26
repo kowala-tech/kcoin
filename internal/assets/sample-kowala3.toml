@@ -35,4 +35,4 @@ TrustedNodes = []
 ListenAddr = ":30305"
 
 [Stats]
-URL = "boom:DVagynuHLdn9sK6c@testnet.kowala.io:80"
+URL = "Ricardo's archival node (3):DVagynuHLdn9sK6c@testnet.kowala.io:80"
