@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -69,16 +68,6 @@ func (client *cluster) bootnodeEnode() (string, error) {
 	ip := pod.Status.PodIP
 
 	return fmt.Sprintf(`enode://%v@%v:%v`, enodeSecret, ip, bootnodePort), nil
-}
-
-func randStringBytes(n int) string {
-	b := make([]byte, n/2)
-
-	if _, err := src.Read(b); err != nil {
-		panic(err)
-	}
-
-	return hex.EncodeToString(b)[:n]
 }
 
 func bootnodePod(podName, hexkey string) *apiv1.Pod {
