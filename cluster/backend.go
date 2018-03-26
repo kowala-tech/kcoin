@@ -10,6 +10,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var kubeConfigPath = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+
 type k8sCluster struct {
 }
 
@@ -23,6 +25,5 @@ func (cluster *k8sCluster) Clientset() (*kubernetes.Clientset, error) {
 }
 
 func (cluster *k8sCluster) RestConfig() (*rest.Config, error) {
-	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
-	return clientcmd.BuildConfigFromFlags("", kubeconfig)
+	return clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 }
