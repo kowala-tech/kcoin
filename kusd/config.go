@@ -8,12 +8,13 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/kusd/downloader"
 	"github.com/kowala-tech/kUSD/kusd/gasprice"
+	"github.com/kowala-tech/kUSD/params"
 )
 
-// DefaultConfig contains default settings for use on the Ethereum main net.
+// DefaultConfig contains default settings for use on the Kowala main net.
 var DefaultConfig = Config{
 	SyncMode:      downloader.FastSync,
-	NetworkId:     1,
+	NetworkId:     params.MainnetChainConfig.ChainID.Uint64(),
 	LightPeers:    20,
 	DatabaseCache: 128,
 	GasPrice:      big.NewInt(1),

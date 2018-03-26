@@ -28,6 +28,36 @@ func (typ VoteType) IsValid() bool {
 	return typ >= PreVote && typ <= PreCommit
 }
 
+type SignedVote interface {
+	Address() common.Address
+	Vote() *Vote
+}
+
+func NewSignedVote(signer Signer, vote *Vote) (*signedVote, error) {
+	address, err := VoteSender(signer, vote)
+	if err != nil {
+		return nil, err
+	}
+
+	return &signedVote{
+		vote,
+		address,
+	}, nil
+}
+
+type signedVote struct {
+	vote    *Vote
+	address common.Address
+}
+
+func (signedVote *signedVote) Address() common.Address {
+	return signedVote.address
+}
+
+func (signedVote *signedVote) Vote() *Vote {
+	return signedVote.vote
+}
+
 // Vote represents a consensus vote
 type Vote struct {
 	data votedata

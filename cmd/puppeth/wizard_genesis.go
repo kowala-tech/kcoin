@@ -160,12 +160,31 @@ func (w *wizard) makeGenesis() {
 		Alloc:     make(core.GenesisAlloc),
 		Config:    &params.ChainConfig{},
 	}
+
+	fmt.Println()
+	fmt.Println("Which network to use? (default = Test Network)")
+	fmt.Println(" 1. Main Network")
+	fmt.Println(" 2. Test Network")
+	fmt.Println(" 3. Other Network")
+	choice := w.read()
+	switch {
+	case choice == "1":
+		genesis.Config.ChainID = params.MainnetChainConfig.ChainID
+	case choice == "2" || choice == "":
+		genesis.Config.ChainID = params.TestnetChainConfig.ChainID
+	case choice == "3":
+		fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
+		genesis.Config.ChainID = new(big.Int).SetUint64(uint64(w.readDefaultInt(rand.Intn(65536))))
+	default:
+		log.Crit("Invalid network choice", "choice", choice)
+	}
+
 	// Figure out which consensus engine to choose
 	fmt.Println()
 	fmt.Println("Which consensus engine to use? (default = Tendermint)")
 	fmt.Println(" 1. Tendermint - proof-of-stake")
 
-	choice := w.read()
+	choice = w.read()
 	var ownerAddr *common.Address
 	switch {
 	case choice == "" || choice == "1":
@@ -224,10 +243,6 @@ func (w *wizard) makeGenesis() {
 	fmt.Println()
 
 	// Query the user for some custom extras
-	fmt.Println()
-	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
-	genesis.Config.ChainID = new(big.Int).SetUint64(uint64(w.readDefaultInt(rand.Intn(65536))))
-
 	fmt.Println()
 	fmt.Println("Anything fun to embed into the genesis block? (max 32 bytes)")
 

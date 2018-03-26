@@ -12,12 +12,7 @@ import (
 )
 
 var (
-	ErrInvalidSig     = errors.New("invalid v, r, s values")
-	errNoSigner       = errors.New("missing signing methods")
-	ErrInvalidChainId = errors.New("invalid chain id for signer")
-
-	errAbstractSigner     = errors.New("abstract signer")
-	abstractSignerAddress = common.HexToAddress("ffffffffffffffffffffffffffffffffffffffff")
+	ErrInvalidSig = errors.New("invalid v, r, s values")
 
 	big8 = big.NewInt(8)
 )

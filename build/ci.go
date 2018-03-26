@@ -129,6 +129,7 @@ var (
 		"./consensus/tendermint",
 		"./kusd/validator",
 		"./accounts",
+		"./core/types",
 	}
 
 	allPackages = []string{"./..."}
