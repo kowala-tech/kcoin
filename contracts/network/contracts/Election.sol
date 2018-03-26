@@ -62,12 +62,12 @@ contract Election is Ownable {
     function Election(uint _baseDeposit, uint _maxValidators, uint _unbondingPeriod, address _genesis) public {
         require(_maxValidators >= 1);
 
-        baseDeposit = _baseDeposit;
+        baseDeposit = _baseDeposit * 1 ether;
         maxValidators = _maxValidators;
         unbondingPeriod = _unbondingPeriod * 1 days;
         genesisValidator = _genesis;
-
-        _insertValidator(_genesis, _baseDeposit);
+    
+        _insertValidator(_genesis, baseDeposit);
     }
 
     function isGenesisValidator(address code) public view returns (bool isIndeed) {
@@ -168,7 +168,7 @@ contract Election is Ownable {
 
     function getDepositAtIndex(uint index) public view returns (uint amount, uint availableAt) {
         Deposit deposit = validators[msg.sender].deposits[index];
-        return (deposit.amount, deposit.availableAt);
+        return (deposit.amount / 1 ether, deposit.availableAt);
     }
 
     // join registers a new candidate as validator

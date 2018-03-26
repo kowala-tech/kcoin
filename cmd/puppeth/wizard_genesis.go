@@ -69,8 +69,7 @@ func (w *wizard) createElectionContract(genesis *core.Genesis, owner common.Addr
 	fmt.Println()
 	var baseDeposit *big.Int
 	for baseDeposit == nil {
-		fmt.Println("How much is a deposit to secure a place in the election? (default=0)")
-		fmt.Println("Note: Multiplier for the kUSD denomination: 1e18 (ex: 10 kUSD = 10 * 1e18)")
+		fmt.Println("How much is a deposit in kUSD to secure a place in the election? (default=0)")
 		baseDeposit = w.readDefaultBigInt(common.Big0)
 	}
 
@@ -91,7 +90,7 @@ func (w *wizard) createElectionContract(genesis *core.Genesis, owner common.Addr
 	fmt.Println()
 	var unbondingPeriod *big.Int
 	for unbondingPeriod == nil {
-		fmt.Println("How long should the unbonding period be? (default=0)")
+		fmt.Println("How long should the unbonding period be in days? (default=0)")
 		unbondingPeriod = w.readDefaultBigInt(common.Big0)
 	}
 
@@ -124,7 +123,7 @@ func (w *wizard) createElectionContract(genesis *core.Genesis, owner common.Addr
 	genesis.Alloc[contract.addr] = core.GenesisAccount{
 		Code:    contract.code,
 		Storage: contract.storage,
-		Balance: baseDeposit,
+		Balance: new(big.Int).Mul(baseDeposit, new(big.Int).SetUint64(params.Ether)),
 	}
 
 	return nil
