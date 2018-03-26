@@ -25,37 +25,45 @@ func Root() Logger {
 	return root
 }
 
+func SetContext(ctx ...interface{}) {
+	root.ctx = ctx
+}
+
 // The following functions bypass the exported logger methods (logger.Debug,
 // etc.) to keep the call depth the same for all paths to logger.write so
 // runtime.Caller(2) always refers to the call site in client code.
 
 // Trace is a convenient alias for Root().Trace
 func Trace(msg string, ctx ...interface{}) {
-	root.write(msg, LvlTrace, ctx)
+	root.write(msg, LvlTrace, withRootContext(ctx))
 }
 
 // Debug is a convenient alias for Root().Debug
 func Debug(msg string, ctx ...interface{}) {
-	root.write(msg, LvlDebug, ctx)
+	root.write(msg, LvlDebug, withRootContext(ctx))
 }
 
 // Info is a convenient alias for Root().Info
 func Info(msg string, ctx ...interface{}) {
-	root.write(msg, LvlInfo, ctx)
+	root.write(msg, LvlInfo, withRootContext(ctx))
 }
 
 // Warn is a convenient alias for Root().Warn
 func Warn(msg string, ctx ...interface{}) {
-	root.write(msg, LvlWarn, ctx)
+	root.write(msg, LvlWarn, withRootContext(ctx))
 }
 
 // Error is a convenient alias for Root().Error
 func Error(msg string, ctx ...interface{}) {
-	root.write(msg, LvlError, ctx)
+	root.write(msg, LvlError, withRootContext(ctx))
 }
 
 // Crit is a convenient alias for Root().Crit
 func Crit(msg string, ctx ...interface{}) {
-	root.write(msg, LvlCrit, ctx)
+	root.write(msg, LvlCrit, withRootContext(ctx))
 	os.Exit(1)
+}
+
+func withRootContext(ctx ...interface{}) []interface{} {
+	return []interface{}{root.ctx, ctx}
 }

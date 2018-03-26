@@ -86,7 +86,7 @@ var (
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
-		utils.ShipLogzio,
+		utils.ShipLogzioFlag,
 		utils.KowalaStatsURLFlag,
 		utils.MetricsEnabledFlag,
 		utils.MetricsPrometheusAddressFlag,
@@ -154,17 +154,6 @@ func init() {
 			return err
 		}
 
-		if utils.ShipLogzio.Value != "" {
-			log.Debug("attaching logzio log handler")
-			root := log.Root()
-			handler, err := log.NewLogzioHandler(ctx.GlobalString(utils.ShipLogzio.Value))
-			if err != nil {
-				log.Error("couldn't attach Logzio log handler", "err", err)
-			} else {
-				root.SetHandler(log.MultiHandler(root.GetHandler(), handler))
-			}
-		}
-
 		// Start system runtime metrics collection
 		go metrics.CollectProcessMetrics(
 			3*time.Second,
@@ -180,6 +169,26 @@ func init() {
 		debug.Exit()
 		console.Stdin.Close() // Resets terminal mode.
 		return nil
+	}
+}
+
+func setupLogging(ctx *cli.Context) {
+	if ctx.GlobalIsSet(utils.ShipLogzioFlag.Name) {
+		log.Debug("attaching logzio log handler")
+		root := log.Root()
+		handler, err := log.NewLogzioHandler(ctx.GlobalString(utils.ShipLogzioFlag.Name))
+		filteredHandler := log.LvlFilterHandler(log.Lvl(ctx.GlobalInt(utils.VerbosityFlag.Name)), log.MultiHandler(root.GetHandler(), handler))
+		if err != nil {
+			log.Error("couldn't attach Logzio log handler", "err", err)
+		} else {
+			root.SetHandler(filteredHandler)
+		}
+
+		// append hostname to log context from stats URL flag
+		parts := strings.Split(ctx.GlobalString(utils.KowalaStatsURLFlag.Name), ":")
+		if len(parts) > 0 {
+			log.SetContext("hostname", parts[0])
+		}
 	}
 }
 
@@ -204,6 +213,8 @@ func kowala(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // validator.
 func startNode(ctx *cli.Context, stack *node.Node) {
+	setupLogging(ctx)
+
 	// Start up the node itself
 	utils.StartNode(stack)
 

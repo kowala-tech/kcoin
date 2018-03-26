@@ -35,7 +35,7 @@ import (
 	"github.com/kowala-tech/kUSD/p2p/netutil"
 	"github.com/kowala-tech/kUSD/params"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -292,10 +292,14 @@ var (
 		Usage: "Record information useful for VM and contract debugging",
 	}
 	// Logging and debug settings
-	ShipLogzio = cli.StringFlag{
+	ShipLogzioFlag = cli.StringFlag{
 		Name:  "logzioapi",
 		Usage: "Logzio API key for shipping logs",
 		Value: "",
+	}
+	VerbosityFlag = cli.IntFlag{
+		Name:  "verbosity",
+		Usage: "sets the verbosity level",
 	}
 	KowalaStatsURLFlag = cli.StringFlag{
 		Name:  "stats",

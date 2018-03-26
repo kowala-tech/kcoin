@@ -170,7 +170,7 @@ var AppHelpFlagGroups = []flagGroup{
 		Flags: append([]cli.Flag{
 			utils.MetricsEnabledFlag,
 			utils.NoCompactionFlag,
-			utils.ShipLogzio,
+			utils.ShipLogzioFlag,
 		}, debug.Flags...),
 	},
 	{
