@@ -288,15 +288,10 @@ func (val *validator) AddVote(vote *types.Vote) error {
 		return ErrCantVoteNotValidating
 	}
 
-	if err := val.addVote(vote); err != nil {
+	if err := val.votingSystem.Add(vote); err != nil {
 		switch err {
 		}
 	}
-	return nil
-}
-
-func (val *validator) addVote(vote *types.Vote) error {
-	val.votingSystem.Add(vote, false)
 	return nil
 }
 
@@ -553,7 +548,10 @@ func (val *validator) vote(vote *types.Vote) {
 		log.Crit("Failed to sign the vote", "err", err)
 	}
 
-	val.votingSystem.Add(signedVote, true)
+	err = val.votingSystem.Add(signedVote)
+	if err != nil {
+		log.Warn("Failed to add own vote to voting table", "err", err)
+	}
 }
 
 func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error {
