@@ -189,10 +189,12 @@ func setupLogging(ctx *cli.Context) {
 		root.SetHandler(filteredHandler)
 	}
 
-	// append hostname to log context from stats URL flag
+	// append hostname to log context from stats URL flag or hostname
 	parts := strings.Split(ctx.GlobalString(utils.KowalaStatsURLFlag.Name), ":")
-	if len(parts) > 0 {
+	if len(parts) > 1 {
 		log.SetContext("hostname", parts[0])
+	} else if hostname, err := os.Hostname(); err == nil {
+		log.SetContext("hostname", hostname)
 	}
 }
 
