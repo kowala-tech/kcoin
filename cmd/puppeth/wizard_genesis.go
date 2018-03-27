@@ -96,13 +96,11 @@ func (w *wizard) createElectionContract(genesis *core.Genesis, owner common.Addr
 
 	electionABI, err := abi.JSON(strings.NewReader(contracts.ElectionContractABI))
 	if err != nil {
-		log.Error("can't parse the election contract ABI:", err)
 		return err
 	}
 
 	electionParams, err := electionABI.Pack("", baseDeposit, maxVal, unbondingPeriod, *genesisAddr)
 	if err != nil {
-		log.Error("can't pack the election contract params", err)
 		return err
 	}
 
@@ -116,7 +114,6 @@ func (w *wizard) createElectionContract(genesis *core.Genesis, owner common.Addr
 
 	contract, err := createContract(runtimeCfg, append(common.FromHex(contracts.ElectionContractBin), electionParams...))
 	if err != nil {
-		log.Error("can't create the election contract", err)
 		return err
 	}
 
