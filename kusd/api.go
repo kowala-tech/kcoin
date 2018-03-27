@@ -43,66 +43,6 @@ func (api *PublicKowalaAPI) Coinbase() (common.Address, error) {
 	return api.kusd.Coinbase()
 }
 
-// @TODO(rgeraldes) - most of these methods will not be necessary
-/*
-// PublicMinerAPI provides an API to control the miner.
-// It offers only methods that operate on data that pose no security risk when it is publicly accessible.
-type PublicMinerAPI struct {
-	kusd  *Kowala
-	agent *miner.RemoteAgent
-}
-
-// NewPublicMinerAPI create a new PublicMinerAPI instance.
-func NewPublicMinerAPI(kusd *Kowala) *PublicMinerAPI {
-	agent := miner.NewRemoteAgent(kusd.BlockChain(), kusd.Engine())
-	kusd.Miner().Register(agent)
-
-	return &PublicMinerAPI{kusd, agent}
-}
-
-// Mining returns an indication if this node is currently mining.
-func (api *PublicMinerAPI) Mining() bool {
-	return api.kusd.IsMining()
-}
-
-// @TODO(rgeraldes) - I think that external validation does not make sense because of the latencies
-
-// SubmitWork can be used by external miner to submit their POW solution. It returns an indication if the work was
-// accepted. Note, this is not an indication if the provided work was valid!
-func (api *PublicMinerAPI) SubmitWork(nonce types.BlockNonce, solution, digest common.Hash) bool {
-	return api.agent.SubmitWork(/*nonce, digest, solution)
-}
-
-
-// @TODO (rgeraldes) - not necessary.
-
-// GetWork returns a work package for external miner. The work package consists of 3 strings
-// result[0], 32 bytes hex encoded current block header pow-hash
-// result[1], 32 bytes hex encoded seed hash used for DAG
-// result[2], 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
-func (api *PublicMinerAPI) GetWork() ([3]string, error) {
-	if !api.kusd.IsMining() {
-		if err := api.kusd.StartMining(false); err != nil {
-			return [3]string{}, err
-		}
-	}
-	work, err := api.agent.GetWork()
-	if err != nil {
-		return work, fmt.Errorf("mining not ready: %v", err)
-	}
-	return work, nil
-}
-
-
-// SubmitHashrate can be used for remote miners to submit their hash rate. This enables the node to report the combined
-// hash rate of all miners which submit work through this node. It accepts the miner hash rate and an identifier which
-// must be unique between nodes.
-func (api *PublicMinerAPI) SubmitHashrate(hashrate hexutil.Uint64, id common.Hash) bool {
-	api.agent.SubmitHashrate(id, uint64(hashrate))
-	return true
-}
-*/
-
 // PrivateValidatorAPI provides private RPC methods to control the validator.
 // These methods can be abused by external users and must be considered insecure for use by untrusted users.
 type PrivateValidatorAPI struct {
@@ -159,15 +99,54 @@ func (api *PrivateValidatorAPI) SetCoinbase(coinbase common.Address) bool {
 	return true
 }
 
-// SetDeposit  sets the deposit of the validator
+// SetDeposit sets the deposit of the validator
 func (api *PrivateValidatorAPI) SetDeposit(deposit uint64) bool {
 	api.kusd.SetDeposit(deposit)
 	return true
 }
 
 // GetMinimumDeposit gets the minimum deposit required to take a slot as a validator
-func (api *PrivateValidatorAPI) GetMinimumDeposit() uint64 {
+func (api *PrivateValidatorAPI) GetMinimumDeposit() (uint64, error) {
 	return api.kusd.GetMinimumDeposit()
+}
+
+// GetDepositsResult is the result of a validator_getDeposits API call.
+type GetDepositsResult struct {
+	Deposits []depositEntry `json:"deposits"`
+}
+
+type depositEntry struct {
+	Amount      uint64 `json:"value"`
+	AvailableAt string `json:",omitempty"`
+}
+
+// GetDeposits returns the validator deposits
+func (api *PrivateValidatorAPI) GetDeposits() (GetDepositsResult, error) {
+	rawDeposits, err := api.kusd.Validator().Deposits()
+	if err != nil {
+		return GetDepositsResult{}, err
+	}
+	deposits := make([]depositEntry, len(rawDeposits))
+	for i, deposit := range rawDeposits {
+		deposits[i] = depositEntry{
+			Amount: deposit.Amount(),
+		}
+		// @NOTE (rgeraldes) - time.IsZero works in a different way
+		if deposit.AvailableAt().Unix() == 0 {
+			// @NOTE (rgeraldes) - zero values are not shown for this field
+			deposits[i].AvailableAt = ""
+		} else {
+			deposits[i].AvailableAt = deposit.AvailableAt().String()
+		}
+	}
+
+	return GetDepositsResult{Deposits: deposits}, nil
+}
+
+// RedeemDeposits requests a transfer of the unlocked deposits back
+// to the validator account
+func (api *PrivateValidatorAPI) RedeemDeposits() error {
+	return api.kusd.Validator().RedeemDeposits()
 }
 
 // PrivateAdminAPI is the collection of Kowala full node-related APIs

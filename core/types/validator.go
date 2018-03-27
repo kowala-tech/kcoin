@@ -2,8 +2,10 @@ package types
 
 import (
 	"math/big"
+	"time"
 
 	"errors"
+
 	"github.com/kowala-tech/kUSD/common"
 )
 
@@ -99,4 +101,25 @@ func (set *validatorList) Proposer() *Validator {
 func (set *validatorList) Contains(addr common.Address) bool {
 	validator := set.Get(addr)
 	return validator != nil
+}
+
+func NewDeposit(amount uint64, unixTimestamp int64) *Deposit {
+	return &Deposit{
+		amount:      amount,
+		availableAt: time.Unix(unixTimestamp, 0),
+	}
+}
+
+// Deposit represents the validator deposits at stake
+type Deposit struct {
+	amount      uint64
+	availableAt time.Time
+}
+
+func (dep *Deposit) Amount() uint64 {
+	return dep.amount
+}
+
+func (dep *Deposit) AvailableAt() time.Time {
+	return dep.availableAt
 }
