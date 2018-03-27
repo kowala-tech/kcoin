@@ -48,11 +48,13 @@ type Validator interface {
 	AddProposal(proposal *types.Proposal) error
 	AddVote(vote *types.Vote) error
 	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
+	Deposits() ([]*types.Deposit, error)
+	RedeemDeposits() error
 }
 
 // validator represents a consensus validator
 type validator struct {
-	Election           // consensus state
+	VotingState        // consensus internal state
 	maxTransitions int // max number of state transitions (tests) 0 - unlimited
 
 	running    int32
@@ -70,7 +72,7 @@ type validator struct {
 
 	walletAccount accounts.WalletAccount
 
-	network ValidationNetwork
+	election network.Election // consensus election
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
@@ -83,13 +85,13 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(walletAccount accounts.WalletAccount, backend Backend, contract *network.NetworkContract, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
+func New(walletAccount accounts.WalletAccount, backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
 		config:        config,
 		backend:       backend,
 		chain:         backend.BlockChain(),
 		engine:        engine,
-		network:       NewValidationNetwork(contract, config.ChainID),
+		election:      election,
 		eventMux:      eventMux,
 		signer:        types.NewAndromedaSigner(config.ChainID),
 		vmConfig:      vmConfig,
@@ -164,7 +166,7 @@ func (val *validator) Stop() error {
 	}
 	log.Info("Stopping consensus validator")
 
-	val.withdraw()
+	val.leave()
 	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
 	atomic.StoreInt32(&val.shouldStart, 0)
@@ -209,7 +211,7 @@ func (val *validator) PendingBlock() *types.Block {
 }
 
 func (val *validator) restoreLastCommit() {
-	checksum, err := val.network.ValidatorsChecksum()
+	checksum, err := val.election.ValidatorsChecksum()
 	if err != nil {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
@@ -227,7 +229,7 @@ func (val *validator) restoreLastCommit() {
 func (val *validator) init() error {
 	parent := val.chain.CurrentBlock()
 
-	checksum, err := val.network.ValidatorsChecksum()
+	checksum, err := val.election.ValidatorsChecksum()
 	if err != nil {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
@@ -286,15 +288,10 @@ func (val *validator) AddVote(vote *types.Vote) error {
 		return ErrCantVoteNotValidating
 	}
 
-	if err := val.addVote(vote); err != nil {
+	if err := val.votingSystem.Add(vote); err != nil {
 		switch err {
 		}
 	}
-	return nil
-}
-
-func (val *validator) addVote(vote *types.Vote) error {
-	val.votingSystem.Add(vote, false)
 	return nil
 }
 
@@ -383,10 +380,10 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 	return nil, receipt.Logs
 }
 
-func (val *validator) withdraw() {
-	err := val.network.Withdraw(val.walletAccount)
+func (val *validator) leave() {
+	err := val.election.Leave(val.walletAccount)
 	if err != nil {
-		log.Error("failed to withdraw from the election", "err", err)
+		log.Error("failed to leave the election", "err", err)
 	}
 }
 
@@ -551,7 +548,10 @@ func (val *validator) vote(vote *types.Vote) {
 		log.Crit("Failed to sign the vote", "err", err)
 	}
 
-	val.votingSystem.Add(signedVote, true)
+	err = val.votingSystem.Add(signedVote)
+	if err != nil {
+		log.Warn("Failed to add own vote to voting table", "err", err)
+	}
 }
 
 func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error {
@@ -619,7 +619,7 @@ func (val *validator) makeCurrent(parent *types.Block) error {
 }
 
 func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
-	validators, err := val.network.Validators()
+	validators, err := val.election.Validators()
 	if err != nil {
 		return err
 	}
@@ -628,4 +628,12 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 	val.validatorsChecksum = checksum
 
 	return nil
+}
+
+func (val *validator) Deposits() ([]*types.Deposit, error) {
+	return val.election.Deposits(val.walletAccount.Account().Address)
+}
+
+func (val *validator) RedeemDeposits() error {
+	return val.election.RedeemDeposits(val.walletAccount)
 }

@@ -1,0 +1,53 @@
+title:
+  name: Logzio Golang API client
+  description: Sends strucuted logs to [logz.io](https://logz.io) over HTTP
+user: dougEfresh
+project: logzio-go
+installation: >-
+  ```shell
+
+  $ go get -u github.com/dougEfresh/logzio
+
+  ```
+quickStart:
+  code: |
+    ```go
+    package main
+
+    import (
+    "fmt"
+    "github.com/dougEfresh/logzio-go"
+    "os"
+    "time"
+    )
+
+    func main() {
+      l, err := logzio.New(os.Args[1]) // Token is required
+      if err != nil {
+        panic(err)
+      }
+      msg := fmt.Sprintf("{ \"%s\": \"%s\"}", "message", time.Now().UnixNano())
+
+      err = l.Send([]byte(msg))
+      if err != nil {
+         panic(err)
+      }
+
+      l.Stop() //logs are buffered on disk. Stop will drain the buffer
+    }
+    ```
+  description: "logzio sender is a low level lib meant to be integrated with other logging libs"
+examples:
+  - "[zapz](https://github.com/dougefresh/zapz)"
+tests:
+  - |
+    ```shell
+    $ go test -v
+
+    ```
+  - "See [travis.yaml](.travis.yml) for running benchmark tests"
+
+usages:
+  - "Setting drain duration (flush logs on disk) : `logzio.New(token, SetDrainDuration(time.Hour))`"
+  - "Setting url mode: `logzio.New(token, SetUrl(ts.URL))`"
+  - "Setting debug mode: `logzio.New(token, SetDebug(os.Stderr))`"

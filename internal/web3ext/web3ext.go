@@ -462,6 +462,14 @@ web3._extend({
 			call: 'validator_getMinimumDeposit',
 			params: 0
 		}),
+		new web3._extend.Method({
+			name: 'getDeposits',
+			call: 'validator_getDeposits'
+		}),
+		new web3._extend.Method({
+			name: 'redeemDeposits',
+			call: 'validator_redeemDeposits'
+		})
 	],
 	properties: []
 });

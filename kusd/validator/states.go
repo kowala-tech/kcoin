@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"math/big"
 	"sync/atomic"
 	"time"
 
@@ -24,7 +23,7 @@ type work struct {
 type stateFn func() stateFn
 
 func (val *validator) notLoggedInState() stateFn {
-	isGenesis, err := val.network.IsGenesisVoter(val.walletAccount.Account().Address)
+	isGenesis, err := val.election.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
 		log.Warn("Failed to verify the voter information", "err", err)
 		return nil
@@ -38,7 +37,7 @@ func (val *validator) notLoggedInState() stateFn {
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
 
-		if err := val.network.Join(val.walletAccount, val.deposit); err != nil {
+		if err := val.election.Join(val.walletAccount, val.deposit); err != nil {
 			log.Error("Error joining validators network", "err", err)
 			return nil
 		}
@@ -52,7 +51,7 @@ func (val *validator) notLoggedInState() stateFn {
 					return nil
 				}
 
-				confirmed, err := val.network.IsVoter(val.walletAccount.Account().Address)
+				confirmed, err := val.election.IsValidator(val.walletAccount.Account().Address)
 				if err != nil {
 					log.Crit("Failed to verify the voter registration", "err", err)
 				}
@@ -63,7 +62,7 @@ func (val *validator) notLoggedInState() stateFn {
 			}
 		}
 	} else {
-		isVoter, err := val.network.IsVoter(val.walletAccount.Account().Address)
+		isVoter, err := val.election.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
 			log.Crit("Failed to verify the voter information", "err", err)
 			return nil
@@ -93,17 +92,19 @@ func (val *validator) newElectionState() stateFn {
 
 	<-time.NewTimer(val.start.Sub(time.Now())).C
 
-	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
-	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
-		numTxs, _ := val.backend.TxPool().Stats() //
-		if val.round == 0 && numTxs == 0 {
-			log.Info("Waiting for a TX")
-			txCh := make(chan core.TxPreEvent)
-			txSub := val.backend.TxPool().SubscribeTxPreEvent(txCh)
-			defer txSub.Unsubscribe()
-			<-txCh
+	/*
+		// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
+		if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
+			numTxs, _ := val.backend.TxPool().Stats() //
+			if val.round == 0 && numTxs == 0 {
+				log.Info("Waiting for a TX")
+				txCh := make(chan core.TxPreEvent)
+				txSub := val.backend.TxPool().SubscribeTxPreEvent(txCh)
+				defer txSub.Unsubscribe()
+				<-txCh
+			}
 		}
-	}
+	*/
 
 	return val.newRoundState
 }
@@ -228,7 +229,7 @@ func (val *validator) commitState() stateFn {
 	// election state updates
 	val.commitRound = int(val.round)
 
-	voter, err := val.network.IsVoter(val.walletAccount.Account().Address)
+	voter, err := val.election.IsValidator(val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}
