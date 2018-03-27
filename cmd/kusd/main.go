@@ -19,7 +19,7 @@ import (
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/metrics"
 	"github.com/kowala-tech/kUSD/node"
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -86,6 +86,7 @@ var (
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
+		utils.ShipLogzioFlag,
 		utils.KowalaStatsURLFlag,
 		utils.MetricsEnabledFlag,
 		utils.MetricsPrometheusAddressFlag,
@@ -152,6 +153,7 @@ func init() {
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
+
 		// Start system runtime metrics collection
 		go metrics.CollectProcessMetrics(
 			3*time.Second,
@@ -167,6 +169,32 @@ func init() {
 		debug.Exit()
 		console.Stdin.Close() // Resets terminal mode.
 		return nil
+	}
+}
+
+func setupLogging(ctx *cli.Context) {
+	if !ctx.GlobalIsSet(utils.ShipLogzioFlag.Name) {
+		return
+	}
+
+	log.Debug("attaching logzio log handler")
+
+	root := log.Root()
+	handler, err := log.NewLogzioHandler(ctx.GlobalString(utils.ShipLogzioFlag.Name))
+	if err != nil {
+		log.Error("couldn't attach Logzio log handler", "err", err)
+	} else {
+		// filter log messages by level flag
+		filteredHandler := log.LvlFilterHandler(log.Lvl(ctx.GlobalInt(utils.VerbosityFlag.Name)), log.MultiHandler(root.GetHandler(), handler))
+		root.SetHandler(filteredHandler)
+	}
+
+	// append hostname to log context from stats URL flag or hostname
+	parts := strings.Split(ctx.GlobalString(utils.KowalaStatsURLFlag.Name), ":")
+	if len(parts) > 1 {
+		log.SetContext("hostname", parts[0])
+	} else if hostname, err := os.Hostname(); err == nil {
+		log.SetContext("hostname", hostname)
 	}
 }
 
@@ -191,6 +219,8 @@ func kowala(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // validator.
 func startNode(ctx *cli.Context, stack *node.Node) {
+	setupLogging(ctx)
+
 	// Start up the node itself
 	utils.StartNode(stack)
 
