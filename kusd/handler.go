@@ -58,6 +58,7 @@ type ProtocolManager struct {
 	downloader *downloader.Downloader
 	fetcher    *fetcher.Fetcher
 	validator  validator.Validator
+	election   validator.Election
 	peers      *peerSet
 
 	SubProtocols []p2p.Protocol
@@ -90,6 +91,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		blockchain:  blockchain,
 		chaindb:     chaindb,
 		validator:   validator,
+		election:    validator.Election(),
 		chainconfig: config,
 		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
@@ -615,7 +617,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&proposal); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		if err := pm.validator.AddProposal(&proposal); err != nil {
+		if err := pm.election.AddProposal(&proposal); err != nil {
 			// ignore
 			break
 		}
@@ -629,8 +631,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&vote); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		if err := pm.validator.AddVote(&vote); err != nil {
-			// ignore
+
+		if err := pm.election.AddVote(&vote); err != nil {
+			//ignore
 			break
 		}
 		p.MarkVote(vote.Hash())

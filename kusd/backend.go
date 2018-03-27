@@ -14,7 +14,6 @@ import (
 	"github.com/kowala-tech/kUSD/common/hexutil"
 	"github.com/kowala-tech/kUSD/consensus"
 	"github.com/kowala-tech/kUSD/consensus/tendermint"
-	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/bloombits"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -60,7 +59,7 @@ type Kowala struct {
 	ApiBackend *KowalaApiBackend
 
 	validator validator.Validator // consensus validator
-	election  network.Election    // consensus election
+	election  validator.Election  // consensus election
 	gasPrice  *big.Int
 	coinbase  common.Address
 	deposit   uint64
@@ -142,12 +141,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kusd.ApiBackend.gpo = gasprice.NewOracle(kusd.ApiBackend, gpoParams)
 
-	// consensus validator
-	election, err := network.NewElection(NewContractBackend(kusd.ApiBackend), chainConfig.ChainID)
+	election, err := network.NewElection(NewContractBackend(backend), chainConfig.ChainID)
 	if err != nil {
 		log.Crit("Failed to load the network contract", "err", err)
 	}
-	kusd.election = election
+	kusd.election = validator.NewElection(election)
+	
 
 	walletAccount, err := getWalletAccount(ctx.AccountManager, kusd.coinbase)
 	if err != nil {

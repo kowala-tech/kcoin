@@ -10,7 +10,6 @@ import (
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -23,10 +22,7 @@ import (
 
 var (
 	ErrCantStopNonStartedValidator       = errors.New("can't stop validator, not started")
-	ErrCantVoteNotValidating             = errors.New("can't vote, not validating")
 	ErrCantSetCoinbaseOnStartedValidator = errors.New("can't set coinbase, already started validating")
-	ErrCantAddProposalNotValidating      = errors.New("can't add proposal, not validating")
-	ErrCantAddBlockFragmentNotValidating = errors.New("can't add block fragment, not validating")
 )
 
 // Backend wraps all methods required for mining.
@@ -45,17 +41,14 @@ type Validator interface {
 	SetDeposit(deposit uint64)
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
-	AddProposal(proposal *types.Proposal) error
-	AddVote(vote *types.Vote) error
-	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
 	Deposits() ([]*types.Deposit, error)
 	RedeemDeposits() error
 }
 
 // validator represents a consensus validator
 type validator struct {
-	VotingState        // consensus internal state
-	maxTransitions int // max number of state transitions (tests) 0 - unlimited
+	election       Election // consensus election
+	maxTransitions int      // max number of state transitions (tests) 0 - unlimited
 
 	running    int32
 	validating int32
@@ -72,8 +65,6 @@ type validator struct {
 
 	walletAccount accounts.WalletAccount
 
-	election network.Election // consensus election
-
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
 	shouldStart int32 // should start indicates whether we should start after sync
@@ -85,7 +76,7 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(walletAccount accounts.WalletAccount, backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
+func New(walletAccount accounts.WalletAccount, backend Backend, election Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
 		config:        config,
 		backend:       backend,
@@ -268,31 +259,6 @@ func (val *validator) init() error {
 
 func (val *validator) isProposer() bool {
 	return val.validators.Proposer().Address() == val.walletAccount.Account().Address
-}
-
-func (val *validator) AddProposal(proposal *types.Proposal) error {
-	if !val.Validating() {
-		return ErrCantAddProposalNotValidating
-	}
-
-	log.Info("Received Proposal")
-
-	val.proposal = proposal
-	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
-
-	return nil
-}
-
-func (val *validator) AddVote(vote *types.Vote) error {
-	if !val.Validating() {
-		return ErrCantVoteNotValidating
-	}
-
-	if err := val.votingSystem.Add(vote); err != nil {
-		switch err {
-		}
-	}
-	return nil
 }
 
 func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
@@ -554,55 +520,6 @@ func (val *validator) vote(vote *types.Vote) {
 	}
 }
 
-func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error {
-	if !val.Validating() {
-		return ErrCantAddBlockFragmentNotValidating
-	}
-	val.blockFragments.Add(fragment)
-
-	if val.blockFragments.HasAll() {
-		block, err := val.blockFragments.Assemble()
-		if err != nil {
-			log.Crit("Failed to assemble the block", "err", err)
-		}
-
-		// Start the parallel header verifier
-		nBlocks := 1
-		headers := make([]*types.Header, nBlocks)
-		seals := make([]bool, nBlocks)
-		headers[nBlocks-1] = block.Header()
-		seals[nBlocks-1] = true
-
-		abort, results := val.engine.VerifyHeaders(val.chain, headers, seals)
-		defer close(abort)
-
-		err = <-results
-		if err == nil {
-			err = val.chain.Validator().ValidateBody(block)
-		}
-
-		parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
-
-		// Process block using the parent state as reference point.
-		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
-		if err != nil {
-			log.Crit("Failed to process the block", "err", err)
-		}
-		val.receipts = receipts
-
-		// Validate the state using the default validator
-		err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
-		if err != nil {
-			log.Crit("Failed to validate the state", "err", err)
-		}
-
-		val.block = block
-
-		go func() { val.blockCh <- block }()
-	}
-	return nil
-}
-
 func (val *validator) makeCurrent(parent *types.Block) error {
 	state, err := val.chain.StateAt(parent.Root())
 	if err != nil {
@@ -636,4 +553,8 @@ func (val *validator) Deposits() ([]*types.Deposit, error) {
 
 func (val *validator) RedeemDeposits() error {
 	return val.election.RedeemDeposits(val.walletAccount)
+}
+
+func (val *validator) Election() *Election {
+	return val.election
 }
