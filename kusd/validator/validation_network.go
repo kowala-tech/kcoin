@@ -3,20 +3,21 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core/types"
-	"math/big"
 )
 
 type ValidatorsChecksum [32]byte
 
 // ValidationNetwork is a gateway to validators contracts on the network
 type ValidationNetwork interface {
-	Join(walletAccount accounts.WalletAccount, amount uint64) error
-	Withdraw(walletAccount accounts.WalletAccount) error
+	Join(walletAccount accounts.WalletAccount, amount uint64) (*types.Transaction, error)
+	Withdraw(walletAccount accounts.WalletAccount) (*types.Transaction, error)
 	ValidatorsChecksum() (ValidatorsChecksum, error)
 	Validators() (types.ValidatorList, error)
 	IsGenesisVoter(address common.Address) (bool, error)
@@ -35,49 +36,49 @@ type validationNetwork struct {
 	chainID *big.Int
 }
 
-func (network *validationNetwork) Join(walletAccount accounts.WalletAccount, amount uint64) error {
+func (network *validationNetwork) Join(walletAccount accounts.WalletAccount, amount uint64) (*types.Transaction, error) {
 	availability, err := network.Availability(&bind.CallOpts{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !availability {
-		return fmt.Errorf("there are no positions available at the moment")
+		return nil, fmt.Errorf("there are no positions available at the moment")
 	}
 
-	err = network.deposit(walletAccount, amount)
+	tx, err := network.deposit(walletAccount, amount)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return tx, nil
 }
 
-func (network *validationNetwork) deposit(walletAccount accounts.WalletAccount, amount uint64) error {
+func (network *validationNetwork) deposit(walletAccount accounts.WalletAccount, amount uint64) (*types.Transaction, error) {
 	min, err := network.MinDeposit(&bind.CallOpts{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var deposit big.Int
 	if min.Cmp(deposit.SetUint64(amount)) > 0 {
-		return fmt.Errorf("current deposit - %d - is not enough. The minimum required is %d", amount, min)
+		return nil, fmt.Errorf("current deposit - %d - is not enough. The minimum required is %d", amount, min)
 	}
 
-	_, err = network.Deposit(network.transactDepositOpts(walletAccount, amount))
+	tx, err := network.Deposit(network.transactDepositOpts(walletAccount, amount))
 	if err != nil {
-		return fmt.Errorf("failed to transact the deposit: %s", err)
+		return nil, fmt.Errorf("failed to transact the deposit: %s", err)
 	}
 
-	return nil
+	return tx, nil
 }
 
-func (network *validationNetwork) Withdraw(walletAccount accounts.WalletAccount) error {
-	_, err := network.NetworkContract.Withdraw(network.transactOpts(walletAccount))
+func (network *validationNetwork) Withdraw(walletAccount accounts.WalletAccount) (*types.Transaction, error) {
+	tx, err := network.NetworkContract.Withdraw(network.transactOpts(walletAccount))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return tx, nil
 }
 
 func (network *validationNetwork) ValidatorsChecksum() (ValidatorsChecksum, error) {

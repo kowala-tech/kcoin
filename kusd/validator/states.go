@@ -38,7 +38,8 @@ func (val *validator) notLoggedInState() stateFn {
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
 
-		if err := val.network.Join(val.walletAccount, val.deposit); err != nil {
+		tx, err := val.network.Join(val.walletAccount, val.deposit)
+		if err != nil {
 			log.Error("Error joining validators network", "err", err)
 			return nil
 		}
@@ -52,14 +53,20 @@ func (val *validator) notLoggedInState() stateFn {
 					return nil
 				}
 
-				confirmed, err := val.network.IsVoter(val.walletAccount.Account().Address)
-				if err != nil {
-					log.Crit("Failed to verify the voter registration", "err", err)
+				// checks whether a transaction has been included or not
+				hash := tx.Hash()
+				tx, _, _, _ := core.GetTransaction(val.backend.ChainDb(), hash)
+				if tx == nil {
+					continue
 				}
 
-				if confirmed {
-					break L
+				receipt, _, _, _ := core.GetReceipt(val.backend.ChainDb(), hash)
+				if receipt.Status == types.ReceiptStatusFailed {
+					log.Error("The transaction to join the consensus failed")
+					return nil
 				}
+
+				break L
 			}
 		}
 	} else {

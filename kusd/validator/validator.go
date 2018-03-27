@@ -164,7 +164,9 @@ func (val *validator) Stop() error {
 	}
 	log.Info("Stopping consensus validator")
 
-	val.withdraw()
+	if err := val.withdraw(); err != nil {
+		return err
+	}
 	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
 	atomic.StoreInt32(&val.shouldStart, 0)
@@ -378,11 +380,41 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 	return nil, receipt.Logs
 }
 
-func (val *validator) withdraw() {
-	err := val.network.Withdraw(val.walletAccount)
+func (val *validator) withdraw() error {
+	tx, err := val.network.Withdraw(val.walletAccount)
 	if err != nil {
 		log.Error("failed to withdraw from the election", "err", err)
 	}
+
+	// wait until transaction is successful/failed
+	chainHeadCh := make(chan core.ChainHeadEvent)
+	chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
+	defer chainHeadSub.Unsubscribe()
+
+	for {
+		select {
+		case _, ok := <-chainHeadCh:
+			if !ok {
+				// @TODO (rgeraldes) - error & api
+				return nil
+			}
+
+			// checks whether a transaction has been included or not
+			hash := tx.Hash()
+			tx, _, _, _ := core.GetTransaction(val.backend.ChainDb(), hash)
+			if tx == nil {
+				continue
+			}
+
+			receipt, _, _, _ := core.GetReceipt(val.backend.ChainDb(), hash)
+			if receipt.Status == types.ReceiptStatusFailed {
+				log.Error("The transaction to join the consensus failed")
+				return nil
+			}
+		}
+	}
+
+	return nil
 }
 
 func (val *validator) createProposalBlock() *types.Block {
