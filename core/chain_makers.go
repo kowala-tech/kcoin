@@ -143,18 +143,6 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db kusddb.Da
 	genblock := func(i int, h *types.Header, statedb *state.StateDB) (*types.Block, types.Receipts) {
 		b := &BlockGen{parent: parent, i: i, chain: blocks, header: h, statedb: statedb, config: config}
 
-		/* @TODO (rgeraldes) - confirm removal
-		// Mutate the state and block according to any hard-fork specs
-		if daoBlock := config.DAOForkBlock; daoBlock != nil {
-			limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
-			if h.Number.Cmp(daoBlock) >= 0 && h.Number.Cmp(limit) < 0 {
-				if config.DAOForkSupport {
-					h.Extra = common.CopyBytes(params.DAOForkBlockExtra)
-				}
-			}
-		}
-		*/
-
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)
