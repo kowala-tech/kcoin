@@ -10,7 +10,6 @@ import (
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/contracts/network"
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/state"
 	"github.com/kowala-tech/kUSD/core/types"
@@ -23,10 +22,7 @@ import (
 
 var (
 	ErrCantStopNonStartedValidator       = errors.New("can't stop validator, not started")
-	ErrCantVoteNotValidating             = errors.New("can't vote, not validating")
 	ErrCantSetCoinbaseOnStartedValidator = errors.New("can't set coinbase, already started validating")
-	ErrCantAddProposalNotValidating      = errors.New("can't add proposal, not validating")
-	ErrCantAddBlockFragmentNotValidating = errors.New("can't add block fragment, not validating")
 )
 
 // Backend wraps all methods required for mining.
@@ -45,17 +41,23 @@ type Validator interface {
 	SetDeposit(deposit uint64)
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
-	AddProposal(proposal *types.Proposal) error
-	AddVote(vote *types.Vote) error
-	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
 	Deposits() ([]*types.Deposit, error)
 	RedeemDeposits() error
 }
 
+// work is the proposer current environment and holds all of the current state information
+type work struct {
+	state    *state.StateDB
+	header   *types.Header
+	tcount   int
+	txs      []*types.Transaction
+	receipts []*types.Receipt
+}
+
 // validator represents a consensus validator
 type validator struct {
-	VotingState        // consensus internal state
-	maxTransitions int // max number of state transitions (tests) 0 - unlimited
+	election       *election // consensus election
+	maxTransitions int       // max number of state transitions (tests) 0 - unlimited
 
 	running    int32
 	validating int32
@@ -72,20 +74,30 @@ type validator struct {
 
 	walletAccount accounts.WalletAccount
 
-	election network.Election // consensus election
-
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
 	shouldStart int32 // should start indicates whether we should start after sync
 
 	// events
-	eventMux *event.TypeMux
+	eventMux    *event.TypeMux
+	majorityCh  chan core.NewMajorityEvent
+	majoritySub event.Subscription
+	proposalCh  chan core.ProposalEvent
+	proposalSub event.Subscription
+
+	// state changes related to the election
+	proposal    *types.Proposal
+	block       *types.Block
+	lockedRound uint64
+	lockedBlock *types.Block
+	commitRound int
+	*work
 
 	wg sync.WaitGroup
 }
 
 // New returns a new consensus validator
-func New(walletAccount accounts.WalletAccount, backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
+func New(walletAccount accounts.WalletAccount, backend Backend, election *election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
 		config:        config,
 		backend:       backend,
@@ -216,7 +228,7 @@ func (val *validator) restoreLastCommit() {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
 
-	if err := val.updateValidators(checksum, true); err != nil {
+	if err := val.election.updateValidators(checksum, true); err != nil {
 		log.Crit("Failed to update the validator set", "err", err)
 	}
 
@@ -226,73 +238,8 @@ func (val *validator) restoreLastCommit() {
 	}
 }
 
-func (val *validator) init() error {
-	parent := val.chain.CurrentBlock()
-
-	checksum, err := val.election.ValidatorsChecksum()
-	if err != nil {
-		log.Crit("Failed to access the voters checksum", "err", err)
-	}
-
-	if val.validatorsChecksum != checksum {
-		if err := val.updateValidators(checksum, true); err != nil {
-			log.Crit("Failed to update the validator set", "err", err)
-		}
-	}
-
-	start := time.Unix(parent.Time().Int64(), 0)
-	val.start = start.Add(time.Duration(params.BlockTime) * time.Millisecond)
-	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
-	val.round = 0
-
-	val.proposal = nil
-	val.block = nil
-	val.blockFragments = nil
-
-	val.lockedRound = 0
-	val.lockedBlock = nil
-	val.commitRound = -1
-
-	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
-
-	val.blockCh = make(chan *types.Block)
-	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
-
-	if err = val.makeCurrent(parent); err != nil {
-		log.Error("Failed to create mining context", "err", err)
-		return nil
-	}
-
-	return nil
-}
-
 func (val *validator) isProposer() bool {
-	return val.validators.Proposer().Address() == val.walletAccount.Account().Address
-}
-
-func (val *validator) AddProposal(proposal *types.Proposal) error {
-	if !val.Validating() {
-		return ErrCantAddProposalNotValidating
-	}
-
-	log.Info("Received Proposal")
-
-	val.proposal = proposal
-	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
-
-	return nil
-}
-
-func (val *validator) AddVote(vote *types.Vote) error {
-	if !val.Validating() {
-		return ErrCantVoteNotValidating
-	}
-
-	if err := val.votingSystem.Add(vote); err != nil {
-		switch err {
-		}
-	}
-	return nil
+	return val.election.Proposer() == val.walletAccount.Account().Address
 }
 
 func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
@@ -458,13 +405,15 @@ func (val *validator) propose() {
 
 	lockedRound := 1
 	lockedBlock := common.Hash{}
+	electionNumber := val.election.Number()
+	electionRound := val.election.Round()
 
 	fragments, err := block.AsFragments(int(block.Size().Int64()))
 	if err != nil {
 		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
 	}
 
-	proposal := types.NewProposal(val.blockNumber, val.round, fragments.Metadata(), lockedRound, lockedBlock)
+	proposal := types.NewProposal(electionNumber, electionRound, fragments.Metadata(), lockedRound, lockedBlock)
 
 	signedProposal, err := val.walletAccount.SignProposal(val.walletAccount.Account(), proposal, val.config.ChainID)
 	if err != nil {
@@ -478,8 +427,8 @@ func (val *validator) propose() {
 
 	for i := uint(0); i < fragments.Size(); i++ {
 		val.eventMux.Post(core.NewBlockFragmentEvent{
-			BlockNumber: val.blockNumber,
-			Round:       val.round,
+			BlockNumber: electionNumber,
+			Round:       electionRound,
 			Data:        fragments.Get(int(i)),
 		})
 	}
@@ -500,7 +449,7 @@ func (val *validator) preVote() {
 		vote = val.block.Hash()
 	}
 
-	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreVote))
+	val.vote(types.NewVote(val.election.Number(), vote, val.election.Round(), types.PreVote))
 }
 
 func (val *validator) preCommit() {
@@ -520,13 +469,13 @@ func (val *validator) preCommit() {
 	case winner == val.lockedBlock.Hash():
 		log.Debug("Majority of validators pre-voted the locked block")
 		// update locked block round
-		val.lockedRound = val.round
+		val.lockedRound = val.election.Round()
 		// vote on the pre-vote election winner
 		vote = winner
 	case winner == val.block.Hash():
 		log.Debug("Majority of validators pre-voted the proposed block")
 		// lock block
-		val.lockedRound = val.round
+		val.lockedRound = val.election.Round()
 		val.lockedBlock = val.block
 		// vote on the pre-vote election winner
 		vote = winner
@@ -539,7 +488,7 @@ func (val *validator) preCommit() {
 		val.block = nil
 	}
 
-	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreCommit))
+	val.vote(types.NewVote(val.election.Number(), vote, val.election.Round(), types.PreCommit))
 }
 
 func (val *validator) vote(vote *types.Vote) {
@@ -548,59 +497,9 @@ func (val *validator) vote(vote *types.Vote) {
 		log.Crit("Failed to sign the vote", "err", err)
 	}
 
-	err = val.votingSystem.Add(signedVote)
-	if err != nil {
+	if err := val.election.Vote(signedVote); err != nil {
 		log.Warn("Failed to add own vote to voting table", "err", err)
 	}
-}
-
-func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error {
-	if !val.Validating() {
-		return ErrCantAddBlockFragmentNotValidating
-	}
-	val.blockFragments.Add(fragment)
-
-	if val.blockFragments.HasAll() {
-		block, err := val.blockFragments.Assemble()
-		if err != nil {
-			log.Crit("Failed to assemble the block", "err", err)
-		}
-
-		// Start the parallel header verifier
-		nBlocks := 1
-		headers := make([]*types.Header, nBlocks)
-		seals := make([]bool, nBlocks)
-		headers[nBlocks-1] = block.Header()
-		seals[nBlocks-1] = true
-
-		abort, results := val.engine.VerifyHeaders(val.chain, headers, seals)
-		defer close(abort)
-
-		err = <-results
-		if err == nil {
-			err = val.chain.Validator().ValidateBody(block)
-		}
-
-		parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
-
-		// Process block using the parent state as reference point.
-		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
-		if err != nil {
-			log.Crit("Failed to process the block", "err", err)
-		}
-		val.receipts = receipts
-
-		// Validate the state using the default validator
-		err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
-		if err != nil {
-			log.Crit("Failed to validate the state", "err", err)
-		}
-
-		val.block = block
-
-		go func() { val.blockCh <- block }()
-	}
-	return nil
 }
 
 func (val *validator) makeCurrent(parent *types.Block) error {
@@ -618,22 +517,34 @@ func (val *validator) makeCurrent(parent *types.Block) error {
 	return nil
 }
 
-func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
-	validators, err := val.election.Validators()
-	if err != nil {
-		return err
-	}
-
-	val.validators = validators
-	val.validatorsChecksum = checksum
-
-	return nil
-}
-
 func (val *validator) Deposits() ([]*types.Deposit, error) {
 	return val.election.Deposits(val.walletAccount.Account().Address)
 }
 
 func (val *validator) RedeemDeposits() error {
 	return val.election.RedeemDeposits(val.walletAccount)
+}
+
+func (val *validator) init() error {
+	parent := val.backend.BlockChain().CurrentBlock()
+
+	if err := val.election.init(); err != nil {
+		return err
+	}
+
+	val.lockedRound = 0
+	val.lockedBlock = nil
+	val.commitRound = -1
+
+	proposalCh := make(chan core.ProposalEvent)
+	val.proposalSub = val.election.SubscribeProposalEvent(proposalCh)
+
+	majortyCh := make(chan core.NewMajorityEvent)
+	val.majoritySub = val.election.SubscribeMajorityEvent(majortyCh)
+
+	if err := val.makeCurrent(parent); err != nil {
+		log.Error("Failed to create mining context", "err", err)
+		return nil
+	}
+	return nil
 }

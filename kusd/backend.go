@@ -60,7 +60,7 @@ type Kowala struct {
 	ApiBackend *KowalaApiBackend
 
 	validator validator.Validator // consensus validator
-	election  network.Election    // consensus election
+	election  validator.Election  // consensus election
 	gasPrice  *big.Int
 	coinbase  common.Address
 	deposit   uint64
@@ -142,21 +142,21 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kusd.ApiBackend.gpo = gasprice.NewOracle(kusd.ApiBackend, gpoParams)
 
-	// consensus validator
-	election, err := network.NewElection(NewContractBackend(kusd.ApiBackend), chainConfig.ChainID)
+	contract, err := network.NewElection(NewContractBackend(kusd.ApiBackend), chainConfig.ChainID)
 	if err != nil {
 		log.Crit("Failed to load the network contract", "err", err)
 	}
+	election := validator.NewElection(contract, kusd.chainConfig, kusd.blockchain, kusd.eventMux)
 	kusd.election = election
 
 	walletAccount, err := getWalletAccount(ctx.AccountManager, kusd.coinbase)
 	if err != nil {
 		log.Warn("failed to get wallet account", "err", err)
 	}
-	kusd.validator = validator.New(walletAccount, kusd, kusd.election, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
+	kusd.validator = validator.New(walletAccount, kusd, election, kusd.chainConfig, kusd.EventMux(), kusd.engine, vmConfig)
 	kusd.validator.SetExtra(makeExtraData(config.ExtraData))
 
-	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator); err != nil {
+	if kusd.protocolManager, err = NewProtocolManager(kusd.chainConfig, config.SyncMode, config.NetworkId, kusd.eventMux, kusd.txPool, kusd.engine, kusd.blockchain, chainDb, kusd.validator, kusd.election); err != nil {
 		return nil, err
 	}
 

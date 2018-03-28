@@ -58,6 +58,7 @@ type ProtocolManager struct {
 	downloader *downloader.Downloader
 	fetcher    *fetcher.Fetcher
 	validator  validator.Validator
+	election   validator.Election
 	peers      *peerSet
 
 	SubProtocols []p2p.Protocol
@@ -81,7 +82,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new kowala sub protocol manager. The Kowala sub protocol manages peers capable
 // with the kowala network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator validator.Validator) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kusddb.Database, validator validator.Validator, election validator.Election) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
@@ -90,6 +91,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		blockchain:  blockchain,
 		chaindb:     chaindb,
 		validator:   validator,
+		election:    election,
 		chainconfig: config,
 		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
@@ -615,7 +617,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&proposal); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		if err := pm.validator.AddProposal(&proposal); err != nil {
+		if err := pm.election.SubmitProposal(&proposal); err != nil {
 			// ignore
 			break
 		}
@@ -629,8 +631,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&vote); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		if err := pm.validator.AddVote(&vote); err != nil {
-			// ignore
+
+		if err := pm.election.Vote(&vote); err != nil {
+			//ignore
 			break
 		}
 		p.MarkVote(vote.Hash())
@@ -645,12 +648,12 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data); err != nil {
+		if err := pm.election.AddBlockFragment(request.BlockNumber, request.Round, request.Data); err != nil {
 			// ignore
 			break
 		}
 		p.MarkFragment(request.Data.Proof)
-		pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data)
+		pm.election.AddBlockFragment(request.BlockNumber, request.Round, request.Data)
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)

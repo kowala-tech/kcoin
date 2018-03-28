@@ -2,53 +2,11 @@ package validator
 
 import (
 	"math/big"
-	"time"
 
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/event"
 )
-
-// VotingState encapsulates the consensus state for a specific block election
-type VotingState struct {
-	blockNumber *big.Int
-	round       uint64
-
-	validators         types.ValidatorList
-	validatorsChecksum [32]byte
-
-	proposal       *types.Proposal
-	block          *types.Block
-	blockFragments *types.BlockFragments
-	votingSystem   *VotingSystem // election votes since round 1
-
-	lockedRound uint64
-	lockedBlock *types.Block
-
-	start time.Time // used to sync the validator nodes
-
-	commitRound int
-
-	// inputs
-	blockCh  chan *types.Block
-	majority *event.TypeMuxSubscription
-
-	// state changes related to the election
-	*work
-}
-
-// VotingTables represents the voting tables available for each election round
-type VotingTables = [2]core.VotingTable
-
-func NewVotingTables(eventMux *event.TypeMux, voters types.ValidatorList) VotingTables {
-	majorityFunc := func() {
-		go eventMux.Post(core.NewMajorityEvent{})
-	}
-	tables := VotingTables{}
-	tables[0] = core.NewVotingTable(types.PreVote, voters, majorityFunc)
-	tables[1] = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
-	return tables
-}
 
 // VotingSystem records the election votes since round 1
 type VotingSystem struct {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
@@ -14,6 +15,11 @@ import (
 	"github.com/kowala-tech/kUSD/contracts/network/contracts"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/params"
+)
+
+var (
+	errNoDeposit         = errors.New("user does not have deposits")
+	errNoUnlockedDeposit = errors.New("user does not have unlocked deposits")
 )
 
 var mapChainIDToAddr = map[uint64]common.Address{
@@ -24,8 +30,8 @@ type ValidatorsChecksum [32]byte
 
 // Election is a gateway to validators contracts on the network
 type Election interface {
-	Join(walletAccount accounts.WalletAccount, amount uint64) error
-	Leave(walletAccount accounts.WalletAccount) error
+	Join(walletAccount accounts.WalletAccount, amount uint64) (*types.Transaction, error)
+	Leave(walletAccount accounts.WalletAccount) (*types.Transaction, error)
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
 	ValidatorsChecksum() (ValidatorsChecksum, error)
 	Validators() (types.ValidatorList, error)
@@ -52,35 +58,48 @@ func NewElection(contractBackend bind.ContractBackend, chainID *big.Int) (*elect
 	}, nil
 }
 
-func (election *election) Join(walletAccount accounts.WalletAccount, amount uint64) error {
+func (election *election) Join(walletAccount accounts.WalletAccount, amount uint64) (*types.Transaction, error) {
+	// @NOTE (rgeraldes) - the transaction can fail anyway if there's a similar transaction
+	// on the same block that gets posted before ours.
 	minDeposit, err := election.MinimumDeposit()
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	if amount < minDeposit {
-		return fmt.Errorf("current deposit - %d - is not enough. The minimum required is %d", amount, minDeposit)
+		return nil, fmt.Errorf("current deposit - %d - is not enough. The minimum required is %d", amount, minDeposit)
 	}
 
-	_, err = election.ElectionContract.Join(election.transactDepositOpts(walletAccount, amount))
+	tx, err := election.ElectionContract.Join(election.transactDepositOpts(walletAccount, amount))
 	if err != nil {
-		return fmt.Errorf("failed to transact the deposit: %s", err)
+		return nil, fmt.Errorf("failed to transact the deposit: %s", err)
 	}
 
-	return nil
+	return tx, nil
 }
 
-func (election *election) Leave(walletAccount accounts.WalletAccount) error {
-	_, err := election.ElectionContract.Leave(election.transactOpts(walletAccount))
+func (election *election) Leave(walletAccount accounts.WalletAccount) (*types.Transaction, error) {
+	tx, err := election.ElectionContract.Leave(election.transactOpts(walletAccount))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return tx, nil
 }
 
 func (election *election) RedeemDeposits(walletAccount accounts.WalletAccount) error {
-	_, err := election.ElectionContract.RedeemDeposits(election.transactOpts(walletAccount))
+	depositCount, err := election.GetDepositCount(&bind.CallOpts{From: walletAccount.Account().Address})
+	if err != nil {
+		return err
+	}
+	if depositCount.Uint64() < 1 {
+		return errNoDeposit
+	}
+	deposit, err := election.GetDepositAtIndex(&bind.CallOpts{From: walletAccount.Account().Address}, common.Big0)
+	if time.Unix(deposit.AvailableAt.Int64(), 0).Before(time.Now()) {
+		return errNoUnlockedDeposit
+	}
+
+	_, err = election.ElectionContract.RedeemDeposits(election.transactOpts(walletAccount))
 	if err != nil {
 		return err
 	}
@@ -155,7 +174,10 @@ func (election *election) transactOpts(walletAccount accounts.WalletAccount) *bi
 
 func (election *election) MinimumDeposit() (uint64, error) {
 	rawMinDeposit, err := election.GetMinimumDeposit(&bind.CallOpts{})
-	return rawMinDeposit.Uint64(), err
+	if err != nil {
+		return 0, err
+	}
+	return rawMinDeposit.Uint64(), nil
 }
 
 func (election *election) transactDepositOpts(walletAccount accounts.WalletAccount, amount uint64) *bind.TransactOpts {
