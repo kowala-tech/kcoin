@@ -208,7 +208,7 @@ func newCanonical(n int, full bool) (kusddb.Database, *BlockChain, error) {
 	db, _ := kusddb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, params.AllProtocolChanges, tendermint.NewFaker(), vm.Config{})
+	blockchain, _ := NewBlockChain(db, params.AllTendermintProtocolChanges, tendermint.NewFaker(), vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil
