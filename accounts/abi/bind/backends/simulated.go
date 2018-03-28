@@ -44,7 +44,7 @@ type SimulatedBackend struct {
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	database, _ := kusddb.NewMemDatabase()
-	genesis := core.Genesis{Config: params.AllProtocolChanges, Alloc: alloc}
+	genesis := core.Genesis{Config: params.AllTendermintProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
 	blockchain, _ := core.NewBlockChain(database, genesis.Config, tendermint.NewFaker(), vm.Config{})
 	backend := &SimulatedBackend{database: database, BlockChain: blockchain, config: genesis.Config}
