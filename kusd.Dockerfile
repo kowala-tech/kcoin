@@ -6,6 +6,7 @@ ADD . .
 RUN make kusd
 
 FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 WORKDIR /kusd/
 COPY --from=builder /kusd/build/bin/kusd .
 EXPOSE 22334
