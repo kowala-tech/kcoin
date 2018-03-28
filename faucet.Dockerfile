@@ -9,5 +9,6 @@ FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 WORKDIR /faucet/
 COPY --from=builder /faucet/build/bin/faucet .
+ADD release/testnet_genesis.json genesis.json
 EXPOSE 80
 ENTRYPOINT ["./faucet"]
