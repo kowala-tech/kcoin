@@ -1,9 +1,9 @@
 [Kowala]
-NetworkId = 1
+NetworkId = 3680923
 SyncMode = "full"
 LightPeers = 20
 DatabaseCache = 128
-GasPrice = 20
+GasPrice = 1
 EnablePreimageRecording = false
 
 [Kowala.TxPool]
