@@ -11,30 +11,38 @@ import (
 	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/internal/kusdapi"
 	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kUSD/params"
 )
 
 type Election interface {
 	Join(walletAccount accounts.WalletAccount, amount uint64) error
-	AddProposal(proposal *types.Proposal) error
-	AddVote(vote *types.Vote) error
+	Leave(alletAccount accounts.WalletAccount) error
+	SubmitProposal(proposal *types.Proposal) error
+	Vote(vote *types.Vote) error
+	// @TODO (rgeraldes) - I think that this should be moved to the protocol manager
 	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
 	MinimumDeposit() (uint64, error)
-}
-
-func NewElection(contract network.Election) *election {
-	return &election{
-		Election: contract,
-	}
+	Proposer() common.Address
+	Number() *big.Int
+	Round() uint64
+	SubscribeMajorityEvent(ch chan<- core.NewMajorityEvent) event.Subscription
+	SubscribeProposalEvent(ch chan<- core.ProposalEvent) event.Subscription
 }
 
 // election retains the consensus state for a specific block election
 type election struct {
 	network.Election // consensus election
-	kusdapi.Backend
+
+	majorityFeed event.Feed
+	proposalFeed event.Feed
+	scope        event.SubscriptionScope
+
+	chain    *core.BlockChain
+	eventMux *event.TypeMux
+	signer   types.Signer
 
 	blockNumber *big.Int
 	round       uint64
@@ -47,22 +55,59 @@ type election struct {
 	blockFragments *types.BlockFragments
 	votingSystem   *VotingSystem // election votes since round 1
 
-	lockedRound uint64
-	lockedBlock *types.Block
-
 	start time.Time // used to sync the validator nodes
-
-	commitRound int
-
-	// inputs
-	blockCh  chan *types.Block
-	majority *event.TypeMuxSubscription
-
-	// state changes related to the election
-	*work
 }
 
-func (election *election) AddVote(vote *types.Vote) error {
+func NewElection(contract network.Election, config *params.ChainConfig, blockchain *core.BlockChain, eventMux *event.TypeMux) *election {
+	return &election{
+		Election: contract,
+		chain:    blockchain,
+		eventMux: eventMux,
+		signer:   types.NewAndromedaSigner(config.ChainID),
+	}
+}
+
+func (election *election) updateValidators(checksum [32]byte, genesis bool) error {
+	validators, err := election.Validators()
+	if err != nil {
+		return err
+	}
+
+	election.validators = validators
+	election.validatorsChecksum = checksum
+
+	return nil
+}
+
+func (election *election) init() error {
+	parent := election.chain.CurrentBlock()
+
+	checksum, err := election.ValidatorsChecksum()
+	if err != nil {
+		log.Crit("Failed to access the voters checksum", "err", err)
+	}
+
+	if election.validatorsChecksum != checksum {
+		if err := election.updateValidators(checksum, true); err != nil {
+			log.Crit("Failed to update the validator set", "err", err)
+		}
+	}
+
+	start := time.Unix(parent.Time().Int64(), 0)
+	election.start = start.Add(time.Duration(params.BlockTime) * time.Millisecond)
+	election.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
+	election.round = 0
+
+	election.proposal = nil
+	election.block = nil
+	election.blockFragments = nil
+
+	election.votingSystem = NewVotingSystem(election.eventMux, election.signer, election.blockNumber, election.validators)
+
+	return nil
+}
+
+func (election *election) Vote(vote *types.Vote) error {
 	if err := election.votingSystem.Add(vote); err != nil {
 		switch err {
 		}
@@ -70,7 +115,7 @@ func (election *election) AddVote(vote *types.Vote) error {
 	return nil
 }
 
-func (election *election) AddProposal(proposal *types.Proposal) error {
+func (election *election) SubmitProposal(proposal *types.Proposal) error {
 	log.Info("Received Proposal")
 
 	election.proposal = proposal
@@ -134,7 +179,7 @@ func (election *election) Join(walletAccount accounts.WalletAccount, amount uint
 		return err
 	}
 
-	if err := transactionWaiter(tx.Hash(), nil, nil); err != nil {
+	if err := txVerifier(tx.Hash(), nil, nil); err != nil {
 		return err
 	}
 
@@ -147,16 +192,20 @@ func (election *election) Leave(walletAccount accounts.WalletAccount) error {
 		return err
 	}
 
-	if err := transactionWaiter(tx.Hash(), nil, nil); err != nil {
+	if err := txVerifier(tx.Hash(), nil, nil); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// transactionWaiter subscribes to the chain head events and
+func (election *election) Proposer() common.Address {
+	return election.validators.Proposer().Address()
+}
+
+// confirmTransaction subscribes to the chain head events and
 // verifies if a mined transaction failed or not
-func transactionWaiter(hash common.Hash, blockchain *core.BlockChain, db core.DatabaseReader) error {
+func txVerifier(hash common.Hash, blockchain *core.BlockChain, db core.DatabaseReader) error {
 	chainHeadCh := make(chan core.ChainHeadEvent)
 	chainHeadSub := blockchain.SubscribeChainHeadEvent(chainHeadCh)
 	defer chainHeadSub.Unsubscribe()
@@ -182,76 +231,22 @@ func transactionWaiter(hash common.Hash, blockchain *core.BlockChain, db core.Da
 	}
 }
 
-// VotingTables represents the voting tables available for each election round
-type VotingTables = [2]core.VotingTable
-
-func NewVotingTables(eventMux *event.TypeMux, voters types.ValidatorList) VotingTables {
-	majorityFunc := func() {
-		go eventMux.Post(core.NewMajorityEvent{})
-	}
-	tables := VotingTables{}
-	tables[0] = core.NewVotingTable(types.PreVote, voters, majorityFunc)
-	tables[1] = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
-	return tables
+func (election *election) Number() *big.Int {
+	return election.blockNumber
 }
 
-// VotingSystem records the election votes since round 1
-type VotingSystem struct {
-	voters         types.ValidatorList
-	electionNumber *big.Int // election number
-	round          uint64
-	votesPerRound  map[uint64]VotingTables
-	signer         types.Signer
-
-	eventMux *event.TypeMux
+func (election *election) Round() uint64 {
+	return election.round
 }
 
-// NewVotingSystem returns a new voting system
-// @TODO (rgeraldes) - in the future replace eventMux with a subscription method
-func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters types.ValidatorList) *VotingSystem {
-	system := &VotingSystem{
-		voters:         voters,
-		electionNumber: electionNumber,
-		round:          0,
-		votesPerRound:  make(map[uint64]VotingTables),
-		eventMux:       eventMux,
-		signer:         signer,
-	}
-
-	system.NewRound()
-
-	return system
+// SubscribeMajorityEvent registers a subscription of NewMajorityEvent and
+// starts sending event to the given channel.
+func (election *election) SubscribeMajorityEvent(ch chan<- core.NewMajorityEvent) event.Subscription {
+	return election.scope.Track(election.majorityFeed.Subscribe(ch))
 }
 
-func (vs *VotingSystem) NewRound() {
-	vs.votesPerRound[vs.round] = NewVotingTables(vs.eventMux, vs.voters)
-}
-
-// Add registers a vote
-func (vs *VotingSystem) Add(vote *types.Vote) error {
-	votingTable := vs.getVoteSet(vote.Round(), vote.Type())
-
-	signedVote, err := types.NewSignedVote(vs.signer, vote)
-	if err != nil {
-		return err
-	}
-
-	err = votingTable.Add(signedVote)
-	if err != nil {
-		return err
-	}
-
-	go vs.eventMux.Post(core.NewVoteEvent{Vote: vote})
-
-	return nil
-}
-
-func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) core.VotingTable {
-	votingTables, ok := vs.votesPerRound[round]
-	if !ok {
-		// @TODO (rgeraldes) - critical
-		return nil
-	}
-
-	return votingTables[int(voteType)]
+// SubscribeProposalEvent registers a subscription of NewProposalEvent and
+// starts sending event to the given channel.
+func (election *election) SubscribeProposalEvent(ch chan<- core.ProposalEvent) event.Subscription {
+	return election.scope.Track(election.majorityFeed.Subscribe(ch))
 }

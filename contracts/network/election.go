@@ -7,14 +7,19 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/kowala-tech/kUSD/accounts"
 	"github.com/kowala-tech/kUSD/accounts/abi/bind"
 	"github.com/kowala-tech/kUSD/common"
 	"github.com/kowala-tech/kUSD/contracts/network/contracts"
-	"github.com/kowala-tech/kUSD/core"
 	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/params"
+)
+
+var (
+	errNoDeposit         = errors.New("user does not have deposits")
+	errNoUnlockedDeposit = errors.New("user does not have unlocked deposits")
 )
 
 var mapChainIDToAddr = map[uint64]common.Address{
@@ -72,7 +77,7 @@ func (election *election) Join(walletAccount accounts.WalletAccount, amount uint
 	return tx, nil
 }
 
-func (election *election) Leave(walletAccount accounts.WalletAccount, db core.DatabaseReader) (*types.Transaction, error) {
+func (election *election) Leave(walletAccount accounts.WalletAccount) (*types.Transaction, error) {
 	tx, err := election.ElectionContract.Leave(election.transactOpts(walletAccount))
 	if err != nil {
 		return nil, err
@@ -82,7 +87,19 @@ func (election *election) Leave(walletAccount accounts.WalletAccount, db core.Da
 }
 
 func (election *election) RedeemDeposits(walletAccount accounts.WalletAccount) error {
-	_, err := election.ElectionContract.RedeemDeposits(election.transactOpts(walletAccount))
+	depositCount, err := election.GetDepositCount(&bind.CallOpts{From: walletAccount.Account().Address})
+	if err != nil {
+		return err
+	}
+	if depositCount.Uint64() < 1 {
+		return errNoDeposit
+	}
+	deposit, err := election.GetDepositAtIndex(&bind.CallOpts{From: walletAccount.Account().Address}, common.Big0)
+	if time.Unix(deposit.AvailableAt.Int64(), 0).Before(time.Now()) {
+		return errNoUnlockedDeposit
+	}
+
+	_, err = election.ElectionContract.RedeemDeposits(election.transactOpts(walletAccount))
 	if err != nil {
 		return err
 	}
@@ -157,7 +174,10 @@ func (election *election) transactOpts(walletAccount accounts.WalletAccount) *bi
 
 func (election *election) MinimumDeposit() (uint64, error) {
 	rawMinDeposit, err := election.GetMinimumDeposit(&bind.CallOpts{})
-	return rawMinDeposit.Uint64(), err
+	if err != nil {
+		return 0, err
+	}
+	return rawMinDeposit.Uint64(), nil
 }
 
 func (election *election) transactDepositOpts(walletAccount accounts.WalletAccount, amount uint64) *bind.TransactOpts {

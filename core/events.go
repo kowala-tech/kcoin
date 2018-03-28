@@ -16,6 +16,8 @@ type NewVoteEvent struct{ Vote *types.Vote }
 // NewProposalEvent is posted when a consensus validator proposes a new block.
 type NewProposalEvent struct{ Proposal *types.Proposal }
 
+type ProposalEvent struct{ Block *types.Block }
+
 // NewBlockFragmentEvent is posted when a consensus validator broadcasts block fragments.
 type NewBlockFragmentEvent struct {
 	BlockNumber *big.Int

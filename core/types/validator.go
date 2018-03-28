@@ -103,17 +103,19 @@ func (set *validatorList) Contains(addr common.Address) bool {
 	return validator != nil
 }
 
+// @NOTE (rgeraldes) - deposit are not placed inside the Validator
+// because as soon as the user stops the validator, the instance
+// gets deprecated and it cannot be used anymore to check the deposits.
+type Deposit struct {
+	amount      uint64
+	availableAt time.Time
+}
+
 func NewDeposit(amount uint64, unixTimestamp int64) *Deposit {
 	return &Deposit{
 		amount:      amount,
 		availableAt: time.Unix(unixTimestamp, 0),
 	}
-}
-
-// Deposit represents the validator deposits at stake
-type Deposit struct {
-	amount      uint64
-	availableAt time.Time
 }
 
 func (dep *Deposit) Amount() uint64 {

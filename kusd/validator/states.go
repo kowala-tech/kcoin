@@ -6,20 +6,9 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/types"
 	"github.com/kowala-tech/kUSD/log"
 	"github.com/kowala-tech/kUSD/params"
 )
-
-// work is the proposer current environment and holds all of the current state information
-type work struct {
-	state    *state.StateDB
-	header   *types.Header
-	tcount   int
-	txs      []*types.Transaction
-	receipts []*types.Receipt
-}
 
 type stateFn func() stateFn
 
@@ -108,8 +97,8 @@ func (val *validator) newProposalState() stateFn {
 	} else {
 		log.Info("Waiting for the proposal", "proposer", val.election.validators.Proposer())
 		select {
-		case block := <-val.election.blockCh:
-			val.election.block = block
+		case event := <-val.proposalCh:
+			val.block = event.Block
 			log.Info("Received the block", "hash", val.election.block.Hash())
 		case <-time.After(timeout):
 			log.Info("Timeout expired", "duration", timeout)
@@ -131,7 +120,7 @@ func (val *validator) preVoteWaitState() stateFn {
 	timeout := time.Duration(params.PreVoteDuration+val.election.round*params.PreVoteDeltaDuration) * time.Millisecond
 
 	select {
-	case <-val.election.majority.Chan():
+	case <-val.majorityCh:
 		log.Info("There's a majority in the pre-vote sub-election!")
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
@@ -150,10 +139,10 @@ func (val *validator) preCommitState() stateFn {
 func (val *validator) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit sub-election")
 	timeout := time.Duration(params.PreCommitDuration+val.election.round+params.PreCommitDeltaDuration) * time.Millisecond
-	defer val.election.majority.Unsubscribe()
+	defer val.majoritySub.Unsubscribe()
 
 	select {
-	case <-val.election.majority.Chan():
+	case <-val.majorityCh:
 		log.Info("There's a majority in the pre-commit sub-election!")
 		if val.election.block == nil {
 			return val.newRoundState
@@ -169,7 +158,7 @@ func (val *validator) commitState() stateFn {
 	log.Info("Commit state")
 
 	block := val.election.block
-	work := val.election.work
+	work := val.work
 	chainDb := val.backend.ChainDb()
 
 	work.state.CommitTo(chainDb, true)
@@ -201,8 +190,7 @@ func (val *validator) commitState() stateFn {
 	events = append(events, core.ChainHeadEvent{Block: block})
 	val.chain.PostChainEvents(events, logs)
 
-	// election state updates
-	val.election.commitRound = int(val.election.round)
+	val.commitRound = int(val.election.round)
 
 	voter, err := val.election.IsValidator(val.walletAccount.Account().Address)
 	if err != nil {
