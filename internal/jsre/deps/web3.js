@@ -2150,7 +2150,7 @@ var getValueOfUnit = function (unit) {
  * - ether      --             --
  * - kether                    --           grand
  * - mether
- * - kusder
+ * - kcoiner
  * - tether
  *
  * @method fromWei
@@ -2178,7 +2178,7 @@ var fromWei = function(number, unit) {
  * - ether      --             --
  * - kether                    --           grand
  * - mether
- * - kusder
+ * - kcoiner
  * - tether
  *
  * @method toWei

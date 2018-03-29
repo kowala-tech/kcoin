@@ -14,17 +14,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/mclock"
-	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusd"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/node"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/mclock"
+	"github.com/kowala-tech/kcoin/consensus"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/kcoin"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/node"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/rpc"
 	"golang.org/x/net/websocket"
 )
 
@@ -56,7 +56,7 @@ type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
 	server *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	kusd   *kusd.Kowala     // Full Kowala service if monitoring a full node
+	kcoin   *kcoin.Kowala     // Full Kowala service if monitoring a full node
 	engine consensus.Engine // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
@@ -68,7 +68,7 @@ type Service struct {
 }
 
 // New returns a monitoring service ready for stats reporting.
-func New(url string, kowalaServ *kusd.Kowala) (*Service, error) {
+func New(url string, kowalaServ *kcoin.Kowala) (*Service, error) {
 	// Parse the netstats connection url
 	re := regexp.MustCompile("([^:@]*)(:([^@]*))?@(.+)")
 	parts := re.FindStringSubmatch(url)
@@ -79,7 +79,7 @@ func New(url string, kowalaServ *kusd.Kowala) (*Service, error) {
 	engine := kowalaServ.Engine()
 
 	return &Service{
-		kusd:   kowalaServ,
+		kcoin:   kowalaServ,
 		engine: engine,
 		node:   parts[1],
 		pass:   parts[3],
@@ -119,8 +119,8 @@ func (s *Service) loop() {
 	var blockchain blockChain
 	var txpool txPool
 
-	blockchain = s.kusd.BlockChain()
-	txpool = s.kusd.TxPool()
+	blockchain = s.kcoin.BlockChain()
+	txpool = s.kcoin.TxPool()
 
 	chainHeadCh := make(chan core.ChainHeadEvent, chainHeadChanSize)
 	headSub := blockchain.SubscribeChainHeadEvent(chainHeadCh)
@@ -349,9 +349,9 @@ func (s *Service) login(conn *websocket.Conn) error {
 	// Construct and send the login authentication
 	infos := s.server.NodeInfo()
 
-	info := infos.Protocols["kusd"]
-	network := fmt.Sprintf("%d", info.(*kusd.KowalaNodeInfo).Network)
-	protocol := fmt.Sprintf("kusd/%d", kusd.ProtocolVersions[0])
+	info := infos.Protocols["kcoin"]
+	network := fmt.Sprintf("%d", info.(*kcoin.KowalaNodeInfo).Network)
+	protocol := fmt.Sprintf("kcoin/%d", kcoin.ProtocolVersions[0])
 
 	auth := &authMsg{
 		Id: s.node,
@@ -405,7 +405,7 @@ func (s *Service) report(conn *websocket.Conn) error {
 // reportLatency sends a ping request to the server, measures the RTT time and
 // finally sends a latency update.
 func (s *Service) reportLatency(conn *websocket.Conn) error {
-	// Send the current time to the kusdstats server
+	// Send the current time to the kcoinstats server
 	start := time.Now()
 
 	ping := map[string][]interface{}{
@@ -428,7 +428,7 @@ func (s *Service) reportLatency(conn *websocket.Conn) error {
 	latency := strconv.Itoa(int((time.Since(start) / time.Duration(2)).Nanoseconds() / 1000000))
 
 	// Send back the measured latency
-	log.Trace("Sending measured latency to kusdstats", "latency", latency)
+	log.Trace("Sending measured latency to kcoinstats", "latency", latency)
 
 	stats := map[string][]interface{}{
 		"emit": {"latency", map[string]string{
@@ -478,7 +478,7 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	details := s.assembleBlockStats(block)
 
 	// Assemble the block report and send it to the server
-	log.Trace("Sending new block to kusdstats", "number", details.Number, "hash", details.Hash)
+	log.Trace("Sending new block to kcoinstats", "number", details.Number, "hash", details.Hash)
 
 	stats := map[string]interface{}{
 		"id":    s.node,
@@ -501,7 +501,7 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 
 	// Full nodes have all needed information available
 	if block == nil {
-		block = s.kusd.BlockChain().CurrentBlock()
+		block = s.kcoin.BlockChain().CurrentBlock()
 	}
 	header = block.Header()
 
@@ -537,7 +537,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 		indexes = append(indexes, list...)
 	} else {
 		// No indexes requested, send back the top ones
-		head := s.kusd.BlockChain().CurrentHeader().Number.Int64()
+		head := s.kcoin.BlockChain().CurrentHeader().Number.Int64()
 
 		start := head - historyUpdateRange + 1
 		if start < 0 {
@@ -551,7 +551,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 	history := make([]*blockStats, len(indexes))
 	for i, number := range indexes {
 		// Retrieve the next block if it's known to us
-		block := s.kusd.BlockChain().GetBlockByNumber(number)
+		block := s.kcoin.BlockChain().GetBlockByNumber(number)
 
 		// If we do have the block, add to the history and continue
 		if block != nil {
@@ -563,7 +563,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 	}
 	// Assemble the history report and send it to the server
 	if len(history) > 0 {
-		log.Trace("Sending historical blocks to kusdstats", "first", history[0].Number, "last", history[len(history)-1].Number)
+		log.Trace("Sending historical blocks to kcoinstats", "first", history[0].Number, "last", history[len(history)-1].Number)
 	} else {
 		log.Trace("No history to send to stats server")
 	}
@@ -586,10 +586,10 @@ type pendStats struct {
 // it to the stats server.
 func (s *Service) reportPending(conn *websocket.Conn) error {
 	// Retrieve the pending count from the local blockchain
-	pending, _ := s.kusd.TxPool().Stats()
+	pending, _ := s.kcoin.TxPool().Stats()
 
 	// Assemble the transaction stats and send it to the server
-	log.Trace("Sending pending transactions to kusdstats", "count", pending)
+	log.Trace("Sending pending transactions to kcoinstats", "count", pending)
 
 	stats := map[string]interface{}{
 		"id": s.node,
@@ -624,16 +624,16 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 		gasprice   int
 	)
 
-	validating = s.kusd.Validator().Validating()
+	validating = s.kcoin.Validator().Validating()
 
-	sync := s.kusd.Downloader().Progress()
-	syncing = s.kusd.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
+	sync := s.kcoin.Downloader().Progress()
+	syncing = s.kcoin.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
 
-	price, _ := s.kusd.ApiBackend.SuggestPrice(context.Background())
+	price, _ := s.kcoin.ApiBackend.SuggestPrice(context.Background())
 	gasprice = int(price.Uint64())
 
 	// Assemble the node stats and send it to the server
-	log.Trace("Sending node details to kusdstats")
+	log.Trace("Sending node details to kcoinstats")
 
 	stats := map[string]interface{}{
 		"id": s.node,

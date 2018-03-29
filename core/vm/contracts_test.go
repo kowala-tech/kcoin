@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.

@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // deployNode creates a new node configuration based on some user input.

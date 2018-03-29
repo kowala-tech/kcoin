@@ -4,9 +4,9 @@ import (
 	"container/list"
 	"fmt"
 
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusddb"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/kcoindb"
 )
 
 // Implement our EthTest Manager
@@ -14,7 +14,7 @@ type TestManager struct {
 	// stateManager *StateManager
 	eventMux *event.TypeMux
 
-	db         kusddb.Database
+	db         kcoindb.Database
 	txPool     *TxPool
 	blockChain *BlockChain
 	Blocks     []*types.Block
@@ -56,12 +56,12 @@ func (tm *TestManager) EventMux() *event.TypeMux {
 // 	return nil
 // }
 
-func (tm *TestManager) Db() kusddb.Database {
+func (tm *TestManager) Db() kcoindb.Database {
 	return tm.db
 }
 
 func NewTestManager() *TestManager {
-	db, err := kusddb.NewMemDatabase()
+	db, err := kcoindb.NewMemDatabase()
 	if err != nil {
 		fmt.Println("Could not create mem-db, failing")
 		return nil

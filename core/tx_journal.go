@@ -21,10 +21,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted

@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/trie"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/trie"
 )
 
 // testAccount is the data associated with an account used by the state tests.
@@ -20,9 +20,9 @@ type testAccount struct {
 }
 
 // makeTestState create a sample test state to test node-wise reconstruction.
-func makeTestState() (Database, *kusddb.MemDatabase, common.Hash, []*testAccount) {
+func makeTestState() (Database, *kcoindb.MemDatabase, common.Hash, []*testAccount) {
 	// Create an empty state
-	mem, _ := kusddb.NewMemDatabase()
+	mem, _ := kcoindb.NewMemDatabase()
 	db := NewDatabase(mem)
 	state, _ := New(common.Hash{}, db)
 
@@ -53,7 +53,7 @@ func makeTestState() (Database, *kusddb.MemDatabase, common.Hash, []*testAccount
 
 // checkStateAccounts cross references a reconstructed state with an expected
 // account array.
-func checkStateAccounts(t *testing.T, db kusddb.Database, root common.Hash, accounts []*testAccount) {
+func checkStateAccounts(t *testing.T, db kcoindb.Database, root common.Hash, accounts []*testAccount) {
 	// Check root availability and state contents
 	state, err := New(root, NewDatabase(db))
 	if err != nil {
@@ -76,7 +76,7 @@ func checkStateAccounts(t *testing.T, db kusddb.Database, root common.Hash, acco
 }
 
 // checkTrieConsistency checks that all nodes in a (sub-)trie are indeed present.
-func checkTrieConsistency(db kusddb.Database, root common.Hash) error {
+func checkTrieConsistency(db kcoindb.Database, root common.Hash) error {
 	if v, _ := db.Get(root[:]); v == nil {
 		return nil // Consider a non existent state consistent.
 	}
@@ -91,7 +91,7 @@ func checkTrieConsistency(db kusddb.Database, root common.Hash) error {
 }
 
 // checkStateConsistency checks that all data of a state root is present.
-func checkStateConsistency(db kusddb.Database, root common.Hash) error {
+func checkStateConsistency(db kcoindb.Database, root common.Hash) error {
 	// Create and iterate a state trie rooted in a sub-node
 	if _, err := db.Get(root.Bytes()); err != nil {
 		return nil // Consider a non existent state consistent.
@@ -109,7 +109,7 @@ func checkStateConsistency(db kusddb.Database, root common.Hash) error {
 // Tests that an empty state is not scheduled for syncing.
 func TestEmptyStateSync(t *testing.T) {
 	empty := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-	db, _ := kusddb.NewMemDatabase()
+	db, _ := kcoindb.NewMemDatabase()
 	if req := NewStateSync(empty, db).Missing(1); len(req) != 0 {
 		t.Errorf("content requested for empty state: %v", req)
 	}
@@ -125,7 +125,7 @@ func testIterativeStateSync(t *testing.T, batch int) {
 	_, srcMem, srcRoot, srcAccounts := makeTestState()
 
 	// Create a destination state and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	queue := append([]common.Hash{}, sched.Missing(batch)...)
@@ -157,7 +157,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 	_, srcMem, srcRoot, srcAccounts := makeTestState()
 
 	// Create a destination state and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	queue := append([]common.Hash{}, sched.Missing(0)...)
@@ -194,7 +194,7 @@ func testIterativeRandomStateSync(t *testing.T, batch int) {
 	_, srcMem, srcRoot, srcAccounts := makeTestState()
 
 	// Create a destination state and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	queue := make(map[common.Hash]struct{})
@@ -234,7 +234,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	_, srcMem, srcRoot, srcAccounts := makeTestState()
 
 	// Create a destination state and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	queue := make(map[common.Hash]struct{})
@@ -281,7 +281,7 @@ func TestIncompleteStateSync(t *testing.T) {
 	checkTrieConsistency(srcMem, srcRoot)
 
 	// Create a destination state and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewStateSync(srcRoot, dstDb)
 
 	added := []common.Hash{}

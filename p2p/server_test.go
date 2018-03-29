@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/crypto/sha3"
-	"github.com/kowala-tech/kUSD/p2p/discover"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/crypto/sha3"
+	"github.com/kowala-tech/kcoin/p2p/discover"
 )
 
 func init() {

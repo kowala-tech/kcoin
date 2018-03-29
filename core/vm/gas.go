@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 const (

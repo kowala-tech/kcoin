@@ -23,11 +23,11 @@ import (
 	"net"
 	"sync"
 
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/node"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/node"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/rpc"
 )
 
 // SimAdapter is a NodeAdapter which creates in-memory simulation nodes and

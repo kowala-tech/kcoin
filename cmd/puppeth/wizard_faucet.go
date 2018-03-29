@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/kowala-tech/kUSD/accounts/keystore"
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/accounts/keystore"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // deployFaucet queries the user for various input on deploying a faucet, after

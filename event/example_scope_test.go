@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kcoin/event"
 )
 
 // This example demonstrates how SubscriptionScope can be used to control the lifetime of

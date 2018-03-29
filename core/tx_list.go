@@ -22,9 +22,9 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for

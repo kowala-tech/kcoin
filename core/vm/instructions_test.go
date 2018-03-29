@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 func TestByteOp(t *testing.T) {

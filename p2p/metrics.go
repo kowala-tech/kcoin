@@ -5,7 +5,7 @@ package p2p
 import (
 	"net"
 
-	"github.com/kowala-tech/kUSD/metrics"
+	"github.com/kowala-tech/kcoin/metrics"
 )
 
 var (

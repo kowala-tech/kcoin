@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common/math"
+	"github.com/kowala-tech/kcoin/common/math"
 )
 
 func memorySha3(stack *Stack) *big.Int {

@@ -10,11 +10,11 @@ fi
 # Create fake Go workspace if it doesn't exist yet.
 workspace="$PWD/build/_workspace"
 root="$PWD"
-kusddir="$workspace/src/github.com/kowala-tech"
-if [ ! -L "$kusddir/kUSD" ]; then
-    mkdir -p "$kusddir"
-    cd "$kusddir"
-    ln -s ../../../../../. kUSD
+kcoindir="$workspace/src/github.com/kowala-tech"
+if [ ! -L "$kcoindir/kcoin" ]; then
+    mkdir -p "$kcoindir"
+    cd "$kcoindir"
+    ln -s ../../../../../. kcoin
     cd "$root"
 fi
 
@@ -23,8 +23,8 @@ GOPATH="$workspace"
 export GOPATH
 
 # Run the command inside the workspace.
-cd "$kusddir/kUSD"
-PWD="$kusddir/kUSD"
+cd "$kcoindir/kcoin"
+PWD="$kcoindir/kcoin"
 
 # Launch the arguments with the configured environment.
 exec "$@"

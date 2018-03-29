@@ -2,11 +2,11 @@
 set -e
 trap "exit" INT
 
-cd /kusd
+cd /kcoin
 
-./kusd init /kusd/genesis.json
+./kcoin init /kcoin/genesis.json
 
 echo "test" > password.txt
-./kusd account new --password password.txt
+./kcoin account new --password password.txt
 
-./kusd "$@"
+./kcoin --verbosity 2 "$@"

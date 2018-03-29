@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 	"gopkg.in/fatih/set.v0"
 )
 

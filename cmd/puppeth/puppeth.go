@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 	"gopkg.in/urfave/cli.v1"
 )
 

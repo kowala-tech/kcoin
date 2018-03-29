@@ -5,9 +5,9 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto/sha3"
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto/sha3"
+	"github.com/kowala-tech/kcoin/log"
 	"github.com/rcrowley/go-metrics"
 )
 

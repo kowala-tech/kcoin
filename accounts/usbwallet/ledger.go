@@ -12,12 +12,12 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/hexutil"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 // ledgerOpcode is an enumeration encoding the supported Ledger opcodes.
