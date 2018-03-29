@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kowala-tech/kUSD/common/hexutil"
+	"github.com/kowala-tech/kcoin/common/hexutil"
 	"gopkg.in/fatih/set.v0"
 )
 

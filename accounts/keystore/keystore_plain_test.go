@@ -27,12 +27,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto"
 )
 
 func tmpKeyStoreIface(t *testing.T, encrypted bool) (dir string, ks keyStore) {
-	d, err := ioutil.TempDir("", "kusd-keystore-test")
+	d, err := ioutil.TempDir("", "kcoin-keystore-test")
 	if err != nil {
 		t.Fatal(err)
 	}

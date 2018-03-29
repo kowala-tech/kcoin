@@ -4,11 +4,11 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/math"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/math"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 var (

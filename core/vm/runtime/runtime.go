@@ -5,12 +5,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core/state"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 // Config is a basic type specifying certain configuration flags for running
@@ -75,7 +75,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db, _ := kusddb.NewMemDatabase()
+		db, _ := kcoindb.NewMemDatabase()
 		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(db))
 	}
 	var (
@@ -106,7 +106,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db, _ := kusddb.NewMemDatabase()
+		db, _ := kcoindb.NewMemDatabase()
 		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(db))
 	}
 	var (

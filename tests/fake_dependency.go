@@ -3,7 +3,7 @@
 
 package tests
 
-import "github.com/kowala-tech/kUSD/core/state"
+import "github.com/kowala-tech/kcoin/core/state"
 
 type StateTest struct{}
 type StateSubtest struct {

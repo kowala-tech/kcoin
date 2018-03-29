@@ -6,8 +6,8 @@ package node
 import (
 	"reflect"
 
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/rpc"
 )
 
 // NoopService is a trivial implementation of the Service interface.

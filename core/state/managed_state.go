@@ -19,7 +19,7 @@ package state
 import (
 	"sync"
 
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 type account struct {

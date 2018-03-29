@@ -19,9 +19,9 @@ package types
 import (
 	"bytes"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/rlp"
-	"github.com/kowala-tech/kUSD/trie"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/trie"
 )
 
 type DerivableList interface {

@@ -5,14 +5,14 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/kusddb"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/kcoindb"
 	checker "gopkg.in/check.v1"
 )
 
 type StateSuite struct {
-	db    *kusddb.MemDatabase
+	db    *kcoindb.MemDatabase
 	state *StateDB
 }
 
@@ -71,7 +71,7 @@ func (s *StateSuite) TestDump(c *checker.C) {
 }
 
 func (s *StateSuite) SetUpTest(c *checker.C) {
-	s.db, _ = kusddb.NewMemDatabase()
+	s.db, _ = kcoindb.NewMemDatabase()
 	s.state, _ = New(common.Hash{}, NewDatabase(s.db))
 }
 
@@ -117,7 +117,7 @@ func (s *StateSuite) TestSnapshotEmpty(c *checker.C) {
 // use testing instead of checker because checker does not support
 // printing/logging in tests (-check.vv does not work)
 func TestSnapshot2(t *testing.T) {
-	db, _ := kusddb.NewMemDatabase()
+	db, _ := kcoindb.NewMemDatabase()
 	state, _ := New(common.Hash{}, NewDatabase(db))
 
 	stateobjaddr0 := toAddr([]byte("so0"))

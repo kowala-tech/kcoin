@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kowala-tech/kUSD/cmd/utils"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/p2p/discv5"
-	"github.com/kowala-tech/kUSD/p2p/nat"
-	"github.com/kowala-tech/kUSD/p2p/netutil"
+	"github.com/kowala-tech/kcoin/cmd/utils"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/p2p/discv5"
+	"github.com/kowala-tech/kcoin/p2p/nat"
+	"github.com/kowala-tech/kcoin/p2p/netutil"
 )
 
 func main() {

@@ -38,9 +38,9 @@ import (
 	"math/big"
 	"unsafe"
 
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/core/state"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 type JitVm struct {

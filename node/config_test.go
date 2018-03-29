@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/p2p"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/p2p"
 )
 
 // Tests that datadirs can be successfully created, be them manually configured
@@ -57,15 +57,15 @@ func TestIPCPathResolution(t *testing.T) {
 	}{
 		{"", "", false, ""},
 		{"data", "", false, ""},
-		{"", "kusd.ipc", false, filepath.Join(os.TempDir(), "kusd.ipc")},
-		{"data", "kusd.ipc", false, "data/kusd.ipc"},
-		{"data", "./kusd.ipc", false, "./kusd.ipc"},
-		{"data", "/kusd.ipc", false, "/kusd.ipc"},
+		{"", "kcoin.ipc", false, filepath.Join(os.TempDir(), "kcoin.ipc")},
+		{"data", "kcoin.ipc", false, "data/kcoin.ipc"},
+		{"data", "./kcoin.ipc", false, "./kcoin.ipc"},
+		{"data", "/kcoin.ipc", false, "/kcoin.ipc"},
 		{"", "", true, ``},
 		{"data", "", true, ``},
-		{"", "kusd.ipc", true, `\\.\pipe\kusd.ipc`},
-		{"data", "kusd.ipc", true, `\\.\pipe\kusd.ipc`},
-		{"data", `\\.\pipe\kusd.ipc`, true, `\\.\pipe\kusd.ipc`},
+		{"", "kcoin.ipc", true, `\\.\pipe\kcoin.ipc`},
+		{"data", "kcoin.ipc", true, `\\.\pipe\kcoin.ipc`},
+		{"data", `\\.\pipe\kcoin.ipc`, true, `\\.\pipe\kcoin.ipc`},
 	}
 	for i, test := range tests {
 		// Only run when platform/test match

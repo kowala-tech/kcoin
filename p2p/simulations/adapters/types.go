@@ -25,11 +25,11 @@ import (
 	"os"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/node"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/node"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/rpc"
 )
 
 // Node represents a node in a simulation network which is created by a

@@ -2,13 +2,13 @@ FROM alpine:3.5
 
 RUN \
   apk add --update go git make gcc musl-dev linux-headers ca-certificates && \
-  git clone --depth 1 https://github.com/kowala-tech/kUSD && \
-  (cd kUSD && make kusd) && \
-  cp kUSD/build/bin/kusd /kusd && \
+  git clone --depth 1 https://github.com/kowala-tech/kcoin && \
+  (cd kcoin && make kcoin) && \
+  cp kcoin/build/bin/kcoin /kcoin && \
   apk del go git make gcc musl-dev linux-headers && \
-  rm -rf /kUSD && rm -rf /var/cache/apk/*
+  rm -rf /kcoin && rm -rf /var/cache/apk/*
 
 EXPOSE 11223
 EXPOSE 22334
 
-ENTRYPOINT ["/kusd"]
+ENTRYPOINT ["/kcoin"]

@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kUSD/accounts/abi"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/contracts/network/contracts"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/core/vm/runtime"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/accounts/abi"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/contracts/network/contracts"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/core/vm/runtime"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 type vmTracer struct {
@@ -69,7 +69,7 @@ func (w *wizard) createElectionContract(genesis *core.Genesis, owner common.Addr
 	fmt.Println()
 	var baseDeposit *big.Int
 	for baseDeposit == nil {
-		fmt.Println("How much is a deposit in kUSD to secure a place in the election? (default=0)")
+		fmt.Println("How much is a deposit in kcoin to secure a place in the election? (default=0)")
 		baseDeposit = w.readDefaultBigInt(common.Big0)
 	}
 

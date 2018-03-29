@@ -3,11 +3,11 @@ package node
 import (
 	"reflect"
 
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/rpc"
 )
 
 // ServiceContext is a collection of service independent options inherited from
@@ -23,11 +23,11 @@ type ServiceContext struct {
 // OpenDatabase opens an existing database with the given name (or creates one
 // if no previous can be found) from within the node's data directory. If the
 // node is an ephemeral one, a memory database is returned.
-func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (kusddb.Database, error) {
+func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (kcoindb.Database, error) {
 	if ctx.config.DataDir == "" {
-		return kusddb.NewMemDatabase()
+		return kcoindb.NewMemDatabase()
 	}
-	db, err := kusddb.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
+	db, err := kcoindb.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
 	if err != nil {
 		return nil, err
 	}

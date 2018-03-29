@@ -24,8 +24,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common/math"
-	"github.com/kowala-tech/kUSD/crypto/randentropy"
+	"github.com/kowala-tech/kcoin/common/math"
+	"github.com/kowala-tech/kcoin/crypto/randentropy"
 )
 
 const TestCount = 1000

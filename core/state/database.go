@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/trie"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/trie"
 )
 
 // Trie cache generation limit after which to evic trie nodes from memory.
@@ -49,13 +49,13 @@ type Trie interface {
 
 // NewDatabase creates a backing store for state. The returned database is safe for
 // concurrent use and retains cached trie nodes in memory.
-func NewDatabase(db kusddb.Database) Database {
+func NewDatabase(db kcoindb.Database) Database {
 	csc, _ := lru.New(codeSizeCacheSize)
 	return &cachingDB{db: db, codeSizeCache: csc}
 }
 
 type cachingDB struct {
-	db            kusddb.Database
+	db            kcoindb.Database
 	mu            sync.Mutex
 	pastTries     []*trie.SecureTrie
 	codeSizeCache *lru.Cache

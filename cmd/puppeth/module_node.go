@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // nodeDockerfile is the Dockerfile required to run an Ethereum node.
@@ -22,11 +22,11 @@ ADD genesis.json /genesis.json
 	ADD signer.pass /signer.pass
 {{end}}
 RUN \
-  echo '/kusd init /genesis.json' > kusd.sh && \{{if .Unlock}}
-	echo 'mkdir -p /root/.ethereum/keystore/ && cp /signer.json /root/.ethereum/keystore/' >> kusd.sh && \{{end}}
-	echo $'/kusd --networkid {{.NetworkID}} --cache 512 --port {{.Port}} --maxpeers {{.Peers}} {{.LightFlag}} --stats \'{{.Stats}}\' {{if .BootV4}}--bootnodesv4 {{.BootV4}}{{end}} {{if .BootV5}}--bootnodesv5 {{.BootV5}}{{end}} {{if .Coinbase}}--coinbase {{.Etherbase}} --mine{{end}}{{if .Unlock}}--unlock 0 --password /signer.pass --mine{{end}} --targetgaslimit {{.GasTarget}} --gasprice {{.GasPrice}}' >> kusd.sh
+  echo '/kcoin init /genesis.json' > kcoin.sh && \{{if .Unlock}}
+	echo 'mkdir -p /root/.ethereum/keystore/ && cp /signer.json /root/.ethereum/keystore/' >> kcoin.sh && \{{end}}
+	echo $'/kcoin --networkid {{.NetworkID}} --cache 512 --port {{.Port}} --maxpeers {{.Peers}} {{.LightFlag}} --stats \'{{.Stats}}\' {{if .BootV4}}--bootnodesv4 {{.BootV4}}{{end}} {{if .BootV5}}--bootnodesv5 {{.BootV5}}{{end}} {{if .Coinbase}}--coinbase {{.Etherbase}} --mine{{end}}{{if .Unlock}}--unlock 0 --password /signer.pass --mine{{end}} --targetgaslimit {{.GasTarget}} --gasprice {{.GasPrice}}' >> kcoin.sh
 
-ENTRYPOINT ["/bin/sh", "kusd.sh"]
+ENTRYPOINT ["/bin/sh", "kcoin.sh"]
 `
 
 // nodeComposefile is the docker-compose.yml file required to deploy and maintain
@@ -181,7 +181,7 @@ func checkNode(client *sshClient, network string, boot bool) (*nodeInfos, error)
 
 	// Container available, retrieve its node ID and its genesis json
 	var out []byte
-	if out, err = client.Run(fmt.Sprintf("docker exec %s_%s_1 /kusd --exec admin.nodeInfo.id attach", network, kind)); err != nil {
+	if out, err = client.Run(fmt.Sprintf("docker exec %s_%s_1 /kcoin --exec admin.nodeInfo.id attach", network, kind)); err != nil {
 		return nil, ErrServiceUnreachable
 	}
 	id := bytes.Trim(bytes.TrimSpace(out), "\"")

@@ -27,7 +27,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/common/math"
+	"github.com/kowala-tech/kcoin/common/math"
 	"gopkg.in/urfave/cli.v1"
 )
 

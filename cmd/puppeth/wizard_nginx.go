@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // ensureVirtualHost checks whether a reverse-proxy is running on the specified

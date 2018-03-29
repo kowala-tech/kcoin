@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common/math"
+	"github.com/kowala-tech/kcoin/common/math"
 )
 
 func TestBlockNumberJSONUnmarshal(t *testing.T) {

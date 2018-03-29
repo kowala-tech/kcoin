@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 // Prove constructs a merkle proof for key. The result contains all

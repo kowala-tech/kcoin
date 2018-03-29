@@ -1,41 +1,41 @@
-Name "kusd ${MAJORVERSION}.${MINORVERSION}.${BUILDVERSION}" # VERSION variables set through command line arguments
+Name "kcoin ${MAJORVERSION}.${MINORVERSION}.${BUILDVERSION}" # VERSION variables set through command line arguments
 InstallDir "$InstDir"
 OutFile "${OUTPUTFILE}" # set through command line arguments
 
 # Links for "Add/Remove Programs"
-!define HELPURL "https://github.com/kowala-tech/kUSD/issues"
-!define UPDATEURL "https://github.com/kowala-tech/kUSD/releases"
-!define ABOUTURL "https://github.com/kowala-tech/kUSD#ethereum-go"
+!define HELPURL "https://github.com/kowala-tech/kcoin/issues"
+!define UPDATEURL "https://github.com/kowala-tech/kcoin/releases"
+!define ABOUTURL "https://github.com/kowala-tech/kcoin#ethereum-go"
 !define /date NOW "%Y%m%d"
 
 PageEx license
   LicenseData {{.License}}
 PageExEnd
 
-# Install kusd binary
-Section "kUSD" KUSD_IDX
+# Install kcoin binary
+Section "kcoin" KUSD_IDX
   SetOutPath $INSTDIR
-  file {{.kUSD}}
+  file {{.kcoin}}
 
   # Create start menu launcher
   createDirectory "$SMPROGRAMS\${APPNAME}"
-  createShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\kusd.exe" "--fast" "--cache=512"
-  createShortCut "$SMPROGRAMS\${APPNAME}\Attach.lnk" "$INSTDIR\kusd.exe" "attach" "" ""
+  createShortCut "$SMPROGRAMS\${APPNAME}\${APPNAME}.lnk" "$INSTDIR\kcoin.exe" "--fast" "--cache=512"
+  createShortCut "$SMPROGRAMS\${APPNAME}\Attach.lnk" "$INSTDIR\kcoin.exe" "attach" "" ""
   createShortCut "$SMPROGRAMS\${APPNAME}\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "" ""
 
   # Firewall - remove rules (if exists)
-  SimpleFC::AdvRemoveRule "kUSD incoming peers (TCP:22334)"
-  SimpleFC::AdvRemoveRule "kUSD outgoing peers (TCP:22334)"
-  SimpleFC::AdvRemoveRule "kUSD UDP discovery (UDP:22334)"
+  SimpleFC::AdvRemoveRule "kcoin incoming peers (TCP:22334)"
+  SimpleFC::AdvRemoveRule "kcoin outgoing peers (TCP:22334)"
+  SimpleFC::AdvRemoveRule "kcoin UDP discovery (UDP:22334)"
 
   # Firewall - add rules
-  SimpleFC::AdvAddRule "kUSD incoming peers (TCP:22334)" ""  6 1 1 2147483647 1 "$INSTDIR\kusd.exe" "" "" "Ethereum" 22334 "" "" ""
-  SimpleFC::AdvAddRule "kUSD outgoing peers (TCP:22334)" ""  6 2 1 2147483647 1 "$INSTDIR\kusd.exe" "" "" "Ethereum" "" 22334 "" ""
-  SimpleFC::AdvAddRule "kUSD UDP discovery (UDP:22334)" "" 17 2 1 2147483647 1 "$INSTDIR\kusd.exe" "" "" "Ethereum" "" 22334 "" ""
+  SimpleFC::AdvAddRule "kcoin incoming peers (TCP:22334)" ""  6 1 1 2147483647 1 "$INSTDIR\kcoin.exe" "" "" "Ethereum" 22334 "" "" ""
+  SimpleFC::AdvAddRule "kcoin outgoing peers (TCP:22334)" ""  6 2 1 2147483647 1 "$INSTDIR\kcoin.exe" "" "" "Ethereum" "" 22334 "" ""
+  SimpleFC::AdvAddRule "kcoin UDP discovery (UDP:22334)" "" 17 2 1 2147483647 1 "$INSTDIR\kcoin.exe" "" "" "Ethereum" "" 22334 "" ""
 
   # Set default IPC endpoint (https://github.com/ethereum/EIPs/issues/147)
-  ${EnvVarUpdate} $0 "ETHEREUM_SOCKET" "R" "HKLM" "\\.\pipe\kusd.ipc"
-  ${EnvVarUpdate} $0 "ETHEREUM_SOCKET" "A" "HKLM" "\\.\pipe\kusd.ipc"
+  ${EnvVarUpdate} $0 "ETHEREUM_SOCKET" "R" "HKLM" "\\.\pipe\kcoin.ipc"
+  ${EnvVarUpdate} $0 "ETHEREUM_SOCKET" "A" "HKLM" "\\.\pipe\kcoin.ipc"
 
   # Add instdir to PATH
   Push "$INSTDIR"

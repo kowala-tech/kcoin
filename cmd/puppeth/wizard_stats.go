@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // deployStats queries the user for various input on deploying an ethstats
