@@ -34,12 +34,12 @@ or check the [config sample](https://github.com/kowala-tech/kcoin/blob/master/sa
 
 ### Docker quick start
 
-One of the quickest ways to get Kowala up and running on your machine is by using Docker:
+One of the quickest ways to get Kowala up and running on your machine is by picking a currency and using Docker:
 
 ```
 docker run -d --name kcoin-node -v /Users/alice/kcoin:/root \
 		   -p 11223:11223 -p 22334:22334 \
-		   kowalatech/kcoin --fast --cache=512
+		   kowalatech/kusd --fast --cache=512
 ```
 
 ## Networks
