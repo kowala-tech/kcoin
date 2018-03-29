@@ -35,6 +35,7 @@ pipeline:
     dockerfile: kcoin.Dockerfile
     when:
       branch: [dev]
+      event: [push, tag]
 
   docker_bootnode_dev:
     group: docker-deployment
@@ -45,6 +46,7 @@ pipeline:
     dockerfile: bootnode.Dockerfile
     when:
       branch: [dev]
+      event: [push, tag]
 
   docker_faucet_dev:
     group: docker-deployment
@@ -55,6 +57,7 @@ pipeline:
     dockerfile: faucet.Dockerfile
     when:
       branch: [dev]
+      event: [push, tag]
 
   docker_kusd_tag:
     group: docker-deployment
