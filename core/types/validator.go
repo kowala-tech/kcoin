@@ -7,6 +7,7 @@ import (
 	"errors"
 
 	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kUSD/rlp"
 )
 
 // Validator represents a consensus validator
@@ -33,9 +34,10 @@ type ValidatorList interface {
 	UpdateWeights()
 	At(i int) *Validator
 	Get(addr common.Address) *Validator
-	Size() int
+	Len() int
 	Proposer() *Validator
 	Contains(addr common.Address) bool
+	Hash() common.Hash
 }
 
 var ErrInvalidParams = errors.New("A validator set needs at least one validator")
@@ -90,8 +92,17 @@ func (set *validatorList) Get(addr common.Address) *Validator {
 	return nil
 }
 
-func (set *validatorList) Size() int {
+func (set *validatorList) Len() int {
 	return len(set.validators)
+}
+
+func (set *validatorList) GetRlp(i int) []byte {
+	enc, _ := rlp.EncodeToBytes(set.validators[i])
+	return enc
+}
+
+func (set *validatorList) Hash() common.Hash {
+	return DeriveSha(set)
 }
 
 func (set *validatorList) Proposer() *Validator {
