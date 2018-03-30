@@ -1,4 +1,4 @@
-// package web3ext contains kusd specific web3.js extensions.
+// package web3ext contains kcoin specific web3.js extensions.
 package web3ext
 
 var Modules = map[string]string{

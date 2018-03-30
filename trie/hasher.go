@@ -5,9 +5,9 @@ import (
 	"hash"
 	"sync"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto/sha3"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto/sha3"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 type hasher struct {

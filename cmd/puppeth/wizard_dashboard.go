@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // deployDashboard queries the user for various input on deploying a web-service

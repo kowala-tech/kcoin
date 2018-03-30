@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 var (
@@ -30,7 +30,7 @@ const (
 	tcpKeepAliveInterval = 30 * time.Second
 	defaultDialTimeout   = 10 * time.Second // used when dialing if the context has no deadline
 	defaultWriteTimeout  = 10 * time.Second // used for calls if the context has no deadline
-	subscribeTimeout     = 5 * time.Second  // overall timeout kusd_subscribe, rpc_modules calls
+	subscribeTimeout     = 5 * time.Second  // overall timeout kcoin_subscribe, rpc_modules calls
 )
 
 const (
@@ -333,7 +333,7 @@ func (c *Client) BatchCallContext(ctx context.Context, b []BatchElem) error {
 	return err
 }
 
-// KowalaSubscribe registers a subscripion under the "kusd" namespace.
+// KowalaSubscribe registers a subscripion under the "kcoin" namespace.
 func (c *Client) KowalaSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
 	return c.Subscribe(ctx, "eth", channel, args...)
 }

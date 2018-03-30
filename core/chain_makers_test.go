@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/consensus/tendermint"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/consensus/tendermint"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 func ExampleGenerateChain() {
@@ -21,7 +21,7 @@ func ExampleGenerateChain() {
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
 		addr2   = crypto.PubkeyToAddress(key2.PublicKey)
 		addr3   = crypto.PubkeyToAddress(key3.PublicKey)
-		db, _   = kusddb.NewMemDatabase()
+		db, _   = kcoindb.NewMemDatabase()
 	)
 
 	// Ensure that key1 has some funds in the genesis block.

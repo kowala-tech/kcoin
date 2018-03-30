@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus/tendermint"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/consensus/tendermint"
+	"github.com/kowala-tech/kcoin/core/state"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 // So we can deterministically seed different blockchains
@@ -135,7 +135,7 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 // Blocks created by GenerateChain do not contain valid proof of work
 // values. Inserting them into BlockChain requires use of FakePow or
 // a similar non-validating proof of work implementation.
-func GenerateChain(config *params.ChainConfig, parent *types.Block, db kusddb.Database, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
+func GenerateChain(config *params.ChainConfig, parent *types.Block, db kcoindb.Database, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
 	if config == nil {
 		config = params.TestChainConfig
 	}
@@ -202,10 +202,10 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 // newCanonical creates a chain database, and injects a deterministic canonical
 // chain. Depending on the full flag, if creates either a full block chain or a
 // header only chain.
-func newCanonical(n int, full bool) (kusddb.Database, *BlockChain, error) {
+func newCanonical(n int, full bool) (kcoindb.Database, *BlockChain, error) {
 	// Initialize a fresh chain with only a genesis block
 	gspec := new(Genesis)
-	db, _ := kusddb.NewMemDatabase()
+	db, _ := kcoindb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
 	blockchain, _ := NewBlockChain(db, params.AllTendermintProtocolChanges, tendermint.NewFaker(), vm.Config{})
@@ -226,7 +226,7 @@ func newCanonical(n int, full bool) (kusddb.Database, *BlockChain, error) {
 }
 
 // makeHeaderChain creates a deterministic chain of headers rooted at parent.
-func makeHeaderChain(parent *types.Header, n int, db kusddb.Database, seed int) []*types.Header {
+func makeHeaderChain(parent *types.Header, n int, db kcoindb.Database, seed int) []*types.Header {
 	blocks := makeBlockChain(types.NewBlockWithHeader(parent), n, db, seed)
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
@@ -236,7 +236,7 @@ func makeHeaderChain(parent *types.Header, n int, db kusddb.Database, seed int) 
 }
 
 // makeBlockChain creates a deterministic chain of blocks rooted at parent.
-func makeBlockChain(parent *types.Block, n int, db kusddb.Database, seed int) []*types.Block {
+func makeBlockChain(parent *types.Block, n int, db kcoindb.Database, seed int) []*types.Block {
 	blocks, _ := GenerateChain(params.TestChainConfig, parent, db, n, func(i int, b *BlockGen) {
 		b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
 	})

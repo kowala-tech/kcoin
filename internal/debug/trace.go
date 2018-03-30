@@ -7,7 +7,7 @@ import (
 	"os"
 	"runtime/trace"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // StartGoTrace turns on tracing, writing to the given file.

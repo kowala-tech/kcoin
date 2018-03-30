@@ -3,14 +3,14 @@ package state
 import (
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/kusddb"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/kcoindb"
 )
 
 var addr = common.BytesToAddress([]byte("test"))
 
 func create() (*ManagedState, *account) {
-	db, _ := kusddb.NewMemDatabase()
+	db, _ := kcoindb.NewMemDatabase()
 	statedb, _ := New(common.Hash{}, NewDatabase(db))
 	ms := ManageState(statedb)
 	ms.StateDB.SetNonce(addr, 100)

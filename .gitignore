@@ -7,7 +7,7 @@
 # used by the Makefile
 /build/_workspace/
 /build/bin/
-/kusd*.zip
+/kcoin*.zip
 
 # dashboard
 /dashboard/assets/node_modules

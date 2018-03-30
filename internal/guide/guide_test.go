@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kUSD/accounts/keystore"
-	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kcoin/accounts/keystore"
+	"github.com/kowala-tech/kcoin/core/types"
 )
 
 // Tests that the account management snippets work correctly.

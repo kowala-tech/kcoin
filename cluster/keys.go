@@ -93,7 +93,7 @@ func usePasswordFromConfigmap(spec *apiv1.PodSpec) {
 
 	volumeMount := apiv1.VolumeMount{
 		Name:      "password-v",
-		MountPath: filepath.Join("/kusd", "password.txt"),
+		MountPath: filepath.Join("/kcoin", "password.txt"),
 		SubPath:   "password.txt",
 	}
 	addVolume(spec, volume)
@@ -116,7 +116,7 @@ func useKeyFromConfigmap(spec *apiv1.PodSpec, pub_key, pub_key_file string) {
 
 	volumeMount := apiv1.VolumeMount{
 		Name:      name,
-		MountPath: filepath.Join("/root", ".kUSD", "keystore", pub_key_file),
+		MountPath: filepath.Join("/root", ".kcoin", "keystore", pub_key_file),
 		SubPath:   pub_key_file,
 	}
 	addVolume(spec, volume)

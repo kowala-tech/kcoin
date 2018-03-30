@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/kusddb"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/kcoindb"
 )
 
 func init() {
@@ -20,7 +20,7 @@ func TestProof(t *testing.T) {
 	trie, vals := randomTrie(500)
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs, _ := kusddb.NewMemDatabase()
+		proofs, _ := kcoindb.NewMemDatabase()
 		if trie.Prove(kv.k, 0, proofs) != nil {
 			t.Fatalf("missing key %x while constructing proof", kv.k)
 		}
@@ -37,7 +37,7 @@ func TestProof(t *testing.T) {
 func TestOneElementProof(t *testing.T) {
 	trie := new(Trie)
 	updateString(trie, "k", "v")
-	proofs, _ := kusddb.NewMemDatabase()
+	proofs, _ := kcoindb.NewMemDatabase()
 	trie.Prove([]byte("k"), 0, proofs)
 	if len(proofs.Keys()) != 1 {
 		t.Error("proof should have one element")
@@ -55,7 +55,7 @@ func TestVerifyBadProof(t *testing.T) {
 	trie, vals := randomTrie(800)
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs, _ := kusddb.NewMemDatabase()
+		proofs, _ := kcoindb.NewMemDatabase()
 		trie.Prove(kv.k, 0, proofs)
 		if len(proofs.Keys()) == 0 {
 			t.Fatal("zero length proof")
@@ -93,7 +93,7 @@ func BenchmarkProve(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		kv := vals[keys[i%len(keys)]]
-		proofs, _ := kusddb.NewMemDatabase()
+		proofs, _ := kcoindb.NewMemDatabase()
 		if trie.Prove(kv.k, 0, proofs); len(proofs.Keys()) == 0 {
 			b.Fatalf("zero length proof for %x", kv.k)
 		}
@@ -104,10 +104,10 @@ func BenchmarkVerifyProof(b *testing.B) {
 	trie, vals := randomTrie(100)
 	root := trie.Hash()
 	var keys []string
-	var proofs []*kusddb.MemDatabase
+	var proofs []*kcoindb.MemDatabase
 	for k := range vals {
 		keys = append(keys, k)
-		proof, _ := kusddb.NewMemDatabase()
+		proof, _ := kcoindb.NewMemDatabase()
 		trie.Prove([]byte(k), 0, proof)
 		proofs = append(proofs, proof)
 	}

@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kcoin/crypto"
 )
 
 // Callable method given a `Name` and whether the method is a constant.

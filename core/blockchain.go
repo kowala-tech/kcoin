@@ -11,20 +11,20 @@ import (
 	"time"
 
 	"github.com/hashicorp/golang-lru"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/mclock"
-	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/metrics"
-	"github.com/kowala-tech/kUSD/params"
-	"github.com/kowala-tech/kUSD/rlp"
-	"github.com/kowala-tech/kUSD/trie"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/mclock"
+	"github.com/kowala-tech/kcoin/consensus"
+	"github.com/kowala-tech/kcoin/core/state"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/metrics"
+	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/trie"
 )
 
 var (
@@ -62,7 +62,7 @@ type BlockChain struct {
 	config *params.ChainConfig // chain & network configuration
 
 	hc            *HeaderChain
-	chainDb       kusddb.Database
+	chainDb       kcoindb.Database
 	rmLogsFeed    event.Feed
 	chainFeed     event.Feed
 	chainSideFeed event.Feed
@@ -102,7 +102,7 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(chainDb kusddb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+func NewBlockChain(chainDb kcoindb.Database, config *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
 	blockCache, _ := lru.New(blockCacheLimit)
@@ -706,7 +706,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		}
 		stats.processed++
 
-		if batch.ValueSize() >= kusddb.IdealBatchSize {
+		if batch.ValueSize() >= kcoindb.IdealBatchSize {
 			if err := batch.Write(); err != nil {
 				return 0, err
 			}

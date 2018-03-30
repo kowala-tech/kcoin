@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/golang-lru"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/consensus"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 const (
@@ -32,7 +32,7 @@ const (
 type HeaderChain struct {
 	config *params.ChainConfig
 
-	chainDb       kusddb.Database
+	chainDb       kcoindb.Database
 	genesisHeader *types.Header
 
 	currentHeader     *types.Header // Current head of the header chain (may be above the block chain!)
@@ -52,7 +52,7 @@ type HeaderChain struct {
 //  getValidator should return the parent's validator
 //  procInterrupt points to the parent's interrupt semaphore
 //  wg points to the parent's shutdown wait group
-func NewHeaderChain(chainDb kusddb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
+func NewHeaderChain(chainDb kcoindb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
 	headerCache, _ := lru.New(headerCacheLimit)
 	tdCache, _ := lru.New(tdCacheLimit)
 	numberCache, _ := lru.New(numberCacheLimit)

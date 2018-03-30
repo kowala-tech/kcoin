@@ -1,32 +1,32 @@
-[![Gitter chat](https://badges.gitter.im/kowala/kusd.png)](https://gitter.im/kowala-tech/kUSD) [![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kUSD/status.svg)](http://ci.kowala.io/kowala-tech/kUSD) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://testnet.kowala.io)
+[![Gitter chat](https://badges.gitter.im/kowala/kcoin.png)](https://gitter.im/kowala-tech/kcoin) [![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kcoin/status.svg)](http://ci.kowala.io/kowala-tech/kcoin) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://testnet.kowala.io)
 
-## Kowala
+## kCoin
 
-Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kusd`** client is the main client for the Kowala network.
+Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kcoin`** client is the main client for the Kowala network.
 It is the entry point into the Kowala network, and is capable of running a full node. The client offers
 a gateway (Endpoints, WebSocket, IPC) to the Kowala network to other processes.
 
-## Running kUSD
+## Running kcoin
 
 ### Building the source
 
-	make kusd
+	make kcoin
 
 ### Configuration
 
-As an alternative to passing the numerous flags to the `kusd` binary, you can also pass a configuration file via:
+As an alternative to passing the numerous flags to the `kcoin` binary, you can also pass a configuration file via:
 
 ```
-$ kusd --config /path/to/your_config.toml
+$ kcoin --config /path/to/your_config.toml
 ```
 
 To get an idea how the file should look like you can use the `dumpconfig` subcommand to export your existing configuration:
 
 ```
-$ kusd --your-favourite-flags dumpconfig
+$ kcoin --your-favourite-flags dumpconfig
 ```
 
-or check the [config sample](https://github.com/kowala-tech/kUSD/blob/master/sample-kowala.toml).
+or check the [config sample](https://github.com/kowala-tech/kcoin/blob/master/sample-kowala.toml).
 
 ### Client Options
 
@@ -34,10 +34,10 @@ or check the [config sample](https://github.com/kowala-tech/kUSD/blob/master/sam
 
 ### Docker quick start
 
-One of the quickest ways to get Kowala up and running on your machine is by using Docker:
+One of the quickest ways to get Kowala up and running on your machine is by picking a currency and using Docker:
 
 ```
-docker run -d --name kusd-node -v /Users/alice/kusd:/root \
+docker run -d --name kcoin-node -v /Users/alice/kcoin:/root \
 		   -p 11223:11223 -p 22334:22334 \
 		   kowalatech/kusd --fast --cache=512
 ```
@@ -61,27 +61,27 @@ http://testnet.kowala.io/
 1. Generate/request a new account for each genesis validator
 
 ```
-$ kusd --config /path/to/your_config.toml account new
+$ kcoin --config /path/to/your_config.toml account new
 Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 ```
 
 2. Fill in the validator details in the network contracts
 
-   1. pre-fund the validators in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/mUSD.sol#L10)
-   2. mark the validators as genesis validators and also as voters [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L96)
+   1. pre-fund the validators in [here](https://github.com/kowala-tech/kcoin/blob/feature/tendermint/contracts/network/contracts/mUSD.sol#L10)
+   2. mark the validators as genesis validators and also as voters [here](https://github.com/kowala-tech/kcoin/blob/feature/tendermint/contracts/network/contracts/network.sol#L96)
 
 #### Network Contracts - Owner
 
 1. Generate a new account - this account will be selected (on the next step) as the owner of the network contracts.
 
 ```
-$ kusd --config /path/to/your_config.toml account new
+$ kcoin --config /path/to/your_config.toml account new
 Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 ```
 
 #### Network
 
-1. Set `totalSupplyWei` field present in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/contracts/network.sol#L5) to the correct pre-minted amount of kusd (only needed to calculate the blockcap for the reward)
+1. Set `totalSupplyWei` field present in [here](https://github.com/kowala-tech/kcoin/blob/feature/tendermint/contracts/network/contracts/network.sol#L5) to the correct pre-minted amount of kcoin (only needed to calculate the blockcap for the reward)
 
 #### File
 
@@ -113,22 +113,22 @@ $ go generate
 
 ```
 	$ Which file to save the genesis into? (default = test.json)
-	> /src/github.com/kowala-tech/kUSD/assets/test.json
+	> /src/github.com/kowala-tech/kcoin/assets/test.json
 	INFO [01-16|16:49:37] Exported existing genesis block
 ```
 
 3. Initialize the blockchain based on the genesis file created on the previous step.
 
 ```
-$ kusd --config /path/to/your_config.toml init path/to/genesis.json
+$ kcoin --config /path/to/your_config.toml init path/to/genesis.json
 ```
 
-4. Set the `mapAddress` (based on the genesis file) variable in [here](https://github.com/kowala-tech/kUSD/blob/feature/tendermint/contracts/network/data_layouts.go#L94) to the correct address.
+4. Set the `mapAddress` (based on the genesis file) variable in [here](https://github.com/kowala-tech/kcoin/blob/feature/tendermint/contracts/network/data_layouts.go#L94) to the correct address.
 
-5. Rebuild the kusd client
+5. Rebuild the kcoin client
 
 ```
-$ make kusd
+$ make kcoin
 ```
 
 ### Bootstrap Node
@@ -161,14 +161,14 @@ and gather info on other nodes.
 Make sure that you have an account available:
 
 ```
-$ kusd --config /path/to/your_config.toml account new
+$ kcoin --config /path/to/your_config.toml account new
 Address: {c7f1d574658e7b0f37244366c40c8002d78c734f}
 ```
 
-To start a kusd instance for block validation, run it with all your usual flags, extended by:
+To start a kcoin instance for block validation, run it with all your usual flags, extended by:
 
 ```
-$ kusd --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0xc7f1d574658e7b0f37244366c40c8002d78c734f –-coinbase 0xc7f1d574658e7b0f37244366c40c8002d78c734f
+$ kcoin --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0xc7f1d574658e7b0f37244366c40c8002d78c734f –-coinbase 0xc7f1d574658e7b0f37244366c40c8002d78c734f
 ```
 
 ## Mining client metrics
@@ -183,4 +183,4 @@ Prometheus endpoint address can be specified using flag `--metrics-prometheus-ad
 
 ## Contact us
 
-Feel free to email us at support@kowala.tech or talk to us on [Gitter](https://gitter.im/kowala-tech/kUSD).
+Feel free to email us at support@kowala.tech or talk to us on [Gitter](https://gitter.im/kowala-tech/kcoin).

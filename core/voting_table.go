@@ -1,8 +1,8 @@
 package core
 
 import (
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core/types"
 	"errors"
 	"fmt"
 )

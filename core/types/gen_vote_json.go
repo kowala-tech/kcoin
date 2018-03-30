@@ -7,8 +7,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/hexutil"
 )
 
 var _ = (*votedataMarshalling)(nil)

@@ -3,10 +3,10 @@ package core
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/consensus"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/core/vm"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/consensus"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/core/vm"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the

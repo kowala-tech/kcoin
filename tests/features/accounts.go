@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog/gherkin"
-	"github.com/kowala-tech/kUSD/cluster"
+	"github.com/kowala-tech/kcoin/cluster"
 )
 
 type AccountEntry struct {
@@ -97,25 +97,25 @@ func (context *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.Dat
 	return nil
 }
 
-func (context *Context) TheBalanceIsExactly(account string, kusd int64) error {
+func (context *Context) TheBalanceIsExactly(account string, kcoin int64) error {
 	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
 		balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
 		if err != nil {
 			return false
 		}
-		return balance.Cmp(toWei(kusd)) == 0
+		return balance.Cmp(toWei(kcoin)) == 0
 	})
 
 	return err
 }
 
-func (context *Context) TheBalanceIsAround(account string, kusd int64) error {
+func (context *Context) TheBalanceIsAround(account string, kcoin int64) error {
 	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
 		balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
 		if err != nil {
 			return false
 		}
-		diff := balance.Sub(balance, toWei(kusd))
+		diff := balance.Sub(balance, toWei(kcoin))
 		diff.Abs(diff)
 
 		return diff.Cmp(big.NewInt(100000)) < 0

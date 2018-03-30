@@ -3,8 +3,8 @@ package trie
 import (
 	"fmt"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 var secureKeyPrefix = []byte("secure-key-")

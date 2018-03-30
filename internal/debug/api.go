@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // Handler is the global debugging handler.

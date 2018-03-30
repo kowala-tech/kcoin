@@ -23,10 +23,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/tests"
+	"github.com/kowala-tech/kcoin/core/state"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/tests"
 
 	cli "gopkg.in/urfave/cli.v1"
 )

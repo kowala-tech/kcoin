@@ -8,12 +8,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/p2p/nat"
-	"github.com/kowala-tech/kUSD/p2p/netutil"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/p2p/nat"
+	"github.com/kowala-tech/kcoin/p2p/netutil"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 const Version = 4

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/common"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 

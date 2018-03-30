@@ -147,7 +147,7 @@ func validatorPod(podName, networkID, bootnode string, port int32) *apiv1.Pod {
 			Containers: []apiv1.Container{
 				{
 					Name:            podName,
-					Image:           "kowalatech/kusd:dev",
+					Image:           "kowalatech/kcoin:dev",
 					ImagePullPolicy: apiv1.PullAlways,
 					Ports: []apiv1.ContainerPort{
 						{

@@ -6,7 +6,7 @@ import (
 
 	"errors"
 
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 // Validator represents a consensus validator

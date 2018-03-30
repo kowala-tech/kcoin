@@ -8,9 +8,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/p2p/netutil"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/p2p/netutil"
 )
 
 const (

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"unsafe"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto/sha3"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto/sha3"
 )
 
 var (

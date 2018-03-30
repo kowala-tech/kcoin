@@ -23,8 +23,8 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/hexutil"
 )
 
 var unmarshalLogTests = map[string]struct {

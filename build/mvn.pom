@@ -5,13 +5,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.kowala</groupId>
-  <artifactId>kusd</artifactId>
+  <artifactId>kcoin</artifactId>
   <version>{{.Version}}</version>
   <packaging>aar</packaging>
 
   <name>Android Ethereum Client</name>
   <description>Android port of the go-ethereum libraries and node</description>
-  <url>https://github.com/kowala-tech/kUSD</url>
+  <url>https://github.com/kowala-tech/kcoin</url>
   <inceptionYear>2015</inceptionYear>
 
   <licenses>
@@ -48,10 +48,10 @@
 
   <issueManagement>
     <system>GitHub Issues</system>
-    <url>https://github.com/kowala-tech/kUSD/issues/</url>
+    <url>https://github.com/kowala-tech/kcoin/issues/</url>
   </issueManagement>
 
   <scm>
-    <url>https://github.com/kowala-tech/kUSD</url>
+    <url>https://github.com/kowala-tech/kcoin</url>
   </scm>
 </project>

@@ -52,7 +52,7 @@ func genesisValidatorPod(podName, networkID, pub_key, bootnode string, port int3
 			Containers: []apiv1.Container{
 				{
 					Name:            podName,
-					Image:           "kowalatech/kusd:dev",
+					Image:           "kowalatech/kcoin:dev",
 					ImagePullPolicy: apiv1.PullAlways,
 					Ports: []apiv1.ContainerPort{
 						{
@@ -67,7 +67,7 @@ func genesisValidatorPod(podName, networkID, pub_key, bootnode string, port int3
 					Args: []string{
 						"--validate",
 						"--deposit", "100001",
-						"--password", "/kusd/password.txt",
+						"--password", "/kcoin/password.txt",
 						"--unlock", fmt.Sprintf("0x%v", pub_key),
 						"--coinbase", fmt.Sprintf("0x%v", pub_key),
 						"--syncmode", "full",

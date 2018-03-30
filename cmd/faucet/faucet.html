@@ -5,7 +5,7 @@
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 
-		<title>kUSD Faucet</title>
+		<title>kcoin Faucet</title>
 
 		<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
 		<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
@@ -65,7 +65,7 @@
 			<div class="container">
 				<div class="row" style="margin-bottom: 16px;">
 					<div class="col-lg-12">
-						<h1 style="text-align: center;"></i>kUSD Faucet</h1>
+						<h1 style="text-align: center;"></i>kcoin Faucet</h1>
 					</div>
 				</div>
 				<div class="row">
@@ -73,7 +73,7 @@
 						<div class="input-group">
 							<input id="url" name="url" type="text" class="form-control" placeholder="Social network URL containing your Kowala address...">
 							<span class="input-group-btn">
-								<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Give me kUSD 	<i class="fa fa-caret-down" aria-hidden="true"></i></button>
+								<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Give me kcoin 	<i class="fa fa-caret-down" aria-hidden="true"></i></button>
 				        <ul class="dropdown-menu dropdown-menu-right">{{range $idx, $amount := .Amounts}}
 				          <li><a style="text-align: center;" onclick="tier={{$idx}}; {{if $.Recaptcha}}grecaptcha.execute(){{else}}submit({{$idx}}){{end}}">{{$amount}} / {{index $.Periods $idx}}</a></li>{{end}}
 				        </ul>
@@ -85,13 +85,13 @@
 				<div class="row" style="margin-top: 32px;">
 					<div class="col-sm-3"><i class="fa fa-rss" aria-hidden="true"></i> <span id="peers"></span> peers</div>
 					<div class="col-sm-3"><i class="fa fa-database" aria-hidden="true"></i> <span id="block"></span> blocks</div>
-					<div class="col-sm-3"><i class="fa fa-heartbeat" aria-hidden="true"></i> <span id="funds"></span> kUSD</div>
+					<div class="col-sm-3"><i class="fa fa-heartbeat" aria-hidden="true"></i> <span id="funds"></span> kcoin</div>
 					<div class="col-sm-3"><i class="fa fa-university" aria-hidden="true"></i> <span id="funded"></span> funded</div>
 				</div>
 				<div class="row" style="margin-top: 32px;">
 					<div class="col-lg-12">
 						<h3>How does this work?</h3>
-						<p>This kUSD faucet is running on the {{.Network}} network. To prevent malicious actors from exhausting all available funds or accumulating enough kUSD to mount long running spam attacks, requests are tied to common 3rd party social network accounts. Anyone having a Twitter, Google+ or Facebook account may request funds within the permitted limits.</p>
+						<p>This kcoin faucet is running on the {{.Network}} network. To prevent malicious actors from exhausting all available funds or accumulating enough kcoin to mount long running spam attacks, requests are tied to common 3rd party social network accounts. Anyone having a Twitter, Google+ or Facebook account may request funds within the permitted limits.</p>
 						<dl class="dl-horizontal" style="margin-top: 20px;">
 							<dt style="width: auto; margin-left: 40px;"><i class="fa fa-twitter" aria-hidden="true" style="font-size: 36px;"></i></dt>
 							<dd style="margin-left: 88px; margin-bottom: 20px;"></i> To request funds via Twitter, make a <a href="https://twitter.com/intent/tweet?text=Requesting%20faucet%20funds%20into%200x0000000000000000000000000000000000000000%20on%20the%20%23{{.Network}}%20%23Kowala%20test%20network." target="_about:blank">tweet</a> with your Kowala address pasted into the contents (surrounding text doesn't matter).<br/><br/>Copy-paste the <a href="https://support.twitter.com/articles/80586" target="_about:blank">tweets URL</a> into the above input box and fire away!</dd>

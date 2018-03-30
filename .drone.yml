@@ -1,6 +1,6 @@
 workspace:
   base: /go
-  path: src/github.com/kowala-tech/kUSD
+  path: src/github.com/kowala-tech/kcoin
 
 clone:
   git:
@@ -32,9 +32,10 @@ pipeline:
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: kusd.Dockerfile
+    dockerfile: kcoin.Dockerfile
     when:
       branch: [dev]
+      event: [push, tag]
 
   docker_bootnode_dev:
     group: docker-deployment
@@ -45,6 +46,7 @@ pipeline:
     dockerfile: bootnode.Dockerfile
     when:
       branch: [dev]
+      event: [push, tag]
 
   docker_faucet_dev:
     group: docker-deployment
@@ -55,6 +57,7 @@ pipeline:
     dockerfile: faucet.Dockerfile
     when:
       branch: [dev]
+      event: [push, tag]
 
   docker_kusd_tag:
     group: docker-deployment
@@ -63,7 +66,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: kusd.Dockerfile
+    dockerfile: kcoin.Dockerfile
     when:
       event: tag
 
