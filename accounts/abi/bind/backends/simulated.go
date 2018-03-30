@@ -19,7 +19,6 @@ import (
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/params"
-	"github.com/rgeraldes/ethereum-sharding/kusddb"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
@@ -44,7 +43,7 @@ type SimulatedBackend struct {
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
-	database, _ := kusddb.NewMemDatabase()
+	database, _ := kcoindb.NewMemDatabase()
 	genesis := core.Genesis{Config: params.AllTendermintProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
 	blockchain, _ := core.NewBlockChain(database, genesis.Config, tendermint.NewFaker(), vm.Config{})
