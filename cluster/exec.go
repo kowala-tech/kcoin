@@ -50,7 +50,7 @@ func (client *cluster) getExecExecutor(podName, command string) (remotecommand.E
 	req.VersionedParams(&apiv1.PodExecOptions{
 		Container: podName,
 		Command: []string{
-			`./kusd`,
+			`./kcoin`,
 			`attach`,
 			`--exec`,
 			command,

@@ -956,7 +956,7 @@ func useGenesisFromConfigmap(spec *apiv1.PodSpec) {
 
 	volumeMount := apiv1.VolumeMount{
 		Name:      "genesis-v",
-		MountPath: filepath.Join("/kusd", "genesis.json"),
+		MountPath: filepath.Join("/kcoin", "genesis.json"),
 		SubPath:   "genesis.json",
 	}
 	addVolume(spec, volume)

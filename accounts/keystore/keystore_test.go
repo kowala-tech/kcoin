@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/event"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/event"
 )
 
 var testSigData = make([]byte, 32)

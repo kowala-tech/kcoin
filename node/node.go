@@ -10,13 +10,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/internal/debug"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/internal/debug"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/rpc"
 	"github.com/prometheus/prometheus/util/flock"
 )
 
@@ -80,7 +80,7 @@ func New(conf *Config) (*Node, error) {
 		return nil, errors.New(`Config.Name cannot end in ".ipc"`)
 	}
 	// Ensure that the AccountManager method works before the node has started.
-	// We rely on this in cmd/kusd.
+	// We rely on this in cmd/kcoin.
 	am, ephemeralKeystore, err := makeAccountManager(conf)
 	if err != nil {
 		return nil, err
@@ -619,11 +619,11 @@ func (n *Node) EventMux() *event.TypeMux {
 // OpenDatabase opens an existing database with the given name (or creates one if no
 // previous can be found) from within the node's instance directory. If the node is
 // ephemeral, a memory database is returned.
-func (n *Node) OpenDatabase(name string, cache, handles int) (kusddb.Database, error) {
+func (n *Node) OpenDatabase(name string, cache, handles int) (kcoindb.Database, error) {
 	if n.config.DataDir == "" {
-		return kusddb.NewMemDatabase()
+		return kcoindb.NewMemDatabase()
 	}
-	return kusddb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
+	return kcoindb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
 }
 
 // ResolvePath returns the absolute path of a resource in the instance directory.

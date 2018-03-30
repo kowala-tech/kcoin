@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/kusddb"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/kcoindb"
 )
 
 // makeTestTrie create a sample test trie to test node-wise reconstruction.
-func makeTestTrie() (kusddb.Database, *Trie, map[string][]byte) {
+func makeTestTrie() (kcoindb.Database, *Trie, map[string][]byte) {
 	// Create an empty trie
-	db, _ := kusddb.NewMemDatabase()
+	db, _ := kcoindb.NewMemDatabase()
 	trie, _ := New(common.Hash{}, db)
 
 	// Fill it with some arbitrary data
@@ -76,7 +76,7 @@ func TestEmptyTrieSync(t *testing.T) {
 	emptyB, _ := New(emptyRoot, nil)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
-		db, _ := kusddb.NewMemDatabase()
+		db, _ := kcoindb.NewMemDatabase()
 		if req := NewTrieSync(common.BytesToHash(trie.Root()), db, nil).Missing(1); len(req) != 0 {
 			t.Errorf("test %d: content requested for empty trie: %v", i, req)
 		}
@@ -93,7 +93,7 @@ func testIterativeTrieSync(t *testing.T, batch int) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := append([]common.Hash{}, sched.Missing(batch)...)
@@ -125,7 +125,7 @@ func TestIterativeDelayedTrieSync(t *testing.T) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := append([]common.Hash{}, sched.Missing(10000)...)
@@ -162,7 +162,7 @@ func testIterativeRandomTrieSync(t *testing.T, batch int) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := make(map[common.Hash]struct{})
@@ -202,7 +202,7 @@ func TestIterativeRandomDelayedTrieSync(t *testing.T) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := make(map[common.Hash]struct{})
@@ -248,7 +248,7 @@ func TestDuplicateAvoidanceTrieSync(t *testing.T) {
 	srcDb, srcTrie, srcData := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	queue := append([]common.Hash{}, sched.Missing(0)...)
@@ -287,7 +287,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 	srcDb, srcTrie, _ := makeTestTrie()
 
 	// Create a destination trie and sync with the scheduler
-	dstDb, _ := kusddb.NewMemDatabase()
+	dstDb, _ := kcoindb.NewMemDatabase()
 	sched := NewTrieSync(common.BytesToHash(srcTrie.Root()), dstDb, nil)
 
 	added := []common.Hash{}

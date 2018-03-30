@@ -1,6 +1,6 @@
 package features
 
-import "github.com/kowala-tech/kUSD/cluster"
+import "github.com/kowala-tech/kcoin/cluster"
 
 type Context struct {
 	cluster              cluster.Cluster

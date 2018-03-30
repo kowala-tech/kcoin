@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"

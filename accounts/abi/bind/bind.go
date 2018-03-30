@@ -28,7 +28,7 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/kowala-tech/kUSD/accounts/abi"
+	"github.com/kowala-tech/kcoin/accounts/abi"
 	"golang.org/x/tools/imports"
 )
 

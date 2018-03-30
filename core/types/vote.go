@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/hexutil"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 //go:generate gencodec -type votedata -field-override votedataMarshalling -out gen_vote_json.go

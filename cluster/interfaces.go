@@ -36,7 +36,7 @@ type Cluster interface {
 	// Cleanup deletes all pods, leaving the kluster in a fresh state
 	Cleanup() error
 
-	// Exec runs arbitrary console commands on a specific pod running kusd.
+	// Exec runs arbitrary console commands on a specific pod running kcoin.
 	Exec(podName, command string) (*ExecResponse, error)
 
 	// GetBalance returns the balance of the coinbase of the specified node

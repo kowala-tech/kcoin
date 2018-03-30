@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/core/asm"
+	"github.com/kowala-tech/kcoin/core/asm"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

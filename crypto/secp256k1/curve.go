@@ -37,7 +37,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/kowala-tech/kUSD/common/math"
+	"github.com/kowala-tech/kcoin/common/math"
 )
 
 /*

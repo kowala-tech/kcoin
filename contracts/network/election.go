@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/contracts/network/contracts"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/contracts/network/contracts"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 var mapChainIDToAddr = map[uint64]common.Address{

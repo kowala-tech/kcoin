@@ -54,7 +54,7 @@ func TestBloom(t *testing.T) {
 import (
 	"testing"
 
-	"github.com/kowala-tech/kUSD/core/state"
+	"github.com/kowala-tech/kcoin/core/state"
 )
 
 func TestBloom9(t *testing.T) {

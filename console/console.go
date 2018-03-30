@@ -11,9 +11,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/internal/jsre"
-	"github.com/kowala-tech/kUSD/internal/web3ext"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/internal/jsre"
+	"github.com/kowala-tech/kcoin/internal/web3ext"
+	"github.com/kowala-tech/kcoin/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"
@@ -238,11 +238,11 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 	return line[:start], c.jsre.CompleteKeywords(line[start:pos]), line[pos:]
 }
 
-// Welcome show summary of current kusd instance and some metadata about the
+// Welcome show summary of current kcoin instance and some metadata about the
 // console's available modules.
 func (c *Console) Welcome() {
-	// Print some generic kusd metadata
-	fmt.Fprintf(c.printer, "Welcome to the kUSD JavaScript console!\n\n")
+	// Print some generic kcoin metadata
+	fmt.Fprintf(c.printer, "Welcome to the kcoin JavaScript console!\n\n")
 	c.jsre.Run(`
 		console.log("instance: " + web3.version.node);
 		console.log("coinbase: " + eth.coinbase);

@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog"
-	"github.com/kowala-tech/kUSD/cluster"
-	"github.com/kowala-tech/kUSD/tests/features"
+	"github.com/kowala-tech/kcoin/cluster"
+	"github.com/kowala-tech/kcoin/tests/features"
 )
 
 var (
@@ -23,9 +23,9 @@ func FeatureContext(s *godog.Suite) {
 
 	context := features.NewTestContext(k8sCluster, genesisValidatorName)
 	s.Step(`^I have the following accounts:$`, context.IHaveTheFollowingAccounts)
-	s.Step(`^I transfer (\d+) kUSD from (\w+) to (\w+)$`, context.ITransferKUSD)
-	s.Step(`^the balance of (\w+) is eventually (\d+) kUSD$`, context.TheBalanceIsExactly)
-	s.Step(`^the balance of (\w+) is eventually around (\d+) kUSD$`, context.TheBalanceIsAround)
+	s.Step(`^I transfer (\d+) kcoin from (\w+) to (\w+)$`, context.ITransferKUSD)
+	s.Step(`^the balance of (\w+) is eventually (\d+) kcoin$`, context.TheBalanceIsExactly)
+	s.Step(`^the balance of (\w+) is eventually around (\d+) kcoin$`, context.TheBalanceIsAround)
 }
 
 func prepareCluster() {

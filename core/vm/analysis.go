@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 // destinations stores one map per contract (keyed by hash of code).

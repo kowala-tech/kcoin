@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 const (

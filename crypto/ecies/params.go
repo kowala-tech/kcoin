@@ -42,7 +42,7 @@ import (
 	"fmt"
 	"hash"
 
-	ethcrypto "github.com/kowala-tech/kUSD/crypto"
+	ethcrypto "github.com/kowala-tech/kcoin/crypto"
 )
 
 var (

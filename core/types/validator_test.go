@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

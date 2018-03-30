@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // CreateIPCListener creates an listener, on Unix platforms this is a unix socket, on
