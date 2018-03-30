@@ -4,11 +4,11 @@ import (
 	"testing"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/common"
 	"math/big"
 	"github.com/stretchr/testify/require"
-	"github.com/kowala-tech/kUSD/core/types/mocks"
+	"github.com/kowala-tech/kcoin/core/types/mocks"
 )
 
 func TestTwoThirdsPlusOneVoteQuorum(t *testing.T) {

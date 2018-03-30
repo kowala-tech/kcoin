@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/hexutil"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshalling -out gen_tx_json.go

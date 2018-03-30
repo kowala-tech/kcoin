@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/accounts/abi"
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kcoin/accounts/abi"
+	"github.com/kowala-tech/kcoin/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core/types"
 )
 
 // ReleaseOracleABI is the input ABI used to generate the binding from.

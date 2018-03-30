@@ -9,10 +9,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
-	"github.com/kowala-tech/kUSD/crypto/sha3"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/hexutil"
+	"github.com/kowala-tech/kcoin/crypto/sha3"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 var (
@@ -135,7 +135,7 @@ type Block struct {
 	ReceivedFrom interface{}
 }
 
-// "external" block encoding. used for kusd protocol, etc.
+// "external" block encoding. used for kcoin protocol, etc.
 type extblock struct {
 	Header     *Header
 	LastCommit *Commit

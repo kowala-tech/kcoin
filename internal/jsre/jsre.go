@@ -10,8 +10,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/internal/jsre/deps"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/internal/jsre/deps"
 	"github.com/robertkrimen/otto"
 )
 

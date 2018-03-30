@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
-	"github.com/kowala-tech/kUSD/common/compiler"
+	"github.com/kowala-tech/kcoin/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/common/compiler"
 )
 
 var (

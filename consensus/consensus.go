@@ -2,11 +2,11 @@
 package consensus
 
 import (
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/params"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core/state"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/rpc"
 )
 
 // ChainReader defines a small collection of methods needed to access the local

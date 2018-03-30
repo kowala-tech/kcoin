@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/jackpal/go-nat-pmp"
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // An implementation of nat.Interface can map local ports to ports

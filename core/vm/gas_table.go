@@ -19,9 +19,9 @@ package vm
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/math"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/math"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so

@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/internal/kusdapi"
-	"github.com/kowala-tech/kUSD/kusd"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/node"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/internal/kcoinapi"
+	"github.com/kowala-tech/kcoin/kcoin"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/node"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/rpc"
 )
 
 // Interval to check for new releases
@@ -44,15 +44,15 @@ type ReleaseService struct {
 // releases and notify the user of such.
 func NewReleaseService(ctx *node.ServiceContext, config Config) (node.Service, error) {
 	// Retrieve the Kowala service dependency to access the blockchain
-	var apiBackend kusdapi.Backend
-	var kowala *kusd.Kowala
+	var apiBackend kcoinapi.Backend
+	var kowala *kcoin.Kowala
 	if err := ctx.Service(&kowala); err == nil {
 		apiBackend = kowala.ApiBackend
 	} else {
 		return nil, err
 	}
 	// Construct the release service
-	contract, err := NewReleaseOracle(config.Oracle, kusd.NewContractBackend(apiBackend))
+	contract, err := NewReleaseOracle(config.Oracle, kcoin.NewContractBackend(apiBackend))
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (r *ReleaseService) checkVersion() {
 
 		warning := fmt.Sprintf("Client v%d.%d.%d-%x seems older than the latest upstream release v%d.%d.%d-%x",
 			r.config.Major, r.config.Minor, r.config.Patch, r.config.Commit[:4], version.Major, version.Minor, version.Patch, version.Commit[:4])
-		howtofix := fmt.Sprintf("Please check https://github.com/kowala-tech/kUSD/releases for new releases")
+		howtofix := fmt.Sprintf("Please check https://github.com/kowala-tech/kcoin/releases for new releases")
 		separator := strings.Repeat("-", len(warning))
 
 		log.Warn(separator)

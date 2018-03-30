@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/internal/jsre"
-	"github.com/kowala-tech/kUSD/kusd"
-	"github.com/kowala-tech/kUSD/node"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/internal/jsre"
+	"github.com/kowala-tech/kcoin/kcoin"
+	"github.com/kowala-tech/kcoin/node"
 )
 
 const (
@@ -57,7 +57,7 @@ func (p *hookedPrompter) SetWordCompleter(completer WordCompleter) {}
 type tester struct {
 	workspace string
 	stack     *node.Node
-	kowala    *kusd.Kowala
+	kowala    *kcoin.Kowala
 	console   *Console
 	input     *hookedPrompter
 	output    *bytes.Buffer
@@ -65,7 +65,7 @@ type tester struct {
 
 // newTester creates a test environment based on which the console can operate.
 // Please ensure you call Close() on the returned tester to avoid leaks.
-func newTester(t *testing.T, confOverride func(*kusd.Config)) *tester {
+func newTester(t *testing.T, confOverride func(*kcoin.Config)) *tester {
 	// Create a temporary storage for the node keys and initialize it
 	workspace, err := ioutil.TempDir("", "console-tester-")
 	if err != nil {
@@ -77,15 +77,15 @@ func newTester(t *testing.T, confOverride func(*kusd.Config)) *tester {
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)
 	}
-	kusdConf := &kusd.Config{
+	kcoinConf := &kcoin.Config{
 		Genesis:  core.DeveloperGenesisBlock(15, common.Address{}),
 		Coinbase: common.HexToAddress(testAddress),
 		PowTest:  true,
 	}
 	if confOverride != nil {
-		confOverride(kusdConf)
+		confOverride(kcoinConf)
 	}
-	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return kusd.New(ctx, kusdConf) }); err != nil {
+	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return kcoin.New(ctx, kcoinConf) }); err != nil {
 		t.Fatalf("failed to register Kowala protocol: %v", err)
 	}
 	// Start the node and assemble the JavaScript console around it
@@ -111,7 +111,7 @@ func newTester(t *testing.T, confOverride func(*kusd.Config)) *tester {
 		t.Fatalf("failed to create JavaScript console: %v", err)
 	}
 	// Create the final tester and return
-	var kowala *kusd.Kowala
+	var kowala *kcoin.Kowala
 	stack.Service(&kowala)
 
 	return &tester{

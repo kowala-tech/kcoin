@@ -11,16 +11,16 @@ import (
 
 	goruntime "runtime"
 
-	"github.com/kowala-tech/kUSD/cmd/evm/internal/compiler"
-	"github.com/kowala-tech/kUSD/cmd/utils"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/core/vm/runtime"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/cmd/evm/internal/compiler"
+	"github.com/kowala-tech/kcoin/cmd/utils"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/core/state"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/core/vm/runtime"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/params"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -83,7 +83,7 @@ func runCmd(ctx *cli.Context) error {
 		_, statedb = gen.ToBlock()
 		chainConfig = gen.Config
 	} else {
-		db, _ := kusddb.NewMemDatabase()
+		db, _ := kcoindb.NewMemDatabase()
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 	}
 	if ctx.GlobalString(SenderFlag.Name) != "" {

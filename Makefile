@@ -2,19 +2,19 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: kusd android ios kusd-cross swarm evm all test clean
-.PHONY: kusd-linux kusd-linux-386 kusd-linux-amd64 kusd-linux-mips64 kusd-linux-mips64le
-.PHONY: kusd-linux-arm kusd-linux-arm-5 kusd-linux-arm-6 kusd-linux-arm-7 kusd-linux-arm64
-.PHONY: kusd-darwin kusd-darwin-386 kusd-darwin-amd64
-.PHONY: kusd-windows kusd-windows-386 kusd-windows-amd64
+.PHONY: kcoin android ios kcoin-cross swarm evm all test clean
+.PHONY: kcoin-linux kcoin-linux-386 kcoin-linux-amd64 kcoin-linux-mips64 kcoin-linux-mips64le
+.PHONY: kcoin-linux-arm kcoin-linux-arm-5 kcoin-linux-arm-6 kcoin-linux-arm-7 kcoin-linux-arm64
+.PHONY: kcoin-darwin kcoin-darwin-386 kcoin-darwin-amd64
+.PHONY: kcoin-windows kcoin-windows-386 kcoin-windows-amd64
 
 GOBIN = $(pwd)/build/bin
 GO ?= latest
 
-kusd:
-	build/env.sh go run build/ci.go install ./cmd/kusd
+kcoin:
+	build/env.sh go run build/ci.go install ./cmd/kcoin
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/kusd\" to launch kusd."
+	@echo "Run \"$(GOBIN)/kcoin\" to launch kcoin."
 
 bootnode:
 	build/env.sh go run build/ci.go install ./cmd/bootnode
@@ -37,7 +37,7 @@ all:
 android:
 	build/env.sh go run build/ci.go aar --local
 	@echo "Done building."
-	@echo "Import \"$(GOBIN)/kusd.aar\" to use the library."
+	@echo "Import \"$(GOBIN)/kcoin.aar\" to use the library."
 
 ios:
 	build/env.sh go run build/ci.go xcode --local
@@ -64,95 +64,95 @@ devtools:
 
 # Cross Compilation Targets (xgo)
 
-kusd-cross: kusd-linux kusd-darwin kusd-windows kusd-android kusd-ios
+kcoin-cross: kcoin-linux kcoin-darwin kcoin-windows kcoin-android kcoin-ios
 	@echo "Full cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-*
+	@ls -ld $(GOBIN)/kcoin-*
 
-kusd-linux: kusd-linux-386 kusd-linux-amd64 kusd-linux-arm kusd-linux-mips64 kusd-linux-mips64le
+kcoin-linux: kcoin-linux-386 kcoin-linux-amd64 kcoin-linux-arm kcoin-linux-mips64 kcoin-linux-mips64le
 	@echo "Linux cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-*
+	@ls -ld $(GOBIN)/kcoin-linux-*
 
-kusd-linux-386:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/kusd
+kcoin-linux-386:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/kcoin
 	@echo "Linux 386 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep 386
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep 386
 
-kusd-linux-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/kusd
+kcoin-linux-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/kcoin
 	@echo "Linux amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep amd64
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep amd64
 
-kusd-linux-arm: kusd-linux-arm-5 kusd-linux-arm-6 kusd-linux-arm-7 kusd-linux-arm64
+kcoin-linux-arm: kcoin-linux-arm-5 kcoin-linux-arm-6 kcoin-linux-arm-7 kcoin-linux-arm64
 	@echo "Linux ARM cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep arm
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm
 
-kusd-linux-arm-5:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/kusd
+kcoin-linux-arm-5:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/kcoin
 	@echo "Linux ARMv5 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep arm-5
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm-5
 
-kusd-linux-arm-6:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/kusd
+kcoin-linux-arm-6:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/kcoin
 	@echo "Linux ARMv6 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep arm-6
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm-6
 
-kusd-linux-arm-7:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/kusd
+kcoin-linux-arm-7:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/kcoin
 	@echo "Linux ARMv7 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep arm-7
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm-7
 
-kusd-linux-arm64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/kusd
+kcoin-linux-arm64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/kcoin
 	@echo "Linux ARM64 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep arm64
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm64
 
-kusd-linux-mips:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/kusd
+kcoin-linux-mips:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/kcoin
 	@echo "Linux MIPS cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep mips
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep mips
 
-kusd-linux-mipsle:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/kusd
+kcoin-linux-mipsle:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/kcoin
 	@echo "Linux MIPSle cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep mipsle
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep mipsle
 
-kusd-linux-mips64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/kusd
+kcoin-linux-mips64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/kcoin
 	@echo "Linux MIPS64 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep mips64
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep mips64
 
-kusd-linux-mips64le:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/kusd
+kcoin-linux-mips64le:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/kcoin
 	@echo "Linux MIPS64le cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-linux-* | grep mips64le
+	@ls -ld $(GOBIN)/kcoin-linux-* | grep mips64le
 
-kusd-darwin: kusd-darwin-386 kusd-darwin-amd64
+kcoin-darwin: kcoin-darwin-386 kcoin-darwin-amd64
 	@echo "Darwin cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-darwin-*
+	@ls -ld $(GOBIN)/kcoin-darwin-*
 
-kusd-darwin-386:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/kusd
+kcoin-darwin-386:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/kcoin
 	@echo "Darwin 386 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-darwin-* | grep 386
+	@ls -ld $(GOBIN)/kcoin-darwin-* | grep 386
 
-kusd-darwin-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/kusd
+kcoin-darwin-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/kcoin
 	@echo "Darwin amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-darwin-* | grep amd64
+	@ls -ld $(GOBIN)/kcoin-darwin-* | grep amd64
 
-kusd-windows: kusd-windows-386 kusd-windows-amd64
+kcoin-windows: kcoin-windows-386 kcoin-windows-amd64
 	@echo "Windows cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-windows-*
+	@ls -ld $(GOBIN)/kcoin-windows-*
 
-kusd-windows-386:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/kusd
+kcoin-windows-386:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/kcoin
 	@echo "Windows 386 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-windows-* | grep 386
+	@ls -ld $(GOBIN)/kcoin-windows-* | grep 386
 
-kusd-windows-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kusd
+kcoin-windows-amd64:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kcoin
 	@echo "Windows amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/kusd-windows-* | grep amd64
+	@ls -ld $(GOBIN)/kcoin-windows-* | grep amd64
 
 
 ## Docker
@@ -160,8 +160,8 @@ kusd-windows-amd64:
 docker-build-bootnode:
 	docker build -t kowalatech/bootnode -f bootnode.Dockerfile .
 
-docker-build-kusd:
-	docker build -t kowalatech/kusd -f kusd.Dockerfile .
+docker-build-kcoin:
+	docker build -t kowalatech/kcoin -f kcoin.Dockerfile .
 
 docker-build-faucet:
 	docker build -t kowalatech/faucet -f faucet.Dockerfile .
@@ -170,8 +170,18 @@ docker-build-faucet:
 docker-publish-bootnode:
 	docker push kowalatech/bootnode
 
-docker-publish-kusd:
-	docker push kowalatech/kusd
+docker-publish-kcoin:
+	docker push kowalatech/kcoin
 
 docker-publish-faucet:
 	docker push kowalatech/faucet
+
+## E2E tests
+
+GODOG_BIN := $(shell command -v godog 2> /dev/null)
+e2e:
+ifndef GODOG_BIN
+	@echo "Installing godog..."
+	@go get github.com/DATA-DOG/godog/cmd/godog
+endif
+	@godog

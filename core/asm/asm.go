@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/kowala-tech/kUSD/core/vm"
+	"github.com/kowala-tech/kcoin/core/vm"
 )
 
 // Iterator for disassembled EVM instructions

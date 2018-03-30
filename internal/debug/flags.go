@@ -8,8 +8,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/log/term"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/log/term"
 	colorable "github.com/mattn/go-colorable"
 	"gopkg.in/urfave/cli.v1"
 )

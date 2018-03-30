@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/p2p/nat"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/p2p/nat"
 )
 
 const (
@@ -39,11 +39,11 @@ func DefaultDataDir() string {
 	home := homeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
-			return filepath.Join(home, "Library", "kUSD")
+			return filepath.Join(home, "Library", "kcoin")
 		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", "kUSD")
+			return filepath.Join(home, "AppData", "Roaming", "kcoin")
 		} else {
-			return filepath.Join(home, ".kUSD")
+			return filepath.Join(home, ".kcoin")
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later

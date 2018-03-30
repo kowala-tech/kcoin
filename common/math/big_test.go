@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 func TestHexOrDecimal256(t *testing.T) {

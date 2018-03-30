@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/karalabe/hid"
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // LedgerScheme is the protocol scheme prefixing account and wallet URLs.

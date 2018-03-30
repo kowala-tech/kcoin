@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kUSD/accounts/usbwallet"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/rpc"
+	"github.com/kowala-tech/kcoin/accounts/usbwallet"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/rpc"
 	"github.com/robertkrimen/otto"
 )
 

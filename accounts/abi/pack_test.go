@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 func TestPack(t *testing.T) {

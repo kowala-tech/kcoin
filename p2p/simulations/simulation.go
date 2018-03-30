@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/kowala-tech/kUSD/p2p/discover"
+	"github.com/kowala-tech/kcoin/p2p/discover"
 )
 
 // Simulation provides a framework for running actions in a simulated network

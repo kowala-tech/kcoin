@@ -7,18 +7,18 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
-	"github.com/kowala-tech/kUSD/accounts/abi/bind/backends"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/params"
 	"github.com/stretchr/testify/suite"
 )
 
 const (
-	initialBalance  = 10 // 10 kUSD
-	baseDeposit     = 1  // 1 kUSD
+	initialBalance  = 10 // 10 kcoin
+	baseDeposit     = 1  // 1 kcoin
 	maxValidators   = 100
 	unbondingPeriod = 10 // 10 days
 )
