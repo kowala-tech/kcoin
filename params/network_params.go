@@ -6,4 +6,5 @@ const (
 	BloomBitsBlocks      uint64 = 4096 // number of blocks a single bloom bit section vector contains
 	MaximumExtraDataSize uint64 = 32   // Maximum size extra data may be after Genesis.
 	MaxCodeSize                 = 24576
+	EpochDuration        uint64 = 30000
 )
