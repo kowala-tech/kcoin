@@ -3,7 +3,6 @@ package main
 import (
 	"math/big"
 	"errors"
-	"github.com/kowala-tech/kcoin/common"
 )
 
 var (
@@ -44,7 +43,7 @@ func validateOptions(options *Options) error {
 	}
 
 	if options.maxValidators == nil {
-		options.maxValidators = common.Big1
+		return ErrEmptyMaxNumValidators
 	}
 
 	return nil

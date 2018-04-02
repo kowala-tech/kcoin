@@ -18,7 +18,7 @@ func TestItFailsWhenCreatingOptionsWithInvalidValues(t *testing.T) {
 		{
 			TestName: "Empty maximum num of Validators.",
 			InvalidOpts: &Options{
-				network: "fakeNet",
+				network: "test",
 			},
 			ExpectedError: ErrEmptyMaxNumValidators,
 		},
