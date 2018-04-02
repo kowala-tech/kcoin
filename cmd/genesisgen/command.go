@@ -4,13 +4,31 @@ import (
 	"time"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/params"
+	"fmt"
+	"math/big"
+	"strings"
+	"github.com/pkg/errors"
+)
+
+var (
+	ErrEmptyMaxNumValidators = errors.New("max number of validators is mandatory")
 )
 
 type GenerateGenesisCommand struct {
+	network string
+	maxNumValidators string
 }
 
-func (c *GenerateGenesisCommand) Run(options *Options) error {
-	err := validateOptions(options)
+type GenerateGenesisCommandHandler struct {
+}
+
+func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) error {
+	network, err := NewNetwork(command.network)
+	if err != nil {
+		return err
+	}
+
+	maxNumValidators, err := h.getMaxNumValidators(command.maxNumValidators)
 	if err != nil {
 		return err
 	}
@@ -22,16 +40,19 @@ func (c *GenerateGenesisCommand) Run(options *Options) error {
 		Config:    &params.ChainConfig{},
 	}
 
-	switch options.network {
-	case "main":
-		genesis.Config.ChainID = params.MainnetChainConfig.ChainID
-	case "test":
-		genesis.Config.ChainID = params.TestChainConfig.ChainID
-	case "other":
-
-	default:
-
-	}
+	fmt.Printf("%v\n", network)
+	fmt.Printf("%v\n", genesis)
+	fmt.Printf("%v\n", maxNumValidators)
 
 	return nil
+}
+
+func (h *GenerateGenesisCommandHandler) getMaxNumValidators(s string) (*big.Int, error) {
+	if s = strings.TrimSpace(s); s == "" {
+		return nil, ErrEmptyMaxNumValidators
+	}
+
+
+
+	return nil, nil
 }
