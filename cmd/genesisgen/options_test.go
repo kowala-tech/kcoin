@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"math/big"
+)
 
 func TestItFailsWhenCreatingOptionsWithInvalidValues(t *testing.T) {
 	tests := []struct{
@@ -16,11 +19,27 @@ func TestItFailsWhenCreatingOptionsWithInvalidValues(t *testing.T) {
 			ExpectedError: ErrInvalidNetwork,
 		},
 		{
-			TestName: "Empty maximum num of Validators.",
+			TestName: "Empty maximum num of Validators",
 			InvalidOpts: &Options{
 				network: "test",
 			},
 			ExpectedError: ErrEmptyMaxNumValidators,
+		},
+		{
+			TestName: "Zero max num validators",
+			InvalidOpts: &Options{
+				network: "test",
+				maxValidators: big.NewInt(0),
+			},
+			ExpectedError: ErrEmptyMaxNumValidators,
+		},
+		{
+			TestName: "Empty Unbound Period",
+			InvalidOpts: &Options{
+				network: "test",
+				maxValidators: big.NewInt(3),
+			},
+			ExpectedError: ErrEmptyUnbondingPeriod,
 		},
 	}
 
@@ -28,7 +47,7 @@ func TestItFailsWhenCreatingOptionsWithInvalidValues(t *testing.T) {
 		t.Run(test.TestName, func(t *testing.T) {
 			err := validateOptions(test.InvalidOpts)
 			if err != test.ExpectedError {
-				t.Fatalf("Invalid options did not return error. Expected error %s", test.ExpectedError.Error())
+				t.Fatalf("Invalid options did not return error. Expected error: %s", test.ExpectedError.Error())
 			}
 		})
 	}
