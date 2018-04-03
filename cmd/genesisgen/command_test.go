@@ -2,6 +2,9 @@ package main
 
 import (
 	"testing"
+	"bytes"
+	"bufio"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
@@ -126,4 +129,35 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
+	cmd := GenerateGenesisCommand{
+		network:                       "test",
+		maxNumValidators:              "5",
+		unbondingPeriod:               "5",
+		walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+		prefundedAccounts: []PrefundedAccount{
+			{
+				walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				balance:       15,
+			},
+			{
+				walletAddress: "0xe286cbae1bbbb47d157516d334e70859a1bee4ff",
+				balance:       15,
+			},
+		},
+	}
+
+	var b bytes.Buffer
+	writer := bufio.NewWriter(&b)
+
+	handler := GenerateGenesisCommandHandler{w:writer}
+
+	err := handler.Handle(cmd)
+	if err != nil {
+		t.Fatalf("Error: %s", err.Error())
+	}
+
+	assert.Equal(t, "", b.String())
 }
