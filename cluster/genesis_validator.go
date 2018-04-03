@@ -52,7 +52,7 @@ func genesisValidatorPod(podName, networkID, pub_key, bootnode string, port int3
 			Containers: []apiv1.Container{
 				{
 					Name:            podName,
-					Image:           "kowalatech/kcoin:dev",
+					Image:           "kowalatech/kusd:dev",
 					ImagePullPolicy: apiv1.PullAlways,
 					Ports: []apiv1.ContainerPort{
 						{
