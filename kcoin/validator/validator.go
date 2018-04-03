@@ -406,12 +406,13 @@ func (val *validator) createBlock() *types.Block {
 		tstamp = parent.Time().Int64() + 1
 	}
 	header := &types.Header{
-		ParentHash: parent.Hash(),
-		Coinbase:   val.walletAccount.Account().Address,
-		Number:     blockNumber.Add(blockNumber, common.Big1),
-		GasLimit:   core.CalcGasLimit(parent),
-		GasUsed:    new(big.Int),
-		Time:       big.NewInt(tstamp),
+		ParentHash:     parent.Hash(),
+		Coinbase:       val.walletAccount.Account().Address,
+		Number:         blockNumber.Add(blockNumber, common.Big1),
+		GasLimit:       core.CalcGasLimit(parent),
+		GasUsed:        new(big.Int),
+		Time:           big.NewInt(tstamp),
+		ValidatorsHash: val.validators.Hash(),
 	}
 	val.header = header
 
