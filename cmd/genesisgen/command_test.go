@@ -5,11 +5,11 @@ import (
 )
 
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
-	tests := []struct{
-		TestName string
+	tests := []struct {
+		TestName       string
 		InvalidCommand GenerateGenesisCommand
-		ExpectedError error
-	} {
+		ExpectedError  error
+	}{
 		{
 			TestName: "Invalid Network",
 			InvalidCommand: GenerateGenesisCommand{
@@ -20,7 +20,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		{
 			TestName: "Empty max number of validators",
 			InvalidCommand: GenerateGenesisCommand{
-				network: "test",
+				network:          "test",
 				maxNumValidators: "",
 			},
 			ExpectedError: ErrEmptyMaxNumValidators,
@@ -28,18 +28,18 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		{
 			TestName: "Empty unbonding period of days",
 			InvalidCommand: GenerateGenesisCommand{
-				network: "test",
+				network:          "test",
 				maxNumValidators: "5",
-				unbondingPeriod: "",
+				unbondingPeriod:  "",
 			},
 			ExpectedError: ErrEmptyUnbondingPeriod,
 		},
 		{
 			TestName: "Empty wallet address of genesis validator",
 			InvalidCommand: GenerateGenesisCommand{
-				network: "test",
-				maxNumValidators: "5",
-				unbondingPeriod: "5",
+				network:                       "test",
+				maxNumValidators:              "5",
+				unbondingPeriod:               "5",
 				walletAddressGenesisValidator: "",
 			},
 			ExpectedError: ErrEmptyWalletAddressValidator,
@@ -47,9 +47,9 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		{
 			TestName: "Invalid wallet address less than 20 bytes with Hex prefix",
 			InvalidCommand: GenerateGenesisCommand{
-				network: "test",
-				maxNumValidators: "5",
-				unbondingPeriod: "5",
+				network:                       "test",
+				maxNumValidators:              "5",
+				unbondingPeriod:               "5",
 				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1be",
 			},
 			ExpectedError: ErrInvalidWalletAddressValidator,
@@ -57,12 +57,59 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		{
 			TestName: "Invalid wallet address less than 20 bytes without Hex prefix",
 			InvalidCommand: GenerateGenesisCommand{
-				network: "test",
-				maxNumValidators: "5",
-				unbondingPeriod: "5",
+				network:                       "test",
+				maxNumValidators:              "5",
+				unbondingPeriod:               "5",
 				walletAddressGenesisValidator: "e2ac86cbae1bbbb47d157516d334e70859a1be",
 			},
 			ExpectedError: ErrInvalidWalletAddressValidator,
+		},
+		{
+			TestName: "Empty prefunded accounts",
+			InvalidCommand: GenerateGenesisCommand{
+				network:                       "test",
+				maxNumValidators:              "5",
+				unbondingPeriod:               "5",
+				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				prefundedAccounts:             []PrefundedAccount{},
+			},
+			ExpectedError: ErrEmptyPrefundedAccounts,
+		},
+		{
+			TestName: "Prefunded accounts does not include validator address",
+			InvalidCommand: GenerateGenesisCommand{
+				network:                       "test",
+				maxNumValidators:              "5",
+				unbondingPeriod:               "5",
+				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				prefundedAccounts: []PrefundedAccount{
+					{
+						walletAddress: "0xaaaaaacbae1bbbb47d157516d334e70859a1bee4",
+						balance:       15,
+					},
+				},
+			},
+			ExpectedError: ErrWalletAddressValidatorNotInPrefundedAccounts,
+		},
+		{
+			TestName: "Prefunded accounts has invalid account.",
+			InvalidCommand: GenerateGenesisCommand{
+				network:                       "test",
+				maxNumValidators:              "5",
+				unbondingPeriod:               "5",
+				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				prefundedAccounts: []PrefundedAccount{
+					{
+						walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+						balance:       15,
+					},
+					{
+						walletAddress: "0xe286cbae1bbbb47d157516d334e70859a1bee4",
+						balance:       15,
+					},
+				},
+			},
+			ExpectedError: ErrInvalidAddressInPrefundedAccounts,
 		},
 	}
 
@@ -80,4 +127,3 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		})
 	}
 }
-
