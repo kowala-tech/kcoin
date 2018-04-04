@@ -9,8 +9,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/log"
-	metrics "github.com/rcrowley/go-metrics"
-	"github.com/rcrowley/go-metrics/exp"
+	"github.com/kowala-tech/kcoin/metrics/exp"
 
 	prometheusmetrics "github.com/kowala-tech/go-metrics-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
@@ -44,34 +43,7 @@ func init() {
 		}
 	}
 
-	exp.Exp(metrics.DefaultRegistry)
-}
-
-// NewCounter create a new metrics Counter, either a real one of a NOP stub depending
-// on the metrics flag.
-func NewCounter(name string) metrics.Counter {
-	if !Enabled {
-		return new(metrics.NilCounter)
-	}
-	return metrics.GetOrRegisterCounter(name, metrics.DefaultRegistry)
-}
-
-// NewMeter create a new metrics Meter, either a real one of a NOP stub depending
-// on the metrics flag.
-func NewMeter(name string) metrics.Meter {
-	if !Enabled {
-		return new(metrics.NilMeter)
-	}
-	return metrics.GetOrRegisterMeter(name, metrics.DefaultRegistry)
-}
-
-// NewTimer create a new metrics Timer, either a real one of a NOP stub depending
-// on the metrics flag.
-func NewTimer(name string) metrics.Timer {
-	if !Enabled {
-		return new(metrics.NilTimer)
-	}
-	return metrics.GetOrRegisterTimer(name, metrics.DefaultRegistry)
+	exp.Exp(DefaultRegistry)
 }
 
 // CollectProcessMetrics periodically collects various metrics about the running
@@ -85,7 +57,7 @@ func CollectProcessMetrics(refresh time.Duration, promAddr, promSubSys string) {
 	// Set up Prometheus
 	go func() {
 		prometheusRegistry := prometheus.DefaultGatherer
-		metricsRegistry := metrics.DefaultRegistry
+		metricsRegistry := DefaultRegistry
 		pClient := prometheusmetrics.NewPrometheusProvider(metricsRegistry, "eth", promSubSys, (prometheusRegistry).(*prometheus.Registry), refresh)
 		go pClient.UpdatePrometheusMetrics()
 
@@ -102,17 +74,17 @@ func CollectProcessMetrics(refresh time.Duration, promAddr, promSubSys string) {
 		diskstats[i] = new(DiskStats)
 	}
 	// Define the various metrics to collect
-	memAllocs := metrics.GetOrRegisterMeter("system/memory/allocs", metrics.DefaultRegistry)
-	memFrees := metrics.GetOrRegisterMeter("system/memory/frees", metrics.DefaultRegistry)
-	memInuse := metrics.GetOrRegisterMeter("system/memory/inuse", metrics.DefaultRegistry)
-	memPauses := metrics.GetOrRegisterMeter("system/memory/pauses", metrics.DefaultRegistry)
+	memAllocs := GetOrRegisterMeter("system/memory/allocs", DefaultRegistry)
+	memFrees := GetOrRegisterMeter("system/memory/frees", DefaultRegistry)
+	memInuse := GetOrRegisterMeter("system/memory/inuse", DefaultRegistry)
+	memPauses := GetOrRegisterMeter("system/memory/pauses", DefaultRegistry)
 
-	var diskReads, diskReadBytes, diskWrites, diskWriteBytes metrics.Meter
+	var diskReads, diskReadBytes, diskWrites, diskWriteBytes Meter
 	if err := ReadDiskStats(diskstats[0]); err == nil {
-		diskReads = metrics.GetOrRegisterMeter("system/disk/readcount", metrics.DefaultRegistry)
-		diskReadBytes = metrics.GetOrRegisterMeter("system/disk/readdata", metrics.DefaultRegistry)
-		diskWrites = metrics.GetOrRegisterMeter("system/disk/writecount", metrics.DefaultRegistry)
-		diskWriteBytes = metrics.GetOrRegisterMeter("system/disk/writedata", metrics.DefaultRegistry)
+		diskReads = GetOrRegisterMeter("system/disk/readcount", DefaultRegistry)
+		diskReadBytes = GetOrRegisterMeter("system/disk/readdata", DefaultRegistry)
+		diskWrites = GetOrRegisterMeter("system/disk/writecount", DefaultRegistry)
+		diskWriteBytes = GetOrRegisterMeter("system/disk/writedata", DefaultRegistry)
 	} else {
 		log.Debug("Failed to read disk metrics", "err", err)
 	}
