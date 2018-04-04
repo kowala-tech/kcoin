@@ -37,6 +37,7 @@ type GenerateGenesisCommand struct {
 	prefundedAccounts             []PrefundedAccount
 	consensusEngine               string
 	smartContractsOwner           string
+	extraData string
 }
 
 type PrefundedAccount struct {
@@ -112,9 +113,12 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 		genesis.Config.Tendermint = &params.TendermintConfig{Rewarded: true}
 	}
 
-	//TODO: This should be an optional param.
-	genesis.ExtraData = make([]byte, 32)
 	extra := ""
+	if command.extraData != "" {
+		extra = command.extraData
+	}
+
+	genesis.ExtraData = make([]byte, 32)
 	if len(extra) > 32 {
 		extra = extra[:32]
 	}
@@ -133,7 +137,7 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 
 	genesis.Alloc[*owner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
 
-	//TODO: This maybe will be need to be available to change by the parameters in the command.
+	//TODO: This maybe will be need to be available to change by the parameters in the command in the future, right now is 0.
 	baseDeposit := common.Big0
 
 	electionABI, err := abi.JSON(strings.NewReader(contracts.ElectionContractABI))

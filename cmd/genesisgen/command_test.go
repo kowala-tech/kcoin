@@ -264,6 +264,25 @@ func TestOptionalValues(t *testing.T) {
 
 		assert.Equal(t, generatedGenesis.Alloc[address], expectedAlloc)
 	})
+
+	t.Run("Extra data", func(t *testing.T) {
+		extraDataStr := "TheExtradata"
+		baseCommand.extraData = extraDataStr
+
+		var b bytes.Buffer
+		handler := GenerateGenesisCommandHandler{w: &b}
+
+		err := handler.Handle(baseCommand)
+		if err != nil {
+			t.Fatalf("Error: %s", err.Error())
+		}
+
+		generatedGenesis := unmarshalGenesisFromBuffer(t, b)
+		expectedExtradata := make([]byte, 32)
+		expectedExtradata = append([]byte(extraDataStr), expectedExtradata[len(extraDataStr):]...)
+
+		assert.Equal(t, expectedExtradata, generatedGenesis.ExtraData)
+	})
 }
 
 //unmarshalGenesisFromBuffer unmarshals a genesis struct from buffer in json.
