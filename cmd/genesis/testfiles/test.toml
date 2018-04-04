@@ -1,0 +1,9 @@
+[genesis]
+network = "testnet"
+maxNumValidators = "1"
+unboundingPeriod = "1"
+walletAddressGenesisValidator = "1"
+prefundedAccounts = [
+
+]
+consensusEngine = "1"

@@ -3,19 +3,38 @@ package main
 import (
 	"github.com/spf13/cobra"
 	"fmt"
+	"os"
+	"github.com/spf13/viper"
+)
+
+var (
+	FileConfig string
 )
 
 func main() {
-	 cmd := &cobra.Command{
-		Use:   "hugo",
-		Short: "Hugo is a very fast static site generator",
-		Long: `A Fast and Flexible Static Site Generator built with
-                love by spf13 and friends in Go.
-                Complete documentation is available at http://hugo.spf13.com`,
+	cmd := createCommand()
+
+	if err := cmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func createCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "genesis",
+		Short: "Generator of a genesis file.",
+		Long:  `Generate a genesis.json file based on a config file or parameters.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Holaj")
+			if FileConfig == "" {
+				fmt.Println("Params usage.")
+			} else {
+				viper.SetConfigFile(FileConfig)
+			}
 		},
 	}
 
-	cmd.Execute()
+	cmd.Flags().StringVarP(&FileConfig, "config", "c", "", "Use to load configuration from config file.")
+
+	return cmd
 }
