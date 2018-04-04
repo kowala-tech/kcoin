@@ -72,7 +72,7 @@ func archiveNodePod(podName, networkID, bootnode string, port int32) *apiv1.Pod 
 				{
 					Name:            podName,
 					Image:           "kowalatech/kusd:dev",
-					ImagePullPolicy: apiv1.PullAlways,
+					ImagePullPolicy: apiv1.PullNever,
 					Ports: []apiv1.ContainerPort{
 						{
 							ContainerPort: port,

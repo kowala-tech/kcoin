@@ -61,6 +61,10 @@ func (client *cluster) Initialize(networkID string) error {
 	log.Println("Initializing cluster")
 	client.NetworkID = networkID
 
+	if err := client.buildLocalDockerImages(); err != nil {
+		return err
+	}
+
 	if err := client.createNamespace(); err != nil {
 		return err
 	}
@@ -76,6 +80,7 @@ func (client *cluster) Initialize(networkID string) error {
 	if err := client.generateGenesis(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
