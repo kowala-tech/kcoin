@@ -56,7 +56,7 @@ type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
 	server *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	kcoin   *kcoin.Kowala     // Full Kowala service if monitoring a full node
+	kcoin  *kcoin.Kowala     // Full Kowala service if monitoring a full node
 	engine consensus.Engine // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
@@ -169,7 +169,6 @@ func (s *Service) loop() {
 			}
 		}
 		close(quitCh)
-		return
 	}()
 	// Loop reporting until termination
 	for {
@@ -292,7 +291,7 @@ func (s *Service) readLoop(conn *websocket.Conn) {
 			// Make sure the request is valid and doesn't crash us
 			request, ok := msg["emit"][1].(map[string]interface{})
 			if !ok {
-				log.Debug("Invalid stats history request", "msg", msg["emit"][1])
+				log.Warn("Invalid stats history request", "msg", msg["emit"][1])
 				s.histCh <- nil
 				continue // Kowalastats sometime sends invalid history requests, ignore those
 			}
@@ -446,8 +445,8 @@ type blockStats struct {
 	ParentHash common.Hash    `json:"parentHash"`
 	Timestamp  *big.Int       `json:"timestamp"`
 	Miner      common.Address `json:"miner"`
-	GasUsed    *big.Int       `json:"gasUsed"`
-	GasLimit   *big.Int       `json:"gasLimit"`
+	GasUsed    uint64         `json:"gasUsed"`
+	GasLimit   uint64         `json:"gasLimit"`
 	Diff       string         `json:"difficulty"`
 	TotalDiff  string         `json:"totalDifficulty"`
 	Txs        []txStats      `json:"transactions"`
@@ -496,7 +495,9 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 	// Gather the block infos from the local blockchain
 	var (
 		header *types.Header
+		td     *big.Int
 		txs    []txStats
+		uncles []*types.Header
 	)
 
 	// Full nodes have all needed information available
@@ -504,11 +505,13 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		block = s.kcoin.BlockChain().CurrentBlock()
 	}
 	header = block.Header()
+	td = s.kcoin.BlockChain().GetTd(header.Hash(), header.Number.Uint64())
 
 	txs = make([]txStats, len(block.Transactions()))
 	for i, tx := range block.Transactions() {
 		txs[i].Hash = tx.Hash()
 	}
+	uncles = block.Uncles()
 
 	// Assemble and return the block stats
 	author, _ := s.engine.Author(header)
@@ -519,11 +522,14 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		ParentHash: header.ParentHash,
 		Timestamp:  header.Time,
 		Miner:      author,
-		GasUsed:    new(big.Int).Set(header.GasUsed),
-		GasLimit:   new(big.Int).Set(header.GasLimit),
+		GasUsed:    header.GasUsed,
+		GasLimit:   header.GasLimit,
+		Diff:       header.Difficulty.String(),
+		TotalDiff:  td.String(),
 		Txs:        txs,
 		TxHash:     header.TxHash,
 		Root:       header.Root,
+		Uncles:     uncles,
 	}
 }
 
