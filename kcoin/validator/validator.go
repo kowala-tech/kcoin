@@ -289,9 +289,18 @@ func (val *validator) AddVote(vote *types.Vote) error {
 	}
 
 	if err := val.votingSystem.Add(vote); err != nil {
-		switch err {
+		switch {
+		case err == core.ErrDuplicateVote:
+			sender, err := types.VoteSender(val.signer, vote)
+			if err != nil {
+				return err
+			}
+			return val.election.ReportValidator(val.walletAccount, sender)
+		default:
+			return err
 		}
 	}
+
 	return nil
 }
 
