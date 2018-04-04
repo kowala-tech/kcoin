@@ -90,6 +90,10 @@ func (client *cluster) DeletePod(podName string) error {
 
 func (client *cluster) createNamespace() error {
 	ns, err := client.Clientset.CoreV1().Namespaces().Get(Namespace, metav1.GetOptions{})
+
+	// `err`` will be a NotFound if the namespace doesn't exist, and `ns` will be
+	//   a struct with an empty Name. Just checking for the name match will cover
+	//   a not found too.
 	if ns.Name == Namespace {
 		return nil
 	}
