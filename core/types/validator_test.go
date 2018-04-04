@@ -2,11 +2,12 @@ package types
 
 import (
 	"fmt"
+	"math/big"
+	"testing"
+
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"math/big"
-	"testing"
 )
 
 func TestValidator_Properties(t *testing.T) {
@@ -58,7 +59,7 @@ func TestValidatorSet_One(t *testing.T) {
 	validatorList, err := NewValidatorList([]*Validator{validator})
 
 	require.NoError(t, err)
-	assert.Equal(t, 1, validatorList.Size())
+	assert.Equal(t, 1, validatorList.Len())
 	assert.Equal(t, validator, validatorList.At(0))
 	assert.Equal(t, validator, validatorList.Get(address))
 	assert.Equal(t, true, validatorList.Contains(address))
@@ -79,7 +80,7 @@ func TestValidatorSet_UpdateWeightChangesProposer(t *testing.T) {
 	assert.Equal(t, big.NewInt(200), validatorList.At(0).weight)
 	assert.Equal(t, big.NewInt(101), validatorList.At(1).weight)
 	assert.Equal(t, big.NewInt(198), validatorList.At(2).weight)
-	assert.Equal(t, 3, validatorList.Size())
+	assert.Equal(t, 3, validatorList.Len())
 }
 
 func TestValidatorSet_UpdateWeightChangesProposerElections(t *testing.T) {
@@ -89,7 +90,7 @@ func TestValidatorSet_UpdateWeightChangesProposerElections(t *testing.T) {
 
 	validatorList, err := NewValidatorList([]*Validator{validator, validator2, validator3})
 	require.NoError(t, err)
-	require.Equal(t, 3, validatorList.Size())
+	require.Equal(t, 3, validatorList.Len())
 
 	elections := []struct {
 		proposerWeight   *big.Int

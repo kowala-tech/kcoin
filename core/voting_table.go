@@ -1,10 +1,11 @@
 package core
 
 import (
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
 	"errors"
 	"fmt"
+
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core/types"
 )
 
 var ErrDuplicateVote = errors.New("duplicate vote")
@@ -63,7 +64,7 @@ func (table *votingTable) isVoter(address common.Address) bool {
 }
 
 func (table *votingTable) hasQuorum() bool {
-	return table.quorum(len(table.votes), table.voters.Size())
+	return table.quorum(len(table.votes), table.voters.Len())
 }
 
 type QuorumReachedFunc func()
