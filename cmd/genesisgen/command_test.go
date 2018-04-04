@@ -239,11 +239,7 @@ func TestOptionalValues(t *testing.T) {
 			t.Fatalf("Error: %s", err.Error())
 		}
 
-		var generatedGenesis = new(core.Genesis)
-		err = json.Unmarshal(b.Bytes(), generatedGenesis)
-		if err != nil {
-			t.Fatal("Error unmarshaling genesis.")
-		}
+		generatedGenesis := unmarshalGenesisFromBuffer(t, b)
 
 		assert.NotNil(t, generatedGenesis.Config.Tendermint)
 	})
@@ -260,17 +256,24 @@ func TestOptionalValues(t *testing.T) {
 			t.Fatalf("Error: %s", err.Error())
 		}
 
-		var generatedGenesis = new(core.Genesis)
-		err = json.Unmarshal(b.Bytes(), generatedGenesis)
-		if err != nil {
-			t.Fatal("Error unmarshaling genesis.")
-		}
+		generatedGenesis := unmarshalGenesisFromBuffer(t, b)
 
 		bigaddr, _ := new(big.Int).SetString(customSmartContractOwner, 0)
 		address := common.BigToAddress(bigaddr)
-
 		expectedAlloc := core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
 
 		assert.Equal(t, generatedGenesis.Alloc[address], expectedAlloc)
 	})
+}
+
+//unmarshalGenesisFromBuffer unmarshals a genesis struct from buffer in json.
+func unmarshalGenesisFromBuffer(t *testing.T, b bytes.Buffer) *core.Genesis {
+	var generatedGenesis = new(core.Genesis)
+
+	err := json.Unmarshal(b.Bytes(), generatedGenesis)
+	if err != nil {
+		t.Fatal("Error unmarshaling genesis.")
+	}
+
+	return generatedGenesis
 }
