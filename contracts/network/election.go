@@ -32,6 +32,7 @@ type Election interface {
 	Deposits(address common.Address) ([]*types.Deposit, error)
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
+	ReportValidator(walletAccount accounts.WalletAccount, address common.Address) error
 	MinimumDeposit() (uint64, error)
 }
 
@@ -72,20 +73,12 @@ func (election *election) Join(walletAccount accounts.WalletAccount, amount uint
 
 func (election *election) Leave(walletAccount accounts.WalletAccount) error {
 	_, err := election.ElectionContract.Leave(election.transactOpts(walletAccount))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (election *election) RedeemDeposits(walletAccount accounts.WalletAccount) error {
 	_, err := election.ElectionContract.RedeemDeposits(election.transactOpts(walletAccount))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (election *election) ValidatorsChecksum() (ValidatorsChecksum, error) {
@@ -106,7 +99,7 @@ func (election *election) Validators() (types.ValidatorList, error) {
 		}
 
 		weight := big.NewInt(0)
-		validators[i] = types.NewValidator(validator.Code, validator.Deposit.Uint64(), weight)
+		validators[i] = types.NewValidator(validator.Identity, validator.Deposit.Uint64(), weight)
 	}
 
 	return types.NewValidatorList(validators)
@@ -138,6 +131,27 @@ func (election *election) IsValidator(address common.Address) (bool, error) {
 	return election.ElectionContract.IsValidator(&bind.CallOpts{}, address)
 }
 
+func (election *election) MinimumDeposit() (uint64, error) {
+	rawMinDeposit, err := election.GetMinimumDeposit(&bind.CallOpts{})
+	return rawMinDeposit.Uint64(), err
+}
+
+func (election *election) ReportValidator(walletAccount accounts.WalletAccount, address common.Address) error {
+	isValidator, err := election.IsValidator(address)
+	if err != nil {
+		return err
+	}
+	if !isValidator {
+		return errors.New("the target address is not a validator")
+	}
+
+	// @NOTE (rgerales) - the first validator reporting the problem
+	// will be the one with a successful transaction. The transaction
+	// will fail for the other validators.
+	_, err = election.ElectionContract.ReportValidator(election.transactOpts(walletAccount), address)
+	return err
+}
+
 func (election *election) transactOpts(walletAccount accounts.WalletAccount) *bind.TransactOpts {
 	signerAddress := walletAccount.Account().Address
 	opts := &bind.TransactOpts{
@@ -151,11 +165,6 @@ func (election *election) transactOpts(walletAccount accounts.WalletAccount) *bi
 	}
 
 	return opts
-}
-
-func (election *election) MinimumDeposit() (uint64, error) {
-	rawMinDeposit, err := election.GetMinimumDeposit(&bind.CallOpts{})
-	return rawMinDeposit.Uint64(), err
 }
 
 func (election *election) transactDepositOpts(walletAccount accounts.WalletAccount, amount uint64) *bind.TransactOpts {

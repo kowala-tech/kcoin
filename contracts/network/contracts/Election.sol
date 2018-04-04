@@ -27,6 +27,7 @@ contract Election is Ownable {
     struct Validator {
         uint index;
         bool isValidator;
+        bool isBlacklisted; // banned party
 
         // @NOTE (rgeraldes) - users can have more than one deposit
         // Example: user leaves and re-enters the election. At this point
@@ -35,11 +36,14 @@ contract Election is Ownable {
         Deposit[] deposits; 
     }
     
-    mapping (address => Validator) private validators;
+    mapping (address => Validator) private validatorRegistry;
     
-    // validatorIndex contains the validator code ordered by the biggest deposit to
+    // validatorIndex contains the validator identity ordered by the biggest deposit to
     // the smallest deposit.
     address[] validatorIndex;
+
+    // blacklist contains the address of the banned validators
+    address[] blacklist;
 
     // onlyWithMinDeposit requires a minimum deposit to proceed
     modifier onlyWithMinDeposit {
@@ -54,8 +58,13 @@ contract Election is Ownable {
     }
 
     // onlyNewCandidate required the sender to be a new candidate
-    modifier onlyNewCandidate {
+    modifier onlyNonValidator {
         require(!isValidator(msg.sender));
+        _;
+    }
+
+    modifier onlyNonBlacklisted {
+        require(!isBlacklisted(msg.sender));
         _;
     }
 
@@ -70,21 +79,25 @@ contract Election is Ownable {
         _insertValidator(_genesis, baseDeposit);
     }
 
-    function isGenesisValidator(address code) public view returns (bool isIndeed) {
-        return code == genesisValidator;
+    function isGenesisValidator(address identity) public view returns (bool isIndeed) {
+        return identity == genesisValidator;
     }
 
-    function isValidator(address code) public view returns (bool isIndeed) {
-        return validators[code].isValidator;
+    function isValidator(address identity) public view returns (bool isIndeed) {
+        return validatorRegistry[identity].isValidator;
+    }
+
+    function isBlacklisted(address identity) public view returns (bool isIndeed) {
+        return validatorRegistry[identity].isBlacklisted;
     }
 
     function getValidatorCount() public view returns (uint count) {
         return validatorIndex.length;
     }
 
-    function getValidatorAtIndex(uint index) public view returns (address code, uint deposit) {
-        code = validatorIndex[index];
-        Validator validator = validators[code];
+    function getValidatorAtIndex(uint index) public view returns (address identity, uint deposit) {
+        identity = validatorIndex[index];
+        Validator validator = validatorRegistry[identity];
         deposit = validator.deposits[validator.deposits.length - 1].amount;
     }
 
@@ -99,7 +112,7 @@ contract Election is Ownable {
         if (_hasAvailability()) {
             return baseDeposit;
         } else {
-            Validator smallestBidder = validators[validatorIndex[validatorIndex.length - 1]];               
+            Validator smallestBidder = validatorRegistry[validatorIndex[validatorIndex.length - 1]];               
             return smallestBidder.deposits[smallestBidder.deposits.length - 1].amount + 1;
         }
     }
@@ -109,13 +122,13 @@ contract Election is Ownable {
     }
 
     function _insertValidator(address code, uint deposit) private {
-        Validator sender = validators[code];
+        Validator sender = validatorRegistry[code];
         sender.index = validatorIndex.push(code) - 1;
         sender.isValidator = true;
         sender.deposits.push(Deposit({amount:deposit, availableAt: 0}));
 
         for (uint index = sender.index; index > 0; index--) {
-            Validator target = validators[validatorIndex[index - 1]];
+            Validator target = validatorRegistry[validatorIndex[index - 1]];
             Deposit collateral = target.deposits[target.deposits.length - 1];
             if (deposit <= collateral.amount) {
                 break;
@@ -135,7 +148,7 @@ contract Election is Ownable {
     }
 
     function _deleteValidator(address account) private {
-        Validator validator = validators[account];
+        Validator validator = validatorRegistry[account];
         for (uint index = validator.index; index < validatorIndex.length - 1; index++) {
             validatorIndex[index] = validatorIndex[index + 1];
         }
@@ -163,16 +176,16 @@ contract Election is Ownable {
     }
 
     function getDepositCount() public view returns (uint count) {
-        return validators[msg.sender].deposits.length; 
+        return validatorRegistry[msg.sender].deposits.length; 
     }
 
     function getDepositAtIndex(uint index) public view returns (uint amount, uint availableAt) {
-        Deposit deposit = validators[msg.sender].deposits[index];
+        Deposit deposit = validatorRegistry[msg.sender].deposits[index];
         return (deposit.amount / 1 ether, deposit.availableAt);
     }
 
     // join registers a new candidate as validator
-    function join() public payable onlyNewCandidate onlyWithMinDeposit {
+    function join() public payable onlyNonBlacklisted onlyNonValidator onlyWithMinDeposit {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
         }
@@ -187,7 +200,7 @@ contract Election is Ownable {
     function _removeDeposits(address code, uint index) private {
         if (index == 0) return;
 
-        Validator validator = validators[code];
+        Validator validator = validatorRegistry[code];
         uint lo = 0;
         uint hi = index;
         while (hi < validator.deposits.length) {
@@ -200,10 +213,10 @@ contract Election is Ownable {
 
     // redeemDeposits transfers locked deposit(s) back the user account if they
     // are past the unbonding period
-    function redeemDeposits() public {
+    function redeemDeposits() public onlyNonBlacklisted {
         uint refund = 0;
         uint i = 0;
-        Deposit[] deposits = validators[msg.sender].deposits;
+        Deposit[] deposits = validatorRegistry[msg.sender].deposits;
         
         for (; i < deposits.length && deposits[i].availableAt != 0; i++) {
             if (now < deposits[i].availableAt) {
@@ -220,6 +233,19 @@ contract Election is Ownable {
         if (refund > 0) {
             msg.sender.transfer(refund);
         }
+    }
+
+    function _blacklistValidator(address identity) private {
+        require(isValidator(identity));
+        _deleteValidator(identity);
+        validatorRegistry[identity].isBlacklisted = true;
+        blacklist.push(identity);
+    }
+
+    // reportValidators implements the evidence transaction - duplicated votes;
+    // destroys the bonded coins of the guilty validator(s)
+    function reportValidator(address identity) public onlyValidator {
+        _blacklistValidator(identity);
     }
 
     // fallback function

@@ -315,6 +315,18 @@ func (suite *ElectionContractSuite) TestSetMaxValidators_Owner_LessThanValidator
 	// @TODO (rgeraldes)
 }
 
+func (suite *ElectionContractSuite) TestJoin_Blacklisted() {
+	req := suite.Require()
+
+	// genesis validator reports himself
+	req.NoError(suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), getAddress(suite.genesisValidator)))
+	suite.backend.Commit()
+
+	// @NOTE (rgeraldes) - no need to leave, as the validator gets expelled automatically
+	_, err := suite.contract.Join(bind.NewKeyedTransactor(suite.genesisValidator))
+	req.Equal(errTransactionFailed, err)
+}
+
 func (suite *ElectionContractSuite) TestJoin_AlreadyValidator() {
 	req := suite.Require()
 
@@ -431,6 +443,87 @@ func (suite *ElectionContractSuite) TestLeave_Validator() {
 	currentDeposit, err := suite.contract.GetDepositAtIndex(&bind.CallOpts{From: senderAddr}, new(big.Int).Sub(latestDepositCount, common.Big1))
 	req.NoError(err)
 	req.NotZero(currentDeposit.Amount.Uint64())
+}
+
+func (suite *ElectionContractSuite) TestReportValidator_NotValidator() {
+	req := suite.Require()
+
+	_, err := suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.randomUser), getAddress(suite.owner))
+	req.Equal(errTransactionFailed, err)
+}
+
+func (suite *ElectionContractSuite) TestReportValidator_ValidatorReportsNonValidator() {
+	req := suite.Require()
+
+	_, err := suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), getAddress(suite.randomUser))
+	req.Equal(errTransactionFailed, err)
+}
+
+func (suite *ElectionContractSuite) TestReportValidator_ValidatorReportsValidator() {
+	req := suite.Require()
+
+	_, err := suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), getAddress(suite.genesisValidator))
+	req.NoError(err)
+	suite.backend.Commit()
+
+	// should not be a validator anymore
+	isValidator, err := suite.contract.IsValidator(bind.CallOpts{}, suite.genesisValidator)
+	req.NoError(err)
+	req.False(isValidator)
+
+	// should be blacklisted
+	isBlacklisted, err := suite.contract.IsBlacklisted(bind.CallOpts{}, suite.genesisValidator)
+	req.NoError(err)
+	req.True(isBlacklisted)
+}
+
+func (suite *ElectionContractSuite) TestIsBlacklisted() {
+	req := suite.Require()
+
+	// add a second validator
+	sender := suite.randomUser
+	bannedAddr := getAddress(sender)
+	opts := bind.NewKeyedTransactor(sender)
+	opts.Value = suite.baseDeposit
+	_, err = suite.contract.Join(opts)
+	req.NoError(err)
+
+	// report the new validator with the genesis validator
+	req.NoError(suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), bannedAddr))
+
+	suite.backend.Commit()
+
+	testCases := []struct {
+		input  common.Address
+		output bool
+	}{
+		{
+			input:  getAddress(suite.genesisValidator),
+			output: false,
+		},
+		{
+			input:  bannedAddr,
+			output: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		isBlacklisted, err := suite.contract.IsBlacklisted(&bind.CallOpts{}, tc.input)
+		req.NoError(err)
+		req.Equal(tc.output, isBlacklisted)
+	}
+}
+
+func (suite *ElectionContractSuite) TestRedeemFunds_Blacklisted() {
+	req := suite.Require()
+
+	// genesis validator reports himself
+	req.NoError(suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), getAddress(suite.genesisValidator)))
+	suite.backend.Commit()
+
+	// redeem deposit
+	_, err = suite.contract.RedeemDeposits(opts)
+	req.Equal(errTransactionFailed, err)
 }
 
 func (suite *ElectionContractSuite) TestRedeemFunds_NoDeposits() {
