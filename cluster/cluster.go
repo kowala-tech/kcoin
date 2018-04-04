@@ -61,9 +61,13 @@ func (client *cluster) Initialize(networkID string) error {
 	log.Println("Initializing cluster")
 	client.NetworkID = networkID
 
-	if err := client.buildLocalDockerImages(); err != nil {
+	env, err := client.Backend.DockerEnv()
+	if err != nil {
 		return err
 	}
+	builder := NewDockerBuilder(env)
+	builder.Build("kowalatech/bootnode:dev", "bootnode.Dockerfile")
+	builder.Build("kowalatech/kusd:dev", "kcoin.Dockerfile")
 
 	if err := client.createNamespace(); err != nil {
 		return err
@@ -79,6 +83,9 @@ func (client *cluster) Initialize(networkID string) error {
 	}
 	if err := client.generateGenesis(); err != nil {
 		return err
+	}
+	if errs := builder.Wait(); len(errs) > 0 {
+		return errs[0] // any error will do
 	}
 
 	return nil

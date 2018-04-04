@@ -2,57 +2,67 @@ package cluster
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"sync"
 	"time"
 )
 
-// builds docker images in parallel
-func (client *cluster) buildLocalDockerImages() error {
-	failed := false
-	wg := sync.WaitGroup{}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := client.buildKusdLocalDockerImage("kowalatech/bootnode:dev", "bootnode.Dockerfile"); err != nil {
-			failed = true
-		}
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := client.buildKusdLocalDockerImage("kowalatech/kusd:dev", "kcoin.Dockerfile"); err != nil {
-			failed = true
-		}
-	}()
-
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		done <- struct{}{}
-	}()
-
-	select {
-	case <-time.After(5 * time.Minute):
-		return fmt.Errorf("Timeout building docker images")
-	case <-done:
-		if failed {
-			return fmt.Errorf("Error building docker images")
-		}
-	}
-	return nil
+// DockerBuilder builds images docker hosts
+type DockerBuilder struct {
+	env         []string
+	buildErrors []chan error
+	mtx         sync.Mutex
 }
 
-func (client *cluster) buildKusdLocalDockerImage(tag, dockerfile string) error {
-	cmd := exec.Command("docker", "build", "-t", tag, "-f", dockerfile, ".")
-	dockerEnv, err := client.Backend.DockerEnv()
-	if err != nil {
-		return err
+// NewDockerBuilder returns an instance of a docker image builder.
+func NewDockerBuilder(env []string) *DockerBuilder {
+	return &DockerBuilder{
+		env:         env,
+		buildErrors: make([]chan error, 0),
 	}
+}
+
+func (builder *DockerBuilder) Build(tag, dockerfile string) chan error {
+	builder.mtx.Lock()
+	defer builder.mtx.Unlock()
+
+	errChn := make(chan error)
+	builder.buildErrors = append(builder.buildErrors, errChn)
+	go func() {
+		errChn <- builder.build(tag, dockerfile)
+	}()
+	return errChn
+}
+
+func (builder *DockerBuilder) Wait() []error {
+	log.Println("Waiting for docker images to be built")
+	builder.mtx.Lock()
+	defer builder.mtx.Unlock()
+
+	timeout := time.After(5 * time.Minute)
+
+	errors := make([]error, 0)
+	for _, buildError := range builder.buildErrors {
+		select {
+		case <-timeout:
+			return []error{fmt.Errorf("Timeout building docker images")}
+		case err := <-buildError:
+			if err != nil {
+				errors = append(errors, err)
+			}
+		}
+	}
+	builder.buildErrors = make([]chan error, 0)
+	return errors
+}
+
+func (builder *DockerBuilder) build(tag, dockerfile string) error {
+	cmd := exec.Command("docker", "build", "-t", tag, "-f", dockerfile, ".")
+
 	env := os.Environ()
-	for _, e := range dockerEnv {
+	for _, e := range builder.env {
 		env = append(env, e)
 	}
 	cmd.Env = env
