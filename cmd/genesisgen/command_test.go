@@ -4,6 +4,9 @@ import (
 	"testing"
 	"bytes"
 	"bufio"
+	"io/ioutil"
+	"encoding/json"
+	"github.com/kowala-tech/kcoin/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -142,10 +145,6 @@ func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
 				walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
 				balance:       15,
 			},
-			{
-				walletAddress: "0xe286cbae1bbbb47d157516d334e70859a1bee4ff",
-				balance:       15,
-			},
 		},
 	}
 
@@ -159,5 +158,33 @@ func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
 		t.Fatalf("Error: %s", err.Error())
 	}
 
-	assert.Equal(t, "", b.String())
+	fileName := "testfiles/testnet_default.json"
+	contents, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		t.Fatalf("Failed to read file %s", fileName)
+	}
+
+	var expectedGenesis = new(core.Genesis)
+	err = json.Unmarshal(contents, expectedGenesis)
+	if err != nil {
+		t.Fatalf("Error unmarshalling json genesis with error: %s", err.Error())
+	}
+
+	var generatedGenesis = new(core.Genesis)
+	err = json.Unmarshal(b.Bytes(), generatedGenesis)
+
+	assertEqualGenesis(t, expectedGenesis, generatedGenesis)
+}
+
+//assertEqualGenesis checks if two genesis are the same, it ignores some fields as the timestamp that
+//will be always different when it is generated.
+func assertEqualGenesis(t *testing.T, expectedGenesis *core.Genesis, generatedGenesis *core.Genesis) {
+	assert.Equal(t, expectedGenesis.ExtraData, generatedGenesis.ExtraData)
+	assert.Equal(t, expectedGenesis.Config, generatedGenesis.Config)
+	assert.Equal(t, expectedGenesis.GasLimit, generatedGenesis.GasLimit)
+	assert.Equal(t, expectedGenesis.GasUsed, generatedGenesis.GasUsed)
+	assert.Equal(t, expectedGenesis.Coinbase, generatedGenesis.Coinbase)
+	assert.Equal(t, expectedGenesis.ParentHash, generatedGenesis.ParentHash)
+
+	assert.Len(t, expectedGenesis.Alloc, len(generatedGenesis.Alloc))
 }

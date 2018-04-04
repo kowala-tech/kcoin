@@ -97,9 +97,16 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 		genesis.Config.ChainID = new(big.Int).SetUint64(uint64(rand.Intn(65536)))
 	}
 
-	//TODO: Add possibility to change it (optional)
 	genesis.Config.Tendermint = &params.TendermintConfig{Rewarded: true}
+
+	//TODO: This should be an optional param.
 	genesis.ExtraData = make([]byte, 32)
+	extra := ""
+	if len(extra) > 32 {
+		extra = extra[:32]
+	}
+
+	genesis.ExtraData = append([]byte(extra), genesis.ExtraData[len(extra):]...)
 
 	//TODO: Default account for the network contracts, maybe it is good to unify in
 	//a global constant this information.
@@ -158,14 +165,6 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 	for i := int64(0); i < 256; i++ {
 		genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
 	}
-
-	//TODO: This should be an optional param.
-	extra := "Extradata"
-	if len(extra) > 32 {
-		extra = extra[:32]
-	}
-
-	genesis.ExtraData = append([]byte(extra), genesis.ExtraData[len(extra):]...)
 
 	out, _ := json.MarshalIndent(genesis, "", "  ")
 
