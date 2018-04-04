@@ -1,13 +1,16 @@
 package main
 
 import (
-	"testing"
-	"bytes"
 	"bufio"
-	"io/ioutil"
+	"bytes"
 	"encoding/json"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"testing"
+	"math/big"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
@@ -117,6 +120,23 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 			},
 			ExpectedError: ErrInvalidAddressInPrefundedAccounts,
 		},
+		{
+			TestName: "Invalid consensus engine.",
+			InvalidCommand: GenerateGenesisCommand{
+				network:                       "test",
+				maxNumValidators:              "5",
+				unbondingPeriod:               "5",
+				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				prefundedAccounts: []PrefundedAccount{
+					{
+						walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+						balance:       15,
+					},
+				},
+				consensusEngine: "fakeConsensus",
+			},
+			ExpectedError: ErrInvalidConsensusEngine,
+		},
 	}
 
 	for _, test := range tests {
@@ -151,7 +171,7 @@ func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
 	var b bytes.Buffer
 	writer := bufio.NewWriter(&b)
 
-	handler := GenerateGenesisCommandHandler{w:writer}
+	handler := GenerateGenesisCommandHandler{w: writer}
 
 	err := handler.Handle(cmd)
 	if err != nil {
@@ -206,7 +226,7 @@ func TestOptionalValues(t *testing.T) {
 		}
 
 		var b bytes.Buffer
-		handler := GenerateGenesisCommandHandler{w:&b}
+		handler := GenerateGenesisCommandHandler{w: &b}
 
 		err := handler.Handle(cmd)
 		if err != nil {
@@ -220,5 +240,42 @@ func TestOptionalValues(t *testing.T) {
 		}
 
 		assert.NotNil(t, generatedGenesis.Config.Tendermint)
+	})
+
+	t.Run("Smart contracts owner", func(t *testing.T) {
+		cmd := GenerateGenesisCommand{
+			network:                       "test",
+			maxNumValidators:              "5",
+			unbondingPeriod:               "5",
+			walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+			prefundedAccounts: []PrefundedAccount{
+				{
+					walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+					balance:       15,
+				},
+			},
+			smartContractsOwner: "0xe2ac86cbae1bbbb47d157516d334e70859a1aaaa",
+		}
+
+		var b bytes.Buffer
+		handler := GenerateGenesisCommandHandler{w: &b}
+
+		err := handler.Handle(cmd)
+		if err != nil {
+			t.Fatalf("Error: %s", err.Error())
+		}
+
+		var generatedGenesis = new(core.Genesis)
+		err = json.Unmarshal(b.Bytes(), generatedGenesis)
+		if err != nil {
+			t.Fatal("Error unmarshaling genesis.")
+		}
+
+		bigaddr, _ := new(big.Int).SetString("0xe2ac86cbae1bbbb47d157516d334e70859a1aaaa", 0)
+		address := common.BigToAddress(bigaddr)
+
+		expectedAlloc := core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
+
+		assert.Equal(t, generatedGenesis.Alloc[address], expectedAlloc)
 	})
 }

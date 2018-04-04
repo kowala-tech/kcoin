@@ -1,9 +1,9 @@
 package main
 
 import (
-	"time"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/vm"
+	"time"
 )
 
 //TODO:This vmTracer is an exact copy of the one in pupphet, can be unified?

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"gopkg.in/urfave/cli.v1"
 	"fmt"
-	"os"
 	"github.com/prometheus/common/log"
+	"gopkg.in/urfave/cli.v1"
+	"os"
 )
 
 func main() {

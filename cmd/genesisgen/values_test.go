@@ -3,17 +3,17 @@ package main
 import "testing"
 
 func TestItFailsWithAnInvalidNetwork(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		testName string
-		network string
-	} {
+		network  string
+	}{
 		{
 			testName: "Empty string",
-			network: "",
+			network:  "",
 		},
 		{
 			testName: "Invalid network",
-			network: "fakeNetwork",
+			network:  "fakeNetwork",
 		},
 	}
 
@@ -28,16 +28,16 @@ func TestItFailsWithAnInvalidNetwork(t *testing.T) {
 }
 
 func TestItFailsWithInvalidConsensusEngine(t *testing.T) {
-	tests := []struct{
-		testName string
+	tests := []struct {
+		testName  string
 		consensus string
-	} {
+	}{
 		{
-			testName: "Empty string",
+			testName:  "Empty string",
 			consensus: "",
 		},
 		{
-			testName: "Invalid consensus engine",
+			testName:  "Invalid consensus engine",
 			consensus: "invalidConsensus",
 		},
 	}

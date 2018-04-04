@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"github.com/kowala-tech/kcoin/accounts/abi"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/contracts/network/contracts"
@@ -15,7 +16,6 @@ import (
 	"math/rand"
 	"strings"
 	"time"
-	"encoding/json"
 )
 
 var (
@@ -35,7 +35,8 @@ type GenerateGenesisCommand struct {
 	unbondingPeriod               string
 	walletAddressGenesisValidator string
 	prefundedAccounts             []PrefundedAccount
-	consensusEngine	string
+	consensusEngine               string
+	smartContractsOwner           string
 }
 
 type PrefundedAccount struct {
@@ -120,9 +121,12 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 
 	genesis.ExtraData = append([]byte(extra), genesis.ExtraData[len(extra):]...)
 
-	//TODO: Default account for the network contracts, maybe it is good to unify in
-	//a global constant this information.
-	owner, err := h.createWalletAddress("0x259be75d96876f2ada3d202722523e9cd4dd917d")
+	strAddr := DefaultSmartContractsOwner
+	if command.smartContractsOwner != "" {
+		strAddr = command.smartContractsOwner
+	}
+
+	owner, err := h.createWalletAddress(strAddr)
 	if err != nil {
 		return ErrInvalidContractsOwnerAddress
 	}
