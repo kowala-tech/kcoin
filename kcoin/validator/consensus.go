@@ -14,8 +14,8 @@ type VotingState struct {
 	blockNumber *big.Int
 	round       uint64
 
-	validators         types.Voters
-	validatorsChecksum [32]byte
+	voters         types.Voters
+	votersChecksum [32]byte
 
 	proposal       *types.Proposal
 	block          *types.Block

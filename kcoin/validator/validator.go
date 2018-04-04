@@ -234,7 +234,7 @@ func (val *validator) init() error {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
 
-	if val.validatorsChecksum != checksum {
+	if val.votersChecksum != checksum {
 		if err := val.updateValidators(checksum, true); err != nil {
 			log.Crit("Failed to update the validator set", "err", err)
 		}
@@ -253,7 +253,7 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
+	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.voters)
 
 	val.blockCh = make(chan *types.Block)
 	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
@@ -408,7 +408,7 @@ func (val *validator) createBlock() *types.Block {
 		GasLimit:       core.CalcGasLimit(parent),
 		GasUsed:        new(big.Int),
 		Time:           big.NewInt(tstamp),
-		ValidatorsHash: val.validators.Hash(),
+		ValidatorsHash: val.voters.Hash(),
 	}
 	val.header = header
 
@@ -621,8 +621,8 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 		return err
 	}
 
-	val.validators = validators
-	val.validatorsChecksum = checksum
+	val.voters = validators
+	val.votersChecksum = checksum
 
 	return nil
 }

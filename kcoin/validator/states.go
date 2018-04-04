@@ -111,7 +111,7 @@ func (val *validator) newElectionState() stateFn {
 func (val *validator) newRoundState() stateFn {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
-	val.validators.NextProposer()
+	val.voters.NextProposer()
 
 	if val.round != 0 {
 		val.round++
@@ -124,7 +124,7 @@ func (val *validator) newRoundState() stateFn {
 }
 
 func (val *validator) newProposalState() stateFn {
-	proposer := val.validators.NextProposer()
+	proposer := val.voters.NextProposer()
 	if proposer.Address() == val.walletAccount.Account().Address {
 		log.Info("Proposing a new block")
 		val.propose()

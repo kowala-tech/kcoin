@@ -9,14 +9,14 @@ import (
 	"io"
 )
 
-// Validator represents a consensus validator
+// Validator represents a consensus Voter
 type Voter struct {
 	address common.Address
 	deposit uint64
 	weight  *big.Int
 }
 
-// NewVoter returns a new validator instance
+// NewVoter returns a new Voter instance
 func NewVoter(address common.Address, deposit uint64, weight *big.Int) *Voter {
 	return &Voter{
 		address: address,
@@ -34,6 +34,9 @@ func (val *Voter) EncodeRLP(w io.Writer) error {
 	return nil
 }
 
+// Voters represent a set of voters
+// it allows to iterate over to next Proposer
+// base on Voter deposit and weight
 type Voters interface {
 	NextProposer() *Voter
 	At(i int) *Voter
@@ -43,8 +46,9 @@ type Voters interface {
 	Hash() common.Hash
 }
 
-var ErrInvalidParams = errors.New("A validator set needs at least one validator")
+var ErrInvalidParams = errors.New("voters set needs at least one voter")
 
+// NewVoter validates that a list of voters is valid returning a new type if so
 func NewVoters(voterList []*Voter) (*voters, error) {
 	if len(voterList) == 0 {
 		return nil, ErrInvalidParams
@@ -57,27 +61,32 @@ func NewVoters(voterList []*Voter) (*voters, error) {
 	return set, nil
 }
 
+// voters is a list of Voter
 type voters struct {
 	voters []*Voter
 }
 
-// Update updates the weight and the proposer based on the set of voters
+// NextProposer returns the next proposer based on the round and weight of the each voters
 func (voters *voters) NextProposer() *Voter {
 	proposer := voters.voters[0]
 
-	for _, validator := range voters.voters {
-		validator.weight = validator.weight.Add(validator.weight, big.NewInt(int64(validator.deposit)))
-		if validator.weight.Cmp(proposer.weight) > 0 {
-			proposer = validator
+	for _, voter := range voters.voters {
+
+		// add more chance for each voter to be the next Proposer by adding their deposit amount as weight
+		voter.weight = voter.weight.Add(voter.weight, big.NewInt(int64(voter.deposit)))
+
+		if voter.weight.Cmp(proposer.weight) > 0 {
+			proposer = voter
 		}
 	}
 
-	// decrement the validator weight since he has been selected
+	// decrement this Voter weight since he has been selected as next proposer
 	proposer.weight.Sub(proposer.weight, big.NewInt(int64(proposer.deposit)))
 
 	return proposer
 }
 
+// At returns Voter at position or nil if not found
 func (voters *voters) At(i int) *Voter {
 	if i < 0 || i >= len(voters.voters) {
 		return nil
@@ -85,28 +94,35 @@ func (voters *voters) At(i int) *Voter {
 	return voters.voters[i]
 }
 
+// Get returns the Voter at index position, nil if outside boundaries or not found
 func (voters *voters) Get(addr common.Address) *Voter {
-	for _, validator := range voters.voters {
-		if validator.Address() == addr {
-			return validator
+	for _, voter := range voters.voters {
+		if voter.Address() == addr {
+			return voter
 		}
 	}
 	return nil
 }
 
+// Len returns the amount of voters in this set
+// needed for hash thru interface DerivableList interface
 func (voters *voters) Len() int {
 	return len(voters.voters)
 }
 
+// GetRlp returns encoded bytes for one voter
+// needed for hash thru interface DerivableList interface
 func (voters *voters) GetRlp(i int) []byte {
 	enc, _ := rlp.EncodeToBytes(voters.voters[i])
 	return enc
 }
 
+// Hash returns a unique Hash value for this set of Voters
 func (voters *voters) Hash() common.Hash {
 	return DeriveSha(voters)
 }
 
+// Contains returns is ones Voter address is part of this set
 func (voters *voters) Contains(addr common.Address) bool {
 	voter := voters.Get(addr)
 	return voter != nil
@@ -119,16 +135,18 @@ func NewDeposit(amount uint64, timeUnix int64) *Deposit {
 	}
 }
 
-// Deposit represents the validator deposits at stake
+// Deposit represents the voter deposits at stake
 type Deposit struct {
 	amount              uint64
 	availableAtTimeUnix int64
 }
 
+// Amount at stake
 func (dep *Deposit) Amount() uint64 {
 	return dep.amount
 }
 
+// AvailableAtTimeUnix when this deposit is available to withdraw
 func (dep *Deposit) AvailableAtTimeUnix() int64 {
 	return dep.availableAtTimeUnix
 }

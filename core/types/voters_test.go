@@ -94,10 +94,10 @@ func TestVoters_UpdateWeightChangesProposerElections(t *testing.T) {
 	require.Equal(t, 3, voters.Len())
 
 	elections := []struct {
-		proposerWeight   *big.Int
-		validator1weight *big.Int
-		validator2weight *big.Int
-		validator3weight *big.Int
+		proposerWeight *big.Int
+		voter1weight   *big.Int
+		voter2weight   *big.Int
+		voter3weight   *big.Int
 	}{
 		{big.NewInt(101), big.NewInt(200), big.NewInt(101), big.NewInt(198)},
 		{big.NewInt(200), big.NewInt(200), big.NewInt(202), big.NewInt(297)},
@@ -109,9 +109,9 @@ func TestVoters_UpdateWeightChangesProposerElections(t *testing.T) {
 		t.Run(fmt.Sprintf("round %d", round), func(t *testing.T) {
 			proposer := voters.NextProposer()
 			assert.Equal(t, tc.proposerWeight, proposer.weight)
-			assert.Equal(t, tc.validator1weight, voters.At(0).weight)
-			assert.Equal(t, tc.validator2weight, voters.At(1).weight)
-			assert.Equal(t, tc.validator3weight, voters.At(2).weight)
+			assert.Equal(t, tc.voter1weight, voters.At(0).weight)
+			assert.Equal(t, tc.voter2weight, voters.At(1).weight)
+			assert.Equal(t, tc.voter3weight, voters.At(2).weight)
 		})
 	}
 }
