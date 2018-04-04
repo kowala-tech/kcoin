@@ -30,6 +30,24 @@ func createCommand() *cobra.Command {
 				fmt.Println("Params usage.")
 			} else {
 				viper.SetConfigFile(FileConfig)
+
+				err := viper.ReadInConfig()
+				if err != nil {
+					panic(fmt.Errorf("Fatal error config file: %s \n", err))
+				}
+			}
+
+			command := GenerateGenesisCommand{
+				network: viper.GetString("genesis.network"),
+				maxNumValidators: viper.GetString("genesis.maxNumValidators"),
+				unbondingPeriod: viper.GetString("genesis.unbondingPeriod"),
+			}
+
+			handler := GenerateGenesisCommandHandler{w:os.Stdout}
+			err := handler.Handle(command)
+			if err != nil {
+				fmt.Printf("Error generating file: %s", err)
+				os.Exit(1)
 			}
 		},
 	}

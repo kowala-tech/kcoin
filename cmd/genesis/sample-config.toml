@@ -1,7 +1,7 @@
 [genesis]
-network = "testnet"
+network = "test"
 maxNumValidators = "1"
-unboundingPeriod = "1"
+unbondingPeriod = "1"
 walletAddressGenesisValidator = "1"
 prefundedAccounts = [
 
