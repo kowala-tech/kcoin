@@ -20,7 +20,7 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
 		TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
 		ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-		ValidatorsHash common.Hash    `json:"validators"       gencodec:"required"`
+		ValidatorsHash common.Hash    `json:"voters"       gencodec:"required"`
 		LastCommitHash common.Hash    `json:"lastCommit"       gencodec:"required"`
 		Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
 		Number         *hexutil.Big   `json:"number"           gencodec:"required"`
@@ -55,7 +55,7 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		Root           *common.Hash    `json:"stateRoot"        gencodec:"required"`
 		TxHash         *common.Hash    `json:"transactionsRoot" gencodec:"required"`
 		ReceiptHash    *common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-		ValidatorsHash *common.Hash    `json:"validators"       gencodec:"required"`
+		ValidatorsHash *common.Hash    `json:"voters"       gencodec:"required"`
 		LastCommitHash *common.Hash    `json:"lastCommit"       gencodec:"required"`
 		Bloom          *Bloom          `json:"logsBloom"        gencodec:"required"`
 		Number         *hexutil.Big    `json:"number"           gencodec:"required"`
@@ -89,7 +89,7 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 	}
 	h.ReceiptHash = *dec.ReceiptHash
 	if dec.ValidatorsHash == nil {
-		return errors.New("missing required field 'validators' for Header")
+		return errors.New("missing required field 'voters' for Header")
 	}
 	h.ValidatorsHash = *dec.ValidatorsHash
 	if dec.LastCommitHash == nil {

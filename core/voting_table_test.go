@@ -38,8 +38,8 @@ func TestVotingTable_Add_CheckIsVoterAndVoteNotSeen_CallsQuorum(t *testing.T) {
 	quorum := false
 	voterAddress := common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 
-	validator := types.NewValidator(voterAddress, 0, big.NewInt(1))
-	validatorList, err := types.NewValidatorList([]*types.Validator{validator})
+	validator := types.NewVoter(voterAddress, 0, big.NewInt(1))
+	validatorList, err := types.NewVoters([]*types.Validator{validator})
 	require.NoError(t, err)
 
 	votingTable := NewVotingTable(
@@ -65,8 +65,8 @@ func TestVotingTable_Add_CheckIsVoterAndVoteNotSeen_CallsQuorum(t *testing.T) {
 func TestVotingTable_Add_DoubleVoteFromAddressReturnsError(t *testing.T) {
 	voterAddress := common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 
-	validator := types.NewValidator(voterAddress, 0, big.NewInt(1))
-	validatorList, err := types.NewValidatorList([]*types.Validator{validator})
+	validator := types.NewVoter(voterAddress, 0, big.NewInt(1))
+	validatorList, err := types.NewVoters([]*types.Validator{validator})
 	require.NoError(t, err)
 
 	votingTable := NewVotingTable(
@@ -93,8 +93,8 @@ func TestVotingTable_Add_VoteFromNonValidatorReturnsError(t *testing.T) {
 	voterAddress := common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 	nonVoterAddress := common.HexToAddress("0x6aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 
-	validator := types.NewValidator(voterAddress, 0, big.NewInt(1))
-	validatorList, err := types.NewValidatorList([]*types.Validator{validator})
+	validator := types.NewVoter(voterAddress, 0, big.NewInt(1))
+	validatorList, err := types.NewVoters([]*types.Validator{validator})
 	require.NoError(t, err)
 
 	votingTable := NewVotingTable(

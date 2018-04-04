@@ -29,7 +29,7 @@ type Header struct {
 	Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	ValidatorsHash common.Hash    `json:"validators"       gencodec:"required"`
+	ValidatorsHash common.Hash    `json:"voters"       gencodec:"required"`
 	LastCommitHash common.Hash    `json:"lastCommit"       gencodec:"required"`
 	Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
 	Number         *big.Int       `json:"number"           gencodec:"required"`
@@ -81,7 +81,7 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
-// Commit contains the evidence that a block was committed by a set of validators
+// Commit contains the evidence that a block was committed by a set of voters
 type Commit struct {
 	// @NOTE (rgeraldes) - pre-commits are in order of address
 	PreCommits     Votes `json:"votes"    gencodec:"required"`
