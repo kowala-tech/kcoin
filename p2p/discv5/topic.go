@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common/mclock"
+	"github.com/kowala-tech/kcoin/common/mclock"
 )
 
 const (

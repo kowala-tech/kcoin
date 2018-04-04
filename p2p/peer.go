@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common/mclock"
-	"github.com/kowala-tech/kUSD/event"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/common/mclock"
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 const (

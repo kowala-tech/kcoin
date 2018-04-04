@@ -34,8 +34,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 type allocItem struct{ Addr, Balance *big.Int }

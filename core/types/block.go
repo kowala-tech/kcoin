@@ -9,10 +9,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
-	"github.com/kowala-tech/kUSD/crypto/sha3"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/hexutil"
+	"github.com/kowala-tech/kcoin/crypto/sha3"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 var (
@@ -29,8 +29,8 @@ type Header struct {
 	Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
 	TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
 	ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	ValidatorsHash common.Hash    `json:"validators"   	   gencodec:"required"`
-	LastCommitHash common.Hash    `json:"lastCommit"	   gencodec:"required"`
+	ValidatorsHash common.Hash    `json:"validators"       gencodec:"required"`
+	LastCommitHash common.Hash    `json:"lastCommit"       gencodec:"required"`
 	Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
 	Number         *big.Int       `json:"number"           gencodec:"required"`
 	GasLimit       *big.Int       `json:"gasLimit"         gencodec:"required"`
@@ -135,7 +135,7 @@ type Block struct {
 	ReceivedFrom interface{}
 }
 
-// "external" block encoding. used for kusd protocol, etc.
+// "external" block encoding. used for kcoin protocol, etc.
 type extblock struct {
 	Header     *Header
 	LastCommit *Commit

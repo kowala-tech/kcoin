@@ -5,14 +5,14 @@ Maintainer: {{.Author}}
 Build-Depends: debhelper (>= 8.0.0), golang-1.9
 Standards-Version: 3.9.5
 Homepage: https://ethereum.org
-Vcs-Git: git://github.com/kowala-tech/kUSD.git
-Vcs-Browser: https://github.com/kowala-tech/kUSD
+Vcs-Git: git://github.com/kowala-tech/kcoin.git
+Vcs-Browser: https://github.com/kowala-tech/kcoin
 
 Package: {{.Name}}
 Architecture: any
 Depends: ${misc:Depends}, {{.ExeList}}
-Description: Meta-package to install kusd and other tools
- Meta-package to install kusd and other tools
+Description: Meta-package to install kcoin and other tools
+ Meta-package to install kcoin and other tools
 
 {{range .Executables}}
 Package: {{$.ExeName .}}

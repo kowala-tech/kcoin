@@ -20,12 +20,12 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/crypto/ecies"
-	"github.com/kowala-tech/kUSD/crypto/secp256k1"
-	"github.com/kowala-tech/kUSD/crypto/sha3"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/rlp"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/crypto/ecies"
+	"github.com/kowala-tech/kcoin/crypto/secp256k1"
+	"github.com/kowala-tech/kcoin/crypto/sha3"
+	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/rlp"
 )
 
 const (

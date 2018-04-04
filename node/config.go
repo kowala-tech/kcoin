@@ -9,14 +9,14 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/accounts/keystore"
-	"github.com/kowala-tech/kUSD/accounts/usbwallet"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/p2p/discover"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/accounts/keystore"
+	"github.com/kowala-tech/kcoin/accounts/usbwallet"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/p2p/discover"
 )
 
 const (
@@ -32,7 +32,7 @@ const (
 // all registered services.
 type Config struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
-	// used in the devp2p node identifier. The instance name of kusd is "kusd". If no
+	// used in the devp2p node identifier. The instance name of kcoin is "kcoin". If no
 	// value is specified, the basename of the current executable is used.
 	Name string `toml:"-"`
 
@@ -200,7 +200,7 @@ func DefaultWSEndpoint() string {
 func (c *Config) NodeName() string {
 	name := c.name()
 	// Backwards compatibility: previous versions used title-cased "Kusd", keep that.
-	if name == "kusd" || name == "kusd-testnet" {
+	if name == "kcoin" || name == "kcoin-testnet" {
 		name = "Kusd"
 	}
 	if c.UserIdent != "" {
@@ -225,7 +225,7 @@ func (c *Config) name() string {
 	return c.Name
 }
 
-// These resources are resolved differently for "kusd" instances.
+// These resources are resolved differently for "kcoin" instances.
 var isOldKusdResource = map[string]bool{
 	"chaindata":          true,
 	"nodes":              true,
@@ -243,10 +243,10 @@ func (c *Config) resolvePath(path string) string {
 		return ""
 	}
 	// Backwards-compatibility: ensure that data directory files created
-	// by kusd 1.4 are used if they exist.
-	if c.name() == "kusd" && isOldKusdResource[path] {
+	// by kcoin 1.4 are used if they exist.
+	if c.name() == "kcoin" && isOldKusdResource[path] {
 		oldpath := ""
-		if c.Name == "kusd" {
+		if c.Name == "kcoin" {
 			oldpath = filepath.Join(c.DataDir, path)
 		}
 		if oldpath != "" && common.FileExist(oldpath) {
@@ -377,7 +377,7 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 	var ephemeral string
 	if keydir == "" {
 		// There is no datadir.
-		keydir, err = ioutil.TempDir("", "kUSD-keystore")
+		keydir, err = ioutil.TempDir("", "kcoin-keystore")
 		ephemeral = keydir
 	}
 

@@ -4,20 +4,17 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kUSD/accounts/abi"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/contracts/network"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/core/vm/runtime"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/accounts/abi"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/contracts/network/contracts"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/core/vm/runtime"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 type vmTracer struct {
@@ -50,15 +47,6 @@ func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, 
 	return nil
 }
 
-type contractType byte
-
-const (
-	ctNetworkMap contractType = iota
-	ctMToken
-	ctPriceOracle
-	ctNetworkStats
-)
-
 type contractData struct {
 	addr    common.Address
 	code    []byte
@@ -77,78 +65,65 @@ func createContract(cfg *runtime.Config, code []byte) (*contractData, error) {
 	}, nil
 }
 
-func createContracts(owner common.Address, contractsCode map[contractType][]byte) ([]*contractData, error) {
-	// memdb
-	memDb, err := kusddb.NewMemDatabase()
-	if err != nil {
-		return nil, err
+func (w *wizard) createElectionContract(genesis *core.Genesis, owner common.Address) error {
+	fmt.Println()
+	var baseDeposit *big.Int
+	for baseDeposit == nil {
+		fmt.Println("How much is a deposit in kcoin to secure a place in the election? (default=0)")
+		baseDeposit = w.readDefaultBigInt(common.Big0)
 	}
-	// statedb
-	sdb, err := state.New(common.Hash{}, state.NewDatabase(memDb))
-	if err != nil {
-		return nil, err
+
+	fmt.Println()
+	var genesisAddr *common.Address
+	for genesisAddr == nil {
+		fmt.Println("Which account will be used as the genesis validator? (mandatory at least one)")
+		genesisAddr = w.readAddress()
 	}
-	// tracer
-	tracer := newVmTracer()
-	// evm runtime config
-	runtimeConfig := &runtime.Config{
+
+	fmt.Println()
+	var maxVal *big.Int
+	for maxVal == nil {
+		fmt.Println("What is the maximum number of validators? (default=1)")
+		maxVal = w.readDefaultBigInt(common.Big1)
+	}
+
+	fmt.Println()
+	var unbondingPeriod *big.Int
+	for unbondingPeriod == nil {
+		fmt.Println("How long should the unbonding period be in days? (default=0)")
+		unbondingPeriod = w.readDefaultBigInt(common.Big0)
+	}
+
+	electionABI, err := abi.JSON(strings.NewReader(contracts.ElectionContractABI))
+	if err != nil {
+		return err
+	}
+
+	electionParams, err := electionABI.Pack("", baseDeposit, maxVal, unbondingPeriod, *genesisAddr)
+	if err != nil {
+		return err
+	}
+
+	runtimeCfg := &runtime.Config{
 		Origin: owner,
-		State:  sdb,
 		EVMConfig: vm.Config{
 			Debug:  true,
-			Tracer: tracer,
+			Tracer: newVmTracer(),
 		},
 	}
-	// run contracts
-	r := make([]*contractData, 0, len(contractsCode))
-	// first the network stats contract
-	c, err := createContract(runtimeConfig, contractsCode[ctNetworkStats])
+
+	contract, err := createContract(runtimeCfg, append(common.FromHex(contracts.ElectionContractBin), electionParams...))
 	if err != nil {
-		fmt.Println("can't create network stats contract:", err)
-		os.Exit(-5)
+		return err
 	}
-	r = append(r, c)
-	// create mToken contract
-	if c, err = createContract(runtimeConfig, contractsCode[ctMToken]); err != nil {
-		fmt.Println("can't create mToken contract:", err)
-		os.Exit(-6)
+
+	genesis.Alloc[contract.addr] = core.GenesisAccount{
+		Code:    contract.code,
+		Storage: contract.storage,
+		Balance: new(big.Int).Mul(baseDeposit, new(big.Int).SetUint64(params.Ether)),
 	}
-	r = append(r, c)
-	// create price oracle contract
-	priceOracleAbi, err := abi.JSON(strings.NewReader(network.PriceOracleContractABI))
-	if err != nil {
-		fmt.Println("can't parse price oracle contract ABI:", err)
-		os.Exit(-7)
-	}
-	priceOracleParams, err := priceOracleAbi.Pack("",
-		"kUSD", "kUSD", uint8(18), big.NewInt(1000000000000000000),
-		"US Dollar", "USD", uint8(4), big.NewInt(10000),
-	)
-	if err != nil {
-		fmt.Println("can't pack price oracle contract params:", err)
-		os.Exit(-8)
-	}
-	if c, err = createContract(runtimeConfig, append(contractsCode[ctPriceOracle], priceOracleParams...)); err != nil {
-		fmt.Println("can't create price oracle contract:", err)
-		os.Exit(-9)
-	}
-	r = append(r, c)
-	// create network map contract
-	netMapAbi, err := abi.JSON(strings.NewReader(network.ContractsContractABI))
-	if err != nil {
-		fmt.Println("can't parse network stats abi:", err)
-		os.Exit(-10)
-	}
-	netMapParams, err := netMapAbi.Pack("", r[1].addr, r[2].addr, r[0].addr)
-	if err != nil {
-		fmt.Println("can't pack network map contract params:", err)
-		os.Exit(-11)
-	}
-	if c, err = createContract(runtimeConfig, append(contractsCode[ctNetworkMap], netMapParams...)); err != nil {
-		fmt.Println("can't create network map contract:", err)
-		os.Exit(-12)
-	}
-	return append(r, c), nil
+
+	return nil
 }
 
 // makeGenesis creates a new genesis struct based on some user input.
@@ -160,44 +135,49 @@ func (w *wizard) makeGenesis() {
 		Alloc:     make(core.GenesisAlloc),
 		Config:    &params.ChainConfig{},
 	}
+
+	fmt.Println()
+	fmt.Println("Which network to use? (default = Test Network)")
+	fmt.Println(" 1. Main Network")
+	fmt.Println(" 2. Test Network")
+	fmt.Println(" 3. Other Network")
+	choice := w.read()
+	switch {
+	case choice == "1":
+		genesis.Config.ChainID = params.MainnetChainConfig.ChainID
+	case choice == "2" || choice == "":
+		genesis.Config.ChainID = params.TestnetChainConfig.ChainID
+	case choice == "3":
+		fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
+		genesis.Config.ChainID = new(big.Int).SetUint64(uint64(w.readDefaultInt(rand.Intn(65536))))
+	default:
+		log.Crit("Invalid network choice", "choice", choice)
+	}
+
 	// Figure out which consensus engine to choose
 	fmt.Println()
 	fmt.Println("Which consensus engine to use? (default = Tendermint)")
 	fmt.Println(" 1. Tendermint - proof-of-stake")
 
-	choice := w.read()
-	var ownerAddr *common.Address
+	choice = w.read()
+	var owner *common.Address
 	switch {
 	case choice == "" || choice == "1":
 		genesis.Config.Tendermint = &params.TendermintConfig{Rewarded: true}
 		genesis.ExtraData = make([]byte, 32)
 
 		fmt.Println()
-		for ownerAddr == nil {
+		for owner == nil {
 			fmt.Println("Which account will be used as the owner of the network contracts? (mandatory at least one)")
-			ownerAddr = w.readAddress()
+			owner = w.readAddress()
 		}
 
-		contractsData, err := createContracts(*ownerAddr, map[contractType][]byte{
-			ctNetworkMap:   common.FromHex(network.ContractsContractBin),
-			ctMToken:       common.FromHex(network.MusdContractBin),
-			ctNetworkStats: common.FromHex(network.NetworkContractBin),
-			ctPriceOracle:  common.FromHex(network.PriceOracleContractBin),
-		})
-		if err != nil {
-			log.Crit("Failed to create contracts", "err", err)
-		}
+		log.Info("the owner account will be pre-funded with 1 coin to cover the gas used", "address", owner)
+		genesis.Alloc[*owner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
 
-		for _, contract := range contractsData {
-			genesis.Alloc[contract.addr] = core.GenesisAccount{
-				Code:    contract.code,
-				Storage: contract.storage,
-				Balance: common.Big0,
-			}
+		if err := w.createElectionContract(genesis, *owner); err != nil {
+			log.Crit("Failed to create", err)
 		}
-
-		log.Info("the owner account will be pre-funded with 1 coin", "address", ownerAddr)
-		genesis.Alloc[*ownerAddr] = core.GenesisAccount{Balance: new(big.Int).SetUint64(1000000000000000000)}
 
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
@@ -224,10 +204,6 @@ func (w *wizard) makeGenesis() {
 	fmt.Println()
 
 	// Query the user for some custom extras
-	fmt.Println()
-	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
-	genesis.Config.ChainID = new(big.Int).SetUint64(uint64(w.readDefaultInt(rand.Intn(65536))))
-
 	fmt.Println()
 	fmt.Println("Anything fun to embed into the genesis block? (max 32 bytes)")
 

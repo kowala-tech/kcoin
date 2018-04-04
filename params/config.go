@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 
 	// TestnetChainConfig contains the chain parameters to run a node on the test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID:    big.NewInt(3),
+		ChainID:    big.NewInt(519374298533),
 		Tendermint: new(TendermintConfig),
 	}
 

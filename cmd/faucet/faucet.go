@@ -1,4 +1,4 @@
-// faucet is a kUSD faucet backed by a fast node (for now)
+// faucet is a kcoin faucet backed by a fast node (for now)
 package main
 
 //go:generate go-bindata -nometadata -o website.go faucet.html
@@ -25,31 +25,31 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/accounts/keystore"
-	"github.com/kowala-tech/kUSD/cmd/utils"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/kusd"
-	"github.com/kowala-tech/kUSD/kusd/downloader"
-	"github.com/kowala-tech/kUSD/kusdclient"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/node"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/p2p/nat"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/accounts/keystore"
+	"github.com/kowala-tech/kcoin/cmd/utils"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/core/types"
+	kcoinroot "github.com/kowala-tech/kcoin/kcoin"
+	"github.com/kowala-tech/kcoin/kcoin/downloader"
+	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/node"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/p2p/nat"
+	"github.com/kowala-tech/kcoin/params"
 	"golang.org/x/net/websocket"
 )
 
 var (
-	genesisFlag  = flag.String("genesis", "", "Genesis json file to seed the chain with")
-	apiPortFlag  = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
-	kusdPortFlag = flag.Int("kusdport", 30303, "Listener port for the devp2p connection")
-	bootFlag     = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
-	netFlag      = flag.Uint64("network", 0, "Network ID to use for the Kowala protocol")
-	statsFlag    = flag.String("kusdstats", "", "kUSDStats network monitoring auth string")
+	genesisFlag   = flag.String("genesis", "", "Genesis json file to seed the chain with")
+	apiPortFlag   = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
+	kcoinPortFlag = flag.Int("kcoinport", 30303, "Listener port for the devp2p connection")
+	bootFlag      = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
+	netFlag       = flag.Uint64("network", 0, "Network ID to use for the Kowala protocol")
+	statsFlag     = flag.String("kcoinstats", "", "kcoinStats network monitoring auth string")
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
 	payoutFlag  = flag.Int("faucet.amount", 1, "Number of mUSDs to pay out per user request")
@@ -70,7 +70,7 @@ var (
 )
 
 var (
-	kUSD = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	kcoin = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
 func main() {
@@ -84,7 +84,7 @@ func main() {
 	for i := 0; i < *tiersFlag; i++ {
 		// Calculate the amount for the next tier and format it
 		amount := float64(*payoutFlag) * math.Pow(2.5, float64(i))
-		amounts[i] = fmt.Sprintf("%s kUSDs", strconv.FormatFloat(amount, 'f', -1, 64))
+		amounts[i] = fmt.Sprintf("%s kcoins", strconv.FormatFloat(amount, 'f', -1, 64))
 		if amount == 1 {
 			amounts[i] = strings.TrimSuffix(amounts[i], "s")
 		}
@@ -152,7 +152,7 @@ func main() {
 	ks.Unlock(acc, pass)
 
 	// Assemble and start the faucet light service
-	faucet, err := newFaucet(genesis, *kusdPortFlag, enodes, *netFlag, *statsFlag, ks, website.Bytes())
+	faucet, err := newFaucet(genesis, *kcoinPortFlag, enodes, *netFlag, *statsFlag, ks, website.Bytes())
 	if err != nil {
 		log.Crit("Failed to start faucet", "err", err)
 	}
@@ -175,7 +175,7 @@ type request struct {
 type faucet struct {
 	config *params.ChainConfig // Chain configurations for signing
 	stack  *node.Node          // Kowala protocol stack
-	client *kusdclient.Client  // Client connection to the Kowala chain
+	client *kcoinclient.Client // Client connection to the Kowala chain
 	index  []byte              // Index page to serve up on the web
 
 	keystore *keystore.KeyStore // Keystore containing the single signer
@@ -194,7 +194,7 @@ type faucet struct {
 func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
 	// Assemble the raw devp2p protocol stack
 	stack, err := node.New(&node.Config{
-		Name:    "kusd",
+		Name:    "kcoin",
 		Version: params.Version,
 		DataDir: filepath.Join(os.Getenv("HOME"), ".faucet"),
 		P2P: p2p.Config{
@@ -209,13 +209,13 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network
 	}
 
 	// Assemble the Kowala protocol
-	cfg := kusd.DefaultConfig
+	cfg := kcoinroot.DefaultConfig
 	cfg.SyncMode = downloader.FastSync
 	cfg.NetworkId = network
 	cfg.Genesis = genesis
 	utils.RegisterKowalaService(stack, &cfg)
 
-	// Assemble the kusdstats monitoring and reporting service'
+	// Assemble the kcoinstats monitoring and reporting service'
 	if stats != "" {
 		utils.RegisterKowalaStatsService(stack, stats)
 	}
@@ -234,7 +234,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network
 		stack.Stop()
 		return nil, err
 	}
-	client := kusdclient.NewClient(api)
+	client := kcoinclient.NewClient(api)
 
 	return &faucet{
 		config:   genesis.Config,
@@ -270,7 +270,7 @@ func (f *faucet) webHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(f.index)
 }
 
-// apiHandler handles requests for kUSD grants and transaction statuses.
+// apiHandler handles requests for kcoin grants and transaction statuses.
 func (f *faucet) apiHandler(conn *websocket.Conn) {
 	// Start tracking the connection and drop at the end
 	defer conn.Close()
@@ -310,6 +310,10 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 
 		// If stats retrieval failed, wait a bit and retry
 		if err != nil {
+
+			// @NOTE (rgeraldes) - Unmarshalling errors are probably due to this return message:
+			// https://github.com/kowala-tech/kcoin/blob/dev/internal/kcoinapi/api.go#L698
+			// new fields in the header (required fields) must be added to that return msg.
 			if err = sendError(conn, errors.New("Faucet offline: "+err.Error())); err != nil {
 				log.Warn("Failed to send faucet error to client", "err", err)
 				return
@@ -322,7 +326,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 	}
 	// Send over the initial stats and the latest header
 	if err = send(conn, map[string]interface{}{
-		"funds":    balance.Div(balance, kUSD),
+		"funds":    balance.Div(balance, kcoin),
 		"funded":   nonce,
 		"peers":    f.stack.Server().PeerCount(),
 		"requests": f.reqs,
@@ -420,7 +424,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		case *noauthFlag:
 			username, avatar, address, err = authNoAuth(msg.URL)
 		default:
-			err = errors.New("Something funky happened, please open an issue at https://github.com/kowala-tech/kUSD/issues")
+			err = errors.New("Something funky happened, please open an issue at https://github.com/kowala-tech/kcoin/issues")
 		}
 		if err != nil {
 			if err = sendError(conn, err); err != nil {
@@ -439,7 +443,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		)
 		if timeout = f.timeouts[username]; time.Now().After(timeout) {
 			// User wasn't funded recently, create the funding transaction
-			amount := new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), kUSD)
+			amount := new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), kcoin)
 			amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
 			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
 
@@ -539,7 +543,7 @@ func (f *faucet) loop() {
 				log.Info("Updated faucet state", "block", head.Number, "hash", head.Hash(), "balance", balance)
 			}
 			// Faucet state retrieved, update locally and send to clients
-			balance = new(big.Int).Div(balance, kUSD)
+			balance = new(big.Int).Div(balance, kcoin)
 
 			f.lock.Lock()
 			for len(f.reqs) > 0 && f.reqs[0].Tx.Nonce() < f.nonce {

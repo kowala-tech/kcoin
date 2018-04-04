@@ -4,10 +4,10 @@ package accounts
 import (
 	"math/big"
 
-	kusd "github.com/kowala-tech/kUSD"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/event"
+	kcoin "github.com/kowala-tech/kcoin"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/event"
 )
 
 // Account represents a Kowala account located at a specific location defined
@@ -69,7 +69,7 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
-	SelfDerive(base DerivationPath, chain kusd.ChainStateReader)
+	SelfDerive(base DerivationPath, chain kcoin.ChainStateReader)
 
 	// SignHash requests the wallet to sign the given hash.
 	//

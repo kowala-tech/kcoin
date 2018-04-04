@@ -23,10 +23,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
-	"github.com/kowala-tech/kUSD/common/math"
-	"github.com/kowala-tech/kUSD/core/types"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/hexutil"
+	"github.com/kowala-tech/kcoin/common/math"
+	"github.com/kowala-tech/kcoin/core/types"
 )
 
 type Storage map[common.Hash]common.Hash

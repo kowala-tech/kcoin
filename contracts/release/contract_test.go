@@ -21,11 +21,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/accounts/abi/bind"
-	"github.com/kowala-tech/kUSD/accounts/abi/bind/backends"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kcoin/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/crypto"
 )
 
 // setupReleaseTest creates a blockchain simulator and deploys a version oracle

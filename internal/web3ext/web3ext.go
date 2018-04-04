@@ -1,4 +1,4 @@
-// package web3ext contains kusd specific web3.js extensions.
+// package web3ext contains kcoin specific web3.js extensions.
 package web3ext
 
 var Modules = map[string]string{
@@ -451,6 +451,24 @@ web3._extend({
 			call: 'validator_setGasPrice',
 			params: 1,
 			inputFormatter: [web3._extend.utils.fromDecimal]
+		}),
+		new web3._extend.Method({
+			name: 'setDeposit',
+			call: 'validator_setDeposit',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getMinimumDeposit',
+			call: 'validator_getMinimumDeposit',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'getDeposits',
+			call: 'validator_getDeposits'
+		}),
+		new web3._extend.Method({
+			name: 'redeemDeposits',
+			call: 'validator_redeemDeposits'
 		})
 	],
 	properties: []

@@ -29,9 +29,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

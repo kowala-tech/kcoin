@@ -21,8 +21,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/kowala-tech/kUSD/core/types"
-	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/crypto"
 )
 
 // Tests that transactions can be added to strict lists and list contents and

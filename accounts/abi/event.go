@@ -21,8 +21,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto"
 )
 
 // Event is an event potentially triggered by the EVM's LOG mechanism. The Event

@@ -16,7 +16,7 @@
 
 package bind
 
-import "github.com/kowala-tech/kUSD/accounts/abi"
+import "github.com/kowala-tech/kcoin/accounts/abi"
 
 // tmplData is the data structure required to fill the binding template.
 type tmplData struct {

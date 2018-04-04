@@ -6,18 +6,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/params"
 )
 
 var (
-	ErrInvalidSig     = errors.New("invalid v, r, s values")
-	errNoSigner       = errors.New("missing signing methods")
-	ErrInvalidChainId = errors.New("invalid chain id for signer")
-
-	errAbstractSigner     = errors.New("abstract signer")
-	abstractSignerAddress = common.HexToAddress("ffffffffffffffffffffffffffffffffffffffff")
+	ErrInvalidSig = errors.New("invalid v, r, s values")
 
 	big8 = big.NewInt(8)
 )

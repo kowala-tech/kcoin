@@ -7,8 +7,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/common/hexutil"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/hexutil"
 )
 
 var _ = (*receiptMarshaling)(nil)
@@ -16,6 +16,7 @@ var _ = (*receiptMarshaling)(nil)
 func (r Receipt) MarshalJSON() ([]byte, error) {
 	type Receipt struct {
 		PostState         hexutil.Bytes  `json:"root"`
+		Status            hexutil.Uint   `json:"status"`
 		CumulativeGasUsed *hexutil.Big   `json:"cumulativeGasUsed" gencodec:"required"`
 		Bloom             Bloom          `json:"logsBloom"         gencodec:"required"`
 		Logs              []*Log         `json:"logs"              gencodec:"required"`
@@ -25,6 +26,7 @@ func (r Receipt) MarshalJSON() ([]byte, error) {
 	}
 	var enc Receipt
 	enc.PostState = r.PostState
+	enc.Status = hexutil.Uint(r.Status)
 	enc.CumulativeGasUsed = (*hexutil.Big)(r.CumulativeGasUsed)
 	enc.Bloom = r.Bloom
 	enc.Logs = r.Logs
@@ -36,7 +38,8 @@ func (r Receipt) MarshalJSON() ([]byte, error) {
 
 func (r *Receipt) UnmarshalJSON(input []byte) error {
 	type Receipt struct {
-		PostState         hexutil.Bytes   `json:"root"`
+		PostState         *hexutil.Bytes  `json:"root"`
+		Status            *hexutil.Uint   `json:"status"`
 		CumulativeGasUsed *hexutil.Big    `json:"cumulativeGasUsed" gencodec:"required"`
 		Bloom             *Bloom          `json:"logsBloom"         gencodec:"required"`
 		Logs              []*Log          `json:"logs"              gencodec:"required"`
@@ -49,7 +52,10 @@ func (r *Receipt) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	if dec.PostState != nil {
-		r.PostState = dec.PostState
+		r.PostState = *dec.PostState
+	}
+	if dec.Status != nil {
+		r.Status = uint(*dec.Status)
 	}
 	if dec.CumulativeGasUsed == nil {
 		return errors.New("missing required field 'cumulativeGasUsed' for Receipt")

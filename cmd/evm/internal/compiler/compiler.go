@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kowala-tech/kUSD/core/asm"
+	"github.com/kowala-tech/kcoin/core/asm"
 )
 
 func Compile(fn string, src []byte, debug bool) (string, error) {

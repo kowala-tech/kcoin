@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kUSD/log"
+	"github.com/kowala-tech/kcoin/log"
 	"golang.org/x/net/websocket"
 	"gopkg.in/fatih/set.v0"
 )

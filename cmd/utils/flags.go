@@ -10,32 +10,32 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kowala-tech/kUSD/consensus/tendermint"
-	"github.com/kowala-tech/kUSD/stats"
+	"github.com/kowala-tech/kcoin/consensus/tendermint"
+	"github.com/kowala-tech/kcoin/stats"
 
-	"github.com/kowala-tech/kUSD/accounts"
-	"github.com/kowala-tech/kUSD/accounts/keystore"
-	"github.com/kowala-tech/kUSD/common"
-	"github.com/kowala-tech/kUSD/core"
-	"github.com/kowala-tech/kUSD/core/state"
-	"github.com/kowala-tech/kUSD/core/vm"
-	"github.com/kowala-tech/kUSD/crypto"
-	"github.com/kowala-tech/kUSD/dashboard"
-	"github.com/kowala-tech/kUSD/kusd"
-	"github.com/kowala-tech/kUSD/kusd/downloader"
-	"github.com/kowala-tech/kUSD/kusd/gasprice"
-	"github.com/kowala-tech/kUSD/kusddb"
-	"github.com/kowala-tech/kUSD/log"
-	"github.com/kowala-tech/kUSD/metrics"
-	"github.com/kowala-tech/kUSD/node"
-	"github.com/kowala-tech/kUSD/p2p"
-	"github.com/kowala-tech/kUSD/p2p/discover"
-	"github.com/kowala-tech/kUSD/p2p/discv5"
-	"github.com/kowala-tech/kUSD/p2p/nat"
-	"github.com/kowala-tech/kUSD/p2p/netutil"
-	"github.com/kowala-tech/kUSD/params"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/accounts/keystore"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/core/state"
+	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/dashboard"
+	"github.com/kowala-tech/kcoin/kcoin"
+	"github.com/kowala-tech/kcoin/kcoin/downloader"
+	"github.com/kowala-tech/kcoin/kcoin/gasprice"
+	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/metrics"
+	"github.com/kowala-tech/kcoin/node"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/p2p/discv5"
+	"github.com/kowala-tech/kcoin/p2p/nat"
+	"github.com/kowala-tech/kcoin/p2p/netutil"
+	"github.com/kowala-tech/kcoin/params"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -108,7 +108,7 @@ var (
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Ropsten)",
-		Value: kusd.DefaultConfig.NetworkId,
+		Value: kcoin.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
@@ -135,7 +135,7 @@ var (
 		Name:  "light",
 		Usage: "Enable light client mode",
 	}
-	defaultSyncMode = kusd.DefaultConfig.SyncMode
+	defaultSyncMode = kcoin.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
@@ -199,37 +199,37 @@ var (
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: kusd.DefaultConfig.TxPool.PriceLimit,
+		Value: kcoin.DefaultConfig.TxPool.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: kusd.DefaultConfig.TxPool.PriceBump,
+		Value: kcoin.DefaultConfig.TxPool.PriceBump,
 	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
 		Usage: "Minimum number of executable transaction slots guaranteed per account",
-		Value: kusd.DefaultConfig.TxPool.AccountSlots,
+		Value: kcoin.DefaultConfig.TxPool.AccountSlots,
 	}
 	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.globalslots",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: kusd.DefaultConfig.TxPool.GlobalSlots,
+		Value: kcoin.DefaultConfig.TxPool.GlobalSlots,
 	}
 	TxPoolAccountQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.accountqueue",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: kusd.DefaultConfig.TxPool.AccountQueue,
+		Value: kcoin.DefaultConfig.TxPool.AccountQueue,
 	}
 	TxPoolGlobalQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.globalqueue",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: kusd.DefaultConfig.TxPool.GlobalQueue,
+		Value: kcoin.DefaultConfig.TxPool.GlobalQueue,
 	}
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: kusd.DefaultConfig.TxPool.Lifetime,
+		Value: kcoin.DefaultConfig.TxPool.Lifetime,
 	}
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
@@ -269,7 +269,7 @@ var (
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: kusd.DefaultConfig.GasPrice,
+		Value: kcoin.DefaultConfig.GasPrice,
 	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
@@ -292,6 +292,15 @@ var (
 		Usage: "Record information useful for VM and contract debugging",
 	}
 	// Logging and debug settings
+	ShipLogzioFlag = cli.StringFlag{
+		Name:  "logzioapi",
+		Usage: "Logzio API key for shipping logs",
+		Value: "",
+	}
+	VerbosityFlag = cli.IntFlag{
+		Name:  "verbosity",
+		Usage: "sets the verbosity level",
+	}
 	KowalaStatsURLFlag = cli.StringFlag{
 		Name:  "stats",
 		Usage: "Reporting URL of a stats service (nodename:secret@host:port)",
@@ -448,12 +457,12 @@ var (
 	GpoBlocksFlag = cli.IntFlag{
 		Name:  "gpoblocks",
 		Usage: "Number of recent blocks to check for gas prices",
-		Value: kusd.DefaultConfig.GPO.Blocks,
+		Value: kcoin.DefaultConfig.GPO.Blocks,
 	}
 	GpoPercentileFlag = cli.IntFlag{
 		Name:  "gpopercentile",
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: kusd.DefaultConfig.GPO.Percentile,
+		Value: kcoin.DefaultConfig.GPO.Percentile,
 	}
 )
 
@@ -652,7 +661,7 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 }
 
 // makeDatabaseHandles raises out the number of allowed file handles per process
-// for kusd and returns half of the allowance to assign to the database.
+// for kcoin and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
 	if err := raiseFdLimit(2048); err != nil {
 		Fatalf("Failed to raise file descriptor allowance: %v", err)
@@ -688,7 +697,7 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 
 // setCoinbase retrieves the coinbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *kusd.Config) {
+func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *kcoin.Config) {
 	if ctx.GlobalIsSet(CoinbaseFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(CoinbaseFlag.Name))
 		if err != nil {
@@ -707,7 +716,7 @@ func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *kusd.Config) {
 	}
 }
 
-func setDeposit(ctx *cli.Context, cfg *kusd.Config) {
+func setDeposit(ctx *cli.Context, cfg *kcoin.Config) {
 	if ctx.GlobalIsSet(ValidatorDepositFlag.Name) {
 		cfg.Deposit = ctx.GlobalUint64(ValidatorDepositFlag.Name)
 	}
@@ -789,7 +798,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.DataDir = filepath.Join(os.TempDir(), "ethereum_dev_mode")
+		cfg.DataDir = filepath.Join(os.TempDir(), "kowala_dev_mode")
 	case ctx.GlobalBool(TestnetFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
 	}
@@ -860,7 +869,7 @@ func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
 }
 
 // SetKowalaConfig applies kowala-related command line flags to the config.
-func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kusd.Config) {
+func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kcoin.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, DevModeFlag, TestnetFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
@@ -915,17 +924,13 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kusd.Config) {
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
-		}
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
+		cfg.NetworkId = cfg.Genesis.Config.ChainID.Uint64()
 	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.Genesis = core.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = new(big.Int)
 		}
-		// @TODO(rgeraldes) - review
-		//cfg.PowTest = true
 	}
 
 	// TODO(fjl): move trie cache generations into config
@@ -943,11 +948,11 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 }
 
 // RegisterKowalaService adds a Kowala client to the stack.
-func RegisterKowalaService(stack *node.Node, cfg *kusd.Config) {
+func RegisterKowalaService(stack *node.Node, cfg *kcoin.Config) {
 	var err error
 
 	err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		fullNode, err := kusd.New(ctx, cfg)
+		fullNode, err := kcoin.New(ctx, cfg)
 		return fullNode, err
 	})
 
@@ -968,7 +973,7 @@ func RegisterDashboardService(stack *node.Node, cfg *dashboard.Config) {
 func RegisterKowalaStatsService(stack *node.Node, url string) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		// Retrieve both eth and les services
-		var kowalaServ *kusd.Kowala
+		var kowalaServ *kcoin.Kowala
 		ctx.Service(&kowalaServ)
 
 		return stats.New(url, kowalaServ)
@@ -984,7 +989,7 @@ func SetupNetwork(ctx *cli.Context) {
 }
 
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
-func MakeChainDatabase(ctx *cli.Context, stack *node.Node) kusddb.Database {
+func MakeChainDatabase(ctx *cli.Context, stack *node.Node) kcoindb.Database {
 	var (
 		cache   = ctx.GlobalInt(CacheFlag.Name)
 		handles = makeDatabaseHandles()
@@ -1012,7 +1017,7 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 }
 
 // MakeChain creates a chain manager from set command line flags.
-func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb kusddb.Database) {
+func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb kcoindb.Database) {
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
@@ -1055,11 +1060,11 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 // This is a temporary function used for migrating old command/flags to the
 // new format.
 //
-// e.g. kusd account new --keystore /tmp/mykeystore --lightkdf
+// e.g. kcoin account new --keystore /tmp/mykeystore --lightkdf
 //
 // is equivalent after calling this method with:
 //
-// kusd --keystore /tmp/mykeystore --lightkdf account new
+// kcoin --keystore /tmp/mykeystore --lightkdf account new
 //
 // This allows the use of the existing configuration functionality.
 // When all flags are migrated this function can be removed and the existing
