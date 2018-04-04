@@ -188,3 +188,37 @@ func assertEqualGenesis(t *testing.T, expectedGenesis *core.Genesis, generatedGe
 
 	assert.Len(t, expectedGenesis.Alloc, len(generatedGenesis.Alloc))
 }
+
+func TestOptionalValues(t *testing.T) {
+	t.Run("Consensus engine value", func(t *testing.T) {
+		cmd := GenerateGenesisCommand{
+			network:                       "test",
+			maxNumValidators:              "5",
+			unbondingPeriod:               "5",
+			walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+			prefundedAccounts: []PrefundedAccount{
+				{
+					walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+					balance:       15,
+				},
+			},
+			consensusEngine: "tendermint",
+		}
+
+		var b bytes.Buffer
+		handler := GenerateGenesisCommandHandler{w:&b}
+
+		err := handler.Handle(cmd)
+		if err != nil {
+			t.Fatalf("Error: %s", err.Error())
+		}
+
+		var generatedGenesis = new(core.Genesis)
+		err = json.Unmarshal(b.Bytes(), generatedGenesis)
+		if err != nil {
+			t.Fatal("Error unmarshaling genesis.")
+		}
+
+		assert.NotNil(t, generatedGenesis.Config.Tendermint)
+	})
+}

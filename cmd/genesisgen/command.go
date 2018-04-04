@@ -35,6 +35,7 @@ type GenerateGenesisCommand struct {
 	unbondingPeriod               string
 	walletAddressGenesisValidator string
 	prefundedAccounts             []PrefundedAccount
+	consensusEngine	string
 }
 
 type PrefundedAccount struct {
@@ -81,6 +82,14 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 		return ErrWalletAddressValidatorNotInPrefundedAccounts
 	}
 
+	consensusEngine := TendermintConsensus
+	if command.consensusEngine != "" {
+		consensusEngine, err = NewConsensusEngine(command.consensusEngine)
+		if err != nil {
+			return err
+		}
+	}
+
 	genesis := &core.Genesis{
 		Timestamp: uint64(time.Now().Unix()),
 		GasLimit:  4700000,
@@ -97,7 +106,10 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 		genesis.Config.ChainID = new(big.Int).SetUint64(uint64(rand.Intn(65536)))
 	}
 
-	genesis.Config.Tendermint = &params.TendermintConfig{Rewarded: true}
+	switch consensusEngine {
+	case TendermintConsensus:
+		genesis.Config.Tendermint = &params.TendermintConfig{Rewarded: true}
+	}
 
 	//TODO: This should be an optional param.
 	genesis.ExtraData = make([]byte, 32)

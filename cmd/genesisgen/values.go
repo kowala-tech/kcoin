@@ -15,7 +15,14 @@ var (
 		OtherNetwork: true,
 	}
 
-	ErrInvalidNetwork = errors.New("invalid network, use main, test or other")
+	TendermintConsensus = "tendermint"
+
+	AvailableConsensusEngine = map[string]bool {
+		TendermintConsensus: true,
+	}
+
+	ErrInvalidNetwork         = errors.New("invalid network, use main, test or other")
+	ErrInvalidConsensusEngine = errors.New("invalid consensus engine")
 )
 
 //NewNetwork checks and returns a string that represents a network. Maybe it is a good idea
@@ -26,4 +33,12 @@ func NewNetwork(network string) (string, error) {
 	}
 
 	return network, nil
+}
+
+func NewConsensusEngine(consensus string) (string, error) {
+	if !AvailableConsensusEngine[consensus]	 {
+		return "", ErrInvalidConsensusEngine
+	}
+
+	return consensus, nil
 }
