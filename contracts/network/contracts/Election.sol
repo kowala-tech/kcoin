@@ -214,12 +214,13 @@ contract Election is Ownable {
     // redeemDeposits transfers locked deposit(s) back the user account if they
     // are past the unbonding period
     function redeemDeposits() public onlyNonBlacklisted {
-        uint refund = 0;
+        uint refund;
         uint i = 0;
         Deposit[] deposits = validatorRegistry[msg.sender].deposits;
         
         for (; i < deposits.length && deposits[i].availableAt != 0; i++) {
-            if (now < deposits[i].availableAt) {
+            // future date
+            if (deposits[i].availableAt > now) {
                 // @NOTE (rgeraldes) - no need to iterate further since the 
                 // release date (if is different than 0) of the following deposits
                 // will always be past than the current one.
@@ -227,12 +228,8 @@ contract Election is Ownable {
             }
             refund += deposits[i].amount;
         }
-        
         _removeDeposits(msg.sender, i);
-
-        if (refund > 0) {
-            msg.sender.transfer(refund);
-        }
+        msg.sender.transfer(refund);
     }
 
     function _blacklistValidator(address identity) private {

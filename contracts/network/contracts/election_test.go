@@ -57,7 +57,7 @@ func (suite *ElectionContractSuite) SetupSuite() {
 	suite.randomUser = randomUser
 	suite.genesisValidator = genesisValidator
 	suite.initialBalance = new(big.Int).Mul(new(big.Int).SetUint64(initialBalance), new(big.Int).SetUint64(params.Ether))
-	suite.baseDeposit = new(big.Int).Mul(new(big.Int).SetUint64(baseDeposit), new(big.Int).SetUint64(params.Ether))
+	suite.baseDeposit = new(big.Int).SetUint64(baseDeposit)
 	suite.maxValidators = new(big.Int).SetUint64(maxValidators)
 	suite.unbondingPeriod = new(big.Int).SetUint64(unbondingPeriod)
 }
@@ -87,7 +87,7 @@ func (suite *ElectionContractSuite) DeployElectionContract(baseDeposit, maxValid
 	// NOTE (rgeraldes) - add balance to cover the base deposit
 	// for the genesis validator. Eventually this could change
 	// as soon as the token contracts are completed.
-	opts.Value = suite.baseDeposit
+	opts.Value = new(big.Int).Mul(suite.baseDeposit, new(big.Int).SetUint64(params.Ether))
 	_, err = contract.ElectionContractTransactor.contract.Transfer(opts)
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (suite *ElectionContractSuite) TestDeployElectionContract() {
 
 	latestBaseDeposit, err := suite.contract.BaseDeposit(&bind.CallOpts{})
 	req.NoError(err)
-	req.Equal(suite.baseDeposit, latestBaseDeposit)
+	req.Equal(new(big.Int).Mul(suite.baseDeposit, new(big.Int).SetUint64(params.Ether)), latestBaseDeposit)
 
 	latestMaxValidators, err := suite.contract.MaxValidators(&bind.CallOpts{})
 	req.NoError(err)
@@ -219,13 +219,13 @@ func (suite *ElectionContractSuite) TestGetMinimumDeposit_ElectionFull() {
 
 	// leave a position available for the genesis validator - max validators = 1
 	maxValidators := new(big.Int).SetUint64(1)
-	suite.DeployElectionContract(suite.baseDeposit, maxValidators, suite.unbondingPeriod)
+	req.NoError(suite.DeployElectionContract(suite.baseDeposit, maxValidators, suite.unbondingPeriod))
 
 	minDeposit, err := suite.contract.GetMinimumDeposit(&bind.CallOpts{})
 	req.NoError(err)
 	// min deposit should be greater (+ 1) than the smallest stake
 	// at play which is equal to the base deposit (genesis validator)
-	req.Equal((new(big.Int).Add(suite.baseDeposit, common.Big1)), minDeposit)
+	req.Equal(new(big.Int).Add(new(big.Int).Mul(suite.baseDeposit, new(big.Int).SetUint64(params.Ether)), common.Big1), minDeposit)
 }
 
 func (suite *ElectionContractSuite) TestGetMinimumDeposit_ElectionNotFull() {
@@ -237,7 +237,7 @@ func (suite *ElectionContractSuite) TestGetMinimumDeposit_ElectionNotFull() {
 	req.NoError(err)
 	// min deposit should be equal to the base deposit since
 	// there are positions available
-	req.Equal(suite.baseDeposit, minDeposit)
+	req.Equal(new(big.Int).Mul(suite.baseDeposit, new(big.Int).SetUint64(params.Ether)), minDeposit)
 }
 
 func (suite *ElectionContractSuite) TestSetBaseDeposit_NotOwner() {
@@ -319,11 +319,12 @@ func (suite *ElectionContractSuite) TestJoin_Blacklisted() {
 	req := suite.Require()
 
 	// genesis validator reports himself
-	req.NoError(suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), getAddress(suite.genesisValidator)))
+	_, err := suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), getAddress(suite.genesisValidator))
+	req.NoError(err)
 	suite.backend.Commit()
 
 	// @NOTE (rgeraldes) - no need to leave, as the validator gets expelled automatically
-	_, err := suite.contract.Join(bind.NewKeyedTransactor(suite.genesisValidator))
+	_, err = suite.contract.Join(bind.NewKeyedTransactor(suite.genesisValidator))
 	req.Equal(errTransactionFailed, err)
 }
 
@@ -373,7 +374,7 @@ func (suite *ElectionContractSuite) TestJoin_InsertGreaterThan() {
 	// validator at index 0 should be the new candidate
 	validator, err := suite.contract.GetValidatorAtIndex(&bind.CallOpts{}, common.Big0)
 	req.NoError(err)
-	req.Equal(validator.Code, senderAddr)
+	req.Equal(validator.Identity, senderAddr)
 }
 
 func (suite *ElectionContractSuite) TestJoin_InsertLessOrEqualTo() {
@@ -405,7 +406,7 @@ func (suite *ElectionContractSuite) TestJoin_InsertLessOrEqualTo() {
 	// validator at the end of the list should be the new candidate
 	validator, err := suite.contract.GetValidatorAtIndex(&bind.CallOpts{}, new(big.Int).Sub(latestValidatorCount, common.Big1))
 	req.NoError(err)
-	req.Equal(validator.Code, senderAddr)
+	req.Equal(validator.Identity, senderAddr)
 }
 
 func (suite *ElectionContractSuite) TestLeave_NotValidator() {
@@ -467,12 +468,12 @@ func (suite *ElectionContractSuite) TestReportValidator_ValidatorReportsValidato
 	suite.backend.Commit()
 
 	// should not be a validator anymore
-	isValidator, err := suite.contract.IsValidator(bind.CallOpts{}, suite.genesisValidator)
+	isValidator, err := suite.contract.IsValidator(&bind.CallOpts{}, getAddress(suite.genesisValidator))
 	req.NoError(err)
 	req.False(isValidator)
 
 	// should be blacklisted
-	isBlacklisted, err := suite.contract.IsBlacklisted(bind.CallOpts{}, suite.genesisValidator)
+	isBlacklisted, err := suite.contract.IsBlacklisted(&bind.CallOpts{}, getAddress(suite.genesisValidator))
 	req.NoError(err)
 	req.True(isBlacklisted)
 }
@@ -484,12 +485,13 @@ func (suite *ElectionContractSuite) TestIsBlacklisted() {
 	sender := suite.randomUser
 	bannedAddr := getAddress(sender)
 	opts := bind.NewKeyedTransactor(sender)
-	opts.Value = suite.baseDeposit
-	_, err = suite.contract.Join(opts)
+	opts.Value = new(big.Int).Mul(suite.baseDeposit, new(big.Int).SetUint64(params.Ether))
+	_, err := suite.contract.Join(opts)
 	req.NoError(err)
 
 	// report the new validator with the genesis validator
-	req.NoError(suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), bannedAddr))
+	_, err = suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), bannedAddr)
+	req.NoError(err)
 
 	suite.backend.Commit()
 
@@ -518,11 +520,12 @@ func (suite *ElectionContractSuite) TestRedeemFunds_Blacklisted() {
 	req := suite.Require()
 
 	// genesis validator reports himself
-	req.NoError(suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), getAddress(suite.genesisValidator)))
+	_, err := suite.contract.ReportValidator(bind.NewKeyedTransactor(suite.genesisValidator), getAddress(suite.genesisValidator))
+	req.NoError(err)
 	suite.backend.Commit()
 
 	// redeem deposit
-	_, err = suite.contract.RedeemDeposits(opts)
+	_, err = suite.contract.RedeemDeposits(bind.NewKeyedTransactor(suite.genesisValidator))
 	req.Equal(errTransactionFailed, err)
 }
 
@@ -591,7 +594,7 @@ func (suite *ElectionContractSuite) TestRedeemFunds_UnlockedDeposit() {
 
 	// deploy a new version of the contract
 	// with an unbounding period of 0 days
-	suite.DeployElectionContract(suite.baseDeposit, suite.maxValidators, common.Big0)
+	req.NoError(suite.DeployElectionContract(suite.baseDeposit, suite.maxValidators, common.Big0))
 	suite.backend.Commit()
 
 	// leave the election - we will use the genesis
