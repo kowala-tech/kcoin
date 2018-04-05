@@ -1,4 +1,4 @@
-package kcoin
+package genesis
 
 import (
 	"encoding/json"

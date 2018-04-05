@@ -18,8 +18,7 @@ func (h *GenerateGenesisCommandHandler) Handle(command genesis.GenesisOptions) e
 
 	out, _ := json.MarshalIndent(gns, "", "  ")
 
-	_, err = h.w.Write(out)
-	if err != nil {
+	if _, err = h.w.Write(out); err != nil {
 		return err
 	}
 

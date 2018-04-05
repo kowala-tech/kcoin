@@ -1,4 +1,4 @@
-package kcoin
+package genesis
 
 import (
 	"bytes"
@@ -70,42 +70,21 @@ type validPrefundedAccount struct {
 	balance       *big.Int
 }
 
-func GenerateGenesis(command GenesisOptions) (*core.Genesis, error) {
-	network, err := createNetwork(command.Network)
+type validGenesisOptions struct {
+	network                       string
+	maxNumValidators              *big.Int
+	unbondingPeriod               *big.Int
+	walletAddressGenesisValidator *common.Address
+	prefundedAccounts             []*validPrefundedAccount
+	consensusEngine               string
+	smartContractsOwner           *common.Address
+	extraData                     string
+}
+
+func GenerateGenesis(options GenesisOptions) (*core.Genesis, error) {
+	validOptions, err := validateOptions(options)
 	if err != nil {
 		return nil, err
-	}
-
-	maxNumValidators, err := createMaxNumValidators(command.MaxNumValidators)
-	if err != nil {
-		return nil, err
-	}
-
-	unbondingPeriod, err := createUnbondingPeriod(command.UnbondingPeriod)
-	if err != nil {
-		return nil, err
-	}
-
-	walletAddressValidator, err := createWalletAddress(command.WalletAddressGenesisValidator)
-	if err != nil {
-		return nil, err
-	}
-
-	validPrefundedAccounts, err := createPrefundedAccounts(command.PrefundedAccounts)
-	if err != nil {
-		return nil, err
-	}
-
-	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, walletAddressValidator) {
-		return nil, ErrWalletAddressValidatorNotInPrefundedAccounts
-	}
-
-	consensusEngine := TendermintConsensus
-	if command.ConsensusEngine != "" {
-		consensusEngine, err = createConsensusEngine(command.ConsensusEngine)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	genesis := &core.Genesis{
@@ -115,45 +94,13 @@ func GenerateGenesis(command GenesisOptions) (*core.Genesis, error) {
 		Config:    &params.ChainConfig{},
 	}
 
-	switch network {
-	case MainNetwork:
-		genesis.Config.ChainID = params.MainnetChainConfig.ChainID
-	case TestNetwork:
-		genesis.Config.ChainID = params.TestnetChainConfig.ChainID
-	case OtherNetwork:
-		genesis.Config.ChainID = new(big.Int).SetUint64(uint64(rand.Intn(65536)))
-	}
+	setNetwork(validOptions.network, genesis)
+	setConsensusEngine(validOptions.consensusEngine, genesis)
+	setExtraData(options.ExtraData, genesis)
 
-	switch consensusEngine {
-	case TendermintConsensus:
-		genesis.Config.Tendermint = &params.TendermintConfig{Rewarded: true}
-	}
+	genesis.Alloc[*validOptions.smartContractsOwner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
 
-	extra := ""
-	if command.ExtraData != "" {
-		extra = command.ExtraData
-	}
-
-	genesis.ExtraData = make([]byte, 32)
-	if len(extra) > 32 {
-		extra = extra[:32]
-	}
-
-	genesis.ExtraData = append([]byte(extra), genesis.ExtraData[len(extra):]...)
-
-	strAddr := DefaultSmartContractsOwner
-	if command.SmartContractsOwner != "" {
-		strAddr = command.SmartContractsOwner
-	}
-
-	owner, err := createWalletAddress(strAddr)
-	if err != nil {
-		return nil, ErrInvalidContractsOwnerAddress
-	}
-
-	genesis.Alloc[*owner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
-
-	//TODO: This maybe will be need to be available to change by the parameters in the command in the future, right now is 0.
+	//TODO: This maybe will be need to be available to change by the parameters in the options in the future, right now is 0.
 	baseDeposit := common.Big0
 
 	electionABI, err := abi.JSON(strings.NewReader(contracts.ElectionContractABI))
@@ -164,16 +111,16 @@ func GenerateGenesis(command GenesisOptions) (*core.Genesis, error) {
 	electionParams, err := electionABI.Pack(
 		"",
 		baseDeposit,
-		maxNumValidators,
-		unbondingPeriod,
-		*walletAddressValidator,
+		validOptions.maxNumValidators,
+		validOptions.unbondingPeriod,
+		*validOptions.walletAddressGenesisValidator,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	runtimeCfg := &runtime.Config{
-		Origin: *owner,
+		Origin: *validOptions.smartContractsOwner,
 		EVMConfig: vm.Config{
 			Debug:  true,
 			Tracer: newVmTracer(),
@@ -191,17 +138,109 @@ func GenerateGenesis(command GenesisOptions) (*core.Genesis, error) {
 		Balance: new(big.Int).Mul(baseDeposit, new(big.Int).SetUint64(params.Ether)),
 	}
 
-	addPrefundedAccounts(validPrefundedAccounts, genesis)
-
-	// Add a batch of precompile balances to avoid them getting deleted
-	for i := int64(0); i < 256; i++ {
-		genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
-	}
+	setPrefundedAccounts(validOptions.prefundedAccounts, genesis)
+	addBatchOfPrefundedAccounts(genesis)
 
 	return genesis, nil
 }
 
-func addPrefundedAccounts(validPrefundedAccounts []*validPrefundedAccount, genesis *core.Genesis) {
+func setExtraData(extraData string, genesis *core.Genesis) {
+	extra := ""
+	if extraData != "" {
+		extra = extraData
+	}
+	genesis.ExtraData = make([]byte, 32)
+	if len(extra) > 32 {
+		extra = extra[:32]
+	}
+	genesis.ExtraData = append([]byte(extra), genesis.ExtraData[len(extra):]...)
+}
+
+func setConsensusEngine(consensusEngine string, genesis *core.Genesis) {
+	switch consensusEngine {
+	case TendermintConsensus:
+		genesis.Config.Tendermint = &params.TendermintConfig{Rewarded: true}
+	}
+}
+
+func setNetwork(network string, genesis *core.Genesis) {
+	switch network {
+	case MainNetwork:
+		genesis.Config.ChainID = params.MainnetChainConfig.ChainID
+	case TestNetwork:
+		genesis.Config.ChainID = params.TestnetChainConfig.ChainID
+	case OtherNetwork:
+		genesis.Config.ChainID = new(big.Int).SetUint64(uint64(rand.Intn(65536)))
+	}
+}
+
+func validateOptions(options GenesisOptions) (*validGenesisOptions, error) {
+	network, err := createNetwork(options.Network)
+	if err != nil {
+		return nil, err
+	}
+
+	maxNumValidators, err := createMaxNumValidators(options.MaxNumValidators)
+	if err != nil {
+		return nil, err
+	}
+
+	unbondingPeriod, err := createUnbondingPeriod(options.UnbondingPeriod)
+	if err != nil {
+		return nil, err
+	}
+
+	walletAddressValidator, err := createWalletAddress(options.WalletAddressGenesisValidator)
+	if err != nil {
+		return nil, err
+	}
+
+	validPrefundedAccounts, err := createPrefundedAccounts(options.PrefundedAccounts)
+	if err != nil {
+		return nil, err
+	}
+
+	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, walletAddressValidator) {
+		return nil, ErrWalletAddressValidatorNotInPrefundedAccounts
+	}
+
+	consensusEngine := TendermintConsensus
+	if options.ConsensusEngine != "" {
+		consensusEngine, err = createConsensusEngine(options.ConsensusEngine)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	strAddr := DefaultSmartContractsOwner
+	if options.SmartContractsOwner != "" {
+		strAddr = options.SmartContractsOwner
+	}
+
+	owner, err := createWalletAddress(strAddr)
+	if err != nil {
+		return nil, ErrInvalidContractsOwnerAddress
+	}
+
+	return &validGenesisOptions{
+		network: network,
+		maxNumValidators: maxNumValidators,
+		unbondingPeriod: unbondingPeriod,
+		walletAddressGenesisValidator: walletAddressValidator,
+		prefundedAccounts: validPrefundedAccounts,
+		consensusEngine:consensusEngine,
+		smartContractsOwner: owner,
+	}, nil
+}
+
+func addBatchOfPrefundedAccounts(genesis *core.Genesis) {
+	// Add a batch of precompile balances to avoid them getting deleted
+	for i := int64(0); i < 256; i++ {
+		genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
+	}
+}
+
+func setPrefundedAccounts(validPrefundedAccounts []*validPrefundedAccount, genesis *core.Genesis) {
 	for _, vAccount := range validPrefundedAccounts {
 		genesis.Alloc[*vAccount.walletAddress] = core.GenesisAccount{
 			Balance: vAccount.balance,
@@ -314,6 +353,12 @@ func prefundedIncludesValidatorWallet(
 	return false
 }
 
+type contractData struct {
+	addr    common.Address
+	code    []byte
+	storage map[common.Hash]common.Hash
+}
+
 func createContract(cfg *runtime.Config, code []byte) (*contractData, error) {
 	out, addr, _, err := runtime.Create(code, cfg)
 	if err != nil {
@@ -324,12 +369,6 @@ func createContract(cfg *runtime.Config, code []byte) (*contractData, error) {
 		code:    out,
 		storage: cfg.EVMConfig.Tracer.(*vmTracer).data[addr],
 	}, nil
-}
-
-type contractData struct {
-	addr    common.Address
-	code    []byte
-	storage map[common.Hash]common.Hash
 }
 
 //TODO:This vmTracer is an exact copy of the one in pupphet, can be unified? Or maybe it is not even needed? Someone
