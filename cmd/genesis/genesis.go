@@ -33,10 +33,7 @@ func init() {
 				ExtraData:                     viper.GetString("genesis.extraData"),
 			}
 
-			fileName := "genesis.json"
-			if viper.GetString("genesis.fileName") != "" {
-				fileName = viper.GetString("genesis.fileName")
-			}
+			fileName := viper.GetString("genesis.fileName")
 
 			file, err := os.Create(fileName)
 			if err != nil {
@@ -72,7 +69,7 @@ func init() {
 	viper.BindPFlag("genesis.extraData", cmd.Flags().Lookup("extraData"))
 	cmd.Flags().StringP("prefundedAccounts", "a", "", "The prefunded accounts in format 0x212121:12,0x212121:14")
 	viper.BindPFlag("prefundedAccounts", cmd.Flags().Lookup("prefundedAccounts"))
-	cmd.Flags().StringP("fileName", "o", "", "The output filename (default:genesis.json).")
+	cmd.Flags().StringP("fileName", "o", "genesis.json", "The output filename (default:genesis.json).")
 	viper.BindPFlag("genesis.fileName", cmd.Flags().Lookup("fileName"))
 }
 
