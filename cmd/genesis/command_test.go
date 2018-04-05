@@ -14,100 +14,97 @@ import (
 )
 
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
+	baseValidCommand := GenerateGenesisCommand{
+		network: "test",
+		maxNumValidators: "1",
+		unbondingPeriod: "1",
+		walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+		prefundedAccounts: []PrefundedAccount{
+			{
+				walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				balance:       15,
+			},
+		},
+	}
+
 	tests := []struct {
-		TestName       string
-		InvalidCommand GenerateGenesisCommand
-		ExpectedError  error
+		TestName                string
+		InvalidCommandFromValid func(command GenerateGenesisCommand) GenerateGenesisCommand
+		ExpectedError           error
 	}{
 		{
 			TestName: "Invalid Network",
-			InvalidCommand: GenerateGenesisCommand{
-				network: "fakeNetwork",
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.network = "fakeNetwork"
+				return command
 			},
 			ExpectedError: ErrInvalidNetwork,
 		},
 		{
 			TestName: "Empty max number of validators",
-			InvalidCommand: GenerateGenesisCommand{
-				network:          "test",
-				maxNumValidators: "",
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.maxNumValidators = ""
+				return command
 			},
 			ExpectedError: ErrEmptyMaxNumValidators,
 		},
 		{
 			TestName: "Empty unbonding period of days",
-			InvalidCommand: GenerateGenesisCommand{
-				network:          "test",
-				maxNumValidators: "5",
-				unbondingPeriod:  "",
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.unbondingPeriod = ""
+				return command
 			},
 			ExpectedError: ErrEmptyUnbondingPeriod,
 		},
 		{
 			TestName: "Empty wallet address of genesis validator",
-			InvalidCommand: GenerateGenesisCommand{
-				network:                       "test",
-				maxNumValidators:              "5",
-				unbondingPeriod:               "5",
-				walletAddressGenesisValidator: "",
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.walletAddressGenesisValidator = ""
+				return command
 			},
 			ExpectedError: ErrEmptyWalletAddressValidator,
 		},
 		{
 			TestName: "Invalid wallet address less than 20 bytes with Hex prefix",
-			InvalidCommand: GenerateGenesisCommand{
-				network:                       "test",
-				maxNumValidators:              "5",
-				unbondingPeriod:               "5",
-				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1be",
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.walletAddressGenesisValidator = "0xe2ac86cbae1bbbb47d157516d334e70859a1be"
+				return command
 			},
 			ExpectedError: ErrInvalidWalletAddressValidator,
 		},
 		{
 			TestName: "Invalid wallet address less than 20 bytes without Hex prefix",
-			InvalidCommand: GenerateGenesisCommand{
-				network:                       "test",
-				maxNumValidators:              "5",
-				unbondingPeriod:               "5",
-				walletAddressGenesisValidator: "e2ac86cbae1bbbb47d157516d334e70859a1be",
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.walletAddressGenesisValidator = "e2ac86cbae1bbbb47d157516d334e70859a1be"
+				return command
 			},
 			ExpectedError: ErrInvalidWalletAddressValidator,
 		},
 		{
 			TestName: "Empty prefunded accounts",
-			InvalidCommand: GenerateGenesisCommand{
-				network:                       "test",
-				maxNumValidators:              "5",
-				unbondingPeriod:               "5",
-				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				prefundedAccounts:             []PrefundedAccount{},
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.prefundedAccounts = []PrefundedAccount{}
+				return command
 			},
 			ExpectedError: ErrEmptyPrefundedAccounts,
 		},
 		{
 			TestName: "Prefunded accounts does not include validator address",
-			InvalidCommand: GenerateGenesisCommand{
-				network:                       "test",
-				maxNumValidators:              "5",
-				unbondingPeriod:               "5",
-				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				prefundedAccounts: []PrefundedAccount{
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.prefundedAccounts = []PrefundedAccount{
 					{
 						walletAddress: "0xaaaaaacbae1bbbb47d157516d334e70859a1bee4",
 						balance:       15,
 					},
-				},
+				}
+				return command
 			},
 			ExpectedError: ErrWalletAddressValidatorNotInPrefundedAccounts,
 		},
 		{
 			TestName: "Prefunded accounts has invalid account.",
-			InvalidCommand: GenerateGenesisCommand{
-				network:                       "test",
-				maxNumValidators:              "5",
-				unbondingPeriod:               "5",
-				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				prefundedAccounts: []PrefundedAccount{
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.prefundedAccounts = []PrefundedAccount{
 					{
 						walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
 						balance:       15,
@@ -116,24 +113,16 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 						walletAddress: "0xe286cbae1bbbb47d157516d334e70859a1bee4",
 						balance:       15,
 					},
-				},
+				}
+				return command
 			},
 			ExpectedError: ErrInvalidAddressInPrefundedAccounts,
 		},
 		{
 			TestName: "Invalid consensus engine.",
-			InvalidCommand: GenerateGenesisCommand{
-				network:                       "test",
-				maxNumValidators:              "5",
-				unbondingPeriod:               "5",
-				walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				prefundedAccounts: []PrefundedAccount{
-					{
-						walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-						balance:       15,
-					},
-				},
-				consensusEngine: "fakeConsensus",
+			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
+				command.consensusEngine = "fakeConsensus"
+				return command
 			},
 			ExpectedError: ErrInvalidConsensusEngine,
 		},
@@ -142,7 +131,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.TestName, func(t *testing.T) {
 			handler := GenerateGenesisCommandHandler{}
-			err := handler.Handle(test.InvalidCommand)
+			err := handler.Handle(test.InvalidCommandFromValid(baseValidCommand))
 			if err != test.ExpectedError {
 				t.Fatalf(
 					"Invalid options did not return error. Expected error: %s, received error: %s",

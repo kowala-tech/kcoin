@@ -10,7 +10,7 @@ genesis -c sample-config.toml
 A typical config file should be in toml and should like like this:
 
 ```
-[gnesis]
+[genesis]
 network = "test" # Only supported test and main
 maxNumValidators = "1"
 unbondingPeriod = "1"
