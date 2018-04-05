@@ -71,8 +71,8 @@ func archiveNodePod(podName, networkID, bootnode string, port int32) *apiv1.Pod 
 			Containers: []apiv1.Container{
 				{
 					Name:            podName,
-					Image:           "kowalatech/kcoin:dev",
-					ImagePullPolicy: apiv1.PullAlways,
+					Image:           "kowalatech/kusd:dev",
+					ImagePullPolicy: apiv1.PullNever,
 					Ports: []apiv1.ContainerPort{
 						{
 							ContainerPort: port,

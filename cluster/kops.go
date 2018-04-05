@@ -62,6 +62,11 @@ func (cluster *kopsCluster) Delete() error {
 	return nil
 }
 
+// DockerEnv returns the environment variables necessary to connect to the private docker repository in the kubernetes cluster
+func (cluster *kopsCluster) DockerEnv() ([]string, error) {
+	return []string{}, nil
+}
+
 func (cluster *kopsCluster) createCluster() error {
 	log.Println("Creating k8s cluster using kops")
 	cmd := exec.Command("kops", "create", "cluster", "--name", cluster.Name, "--yes", "--state", "s3://"+cluster.s3Bucket, "--zones", "us-east-2b")

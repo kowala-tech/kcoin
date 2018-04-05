@@ -85,7 +85,7 @@ func bootnodePod(podName, hexkey string) *apiv1.Pod {
 				{
 					Name:            podName,
 					Image:           "kowalatech/bootnode:dev",
-					ImagePullPolicy: apiv1.PullAlways,
+					ImagePullPolicy: apiv1.PullNever,
 					Ports: []apiv1.ContainerPort{
 						{
 							ContainerPort: 32233,
