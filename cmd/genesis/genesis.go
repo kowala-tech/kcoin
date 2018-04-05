@@ -93,6 +93,10 @@ func parsePrefundedAccounts(accounts interface{}) []PrefundedAccount {
 		}
 	case string:
 		accountsString := accounts.(string)
+		if accountsString == "" {
+			break
+		}
+
 		a := strings.Split(accountsString, ",")
 
 		for _, v := range a {
