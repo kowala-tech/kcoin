@@ -11,8 +11,7 @@ import (
 )
 
 var (
-	FileConfig string
-	cmd        *cobra.Command
+	cmd *cobra.Command
 )
 
 func init() {
@@ -56,7 +55,7 @@ func init() {
 		},
 	}
 
-	cmd.Flags().StringVarP(&FileConfig, "config", "c", "", "Use to load configuration from config file.")
+	cmd.Flags().StringP("config", "c", "", "Use to load configuration from config file.")
 	cmd.Flags().StringP("network", "n", "", "The network to use, test or main")
 	viper.BindPFlag("genesis.network", cmd.Flags().Lookup("network"))
 	cmd.Flags().StringP("maxNumValidators", "v", "", "The maximum num of validators.")
@@ -78,8 +77,9 @@ func init() {
 }
 
 func loadFromFileConfigIfAvailable() {
-	if FileConfig != "" {
-		viper.SetConfigFile(FileConfig)
+	fileConfig, _ := cmd.Flags().GetString("config")
+	if fileConfig != "" {
+		viper.SetConfigFile(fileConfig)
 
 		err := viper.ReadInConfig()
 		if err != nil {
