@@ -9,7 +9,9 @@ import (
 	"io"
 )
 
-// Validator represents a consensus Voter
+var ErrInvalidParams = errors.New("voters set needs at least one voter")
+
+// Voter represents a consensus Voter
 type Voter struct {
 	address common.Address
 	deposit uint64
@@ -46,31 +48,23 @@ type Voters interface {
 	Hash() common.Hash
 }
 
-var ErrInvalidParams = errors.New("voters set needs at least one voter")
-
 // NewVoter validates that a list of voters is valid returning a new type if so
-func NewVoters(voterList []*Voter) (*voters, error) {
+func NewVoters(voterList []*Voter) (voters, error) {
 	if len(voterList) == 0 {
 		return nil, ErrInvalidParams
 	}
 
-	set := &voters{
-		voters: voterList,
-	}
-
-	return set, nil
+	return voters(voterList), nil
 }
 
 // voters is a list of Voter
-type voters struct {
-	voters []*Voter
-}
+type voters []*Voter
 
 // NextProposer returns the next proposer based on the round and weight of the each voters
-func (voters *voters) NextProposer() *Voter {
-	proposer := voters.voters[0]
+func (voters voters) NextProposer() *Voter {
+	proposer := voters[0]
 
-	for _, voter := range voters.voters {
+	for _, voter := range voters {
 
 		// add more chance for each voter to be the next Proposer by adding their deposit amount as weight
 		voter.weight = voter.weight.Add(voter.weight, big.NewInt(int64(voter.deposit)))
@@ -87,16 +81,16 @@ func (voters *voters) NextProposer() *Voter {
 }
 
 // At returns Voter at position or nil if not found
-func (voters *voters) At(i int) *Voter {
-	if i < 0 || i >= len(voters.voters) {
+func (voters voters) At(i int) *Voter {
+	if i < 0 || i >= len(voters) {
 		return nil
 	}
-	return voters.voters[i]
+	return voters[i]
 }
 
 // Get returns the Voter at index position, nil if outside boundaries or not found
-func (voters *voters) Get(addr common.Address) *Voter {
-	for _, voter := range voters.voters {
+func (voters voters) Get(addr common.Address) *Voter {
+	for _, voter := range voters {
 		if voter.Address() == addr {
 			return voter
 		}
@@ -106,24 +100,24 @@ func (voters *voters) Get(addr common.Address) *Voter {
 
 // Len returns the amount of voters in this set
 // needed for hash thru interface DerivableList interface
-func (voters *voters) Len() int {
-	return len(voters.voters)
+func (voters voters) Len() int {
+	return len(voters)
 }
 
 // GetRlp returns encoded bytes for one voter
 // needed for hash thru interface DerivableList interface
-func (voters *voters) GetRlp(i int) []byte {
-	enc, _ := rlp.EncodeToBytes(voters.voters[i])
+func (voters voters) GetRlp(i int) []byte {
+	enc, _ := rlp.EncodeToBytes(voters[i])
 	return enc
 }
 
 // Hash returns a unique Hash value for this set of Voters
-func (voters *voters) Hash() common.Hash {
+func (voters voters) Hash() common.Hash {
 	return DeriveSha(voters)
 }
 
 // Contains returns is ones Voter address is part of this set
-func (voters *voters) Contains(addr common.Address) bool {
+func (voters voters) Contains(addr common.Address) bool {
 	voter := voters.Get(addr)
 	return voter != nil
 }
