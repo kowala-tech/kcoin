@@ -24,8 +24,10 @@ func FeatureContext(s *godog.Suite) {
 	context := features.NewTestContext(k8sCluster, genesisValidatorName)
 	s.Step(`^I have the following accounts:$`, context.IHaveTheFollowingAccounts)
 	s.Step(`^I transfer (\d+) kcoin from (\w+) to (\w+)$`, context.ITransferKUSD)
-	s.Step(`^the balance of (\w+) is eventually (\d+) kcoin$`, context.TheBalanceIsExactly)
-	s.Step(`^the balance of (\w+) is eventually around (\d+) kcoin$`, context.TheBalanceIsAround)
+	s.Step(`^the balance of (\w+) is (\d+) kcoin$`, context.TheBalanceIsExactly)
+	s.Step(`^the balance of (\w+) is around (\d+) kcoin$`, context.TheBalanceIsAround)
+	s.Step(`^the last transaction is successful$`, context.LastTransactionSuccessful)
+	s.Step(`^the last transaction failed$`, context.LastTransactionFailed)
 }
 
 func prepareCluster() {
