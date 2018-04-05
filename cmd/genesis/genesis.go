@@ -22,7 +22,7 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			loadFromFileConfigIfAvailable()
 
-			command := genesis.GenesisOptions{
+			options := genesis.GenesisOptions{
 				Network:                       viper.GetString("genesis.network"),
 				MaxNumValidators:              viper.GetString("genesis.maxNumValidators"),
 				UnbondingPeriod:               viper.GetString("genesis.unbondingPeriod"),
@@ -45,7 +45,7 @@ func init() {
 			}
 
 			handler := generateGenesisFileCommandHandler{w: file}
-			err = handler.handle(command)
+			err = handler.handle(options)
 			if err != nil {
 				fmt.Printf("Error generating file: %s", err)
 				os.Exit(1)
@@ -99,6 +99,7 @@ func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
 	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
 
 	switch accounts.(type) {
+	// Accounts come from config file.
 	case []interface{}:
 		accountArray := accounts.([]interface{})
 		for _, v := range accountArray {
@@ -111,6 +112,7 @@ func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
 
 			prefundedAccounts = append(prefundedAccounts, prefundedAccount)
 		}
+	// Accounts come from command line param.
 	case string:
 		accountsString := accounts.(string)
 		if accountsString == "" {
