@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"github.com/spf13/viper"
+	"strings"
+	"strconv"
 )
 
 var (
@@ -62,8 +64,8 @@ func init() {
 	viper.BindPFlag("genesis.smartContractsOwner", cmd.Flags().Lookup("smartContractsOwner"))
 	cmd.Flags().StringP("extraData", "d", "", "The network to use, test or main")
 	viper.BindPFlag("genesis.extraData", cmd.Flags().Lookup("extraData"))
-
-
+	cmd.Flags().StringP("prefundedAccounts", "a", "", "The network to use, test or main")
+	viper.BindPFlag("prefundedAccounts", cmd.Flags().Lookup("prefundedAccounts"))
 }
 
 func main() {
@@ -76,20 +78,39 @@ func main() {
 func parsePrefundedAccounts(accounts interface{}) []PrefundedAccount {
 	prefundedAccounts := make([]PrefundedAccount, 0)
 
-	accountArray, ok := accounts.([]interface{})
-	if !ok {
-		return []PrefundedAccount{}
-	}
+	switch accounts.(type) {
+	case []interface{}:
+		accountArray := accounts.([]interface{})
+		for _, v := range accountArray {
+			val := v.(map[string]interface{})
 
-	for _, v := range accountArray {
-		val := v.(map[string]interface{})
+			prefundedAccount := PrefundedAccount{
+				walletAddress: val["walletAddress"].(string),
+				balance: val["balance"].(int64),
+			}
 
-		prefundedAccount := PrefundedAccount{
-			walletAddress: val["walletAddress"].(string),
-			balance: val["balance"].(int64),
+			prefundedAccounts = append(prefundedAccounts, prefundedAccount)
+		}
+	case string:
+		accountsString := accounts.(string)
+		a := strings.Split(accountsString, ",")
+
+		for _, v := range a {
+			values := strings.Split(v, ":")
+			balance, err := strconv.Atoi(values[1])
+			if err != nil {
+				balance = 0
+			}
+
+			prefundedAccount := PrefundedAccount{
+				walletAddress: values[0],
+				balance: int64(balance),
+			}
+
+			prefundedAccounts = append(prefundedAccounts, prefundedAccount)
 		}
 
-		prefundedAccounts = append(prefundedAccounts, prefundedAccount)
+		fmt.Printf("%v", accounts)
 	}
 
 	return prefundedAccounts
