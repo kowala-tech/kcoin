@@ -2,8 +2,14 @@
 network = "test"
 maxNumValidators = "1"
 unbondingPeriod = "1"
-walletAddressGenesisValidator = "1"
-prefundedAccounts = [
-
-]
+walletAddressGenesisValidator = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
 consensusEngine = "1"
+
+[[prefundedAccounts]]
+walletAddress = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
+balance = 15
+
+[[prefundedAccounts]]
+walletAddress = "0x1234ed356e7bc4f7a8fc48cc19c958f4e640ac62"
+balance = 15
+

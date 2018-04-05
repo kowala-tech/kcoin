@@ -41,7 +41,11 @@ func createCommand() *cobra.Command {
 				network: viper.GetString("genesis.network"),
 				maxNumValidators: viper.GetString("genesis.maxNumValidators"),
 				unbondingPeriod: viper.GetString("genesis.unbondingPeriod"),
+				walletAddressGenesisValidator: viper.GetString("genesis.walletAddressGenesisValidator"),
+				prefundedAccounts: parsePrefundedAccounts(viper.Get("prefundedAccounts")),
 			}
+
+			parsePrefundedAccounts(viper.Get("prefundedAccounts"))
 
 			handler := GenerateGenesisCommandHandler{w:os.Stdout}
 			err := handler.Handle(command)
@@ -55,4 +59,21 @@ func createCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&FileConfig, "config", "c", "", "Use to load configuration from config file.")
 
 	return cmd
+}
+func parsePrefundedAccounts(accounts interface{}) []PrefundedAccount {
+	prefundedAccounts := make([]PrefundedAccount, 0)
+
+	accountArray := accounts.([]interface{})
+	for _, v := range accountArray {
+		val := v.(map[string]interface{})
+
+		prefundedAccount := PrefundedAccount{
+			walletAddress: val["walletAddress"].(string),
+			balance: val["balance"].(int64),
+		}
+
+		prefundedAccounts = append(prefundedAccounts, prefundedAccount)
+	}
+
+	return prefundedAccounts
 }
