@@ -1,7 +1,6 @@
-package main
+package kcoin
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"github.com/kowala-tech/kcoin/core"
@@ -14,87 +13,87 @@ import (
 )
 
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
-	baseValidCommand := GenerateGenesisCommand{
-		network: "test",
-		maxNumValidators: "1",
-		unbondingPeriod: "1",
-		walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-		prefundedAccounts: []PrefundedAccount{
+	baseValidCommand := GenesisOptions{
+		Network:                       "test",
+		MaxNumValidators:              "1",
+		UnbondingPeriod:               "1",
+		WalletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+		PrefundedAccounts: []PrefundedAccount{
 			{
-				walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				balance:       15,
+				WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				Balance:       15,
 			},
 		},
 	}
 
 	tests := []struct {
 		TestName                string
-		InvalidCommandFromValid func(command GenerateGenesisCommand) GenerateGenesisCommand
+		InvalidCommandFromValid func(command GenesisOptions) GenesisOptions
 		ExpectedError           error
 	}{
 		{
 			TestName: "Invalid Network",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.network = "fakeNetwork"
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.Network = "fakeNetwork"
 				return command
 			},
 			ExpectedError: ErrInvalidNetwork,
 		},
 		{
 			TestName: "Empty max number of validators",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.maxNumValidators = ""
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.MaxNumValidators = ""
 				return command
 			},
 			ExpectedError: ErrEmptyMaxNumValidators,
 		},
 		{
 			TestName: "Empty unbonding period of days",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.unbondingPeriod = ""
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.UnbondingPeriod = ""
 				return command
 			},
 			ExpectedError: ErrEmptyUnbondingPeriod,
 		},
 		{
 			TestName: "Empty wallet address of genesis validator",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.walletAddressGenesisValidator = ""
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.WalletAddressGenesisValidator = ""
 				return command
 			},
 			ExpectedError: ErrEmptyWalletAddressValidator,
 		},
 		{
 			TestName: "Invalid wallet address less than 20 bytes with Hex prefix",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.walletAddressGenesisValidator = "0xe2ac86cbae1bbbb47d157516d334e70859a1be"
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.WalletAddressGenesisValidator = "0xe2ac86cbae1bbbb47d157516d334e70859a1be"
 				return command
 			},
 			ExpectedError: ErrInvalidWalletAddressValidator,
 		},
 		{
 			TestName: "Invalid wallet address less than 20 bytes without Hex prefix",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.walletAddressGenesisValidator = "e2ac86cbae1bbbb47d157516d334e70859a1be"
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.WalletAddressGenesisValidator = "e2ac86cbae1bbbb47d157516d334e70859a1be"
 				return command
 			},
 			ExpectedError: ErrInvalidWalletAddressValidator,
 		},
 		{
 			TestName: "Empty prefunded accounts",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.prefundedAccounts = []PrefundedAccount{}
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.PrefundedAccounts = []PrefundedAccount{}
 				return command
 			},
 			ExpectedError: ErrEmptyPrefundedAccounts,
 		},
 		{
 			TestName: "Prefunded accounts does not include validator address",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.prefundedAccounts = []PrefundedAccount{
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.PrefundedAccounts = []PrefundedAccount{
 					{
-						walletAddress: "0xaaaaaacbae1bbbb47d157516d334e70859a1bee4",
-						balance:       15,
+						WalletAddress: "0xaaaaaacbae1bbbb47d157516d334e70859a1bee4",
+						Balance:       15,
 					},
 				}
 				return command
@@ -103,15 +102,15 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Prefunded accounts has invalid account.",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.prefundedAccounts = []PrefundedAccount{
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.PrefundedAccounts = []PrefundedAccount{
 					{
-						walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-						balance:       15,
+						WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+						Balance:       15,
 					},
 					{
-						walletAddress: "0xe286cbae1bbbb47d157516d334e70859a1bee4",
-						balance:       15,
+						WalletAddress: "0xe286cbae1bbbb47d157516d334e70859a1bee4",
+						Balance:       15,
 					},
 				}
 				return command
@@ -120,8 +119,8 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Invalid consensus engine.",
-			InvalidCommandFromValid: func(command GenerateGenesisCommand) GenerateGenesisCommand {
-				command.consensusEngine = "fakeConsensus"
+			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+				command.ConsensusEngine = "fakeConsensus"
 				return command
 			},
 			ExpectedError: ErrInvalidConsensusEngine,
@@ -130,8 +129,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.TestName, func(t *testing.T) {
-			handler := GenerateGenesisCommandHandler{}
-			err := handler.Handle(test.InvalidCommandFromValid(baseValidCommand))
+			_, err := GenerateGenesis(test.InvalidCommandFromValid(baseValidCommand))
 			if err != test.ExpectedError {
 				t.Fatalf(
 					"Invalid options did not return error. Expected error: %s, received error: %s",
@@ -144,25 +142,21 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 }
 
 func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
-	cmd := GenerateGenesisCommand{
-		network:                       "test",
-		maxNumValidators:              "5",
-		unbondingPeriod:               "5",
-		walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-		prefundedAccounts: []PrefundedAccount{
+	cmd := GenesisOptions{
+		Network:                       "test",
+		MaxNumValidators:              "5",
+		UnbondingPeriod:               "5",
+		WalletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+		PrefundedAccounts: []PrefundedAccount{
 			{
-				walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				balance:       15,
+				WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				Balance:       15,
 			},
 		},
 	}
 
-	var b bytes.Buffer
-	writer := bufio.NewWriter(&b)
+	generatedGenesis, err := GenerateGenesis(cmd)
 
-	handler := GenerateGenesisCommandHandler{w: writer}
-
-	err := handler.Handle(cmd)
 	if err != nil {
 		t.Fatalf("Error: %s", err.Error())
 	}
@@ -178,9 +172,6 @@ func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error unmarshalling json genesis with error: %s", err.Error())
 	}
-
-	var generatedGenesis = new(core.Genesis)
-	err = json.Unmarshal(b.Bytes(), generatedGenesis)
 
 	assertEqualGenesis(t, expectedGenesis, generatedGenesis)
 }
@@ -204,48 +195,38 @@ func assertEqualGenesis(t *testing.T, expectedGenesis *core.Genesis, generatedGe
 }
 
 func TestOptionalValues(t *testing.T) {
-	baseCommand := GenerateGenesisCommand{
-		network:                       "test",
-		maxNumValidators:              "5",
-		unbondingPeriod:               "5",
-		walletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-		prefundedAccounts: []PrefundedAccount{
+	baseCommand := GenesisOptions{
+		Network:                       "test",
+		MaxNumValidators:              "5",
+		UnbondingPeriod:               "5",
+		WalletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+		PrefundedAccounts: []PrefundedAccount{
 			{
-				walletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				balance:       15,
+				WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				Balance:       15,
 			},
 		},
 	}
 
 	t.Run("Consensus engine value", func(t *testing.T) {
-		baseCommand.consensusEngine = "tendermint"
+		baseCommand.ConsensusEngine = "tendermint"
 
-		var b bytes.Buffer
-		handler := GenerateGenesisCommandHandler{w: &b}
-
-		err := handler.Handle(baseCommand)
+		generatedGenesis, err := GenerateGenesis(baseCommand)
 		if err != nil {
 			t.Fatalf("Error: %s", err.Error())
 		}
-
-		generatedGenesis := unmarshalGenesisFromBuffer(t, b)
 
 		assert.NotNil(t, generatedGenesis.Config.Tendermint)
 	})
 
 	t.Run("Smart contracts owner", func(t *testing.T) {
 		customSmartContractOwner := "0xe2ac86cbae1bbbb47d157516d334e70859a1aaaa"
-		baseCommand.smartContractsOwner = customSmartContractOwner
+		baseCommand.SmartContractsOwner = customSmartContractOwner
 
-		var b bytes.Buffer
-		handler := GenerateGenesisCommandHandler{w: &b}
-
-		err := handler.Handle(baseCommand)
+		generatedGenesis, err := GenerateGenesis(baseCommand)
 		if err != nil {
 			t.Fatalf("Error: %s", err.Error())
 		}
-
-		generatedGenesis := unmarshalGenesisFromBuffer(t, b)
 
 		bigaddr, _ := new(big.Int).SetString(customSmartContractOwner, 0)
 		address := common.BigToAddress(bigaddr)
@@ -256,17 +237,13 @@ func TestOptionalValues(t *testing.T) {
 
 	t.Run("Extra data", func(t *testing.T) {
 		extraDataStr := "TheExtradata"
-		baseCommand.extraData = extraDataStr
+		baseCommand.ExtraData = extraDataStr
 
-		var b bytes.Buffer
-		handler := GenerateGenesisCommandHandler{w: &b}
-
-		err := handler.Handle(baseCommand)
+		generatedGenesis, err := GenerateGenesis(baseCommand)
 		if err != nil {
 			t.Fatalf("Error: %s", err.Error())
 		}
 
-		generatedGenesis := unmarshalGenesisFromBuffer(t, b)
 		expectedExtradata := make([]byte, 32)
 		expectedExtradata = append([]byte(extraDataStr), expectedExtradata[len(extraDataStr):]...)
 

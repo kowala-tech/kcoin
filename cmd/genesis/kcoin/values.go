@@ -1,4 +1,4 @@
-package main
+package kcoin
 
 import (
 	"errors"
@@ -25,11 +25,11 @@ var (
 		TendermintConsensus: true,
 	}
 
-	ErrInvalidNetwork         = errors.New("invalid network, use main, test or other")
+	ErrInvalidNetwork         = errors.New("invalid Network, use main, test or other")
 	ErrInvalidConsensusEngine = errors.New("invalid consensus engine")
 )
 
-//NewNetwork checks and returns a string that represents a network. Maybe it is a good idea
+//NewNetwork checks and returns a string that represents a Network. Maybe it is a good idea
 //to have some value object that represents in the entire codebase the available networks.
 func NewNetwork(network string) (string, error) {
 	if !AvailableNetworks[network] {

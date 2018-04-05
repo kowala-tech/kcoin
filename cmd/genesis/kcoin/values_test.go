@@ -1,4 +1,4 @@
-package main
+package kcoin
 
 import "testing"
 
@@ -12,7 +12,7 @@ func TestItFailsWithAnInvalidNetwork(t *testing.T) {
 			network:  "",
 		},
 		{
-			testName: "Invalid network",
+			testName: "Invalid Network",
 			network:  "fakeNetwork",
 		},
 	}
@@ -21,7 +21,7 @@ func TestItFailsWithAnInvalidNetwork(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 			_, err := NewNetwork(test.network)
 			if err != ErrInvalidNetwork {
-				t.Fatalf("Failed to throw exception with an invalid network value.")
+				t.Fatalf("Failed to throw exception with an invalid Network value.")
 			}
 		})
 	}
@@ -46,7 +46,7 @@ func TestItFailsWithInvalidConsensusEngine(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 			_, err := NewConsensusEngine(test.consensus)
 			if err != ErrInvalidConsensusEngine {
-				t.Fatalf("Failed to throw exception with an invalid network value.")
+				t.Fatalf("Failed to throw exception with an invalid Network value.")
 			}
 		})
 	}

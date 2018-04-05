@@ -1,4 +1,4 @@
-package main
+package kcoin
 
 import (
 	"github.com/kowala-tech/kcoin/common"
@@ -6,7 +6,8 @@ import (
 	"time"
 )
 
-//TODO:This vmTracer is an exact copy of the one in pupphet, can be unified?
+//TODO:This vmTracer is an exact copy of the one in pupphet, can be unified? Or maybe it is not even needed? Someone
+//with more knowledge on this part is welcome.
 type vmTracer struct {
 	data map[common.Address]map[common.Hash]common.Hash
 }
