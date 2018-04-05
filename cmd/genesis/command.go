@@ -3,19 +3,19 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/kowala-tech/kcoin/accounts/abi"
 	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/contracts/network/contracts"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/core/vm/runtime"
-	"github.com/kowala-tech/kcoin/params"
 	"github.com/pkg/errors"
 	"io"
 	"math/big"
-	"math/rand"
 	"strings"
+	"github.com/kowala-tech/kcoin/core"
 	"time"
+	"math/rand"
+	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/contracts/network/contracts"
+	"github.com/kowala-tech/kcoin/accounts/abi"
+	"github.com/kowala-tech/kcoin/core/vm"
 )
 
 var (
@@ -55,40 +55,163 @@ type GenerateGenesisCommandHandler struct {
 }
 
 func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) error {
+	genesis, err := GenerateGenesis(command)
+	if err != nil {
+		return err
+	}
+
+	out, _ := json.MarshalIndent(genesis, "", "  ")
+
+	_, err = h.w.Write(out)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createMaxNumValidators(s string) (*big.Int, error) {
+	if s = strings.TrimSpace(s); s == "" {
+		return nil, ErrEmptyMaxNumValidators
+	}
+
+	numValidators, ok := new(big.Int).SetString(s, 0)
+	if !ok {
+		//TODO: Create error
+		return nil, errors.New("invalid max num of validators.")
+	}
+
+	return numValidators, nil
+}
+
+func createUnbondingPeriod(uP string) (*big.Int, error) {
+	var text string
+	if text = strings.TrimSpace(uP); text == "" {
+		return nil, ErrEmptyUnbondingPeriod
+	}
+
+	unbondingPeriod, ok := new(big.Int).SetString(text, 0)
+	if !ok {
+		//TODO: Create error
+		return nil, errors.New("invalid max num of validators.")
+	}
+
+	return unbondingPeriod, nil
+}
+
+func createWalletAddress(wA string) (*common.Address, error) {
+	stringAddr := wA
+
+	if text := strings.TrimSpace(wA); text == "" {
+		return nil, ErrEmptyWalletAddressValidator
+	}
+
+	if strings.HasPrefix(stringAddr, "0x") {
+		stringAddr = strings.TrimPrefix(stringAddr, "0x")
+	}
+
+	if len(stringAddr) != 40 {
+		return nil, ErrInvalidWalletAddressValidator
+	}
+
+	bigaddr, _ := new(big.Int).SetString(stringAddr, 16)
+	address := common.BigToAddress(bigaddr)
+
+	return &address, nil
+}
+
+func createPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount, error) {
+	var validAccounts []*validPrefundedAccount
+
+	if len(accounts) == 0 {
+		return nil, ErrEmptyPrefundedAccounts
+	}
+
+	for _, a := range accounts {
+		address, err := createWalletAddress(a.walletAddress)
+		if err != nil {
+			return nil, ErrInvalidAddressInPrefundedAccounts
+		}
+
+		balance := big.NewInt(a.balance)
+
+		validAccount := &validPrefundedAccount{
+			walletAddress: address,
+			balance:       balance,
+		}
+
+		validAccounts = append(validAccounts, validAccount)
+	}
+
+	return validAccounts, nil
+}
+
+func prefundedIncludesValidatorWallet(
+	accounts []*validPrefundedAccount,
+	addresses *common.Address,
+) bool {
+	for _, account := range accounts {
+		if bytes.Equal(account.walletAddress.Bytes(), addresses.Bytes()) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func createContract(cfg *runtime.Config, code []byte) (*contractData, error) {
+	out, addr, _, err := runtime.Create(code, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &contractData{
+		addr:    addr,
+		code:    out,
+		storage: cfg.EVMConfig.Tracer.(*vmTracer).data[addr],
+	}, nil
+}
+
+type contractData struct {
+	addr    common.Address
+	code    []byte
+	storage map[common.Hash]common.Hash
+}
+
+func GenerateGenesis(command GenerateGenesisCommand) (*core.Genesis, error) {
 	network, err := NewNetwork(command.network)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	maxNumValidators, err := h.createMaxNumValidators(command.maxNumValidators)
+	maxNumValidators, err := createMaxNumValidators(command.maxNumValidators)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	unbondingPeriod, err := h.createUnbondingPeriod(command.unbondingPeriod)
+	unbondingPeriod, err := createUnbondingPeriod(command.unbondingPeriod)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	walletAddressValidator, err := h.createWalletAddress(command.walletAddressGenesisValidator)
+	walletAddressValidator, err := createWalletAddress(command.walletAddressGenesisValidator)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	validPrefundedAccounts, err := h.createPrefundedAccounts(command.prefundedAccounts)
+	validPrefundedAccounts, err := createPrefundedAccounts(command.prefundedAccounts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if !h.prefundedIncludesValidatorWallet(validPrefundedAccounts, walletAddressValidator) {
-		return ErrWalletAddressValidatorNotInPrefundedAccounts
+	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, walletAddressValidator) {
+		return nil, ErrWalletAddressValidatorNotInPrefundedAccounts
 	}
 
 	consensusEngine := TendermintConsensus
 	if command.consensusEngine != "" {
 		consensusEngine, err = NewConsensusEngine(command.consensusEngine)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -130,9 +253,9 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 		strAddr = command.smartContractsOwner
 	}
 
-	owner, err := h.createWalletAddress(strAddr)
+	owner, err := createWalletAddress(strAddr)
 	if err != nil {
-		return ErrInvalidContractsOwnerAddress
+		return nil, ErrInvalidContractsOwnerAddress
 	}
 
 	genesis.Alloc[*owner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
@@ -142,7 +265,7 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 
 	electionABI, err := abi.JSON(strings.NewReader(contracts.ElectionContractABI))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	electionParams, err := electionABI.Pack(
@@ -153,7 +276,7 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 		*walletAddressValidator,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	runtimeCfg := &runtime.Config{
@@ -166,7 +289,7 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 
 	contract, err := createContract(runtimeCfg, append(common.FromHex(contracts.ElectionContractBin), electionParams...))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	genesis.Alloc[contract.addr] = core.GenesisAccount{
@@ -186,119 +309,5 @@ func (h *GenerateGenesisCommandHandler) Handle(command GenerateGenesisCommand) e
 		genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
 	}
 
-	out, _ := json.MarshalIndent(genesis, "", "  ")
-
-	_, err = h.w.Write(out)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *GenerateGenesisCommandHandler) createMaxNumValidators(s string) (*big.Int, error) {
-	if s = strings.TrimSpace(s); s == "" {
-		return nil, ErrEmptyMaxNumValidators
-	}
-
-	numValidators, ok := new(big.Int).SetString(s, 0)
-	if !ok {
-		//TODO: Create error
-		return nil, errors.New("invalid max num of validators.")
-	}
-
-	return numValidators, nil
-}
-
-func (h *GenerateGenesisCommandHandler) createUnbondingPeriod(uP string) (*big.Int, error) {
-	var text string
-	if text = strings.TrimSpace(uP); text == "" {
-		return nil, ErrEmptyUnbondingPeriod
-	}
-
-	unbondingPeriod, ok := new(big.Int).SetString(text, 0)
-	if !ok {
-		//TODO: Create error
-		return nil, errors.New("invalid max num of validators.")
-	}
-
-	return unbondingPeriod, nil
-}
-
-func (h *GenerateGenesisCommandHandler) createWalletAddress(wA string) (*common.Address, error) {
-	stringAddr := wA
-
-	if text := strings.TrimSpace(wA); text == "" {
-		return nil, ErrEmptyWalletAddressValidator
-	}
-
-	if strings.HasPrefix(stringAddr, "0x") {
-		stringAddr = strings.TrimPrefix(stringAddr, "0x")
-	}
-
-	if len(stringAddr) != 40 {
-		return nil, ErrInvalidWalletAddressValidator
-	}
-
-	bigaddr, _ := new(big.Int).SetString(stringAddr, 16)
-	address := common.BigToAddress(bigaddr)
-
-	return &address, nil
-}
-
-func (h *GenerateGenesisCommandHandler) createPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount, error) {
-	var validAccounts []*validPrefundedAccount
-
-	if len(accounts) == 0 {
-		return nil, ErrEmptyPrefundedAccounts
-	}
-
-	for _, a := range accounts {
-		address, err := h.createWalletAddress(a.walletAddress)
-		if err != nil {
-			return nil, ErrInvalidAddressInPrefundedAccounts
-		}
-
-		balance := big.NewInt(a.balance)
-
-		validAccount := &validPrefundedAccount{
-			walletAddress: address,
-			balance:       balance,
-		}
-
-		validAccounts = append(validAccounts, validAccount)
-	}
-
-	return validAccounts, nil
-}
-
-func (h *GenerateGenesisCommandHandler) prefundedIncludesValidatorWallet(
-	accounts []*validPrefundedAccount,
-	addresses *common.Address,
-) bool {
-	for _, account := range accounts {
-		if bytes.Equal(account.walletAddress.Bytes(), addresses.Bytes()) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func createContract(cfg *runtime.Config, code []byte) (*contractData, error) {
-	out, addr, _, err := runtime.Create(code, cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &contractData{
-		addr:    addr,
-		code:    out,
-		storage: cfg.EVMConfig.Tracer.(*vmTracer).data[addr],
-	}, nil
-}
-
-type contractData struct {
-	addr    common.Address
-	code    []byte
-	storage map[common.Hash]common.Hash
+	return genesis, nil
 }
