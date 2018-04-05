@@ -1,7 +1,6 @@
 package kcoin
 
 import (
-	"bytes"
 	"encoding/json"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/stretchr/testify/assert"
@@ -251,14 +250,52 @@ func TestOptionalValues(t *testing.T) {
 	})
 }
 
-//unmarshalGenesisFromBuffer unmarshals a genesis struct from buffer in json.
-func unmarshalGenesisFromBuffer(t *testing.T, b bytes.Buffer) *core.Genesis {
-	var generatedGenesis = new(core.Genesis)
-
-	err := json.Unmarshal(b.Bytes(), generatedGenesis)
-	if err != nil {
-		t.Fatal("Error unmarshaling genesis.")
+func TestItFailsWithAnInvalidNetwork(t *testing.T) {
+	tests := []struct {
+		testName string
+		network  string
+	}{
+		{
+			testName: "Empty string",
+			network:  "",
+		},
+		{
+			testName: "Invalid Network",
+			network:  "fakeNetwork",
+		},
 	}
 
-	return generatedGenesis
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+			_, err := createNetwork(test.network)
+			if err != ErrInvalidNetwork {
+				t.Fatalf("Failed to throw exception with an invalid Network value.")
+			}
+		})
+	}
+}
+
+func TestItFailsWithInvalidConsensusEngine(t *testing.T) {
+	tests := []struct {
+		testName  string
+		consensus string
+	}{
+		{
+			testName:  "Empty string",
+			consensus: "",
+		},
+		{
+			testName:  "Invalid consensus engine",
+			consensus: "invalidConsensus",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+			_, err := createConsensusEngine(test.consensus)
+			if err != ErrInvalidConsensusEngine {
+				t.Fatalf("Failed to throw exception with an invalid Network value.")
+			}
+		})
+	}
 }

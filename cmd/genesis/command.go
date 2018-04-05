@@ -2,21 +2,21 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/kowala-tech/kcoin/cmd/genesis/kcoin"
 	"io"
+	"github.com/kowala-tech/kcoin/kcoin/genesis"
 )
 
 type GenerateGenesisCommandHandler struct {
 	w io.Writer
 }
 
-func (h *GenerateGenesisCommandHandler) Handle(command kcoin.GenesisOptions) error {
-	genesis, err := kcoin.GenerateGenesis(command)
+func (h *GenerateGenesisCommandHandler) Handle(command genesis.GenesisOptions) error {
+	gns, err := genesis.GenerateGenesis(command)
 	if err != nil {
 		return err
 	}
 
-	out, _ := json.MarshalIndent(genesis, "", "  ")
+	out, _ := json.MarshalIndent(gns, "", "  ")
 
 	_, err = h.w.Write(out)
 	if err != nil {

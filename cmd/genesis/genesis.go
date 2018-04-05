@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 	"strings"
 	"strconv"
-	"github.com/kowala-tech/kcoin/cmd/genesis/kcoin"
+	"github.com/kowala-tech/kcoin/kcoin/genesis"
 )
 
 var (
@@ -23,7 +23,7 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			loadFromFileConfigIfAvailable()
 
-			command := kcoin.GenesisOptions{
+			command := genesis.GenesisOptions{
 				Network:                       viper.GetString("genesis.network"),
 				MaxNumValidators:              viper.GetString("genesis.maxNumValidators"),
 				UnbondingPeriod:               viper.GetString("genesis.unbondingPeriod"),
@@ -88,8 +88,8 @@ func main() {
 	}
 }
 
-func parsePrefundedAccounts(accounts interface{}) []kcoin.PrefundedAccount {
-	prefundedAccounts := make([]kcoin.PrefundedAccount, 0)
+func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
+	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
 
 	switch accounts.(type) {
 	case []interface{}:
@@ -97,7 +97,7 @@ func parsePrefundedAccounts(accounts interface{}) []kcoin.PrefundedAccount {
 		for _, v := range accountArray {
 			val := v.(map[string]interface{})
 
-			prefundedAccount := kcoin.PrefundedAccount{
+			prefundedAccount := genesis.PrefundedAccount{
 				WalletAddress: val["walletAddress"].(string),
 				Balance: val["balance"].(int64),
 			}
@@ -119,7 +119,7 @@ func parsePrefundedAccounts(accounts interface{}) []kcoin.PrefundedAccount {
 				balance = 0
 			}
 
-			prefundedAccount := kcoin.PrefundedAccount{
+			prefundedAccount := genesis.PrefundedAccount{
 				WalletAddress: values[0],
 				Balance: int64(balance),
 			}
