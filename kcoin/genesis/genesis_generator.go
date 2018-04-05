@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/kowala-tech/kcoin/accounts/abi"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/contracts/network"
 	"github.com/kowala-tech/kcoin/contracts/network/contracts"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/vm"
@@ -17,8 +18,6 @@ import (
 )
 
 const (
-	DefaultSmartContractsOwner = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
-
 	MainNetwork  = "main"
 	TestNetwork  = "test"
 	OtherNetwork = "other"
@@ -27,6 +26,8 @@ const (
 )
 
 var (
+	DefaultSmartContractsOwner = network.MapChainIDToAddr[params.TestnetChainConfig.ChainID.Uint64()]
+
 	availableNetworks = map[string]bool{
 		MainNetwork:  true,
 		TestNetwork:  true,
@@ -211,14 +212,14 @@ func validateOptions(options GenesisOptions) (*validGenesisOptions, error) {
 		}
 	}
 
-	strAddr := DefaultSmartContractsOwner
+	owner := &DefaultSmartContractsOwner
 	if options.SmartContractsOwner != "" {
-		strAddr = options.SmartContractsOwner
-	}
+		strAddr := options.SmartContractsOwner
 
-	owner, err := createWalletAddress(strAddr)
-	if err != nil {
-		return nil, ErrInvalidContractsOwnerAddress
+		owner, err = createWalletAddress(strAddr)
+		if err != nil {
+			return nil, ErrInvalidContractsOwnerAddress
+		}
 	}
 
 	return &validGenesisOptions{

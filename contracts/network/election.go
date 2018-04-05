@@ -16,7 +16,7 @@ import (
 	"github.com/kowala-tech/kcoin/params"
 )
 
-var mapChainIDToAddr = map[uint64]common.Address{
+var MapChainIDToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"),
 }
 
@@ -41,7 +41,7 @@ type election struct {
 }
 
 func NewElection(contractBackend bind.ContractBackend, chainID *big.Int) (*election, error) {
-	contract, err := contracts.NewElectionContract(mapChainIDToAddr[chainID.Uint64()], contractBackend)
+	contract, err := contracts.NewElectionContract(MapChainIDToAddr[chainID.Uint64()], contractBackend)
 	if err != nil {
 		return nil, err
 	}

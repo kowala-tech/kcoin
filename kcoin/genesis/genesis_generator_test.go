@@ -187,8 +187,7 @@ func assertEqualGenesis(t *testing.T, expectedGenesis *core.Genesis, generatedGe
 
 	assert.Len(t, expectedGenesis.Alloc, len(generatedGenesis.Alloc))
 
-	bigaddr, _ := new(big.Int).SetString(DefaultSmartContractsOwner, 0)
-	address := common.BigToAddress(bigaddr)
+	address := DefaultSmartContractsOwner
 	expectedAlloc := core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
 	assert.Equal(t, generatedGenesis.Alloc[address], expectedAlloc)
 }
