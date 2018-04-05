@@ -20,7 +20,7 @@ type VotingState struct {
 	proposal       *types.Proposal
 	block          *types.Block
 	blockFragments *types.BlockFragments
-	votingSystem   *VotingSystem // election votes since round 1
+	votingSystem   VotingSystem // election votes since round 1
 
 	lockedRound uint64
 	lockedBlock *types.Block
@@ -50,8 +50,13 @@ func NewVotingTables(eventMux *event.TypeMux, voters types.ValidatorList) Voting
 	return tables
 }
 
-// VotingSystem records the election votes since round 1
-type VotingSystem struct {
+type VotingSystem interface {
+	NewRound()
+	Add(vote *types.Vote) error
+}
+
+// votingSystem records the election votes since round 1
+type votingSystem struct {
 	voters         types.ValidatorList
 	electionNumber *big.Int // election number
 	round          uint64
@@ -63,8 +68,8 @@ type VotingSystem struct {
 
 // NewVotingSystem returns a new voting system
 // @TODO (rgeraldes) - in the future replace eventMux with a subscription method
-func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters types.ValidatorList) *VotingSystem {
-	system := &VotingSystem{
+func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters types.ValidatorList) *votingSystem {
+	system := &votingSystem{
 		voters:         voters,
 		electionNumber: electionNumber,
 		round:          0,
@@ -78,12 +83,12 @@ func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumbe
 	return system
 }
 
-func (vs *VotingSystem) NewRound() {
+func (vs *votingSystem) NewRound() {
 	vs.votesPerRound[vs.round] = NewVotingTables(vs.eventMux, vs.voters)
 }
 
 // Add registers a vote
-func (vs *VotingSystem) Add(vote *types.Vote) error {
+func (vs *votingSystem) Add(vote *types.Vote) error {
 	votingTable := vs.getVoteSet(vote.Round(), vote.Type())
 
 	signedVote, err := types.NewSignedVote(vs.signer, vote)
@@ -101,7 +106,7 @@ func (vs *VotingSystem) Add(vote *types.Vote) error {
 	return nil
 }
 
-func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) core.VotingTable {
+func (vs *votingSystem) getVoteSet(round uint64, voteType types.VoteType) core.VotingTable {
 	votingTables, ok := vs.votesPerRound[round]
 	if !ok {
 		// @TODO (rgeraldes) - critical
