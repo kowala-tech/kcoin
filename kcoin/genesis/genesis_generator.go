@@ -78,7 +78,6 @@ type validGenesisOptions struct {
 	prefundedAccounts             []*validPrefundedAccount
 	consensusEngine               string
 	smartContractsOwner           *common.Address
-	extraData                     string
 }
 
 func GenerateGenesis(options GenesisOptions) (*core.Genesis, error) {
@@ -223,13 +222,13 @@ func validateOptions(options GenesisOptions) (*validGenesisOptions, error) {
 	}
 
 	return &validGenesisOptions{
-		network: network,
-		maxNumValidators: maxNumValidators,
-		unbondingPeriod: unbondingPeriod,
+		network:                       network,
+		maxNumValidators:              maxNumValidators,
+		unbondingPeriod:               unbondingPeriod,
 		walletAddressGenesisValidator: walletAddressValidator,
-		prefundedAccounts: validPrefundedAccounts,
-		consensusEngine:consensusEngine,
-		smartContractsOwner: owner,
+		prefundedAccounts:             validPrefundedAccounts,
+		consensusEngine:               consensusEngine,
+		smartContractsOwner:           owner,
 	}, nil
 }
 

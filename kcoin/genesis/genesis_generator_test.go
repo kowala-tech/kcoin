@@ -2,13 +2,13 @@ package genesis
 
 import (
 	"encoding/json"
+	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/params"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"testing"
 	"math/big"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/params"
+	"testing"
 )
 
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
