@@ -1,7 +1,7 @@
 package params
 
 const (
-	// These are the multipliers for kUSD denominations.
+	// These are the multipliers for kCoin denominations.
 	// Example: To get the wei value of an amount in 'douglas', use
 	//
 	//    new(big.Int).Mul(value, big.NewInt(params.Douglas))
