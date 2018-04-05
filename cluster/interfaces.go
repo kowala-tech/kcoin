@@ -23,6 +23,9 @@ type Backend interface {
 
 	// RestConfig returns the REST config to the cluster.
 	RestConfig() (*rest.Config, error)
+
+	// DockerEnv returns the environment variables necessary to connect to the private docker repository in the kubernetes cluster
+	DockerEnv() ([]string, error)
 }
 
 type Cluster interface {
