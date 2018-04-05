@@ -43,6 +43,9 @@ func createCommand() *cobra.Command {
 				unbondingPeriod: viper.GetString("genesis.unbondingPeriod"),
 				walletAddressGenesisValidator: viper.GetString("genesis.walletAddressGenesisValidator"),
 				prefundedAccounts: parsePrefundedAccounts(viper.Get("prefundedAccounts")),
+				consensusEngine: viper.GetString("genesis.consensusEngine"),
+				smartContractsOwner: viper.GetString("genesis.smartContractsOwner"),
+				extraData: viper.GetString("genesis.extraData"),
 			}
 
 			parsePrefundedAccounts(viper.Get("prefundedAccounts"))

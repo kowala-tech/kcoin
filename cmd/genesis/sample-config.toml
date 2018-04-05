@@ -1,9 +1,12 @@
 [genesis]
-network = "test"
+network = "test" # Only supported test and main
 maxNumValidators = "1"
 unbondingPeriod = "1"
 walletAddressGenesisValidator = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
-consensusEngine = "1"
+# Optional values
+consensusEngine = "tendermint" # Only supported tendermint by the moment
+smartContractsOwner = "0x1234ed356e7bc4f7a8fc48cc19c958f4e640ac62"
+extraData = "extraData"
 
 [[prefundedAccounts]]
 walletAddress = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
