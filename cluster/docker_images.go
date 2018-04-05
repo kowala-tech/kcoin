@@ -24,7 +24,7 @@ func NewDockerBuilder(env []string) *DockerBuilder {
 	}
 }
 
-func (builder *DockerBuilder) Build(tag, dockerfile string) chan error {
+func (builder *DockerBuilder) Build(tag, dockerfile string) {
 	builder.mtx.Lock()
 	defer builder.mtx.Unlock()
 
@@ -33,7 +33,6 @@ func (builder *DockerBuilder) Build(tag, dockerfile string) chan error {
 	go func() {
 		errChn <- builder.build(tag, dockerfile)
 	}()
-	return errChn
 }
 
 func (builder *DockerBuilder) Wait() []error {
