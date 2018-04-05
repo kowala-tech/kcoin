@@ -5,11 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kcoin/consensus/ethash"
 	"github.com/kowala-tech/kcoin/consensus/tendermint"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
-	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/params"
 )
