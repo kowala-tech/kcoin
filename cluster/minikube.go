@@ -70,7 +70,7 @@ func (cluster *minikubeCluster) Delete() error {
 		return err
 	}
 	if !cmd.ProcessState.Success() {
-		return fmt.Errorf("Error creating cluster")
+		return fmt.Errorf("error creating cluster")
 	}
 	return nil
 }
@@ -84,7 +84,7 @@ func (cluster *minikubeCluster) DockerEnv() ([]string, error) {
 		return nil, err
 	}
 	if !statusCmd.ProcessState.Success() {
-		return nil, fmt.Errorf("Error creating cluster")
+		return nil, fmt.Errorf("error getting docker environment variables")
 	}
 	lines := strings.Split(stdout.String(), "\n")
 	goodLines := make([]string, 0)
