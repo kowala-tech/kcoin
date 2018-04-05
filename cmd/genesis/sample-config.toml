@@ -8,6 +8,7 @@ walletAddressGenesisValidator = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
 consensusEngine = "tendermint" # Only supported tendermint by the moment
 smartContractsOwner = "0x1234ed356e7bc4f7a8fc48cc19c958f4e640ac62"
 extraData = "extraData"
+fileName = "genesis.json" # The path of the filename.
 
 [[prefundedAccounts]]
 walletAddress = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
@@ -16,4 +17,3 @@ balance = 15
 [[prefundedAccounts]]
 walletAddress = "0x1234ed356e7bc4f7a8fc48cc19c958f4e640ac62"
 balance = 15
-

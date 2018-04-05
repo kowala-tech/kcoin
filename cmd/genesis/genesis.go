@@ -1,18 +1,18 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
 	"fmt"
-	"os"
-	"github.com/spf13/viper"
-	"strings"
-	"strconv"
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"os"
+	"strconv"
+	"strings"
 )
 
 var (
 	FileConfig string
-	cmd *cobra.Command
+	cmd        *cobra.Command
 )
 
 func init() {
@@ -34,14 +34,19 @@ func init() {
 				ExtraData:                     viper.GetString("genesis.extraData"),
 			}
 
-			file, err := os.Create("genesis.json")
+			fileName := "genesis.json"
+			if viper.GetString("genesis.fileName") != "" {
+				fileName = viper.GetString("genesis.fileName")
+			}
+
+			file, err := os.Create(fileName)
 			if err != nil {
 				fmt.Printf("Error generating file: %s", err)
 				os.Exit(1)
 			}
 
-			handler := GenerateGenesisCommandHandler{w: file}
-			err = handler.Handle(command)
+			handler := generateGenesisFileCommandHandler{w: file}
+			err = handler.handle(command)
 			if err != nil {
 				fmt.Printf("Error generating file: %s", err)
 				os.Exit(1)
@@ -68,6 +73,8 @@ func init() {
 	viper.BindPFlag("genesis.extraData", cmd.Flags().Lookup("extraData"))
 	cmd.Flags().StringP("prefundedAccounts", "a", "", "The prefunded accounts in format 0x212121:12,0x212121:14")
 	viper.BindPFlag("prefundedAccounts", cmd.Flags().Lookup("prefundedAccounts"))
+	cmd.Flags().StringP("fileName", "o", "", "The output filename (default:genesis.json).")
+	viper.BindPFlag("genesis.fileName", cmd.Flags().Lookup("fileName"))
 }
 
 func loadFromFileConfigIfAvailable() {
@@ -99,7 +106,7 @@ func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
 
 			prefundedAccount := genesis.PrefundedAccount{
 				WalletAddress: val["walletAddress"].(string),
-				Balance: val["balance"].(int64),
+				Balance:       val["balance"].(int64),
 			}
 
 			prefundedAccounts = append(prefundedAccounts, prefundedAccount)
@@ -121,7 +128,7 @@ func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
 
 			prefundedAccount := genesis.PrefundedAccount{
 				WalletAddress: values[0],
-				Balance: int64(balance),
+				Balance:       int64(balance),
 			}
 
 			prefundedAccounts = append(prefundedAccounts, prefundedAccount)

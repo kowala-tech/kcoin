@@ -2,16 +2,16 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
+	"io"
 )
 
-type GenerateGenesisCommandHandler struct {
+type generateGenesisFileCommandHandler struct {
 	w io.Writer
 }
 
-func (h *GenerateGenesisCommandHandler) Handle(command genesis.GenesisOptions) error {
-	gns, err := genesis.GenerateGenesis(command)
+func (h *generateGenesisFileCommandHandler) handle(options genesis.GenesisOptions) error {
+	gns, err := genesis.GenerateGenesis(options)
 	if err != nil {
 		return err
 	}
