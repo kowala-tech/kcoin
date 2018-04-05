@@ -43,7 +43,7 @@ func prepareCluster() {
 
 	k8sCluster.Cleanup() // Just in case the previous run didn't finish gracefully
 
-	if err := k8sCluster.Initialize("1234567"); err != nil {
+	if err := k8sCluster.Initialize("519374298533"); err != nil {
 		panic(err)
 	}
 	if err := k8sCluster.RunBootnode(); err != nil {

@@ -61,6 +61,14 @@ func (client *cluster) Initialize(networkID string) error {
 	log.Println("Initializing cluster")
 	client.NetworkID = networkID
 
+	env, err := client.Backend.DockerEnv()
+	if err != nil {
+		return err
+	}
+	builder := NewDockerBuilder(env)
+	builder.Build("kowalatech/bootnode:dev", "bootnode.Dockerfile")
+	builder.Build("kowalatech/kusd:dev", "kcoin.Dockerfile")
+
 	if err := client.createNamespace(); err != nil {
 		return err
 	}
@@ -76,6 +84,10 @@ func (client *cluster) Initialize(networkID string) error {
 	if err := client.generateGenesis(); err != nil {
 		return err
 	}
+	if errs := builder.Wait(); len(errs) > 0 {
+		return errs[0] // any error will do
+	}
+
 	return nil
 }
 
@@ -85,10 +97,11 @@ func (client *cluster) DeletePod(podName string) error {
 
 func (client *cluster) createNamespace() error {
 	ns, err := client.Clientset.CoreV1().Namespaces().Get(Namespace, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	if ns != nil {
+
+	// `err`` will be a NotFound if the namespace doesn't exist, and `ns` will be
+	//   a struct with an empty Name. Just checking for the name match will cover
+	//   a not found too.
+	if ns.Name == Namespace {
 		return nil
 	}
 
