@@ -137,8 +137,8 @@ func GenerateGenesis(options GenesisOptions) (*core.Genesis, error) {
 		Balance: new(big.Int).Mul(baseDeposit, new(big.Int).SetUint64(params.Ether)),
 	}
 
-	setPrefundedAccounts(validOptions.prefundedAccounts, genesis)
-	addBatchOfPrefundedAccounts(genesis)
+	addPrefundedAccountsIntoGenesis(validOptions.prefundedAccounts, genesis)
+	addBatchOfPrefundedAccountsIntoGenesis(genesis)
 
 	return genesis, nil
 }
@@ -240,14 +240,14 @@ func validateOptions(options GenesisOptions) (*validGenesisOptions, error) {
 	}, nil
 }
 
-func addBatchOfPrefundedAccounts(genesis *core.Genesis) {
+func addBatchOfPrefundedAccountsIntoGenesis(genesis *core.Genesis) {
 	// Add a batch of precompile balances to avoid them getting deleted
 	for i := int64(0); i < 256; i++ {
 		genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
 	}
 }
 
-func setPrefundedAccounts(validPrefundedAccounts []*validPrefundedAccount, genesis *core.Genesis) {
+func addPrefundedAccountsIntoGenesis(validPrefundedAccounts []*validPrefundedAccount, genesis *core.Genesis) {
 	for _, vAccount := range validPrefundedAccounts {
 		genesis.Alloc[*vAccount.walletAddress] = core.GenesisAccount{
 			Balance: vAccount.balance,
