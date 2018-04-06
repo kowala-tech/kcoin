@@ -6,4 +6,6 @@
 
 build/_workspace
 build/_bin
-tests/testdata
+tests/**
+features/*
+godog.test
