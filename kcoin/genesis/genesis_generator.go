@@ -95,13 +95,11 @@ func GenerateGenesis(options GenesisOptions) (*core.Genesis, error) {
 			ChainID: getNetwork(validOptions.network),
 			Tendermint: getConsensusEngine(validOptions.consensusEngine),
 		},
+		ExtraData: getExtraData(options.ExtraData),
 	}
-
-	setExtraData(options.ExtraData, genesis)
 
 	genesis.Alloc[*validOptions.smartContractsOwner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
 
-	//TODO: This maybe will be need to be available to change by the parameters in the options in the future, right now is 0.
 	baseDeposit := common.Big0
 
 	electionABI, err := abi.JSON(strings.NewReader(contracts.ElectionContractABI))
@@ -145,16 +143,16 @@ func GenerateGenesis(options GenesisOptions) (*core.Genesis, error) {
 	return genesis, nil
 }
 
-func setExtraData(extraData string, genesis *core.Genesis) {
+func getExtraData(extraData string) []byte {
 	extra := ""
 	if extraData != "" {
 		extra = extraData
 	}
-	genesis.ExtraData = make([]byte, 32)
+	extraSlice := make([]byte, 32)
 	if len(extra) > 32 {
 		extra = extra[:32]
 	}
-	genesis.ExtraData = append([]byte(extra), genesis.ExtraData[len(extra):]...)
+	return append([]byte(extra), extraSlice[len(extra):]...)
 }
 
 func getConsensusEngine(consensusEngine string) *params.TendermintConfig {
