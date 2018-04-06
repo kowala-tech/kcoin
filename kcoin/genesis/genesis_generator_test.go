@@ -266,7 +266,7 @@ func TestItFailsWithAnInvalidNetwork(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
-			_, err := createNetwork(test.network)
+			_, err := mapNetwork(test.network)
 			if err != ErrInvalidNetwork {
 				t.Fatalf("Failed to throw exception with an invalid Network value.")
 			}
@@ -291,7 +291,7 @@ func TestItFailsWithInvalidConsensusEngine(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
-			_, err := createConsensusEngine(test.consensus)
+			_, err := mapConsensusEngine(test.consensus)
 			if err != ErrInvalidConsensusEngine {
 				t.Fatalf("Failed to throw exception with an invalid Network value.")
 			}

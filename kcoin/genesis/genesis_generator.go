@@ -182,27 +182,27 @@ func getNetwork(network string) *big.Int {
 }
 
 func validateOptions(options GenesisOptions) (*validGenesisOptions, error) {
-	network, err := createNetwork(options.Network)
+	network, err := mapNetwork(options.Network)
 	if err != nil {
 		return nil, err
 	}
 
-	maxNumValidators, err := createMaxNumValidators(options.MaxNumValidators)
+	maxNumValidators, err := mapMaxNumValidators(options.MaxNumValidators)
 	if err != nil {
 		return nil, err
 	}
 
-	unbondingPeriod, err := createUnbondingPeriod(options.UnbondingPeriod)
+	unbondingPeriod, err := mapUnbondingPeriod(options.UnbondingPeriod)
 	if err != nil {
 		return nil, err
 	}
 
-	walletAddressValidator, err := createWalletAddress(options.WalletAddressGenesisValidator)
+	walletAddressValidator, err := mapWalletAddress(options.WalletAddressGenesisValidator)
 	if err != nil {
 		return nil, err
 	}
 
-	validPrefundedAccounts, err := createPrefundedAccounts(options.PrefundedAccounts)
+	validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func validateOptions(options GenesisOptions) (*validGenesisOptions, error) {
 
 	consensusEngine := TendermintConsensus
 	if options.ConsensusEngine != "" {
-		consensusEngine, err = createConsensusEngine(options.ConsensusEngine)
+		consensusEngine, err = mapConsensusEngine(options.ConsensusEngine)
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +223,7 @@ func validateOptions(options GenesisOptions) (*validGenesisOptions, error) {
 	if options.SmartContractsOwner != "" {
 		strAddr := options.SmartContractsOwner
 
-		owner, err = createWalletAddress(strAddr)
+		owner, err = mapWalletAddress(strAddr)
 		if err != nil {
 			return nil, ErrInvalidContractsOwnerAddress
 		}
@@ -255,7 +255,7 @@ func addPrefundedAccountsIntoGenesis(validPrefundedAccounts []*validPrefundedAcc
 	}
 }
 
-func createNetwork(network string) (string, error) {
+func mapNetwork(network string) (string, error) {
 	if !availableNetworks[network] {
 		return "", ErrInvalidNetwork
 	}
@@ -263,7 +263,7 @@ func createNetwork(network string) (string, error) {
 	return network, nil
 }
 
-func createConsensusEngine(consensus string) (string, error) {
+func mapConsensusEngine(consensus string) (string, error) {
 	if !availableConsensusEngines[consensus] {
 		return "", ErrInvalidConsensusEngine
 	}
@@ -271,7 +271,7 @@ func createConsensusEngine(consensus string) (string, error) {
 	return consensus, nil
 }
 
-func createMaxNumValidators(s string) (*big.Int, error) {
+func mapMaxNumValidators(s string) (*big.Int, error) {
 	if s = strings.TrimSpace(s); s == "" {
 		return nil, ErrEmptyMaxNumValidators
 	}
@@ -285,7 +285,7 @@ func createMaxNumValidators(s string) (*big.Int, error) {
 	return numValidators, nil
 }
 
-func createUnbondingPeriod(uP string) (*big.Int, error) {
+func mapUnbondingPeriod(uP string) (*big.Int, error) {
 	var text string
 	if text = strings.TrimSpace(uP); text == "" {
 		return nil, ErrEmptyUnbondingPeriod
@@ -300,7 +300,7 @@ func createUnbondingPeriod(uP string) (*big.Int, error) {
 	return unbondingPeriod, nil
 }
 
-func createWalletAddress(wA string) (*common.Address, error) {
+func mapWalletAddress(wA string) (*common.Address, error) {
 	stringAddr := wA
 
 	if text := strings.TrimSpace(wA); text == "" {
@@ -321,7 +321,7 @@ func createWalletAddress(wA string) (*common.Address, error) {
 	return &address, nil
 }
 
-func createPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount, error) {
+func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount, error) {
 	var validAccounts []*validPrefundedAccount
 
 	if len(accounts) == 0 {
@@ -329,7 +329,7 @@ func createPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAcco
 	}
 
 	for _, a := range accounts {
-		address, err := createWalletAddress(a.WalletAddress)
+		address, err := mapWalletAddress(a.WalletAddress)
 		if err != nil {
 			return nil, ErrInvalidAddressInPrefundedAccounts
 		}
