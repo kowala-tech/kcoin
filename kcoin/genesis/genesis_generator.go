@@ -91,11 +91,12 @@ func GenerateGenesis(options GenesisOptions) (*core.Genesis, error) {
 		Timestamp: uint64(time.Now().Unix()),
 		GasLimit:  4700000,
 		Alloc:     make(core.GenesisAlloc),
-		Config:    &params.ChainConfig{},
+		Config:    &params.ChainConfig{
+			ChainID: getNetwork(validOptions.network),
+			Tendermint: getConsensusEngine(validOptions.consensusEngine),
+		},
 	}
 
-	setNetwork(validOptions.network, genesis)
-	setConsensusEngine(validOptions.consensusEngine, genesis)
 	setExtraData(options.ExtraData, genesis)
 
 	genesis.Alloc[*validOptions.smartContractsOwner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
@@ -156,22 +157,30 @@ func setExtraData(extraData string, genesis *core.Genesis) {
 	genesis.ExtraData = append([]byte(extra), genesis.ExtraData[len(extra):]...)
 }
 
-func setConsensusEngine(consensusEngine string, genesis *core.Genesis) {
+func getConsensusEngine(consensusEngine string) *params.TendermintConfig {
+	var consensus *params.TendermintConfig
+
 	switch consensusEngine {
 	case TendermintConsensus:
-		genesis.Config.Tendermint = &params.TendermintConfig{Rewarded: true}
+		consensus = &params.TendermintConfig{Rewarded: true}
 	}
+
+	return consensus
 }
 
-func setNetwork(network string, genesis *core.Genesis) {
+func getNetwork(network string) *big.Int {
+	var chainId *big.Int
+
 	switch network {
 	case MainNetwork:
-		genesis.Config.ChainID = params.MainnetChainConfig.ChainID
+		chainId = params.MainnetChainConfig.ChainID
 	case TestNetwork:
-		genesis.Config.ChainID = params.TestnetChainConfig.ChainID
+		chainId = params.TestnetChainConfig.ChainID
 	case OtherNetwork:
-		genesis.Config.ChainID = new(big.Int).SetUint64(uint64(rand.Intn(65536)))
+		chainId = new(big.Int).SetUint64(uint64(rand.Intn(65536)))
 	}
+
+	return chainId
 }
 
 func validateOptions(options GenesisOptions) (*validGenesisOptions, error) {
