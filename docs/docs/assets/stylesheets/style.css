@@ -1,0 +1,37 @@
+[class^="icon-"],
+[class*=" icon-"] {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  speak: none;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Override header and footer with kowala violet*/
+.md-header,
+.md-footer-nav,
+.md-footer-meta {
+  background-color: #4b1a79;
+}
+
+.md-logo {
+  width: 90;
+  height: 24;
+}
+
+/* Highlight current page in nav menu */
+.md-nav__link--active {
+  color: #536dfe;
+  font-weight: bold;
+}
+
+/* Increase size of social media links in page footer */
+.md-footer-social {
+  font-size: 20px;
+}

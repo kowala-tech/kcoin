@@ -1,0 +1,55 @@
+site_name: Documentation
+theme:
+  name: material
+  custom_dir: theme_custom
+  favicon: 'assets/images/favicon.ico'
+  logo: 'assets/images/logo.svg'
+  font: true
+extra:
+  social:
+    - type: 'github'
+      link: 'https://github.com/kowala-tech'
+    - type: 'twitter'
+      link: 'https://twitter.com/KowalaTech'
+    - type: 'youtube'
+      link: 'https://www.youtube.com/channel/UCDuyhBaLx16iEGwqIt9hHHQ/'
+site_url: https://docs.kowala.tech
+repo_url: https://github.com/kowala-tech/kcoin
+repo_name: kowala-tech/kcoin
+markdown_extensions:
+  - footnotes
+  - fontawesome_markdown
+  - smarty
+  - mdx_math
+  - toc:
+      permalink: True
+  - tables
+extra_javascript:
+  - js/MathJax-2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML
+extra_css:
+    - assets/stylesheets/style.css
+pages:
+  - 'Home': 'index.md'
+  - Getting Started:
+    - 'Overview': 'getting-started/index.md'
+  - Wallet:
+    - 'Overview': 'getting-started/index.md'
+  - Consensus: 
+    - Proof-of-Stake:
+      - 'Overview': 'proof-of-stake/index.md'
+      - 'Glossary': 'proof-of-stake/glossary.md'
+      - 'Network Security': 'proof-of-stake/security.md'
+  - Stable Coin:
+    - 'Overview': 'stable-coin/index.md'
+    - 'Glossary': 'stable-coin/glossary.md'
+    - 'Stabilisation Algorithms': 'stable-coin/algorithms.md'
+    - 'Oracle': 'stable-coin/oracle.md'
+  - Advanced:
+    - 'Block':  'advanced/block.md'
+  - Contributing:
+    - 'Overview': 'contributing/index.md'
+    - 'Projects': 'contributing/projects.md'
+  - About:
+    - 'Credits': 'about/credits.md'
+    - 'License': 'about/license.md'
+copyright: If you wish to improve the documentation, please <a href="https://github.com/kowala-tech/kcoin/issues/new"><i class="fa fa-github"></i> open an issue</a> and <a href="https://github.com/kowala-tech/kcoin/compare"><i class="fa fa-github"></i> send a pull request</a>.<br> docs v0.0.1. Kowala SEZC 2018.

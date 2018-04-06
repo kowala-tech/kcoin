@@ -1,0 +1,169 @@
+{
+    "docs": [
+        {
+            "location": "/",
+            "text": "",
+            "title": "Home"
+        },
+        {
+            "location": "/getting-started/",
+            "text": "",
+            "title": "Overview"
+        },
+        {
+            "location": "/getting-started/",
+            "text": "",
+            "title": "Overview"
+        },
+        {
+            "location": "/proof-of-stake/",
+            "text": "Proof-of-stake (POS)\n\u00b6\n\n\nOverview\n\u00b6\n\n\nKowala uses its own custom implementation of Tendermint. Tendermint is a weakly synchronous, Byzantine fault tolerant, state machine replication protocol, with optimal Byzantine fault tolerance and additional accountability guarantees in the event the BFT assumptions are violated.\n\n\nFeatures include the user of a smart contract as the validator registry for registering validators while making a deposit and contains the logic to report byzantine validators - destroy their deposit. Additionaly Tendermint provides fast finality that can be as fast as 1 second per block depending on the validators hardware requirements.\n\n\nDifferent kinds of PoS\n\u00b6\n\n\n\n\nGlossary\n\u00b6\n\n\nValidator - consensus participant\n\n\n\n\nCredits\n\u00b6",
+            "title": "Overview"
+        },
+        {
+            "location": "/proof-of-stake/#proof-of-stake-pos",
+            "text": "",
+            "title": "Proof-of-stake (POS)"
+        },
+        {
+            "location": "/proof-of-stake/#overview",
+            "text": "Kowala uses its own custom implementation of Tendermint. Tendermint is a weakly synchronous, Byzantine fault tolerant, state machine replication protocol, with optimal Byzantine fault tolerance and additional accountability guarantees in the event the BFT assumptions are violated.  Features include the user of a smart contract as the validator registry for registering validators while making a deposit and contains the logic to report byzantine validators - destroy their deposit. Additionaly Tendermint provides fast finality that can be as fast as 1 second per block depending on the validators hardware requirements.",
+            "title": "Overview"
+        },
+        {
+            "location": "/proof-of-stake/#different-kinds-of-pos",
+            "text": "",
+            "title": "Different kinds of PoS"
+        },
+        {
+            "location": "/proof-of-stake/#glossary",
+            "text": "Validator - consensus participant",
+            "title": "Glossary"
+        },
+        {
+            "location": "/proof-of-stake/#credits",
+            "text": "",
+            "title": "Credits"
+        },
+        {
+            "location": "/proof-of-stake/glossary/",
+            "text": "Proof-of-stake Glossary\n\u00b6",
+            "title": "Glossary"
+        },
+        {
+            "location": "/proof-of-stake/glossary/#proof-of-stake-glossary",
+            "text": "",
+            "title": "Proof-of-stake Glossary"
+        },
+        {
+            "location": "/proof-of-stake/security/",
+            "text": "Security\n\u00b6\n\n\n\n\nByzantine Validators\n\u00b6\n\n\nIn a crash fault, a process simply halts. In a byzantine fault, it can behave arbitrarily (ex: send different and contradictory messages to different peers). Crash faults are easier to handle, as no process can lie to another process. Byzantine failures are more complicated. In a system of 2f + 1 processes, if f are Byzantine, they can co-ordinate to say arbitrary things to the other f + 1 processes. For instance, suppose we are trying to agree on the value of a single bit, and f = 1, so we have N = 3 processes, A, B, and C, where C is Byzantine. C can tell A that the value is 0 and tell B that it\u2019s 1. If A agrees that its 0, and B agrees that its 1, then they will both think they have a majority and commit, thereby violating the safety condition. Hence, the upper bound on faults tolerated by a Byzantine system is strictly lower than a non-Byzantine one. In fact, it can be shown that the upper limit on f for Byzantine faults is f < N/3. Thus, to tolerate a single Byzantine process, we require at least N = 4. Then the faulty process can\u2019t split the vote the way it was able to when N = 3. Systems which only tolerate crash faults can operate via simple majority rule, and therefore typically tolerate simultaneous failure of up to half of the system. If the number of failures the system can tolerate is f, such systems must have at least 2f + 1 processes.\n\n\n// @TODO (rgeraldes) - add picture\n\n\n\n\nAccountability\n\u00b6\n\n\nAn accountable Byzantine Fault Tolerant algorithm is one that can identify all Byzantine validators when there is a violation of safety. Note that accountability can only apply when between one-third of two-thirds of validators are Byzantine. If more than two-thirds are Byzantine, they can completely dominate the protocol, and we have no guarantee that a correct validator will receive any evidence of their misdeeds.\n\n\n\n\nAttacks\n\u00b6\n\n\nThere are only two ways for violation of safety to occur, and both are accountable.\n\n\n\n\nDouble Signing\n\n\n\n\nByzantine Proposer makes two conflicting proposals within a round, and Byzantine validators vote for both of them.\n\n\nIn the case of conflicting proposals and conflicting votes, it is trivial to detect the conflict by receiving both messages, and to identify culprits via their signatures - as soon as an honest validator receives conflicting votes or conflicting proposals he reports the specific validator in the form of a transaction to the validator registry - holds the validator deposit.\n\n\nIn the event that they are found to double-sign proposals or votes, validators publish evidence of the transgression in the form of a transaction, which the application state can use to change the validator set by removing the transgressor, burning its deposit.\nThis has the effect of associating an explicit economic cost with\nByzantine behaviour, and enables one to estimate the cost of violating safety\nby bribing a third or more of the validators to be Byzantine.\n\n\n\n\nByzantine validators violate locking rules after some validators have already committed, causing other validators to commit a different block on a later round.\n\n\n\n\n\n\nNetwork Liveness\n\u00b6\n\n\nIf a third or more of validators crash, the network halts, as no validator is able to make progress without hearing from more than two-thirds of the validator set. The network remains available for reads, but no new commits can be made. As soon as validators come back on-line, they can carry on from where they left in a round. The consensus state-machine should employ a write-ahead log, such that a recovered validator can quickly return to the step it was in when it crashed, ensuring it doesn\u2019t accidentally violate a rule.\n\n\n\n\nReporting a Byzantine Validator\n\u00b6\n\n\nFollowing a violation of safety, the delayed delivery of critical messages may make it impossible to determine which validators were Byzantine until some time after the safety violation is detected. In fact, if correct processes can receive evidence of Byzantine behaviour, but fail irreversibly before they are able to gossip it, there may be cases where accountability is permanently compromised, though in practice such situations should be surmountable with advanced backup solutions.\n\n\nTBD\n\n\nNote that a consensus protocol may specify more behaviours to be punished\nthan just double signing. In particular, we are interested in punishing\nany strong signalling behaviour which is unjustified - typically, any reported\nchange in state that is not based on the reported state of others. For instance,\nin a version of Tendermint where all pre-commits must come with the polka\nthat justifies them, validators may be punished for broadcasting unjustified\npre-commits. Note, however, that we cannot just punish for any unexpected\nbehaviour - for instance, a validator proposing when it is not their round\nto propose may be a basis for optimizations which pre-empt asynchrony or\ncrashed nodes.\n\n\nIn fact, a generalization of Tendermint along these two lines, of 1) looser\nforms of justification and 2) allowing validators to propose before their term,\ngives rise to a family of protocols similar in nature to that proposed by Vlad\nZamfir, under the guise Casper, as the consensus mechanism for a future version\nof ethereum [109]. A more formal account of the relationship between the\nprotocols, and of the characteristics of anti-Byzantine justifications, remains\nfor future work.",
+            "title": "Network Security"
+        },
+        {
+            "location": "/proof-of-stake/security/#security",
+            "text": "",
+            "title": "Security"
+        },
+        {
+            "location": "/proof-of-stake/security/#byzantine-validators",
+            "text": "In a crash fault, a process simply halts. In a byzantine fault, it can behave arbitrarily (ex: send different and contradictory messages to different peers). Crash faults are easier to handle, as no process can lie to another process. Byzantine failures are more complicated. In a system of 2f + 1 processes, if f are Byzantine, they can co-ordinate to say arbitrary things to the other f + 1 processes. For instance, suppose we are trying to agree on the value of a single bit, and f = 1, so we have N = 3 processes, A, B, and C, where C is Byzantine. C can tell A that the value is 0 and tell B that it\u2019s 1. If A agrees that its 0, and B agrees that its 1, then they will both think they have a majority and commit, thereby violating the safety condition. Hence, the upper bound on faults tolerated by a Byzantine system is strictly lower than a non-Byzantine one. In fact, it can be shown that the upper limit on f for Byzantine faults is f < N/3. Thus, to tolerate a single Byzantine process, we require at least N = 4. Then the faulty process can\u2019t split the vote the way it was able to when N = 3. Systems which only tolerate crash faults can operate via simple majority rule, and therefore typically tolerate simultaneous failure of up to half of the system. If the number of failures the system can tolerate is f, such systems must have at least 2f + 1 processes.  // @TODO (rgeraldes) - add picture",
+            "title": "Byzantine Validators"
+        },
+        {
+            "location": "/proof-of-stake/security/#accountability",
+            "text": "An accountable Byzantine Fault Tolerant algorithm is one that can identify all Byzantine validators when there is a violation of safety. Note that accountability can only apply when between one-third of two-thirds of validators are Byzantine. If more than two-thirds are Byzantine, they can completely dominate the protocol, and we have no guarantee that a correct validator will receive any evidence of their misdeeds.",
+            "title": "Accountability"
+        },
+        {
+            "location": "/proof-of-stake/security/#attacks",
+            "text": "There are only two ways for violation of safety to occur, and both are accountable.   Double Signing   Byzantine Proposer makes two conflicting proposals within a round, and Byzantine validators vote for both of them.  In the case of conflicting proposals and conflicting votes, it is trivial to detect the conflict by receiving both messages, and to identify culprits via their signatures - as soon as an honest validator receives conflicting votes or conflicting proposals he reports the specific validator in the form of a transaction to the validator registry - holds the validator deposit.  In the event that they are found to double-sign proposals or votes, validators publish evidence of the transgression in the form of a transaction, which the application state can use to change the validator set by removing the transgressor, burning its deposit.\nThis has the effect of associating an explicit economic cost with\nByzantine behaviour, and enables one to estimate the cost of violating safety\nby bribing a third or more of the validators to be Byzantine.   Byzantine validators violate locking rules after some validators have already committed, causing other validators to commit a different block on a later round.",
+            "title": "Attacks"
+        },
+        {
+            "location": "/proof-of-stake/security/#network-liveness",
+            "text": "If a third or more of validators crash, the network halts, as no validator is able to make progress without hearing from more than two-thirds of the validator set. The network remains available for reads, but no new commits can be made. As soon as validators come back on-line, they can carry on from where they left in a round. The consensus state-machine should employ a write-ahead log, such that a recovered validator can quickly return to the step it was in when it crashed, ensuring it doesn\u2019t accidentally violate a rule.",
+            "title": "Network Liveness"
+        },
+        {
+            "location": "/proof-of-stake/security/#reporting-a-byzantine-validator",
+            "text": "Following a violation of safety, the delayed delivery of critical messages may make it impossible to determine which validators were Byzantine until some time after the safety violation is detected. In fact, if correct processes can receive evidence of Byzantine behaviour, but fail irreversibly before they are able to gossip it, there may be cases where accountability is permanently compromised, though in practice such situations should be surmountable with advanced backup solutions.  TBD  Note that a consensus protocol may specify more behaviours to be punished\nthan just double signing. In particular, we are interested in punishing\nany strong signalling behaviour which is unjustified - typically, any reported\nchange in state that is not based on the reported state of others. For instance,\nin a version of Tendermint where all pre-commits must come with the polka\nthat justifies them, validators may be punished for broadcasting unjustified\npre-commits. Note, however, that we cannot just punish for any unexpected\nbehaviour - for instance, a validator proposing when it is not their round\nto propose may be a basis for optimizations which pre-empt asynchrony or\ncrashed nodes.  In fact, a generalization of Tendermint along these two lines, of 1) looser\nforms of justification and 2) allowing validators to propose before their term,\ngives rise to a family of protocols similar in nature to that proposed by Vlad\nZamfir, under the guise Casper, as the consensus mechanism for a future version\nof ethereum [109]. A more formal account of the relationship between the\nprotocols, and of the characteristics of anti-Byzantine justifications, remains\nfor future work.",
+            "title": "Reporting a Byzantine Validator"
+        },
+        {
+            "location": "/stable-coin/",
+            "text": "",
+            "title": "Overview"
+        },
+        {
+            "location": "/stable-coin/glossary/",
+            "text": "",
+            "title": "Glossary"
+        },
+        {
+            "location": "/stable-coin/algorithms/",
+            "text": "",
+            "title": "Stabilisation Algorithms"
+        },
+        {
+            "location": "/stable-coin/oracle/",
+            "text": "",
+            "title": "Oracle"
+        },
+        {
+            "location": "/advanced/block/",
+            "text": "Block\n\u00b6\n\n\nA block represents the atomic unit of a blockchain. The block in Kowala is the\ncollection of relevant pieces of information - block header - together with\ninformation corresponding to transactions and the consensus election - block body.\n\n\n\n\nWhy Blocks\n\u00b6\n\n\n\n\nBandwidth optimization: since every commit requires two rounds of communication across all validators, batching transactions in blocks amortizes the cost of a commit over all the transactions in the block.\n\n\nIntegrity optimization: the hash chain of blocks forms an immutable data structure, much like a Git repository, enabling authenticity checks for sub-states at any point in the history.\n\n\n\n\n\n\nBlock structure\n\u00b6\n\n\nBlock Header\n\u00b6\n\n\nNote that there are several hashes of the root nodes of trie structures in the block header. The purpose of this construction is to make the protocol light-client friendly in as many ways as possible - for more information on the topic, please check the third reference (Ethereum - Design Rationale).\n\n\n\n\n\n\nNumber - Number of ancestor blocks. The genesis block has a number of zero. The number is particularly important for the sync operations - we rely on it to know if synchronisations are necessary. The number assumes more relevance in proof-of-stake compared to proof-of-work because the last one relies on difficulty, which means that there isn\u2019t block finality and the blockchain can fork. (https://github.com/kowala-tech/kUSD/blob/master/kusd/sync.go#L165)\n\n\n\n\n\n\nParent Hash - is the hash of the previous block\u2019s header (\u201cparent block\u201d).\n\n\n\n\n\n\nCoinbase - account registered by the validator(proposer) who\u2019s responsible for the block creation.\n\n\n\n\n\n\nRoot - hash of the root node of the state trie, after all transactions are executed and finalisations applied. The root hash is especially important for the block validation. Example: As soon as non-validator nodes receive the block, they need to process the block, and the state root that results from the various state changes during the block processing must match the received root hash to make sure that we end up with the same state in the nodes across the network - https://github.com/kowala-tech/kUSD/blob/master/core/block_validator.go#L94.\n\n\n\n\n\n\nTxHash - hash of the root node of the trie structure populated with the transactions of the block. This hash allows an efficient and secure verification of the transactions that compose the block.\n\n\n\n\n\n\nReceiptHash - hash of the root node of the trie structure populated with the receipts of each transaction that compose the block.\n\n\n\n\n\n\nExtra - an arbitrary byte array containing data relevant to this block. In pratical terms this field has been used for example during Ethereum\u2019s dao hard fork to allow fast/light syncers to correctly pick the side they want and is also used in the clique consensus (currently not available in this codebase) to include a signature. Kowala is not using this field at the moment but it can be useful in the future.\n\n\n\n\n\n\nValidatorsHash - contains a hash of the current set of validators for the\n  block. Tracking changes in the validator set can be a time consuming task -\n  especially for a high number of validators - and with this hash we can compare\n  with previous summaries to see if there have been changes. The network contract\n  (smart contract) carries the current set of validators and also this hash.\n  This field is extremely important for the light clients, since the light client\n  needs to keep track of the validator set in order to verify block headers.\n\n\n\n\n\n\nTime - time at the block inception. Kowala is currently using this value to\n  synchronise the validators\u2019 start time for a new election round.\n\n\n\n\n\n\nBloom - the bloom filter(space-efficient probabilistic data structure) for\n  the logs of the block - allows anyone to efficiently search the blockchain for\n  certain transactions (or watch new blocks for certain transactions). Example:\n  User who wants to know every single transfer of some specific ERC20 token.\n  Checking the to address of all transactions ever as well as the data of that\n  transaction, to see if calls transfer on this contract would take forever!\n  Instead, because the ERC20 specification shoot of a log for every transfer, you\n  can just search the blockchain for these logs!\n\n\n\n\n\n\nPending Confirmation\n\n\n\n\nGasLimit - current limit of gas expenditure per block. This limit defines the\n  maximum amount of gas (computational effort) that all the trasactions included in\n  the block can consume. Its purpose is to keep block propagation and processing\n  time low. Note that this value in bitcoin is constant but it\u2019s variable in\n  Ethereum.\n\n\nGasUsed - total gas used in transactions in this block. The fact that the block\n  can handle a certain limit does not mean that we will have enough transactions\n  to fill the block.\n\n\n\n\nBlock Body\n\u00b6\n\n\nThe block body contains the set of transactions that were mined.\n\n\n\n\nBlock dessimination\n\u00b6\n\n\nIt was assumed that proposal messages include the block.\nHowever, since blocks emerge from a single source and can be quite large,\nthis puts undue pressure on the block proposer to upload the data to all\nother nodes; blocks can be disseminated much more quickly if they are split\ninto parts and gossiped.\n\n\nA common approach to securely gossiping data, as popularized by various\np2p protocols [21, 79], is to use a Merkle tree [65], allowing each piece of the\ndata to be accompanied by a short proof (logarithmic in the size of the\ndata) that the piece is a part of the whole. To use this approach, blocks\nare serialized and split into chunks of an appropriate size for the expected\nblock size and number of validators, and chunks are hashed into a Merkle\ntree. The signed proposal, instead of including the entire block, includes just\nthe Merkle root hash, allowing the network to co-operate in gossiping the\nchunks. A node informs its peers every time it receives a chunk, in order to\nminimize the bandwidth wasted by transmitting the same chunk to a node\nmore than once.\nOnce all the chunks are received, the block is deserialized and validated\nto ensure it refers correctly to the previous block, and that its various checksums,\nimplemented as Merkle trees, are correct. While it was previously\nassumed that a validator does not pre-vote until the proposal (including the\nblock) is received, some performance benefit may be obtained by allowing\nvalidators to pre-vote after receiving a proposal, but before receiving the full\nblock. This would imply that it is okay to pre-vote for what turns out to be\nan invalid block. However, pre-committing for an invalid block must always\n36\nbe considered Byzantine.\nPeers that are catching up (i.e. are on an earlier height) are sent chunks\nfor the height they are on, and progress one block at a time.",
+            "title": "Block"
+        },
+        {
+            "location": "/advanced/block/#block",
+            "text": "A block represents the atomic unit of a blockchain. The block in Kowala is the\ncollection of relevant pieces of information - block header - together with\ninformation corresponding to transactions and the consensus election - block body.",
+            "title": "Block"
+        },
+        {
+            "location": "/advanced/block/#why-blocks",
+            "text": "Bandwidth optimization: since every commit requires two rounds of communication across all validators, batching transactions in blocks amortizes the cost of a commit over all the transactions in the block.  Integrity optimization: the hash chain of blocks forms an immutable data structure, much like a Git repository, enabling authenticity checks for sub-states at any point in the history.",
+            "title": "Why Blocks"
+        },
+        {
+            "location": "/advanced/block/#block-structure",
+            "text": "",
+            "title": "Block structure"
+        },
+        {
+            "location": "/advanced/block/#block-header",
+            "text": "Note that there are several hashes of the root nodes of trie structures in the block header. The purpose of this construction is to make the protocol light-client friendly in as many ways as possible - for more information on the topic, please check the third reference (Ethereum - Design Rationale).    Number - Number of ancestor blocks. The genesis block has a number of zero. The number is particularly important for the sync operations - we rely on it to know if synchronisations are necessary. The number assumes more relevance in proof-of-stake compared to proof-of-work because the last one relies on difficulty, which means that there isn\u2019t block finality and the blockchain can fork. (https://github.com/kowala-tech/kUSD/blob/master/kusd/sync.go#L165)    Parent Hash - is the hash of the previous block\u2019s header (\u201cparent block\u201d).    Coinbase - account registered by the validator(proposer) who\u2019s responsible for the block creation.    Root - hash of the root node of the state trie, after all transactions are executed and finalisations applied. The root hash is especially important for the block validation. Example: As soon as non-validator nodes receive the block, they need to process the block, and the state root that results from the various state changes during the block processing must match the received root hash to make sure that we end up with the same state in the nodes across the network - https://github.com/kowala-tech/kUSD/blob/master/core/block_validator.go#L94.    TxHash - hash of the root node of the trie structure populated with the transactions of the block. This hash allows an efficient and secure verification of the transactions that compose the block.    ReceiptHash - hash of the root node of the trie structure populated with the receipts of each transaction that compose the block.    Extra - an arbitrary byte array containing data relevant to this block. In pratical terms this field has been used for example during Ethereum\u2019s dao hard fork to allow fast/light syncers to correctly pick the side they want and is also used in the clique consensus (currently not available in this codebase) to include a signature. Kowala is not using this field at the moment but it can be useful in the future.    ValidatorsHash - contains a hash of the current set of validators for the\n  block. Tracking changes in the validator set can be a time consuming task -\n  especially for a high number of validators - and with this hash we can compare\n  with previous summaries to see if there have been changes. The network contract\n  (smart contract) carries the current set of validators and also this hash.\n  This field is extremely important for the light clients, since the light client\n  needs to keep track of the validator set in order to verify block headers.    Time - time at the block inception. Kowala is currently using this value to\n  synchronise the validators\u2019 start time for a new election round.    Bloom - the bloom filter(space-efficient probabilistic data structure) for\n  the logs of the block - allows anyone to efficiently search the blockchain for\n  certain transactions (or watch new blocks for certain transactions). Example:\n  User who wants to know every single transfer of some specific ERC20 token.\n  Checking the to address of all transactions ever as well as the data of that\n  transaction, to see if calls transfer on this contract would take forever!\n  Instead, because the ERC20 specification shoot of a log for every transfer, you\n  can just search the blockchain for these logs!    Pending Confirmation   GasLimit - current limit of gas expenditure per block. This limit defines the\n  maximum amount of gas (computational effort) that all the trasactions included in\n  the block can consume. Its purpose is to keep block propagation and processing\n  time low. Note that this value in bitcoin is constant but it\u2019s variable in\n  Ethereum.  GasUsed - total gas used in transactions in this block. The fact that the block\n  can handle a certain limit does not mean that we will have enough transactions\n  to fill the block.",
+            "title": "Block Header"
+        },
+        {
+            "location": "/advanced/block/#block-body",
+            "text": "The block body contains the set of transactions that were mined.",
+            "title": "Block Body"
+        },
+        {
+            "location": "/advanced/block/#block-dessimination",
+            "text": "It was assumed that proposal messages include the block.\nHowever, since blocks emerge from a single source and can be quite large,\nthis puts undue pressure on the block proposer to upload the data to all\nother nodes; blocks can be disseminated much more quickly if they are split\ninto parts and gossiped.  A common approach to securely gossiping data, as popularized by various\np2p protocols [21, 79], is to use a Merkle tree [65], allowing each piece of the\ndata to be accompanied by a short proof (logarithmic in the size of the\ndata) that the piece is a part of the whole. To use this approach, blocks\nare serialized and split into chunks of an appropriate size for the expected\nblock size and number of validators, and chunks are hashed into a Merkle\ntree. The signed proposal, instead of including the entire block, includes just\nthe Merkle root hash, allowing the network to co-operate in gossiping the\nchunks. A node informs its peers every time it receives a chunk, in order to\nminimize the bandwidth wasted by transmitting the same chunk to a node\nmore than once.\nOnce all the chunks are received, the block is deserialized and validated\nto ensure it refers correctly to the previous block, and that its various checksums,\nimplemented as Merkle trees, are correct. While it was previously\nassumed that a validator does not pre-vote until the proposal (including the\nblock) is received, some performance benefit may be obtained by allowing\nvalidators to pre-vote after receiving a proposal, but before receiving the full\nblock. This would imply that it is okay to pre-vote for what turns out to be\nan invalid block. However, pre-committing for an invalid block must always\n36\nbe considered Byzantine.\nPeers that are catching up (i.e. are on an earlier height) are sent chunks\nfor the height they are on, and progress one block at a time.",
+            "title": "Block dessimination"
+        },
+        {
+            "location": "/contributing/",
+            "text": "",
+            "title": "Overview"
+        },
+        {
+            "location": "/contributing/projects/",
+            "text": "",
+            "title": "Projects"
+        },
+        {
+            "location": "/about/credits/",
+            "text": "",
+            "title": "Credits"
+        },
+        {
+            "location": "/about/license/",
+            "text": "",
+            "title": "License"
+        }
+    ]
+}
