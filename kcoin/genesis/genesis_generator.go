@@ -39,7 +39,9 @@ var (
 	}
 
 	ErrEmptyMaxNumValidators                        = errors.New("max number of validators is mandatory")
+	ErrInvalidMaxNumValidators                      = errors.New("invalid max num of validators")
 	ErrEmptyUnbondingPeriod                         = errors.New("unbonding period in days is mandatory")
+	ErrInvalidUnbondingPeriod                       = errors.New("unbonding period is invalid")
 	ErrEmptyWalletAddressValidator                  = errors.New("wallet address of genesis validator is mandatory")
 	ErrInvalidWalletAddressValidator                = errors.New("wallet address of genesis validator is invalid")
 	ErrEmptyPrefundedAccounts                       = errors.New("empty prefunded accounts, at least the validator wallet address should be included")
@@ -91,8 +93,8 @@ func GenerateGenesis(options GenesisOptions) (*core.Genesis, error) {
 		Timestamp: uint64(time.Now().Unix()),
 		GasLimit:  4700000,
 		Alloc:     make(core.GenesisAlloc),
-		Config:    &params.ChainConfig{
-			ChainID: getNetwork(validOptions.network),
+		Config: &params.ChainConfig{
+			ChainID:    getNetwork(validOptions.network),
 			Tendermint: getConsensusEngine(validOptions.consensusEngine),
 		},
 		ExtraData: getExtraData(options.ExtraData),
@@ -278,8 +280,7 @@ func mapMaxNumValidators(s string) (*big.Int, error) {
 
 	numValidators, ok := new(big.Int).SetString(s, 0)
 	if !ok {
-		//TODO: Create error
-		return nil, errors.New("invalid max num of validators.")
+		return nil, ErrInvalidMaxNumValidators
 	}
 
 	return numValidators, nil
@@ -293,17 +294,16 @@ func mapUnbondingPeriod(uP string) (*big.Int, error) {
 
 	unbondingPeriod, ok := new(big.Int).SetString(text, 0)
 	if !ok {
-		//TODO: Create error
-		return nil, errors.New("invalid max num of validators.")
+		return nil, ErrInvalidUnbondingPeriod
 	}
 
 	return unbondingPeriod, nil
 }
 
-func mapWalletAddress(wA string) (*common.Address, error) {
-	stringAddr := wA
+func mapWalletAddress(a string) (*common.Address, error) {
+	stringAddr := a
 
-	if text := strings.TrimSpace(wA); text == "" {
+	if text := strings.TrimSpace(a); text == "" {
 		return nil, ErrEmptyWalletAddressValidator
 	}
 
@@ -378,8 +378,6 @@ func createContract(cfg *runtime.Config, code []byte) (*contractData, error) {
 	}, nil
 }
 
-//TODO:This vmTracer is an exact copy of the one in pupphet, can be unified? Or maybe it is not even needed? Someone
-//with more knowledge on this part is welcome.
 type vmTracer struct {
 	data map[common.Address]map[common.Hash]common.Hash
 }
