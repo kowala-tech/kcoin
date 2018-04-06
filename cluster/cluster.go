@@ -85,7 +85,10 @@ func (client *cluster) DeletePod(podName string) error {
 
 func (client *cluster) createNamespace() error {
 	ns, err := client.Clientset.CoreV1().Namespaces().Get(Namespace, metav1.GetOptions{})
-	if ns.Name == Namespace {
+	if err != nil {
+		return err
+	}
+	if ns != nil {
 		return nil
 	}
 

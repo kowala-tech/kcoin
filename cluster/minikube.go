@@ -41,7 +41,7 @@ func (cluster *minikubeCluster) Create() error {
 		return fmt.Errorf("The cluster with this name already exists. Delete it first.")
 	}
 	log.Println("Creating k8s cluster using minikube")
-	cmd := exec.Command("minikube", "start", "-p", cluster.Name, "--kubernetes-version", "v1.9.0")
+	cmd := exec.Command("minikube", "start", "-p", cluster.Name)
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
