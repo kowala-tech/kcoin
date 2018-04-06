@@ -40,8 +40,8 @@ var (
 
 	ErrEmptyMaxNumValidators                        = errors.New("max number of validators is mandatory")
 	ErrEmptyUnbondingPeriod                         = errors.New("unbonding period in days is mandatory")
-	ErrEmptyWalletAddressValidator                  = errors.New("Wallet address of genesis validator is mandatory")
-	ErrInvalidWalletAddressValidator                = errors.New("Wallet address of genesis validator is invalid")
+	ErrEmptyWalletAddressValidator                  = errors.New("wallet address of genesis validator is mandatory")
+	ErrInvalidWalletAddressValidator                = errors.New("wallet address of genesis validator is invalid")
 	ErrEmptyPrefundedAccounts                       = errors.New("empty prefunded accounts, at least the validator wallet address should be included")
 	ErrWalletAddressValidatorNotInPrefundedAccounts = errors.New("prefunded accounts should include genesis validator account")
 	ErrInvalidAddressInPrefundedAccounts            = errors.New("address in prefunded accounts is invalid")
