@@ -16,13 +16,13 @@ type VotingTable interface {
 
 type votingTable struct {
 	voteType types.VoteType
-	voters   types.ValidatorList
+	voters   types.Voters
 	votes    types.Votes
 	quorum   QuorumFunc
 	majority QuorumReachedFunc
 }
 
-func NewVotingTable(voteType types.VoteType, voters types.ValidatorList, majority QuorumReachedFunc) *votingTable {
+func NewVotingTable(voteType types.VoteType, voters types.Voters, majority QuorumReachedFunc) *votingTable {
 	return &votingTable{
 		voteType: voteType,
 		voters:   voters,

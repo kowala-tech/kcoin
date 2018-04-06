@@ -166,6 +166,11 @@ func logfmt(buf *bytes.Buffer, ctx []interface{}, color int, term bool) {
 		k, ok := ctx[i].(string)
 		v := formatLogfmtValue(ctx[i+1], term)
 		if !ok {
+			//  ignore empty errors
+			if k == "" {
+				buf.WriteByte('\n')
+				return
+			}
 			k, v = errorKey, formatLogfmtValue(k, term)
 		}
 
@@ -223,6 +228,10 @@ func JsonFormatEx(pretty, lineSeparated bool) Format {
 		for i := 0; i < len(r.Ctx); i += 2 {
 			k, ok := r.Ctx[i].(string)
 			if !ok {
+				//  ignore empty errors
+				if k == "" {
+					return []byte{'\n'}
+				}
 				props[errorKey] = fmt.Sprintf("%+v is not a string key", r.Ctx[i])
 			}
 			props[k] = formatJsonValue(r.Ctx[i+1])
@@ -355,7 +364,7 @@ func escapeString(s string) string {
 	if needsQuotes {
 		ret = e.String()
 	} else {
-		ret = string(e.Bytes()[1 : e.Len()-1])
+		ret = string(e.Bytes()[1: e.Len()-1])
 	}
 	e.Reset()
 	stringBufPool.Put(e)
