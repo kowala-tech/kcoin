@@ -28,7 +28,7 @@ type Election interface {
 	Leave(walletAccount accounts.WalletAccount) error
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
 	ValidatorsChecksum() (ValidatorsChecksum, error)
-	Validators() (types.ValidatorList, error)
+	Validators() (types.Voters, error)
 	Deposits(address common.Address) ([]*types.Deposit, error)
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
@@ -83,13 +83,13 @@ func (election *election) ValidatorsChecksum() (ValidatorsChecksum, error) {
 	return election.ElectionContract.ValidatorsChecksum(&bind.CallOpts{})
 }
 
-func (election *election) Validators() (types.ValidatorList, error) {
+func (election *election) Validators() (types.Voters, error) {
 	count, err := election.GetValidatorCount(&bind.CallOpts{})
 	if err != nil {
 		return nil, err
 	}
 
-	validators := make([]*types.Validator, count.Uint64())
+	voters := make([]*types.Voter, count.Uint64())
 	for i := int64(0); i < count.Int64(); i++ {
 		validator, err := election.GetValidatorAtIndex(&bind.CallOpts{}, big.NewInt(i))
 		if err != nil {
@@ -97,10 +97,10 @@ func (election *election) Validators() (types.ValidatorList, error) {
 		}
 
 		weight := big.NewInt(0)
-		validators[i] = types.NewValidator(validator.Code, validator.Deposit.Uint64(), weight)
+		voters[i] = types.NewVoter(validator.Code, validator.Deposit.Uint64(), weight)
 	}
 
-	return types.NewValidatorList(validators)
+	return types.NewVoters(voters)
 }
 
 func (election *election) Deposits(addr common.Address) ([]*types.Deposit, error) {
