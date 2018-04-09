@@ -128,7 +128,7 @@ var (
 		"./consensus",
 		"./consensus/tendermint",
 		"./contracts/network",
-		"./kcoin/validator",
+		"./kcoin/...",
 		"./accounts",
 		"./core/types",
 		"./params",

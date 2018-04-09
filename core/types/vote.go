@@ -33,7 +33,7 @@ type SignedVote interface {
 	Vote() *Vote
 }
 
-func NewSignedVote(signer Signer, vote *Vote) (*signedVote, error) {
+func NewAddressVote(signer Signer, vote *Vote) (*signedVote, error) {
 	address, err := VoteSender(signer, vote)
 	if err != nil {
 		return nil, err

@@ -284,10 +284,16 @@ func (val *validator) AddVote(vote *types.Vote) error {
 		return ErrCantVoteNotValidating
 	}
 
-	if err := val.votingSystem.Add(vote); err != nil {
+	signedVote, err := types.NewSignedVote(val.signer, vote)
+	if err != nil {
+		return err
+	}
+
+	if err := val.votingSystem.Add(signedVote); err != nil {
 		switch err {
 		}
 	}
+
 	return nil
 }
 
@@ -543,6 +549,11 @@ func (val *validator) vote(vote *types.Vote) {
 	signedVote, err := val.walletAccount.SignVote(val.walletAccount.Account(), vote, val.config.ChainID)
 	if err != nil {
 		log.Crit("Failed to sign the vote", "err", err)
+	}
+
+	signedVote, err := types.NewSignedVote(val.signer, vote)
+	if err != nil {
+		return err
 	}
 
 	err = val.votingSystem.Add(signedVote)

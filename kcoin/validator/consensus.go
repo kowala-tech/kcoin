@@ -7,6 +7,7 @@ import (
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/event"
+	"github.com/farepilot/services/errors"
 )
 
 // VotingState encapsulates the consensus state for a specific block election
@@ -62,7 +63,6 @@ type VotingSystem struct {
 }
 
 // NewVotingSystem returns a new voting system
-// @TODO (rgeraldes) - in the future replace eventMux with a subscription method
 func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters types.Voters) *VotingSystem {
 	system := &VotingSystem{
 		voters:         voters,
@@ -83,30 +83,27 @@ func (vs *VotingSystem) NewRound() {
 }
 
 // Add registers a vote
-func (vs *VotingSystem) Add(vote *types.Vote) error {
-	votingTable := vs.getVoteSet(vote.Round(), vote.Type())
-
-	signedVote, err := types.NewSignedVote(vs.signer, vote)
+func (vs *VotingSystem) Add(vote types.SignedVote) error {
+	votingTable, err := vs.getVoteSet(vote.Vote().Round(), vote.Vote().Type())
 	if err != nil {
 		return err
 	}
 
-	err = votingTable.Add(signedVote)
+	err = votingTable.Add(vote)
 	if err != nil {
 		return err
 	}
 
-	go vs.eventMux.Post(core.NewVoteEvent{Vote: vote})
+	go vs.eventMux.Post(core.NewVoteEvent{Vote: vote.Vote()})
 
 	return nil
 }
 
-func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) core.VotingTable {
+func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) (core.VotingTable, error) {
 	votingTables, ok := vs.votesPerRound[round]
 	if !ok {
-		// @TODO (rgeraldes) - critical
-		return nil
+		return nil, errors.New("voting table for round doesnt exists")
 	}
 
-	return votingTables[int(voteType)]
+	return votingTables[int(voteType)], nil
 }
