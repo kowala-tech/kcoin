@@ -9,7 +9,11 @@ import (
 	"io/ioutil"
 	"math/big"
 	"testing"
+	"flag"
+	"path/filepath"
 )
+
+var update = flag.Bool("update", false, "update .golden files")
 
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 	baseValidCommand := GenesisOptions{
@@ -129,19 +133,13 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.TestName, func(t *testing.T) {
 			_, err := GenerateGenesis(test.InvalidCommandFromValid(baseValidCommand))
-			if err != test.ExpectedError {
-				t.Fatalf(
-					"Invalid options did not return error. Expected error: %s, received error: %s",
-					test.ExpectedError.Error(),
-					err.Error(),
-				)
-			}
+			assert.EqualError(t, test.ExpectedError, err.Error())
 		})
 	}
 }
 
 func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
-	cmd := GenesisOptions{
+	opt := GenesisOptions{
 		Network:                       "test",
 		MaxNumValidators:              "5",
 		UnbondingPeriod:               "5",
@@ -154,23 +152,30 @@ func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
 		},
 	}
 
-	generatedGenesis, err := GenerateGenesis(cmd)
+	generatedGenesis, err := GenerateGenesis(opt)
 
-	if err != nil {
-		t.Fatalf("Error: %s", err.Error())
+	assert.NoError(t, err)
+
+	fileName := filepath.Join("testfiles", "testnet_default.json")
+	if *update {
+		t.Log("update golden file")
+
+		out, err := json.MarshalIndent(generatedGenesis, "", "  ")
+		if err != nil {
+			t.Fatal("Error marshaling generated genesis to create golden file.")
+		}
+
+		if err := ioutil.WriteFile(fileName, out, 0644); err != nil {
+			t.Fatal("Error saving golden file.")
+		}
 	}
 
-	fileName := "testfiles/testnet_default.json"
 	contents, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		t.Fatalf("Failed to read file %s", fileName)
-	}
+	assert.NoError(t, err)
 
 	var expectedGenesis = new(core.Genesis)
 	err = json.Unmarshal(contents, expectedGenesis)
-	if err != nil {
-		t.Fatalf("Error unmarshalling json genesis with error: %s", err.Error())
-	}
+	assert.NoError(t, err)
 
 	assertEqualGenesis(t, expectedGenesis, generatedGenesis)
 }
@@ -249,7 +254,7 @@ func TestOptionalValues(t *testing.T) {
 	})
 }
 
-func TestItFailsWithAnInvalidNetwork(t *testing.T) {
+func TestMapNetwork(t *testing.T) {
 	tests := []struct {
 		testName string
 		network  string
@@ -274,7 +279,7 @@ func TestItFailsWithAnInvalidNetwork(t *testing.T) {
 	}
 }
 
-func TestItFailsWithInvalidConsensusEngine(t *testing.T) {
+func TestMapConsensusEngine(t *testing.T) {
 	tests := []struct {
 		testName  string
 		consensus string
