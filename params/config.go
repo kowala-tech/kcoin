@@ -36,6 +36,7 @@ var (
 	// fields.
 	// @TODO(rgeraldes) - review AllProtocolChanges, TestChainConfig
 	AllProtocolChanges = &ChainConfig{big.NewInt(1337), new(TendermintConfig)}
+
 	TestChainConfig    = &ChainConfig{big.NewInt(1), new(TendermintConfig)}
 	TestRules          = TestChainConfig.Rules(new(big.Int))
 )
