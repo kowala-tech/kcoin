@@ -12,7 +12,7 @@ import (
 
 func TestNetwork_Lookup(t *testing.T) {
 	key, _ := crypto.GenerateKey()
-	network, err := newNetwork(lookupTestnet, key.PublicKey, nil, "", nil)
+	network, err := newNetwork(lookupTestnet, key.PublicKey, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
