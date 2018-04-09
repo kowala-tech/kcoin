@@ -3,6 +3,9 @@ package cluster
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
+	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +38,21 @@ func (client *cluster) TriggerGenesisValidation() error {
 	_, err := client.Exec(
 		genesisValidatorPodName,
 		`eth.sendTransaction({from:eth.coinbase,to: "0x259be75d96876f2ada3d202722523e9cd4dd917d",value: 1})`)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return WaitFor(2*time.Second, 20*time.Second, func() bool {
+		res, err := client.Exec(genesisValidatorPodName, `eth.blockNumber`)
+		if err != nil {
+			return false
+		}
+		parsed, err := strconv.Atoi(strings.TrimSpace(res.StdOut))
+		if err != nil {
+			return false
+		}
+		return parsed > 0
+	})
 }
 
 func genesisValidatorPod(podName, networkID, pub_key, bootnode string, port int32) *apiv1.Pod {

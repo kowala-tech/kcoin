@@ -1,6 +1,7 @@
 package features
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/DATA-DOG/godog/gherkin"
 	"github.com/kowala-tech/kcoin/cluster"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 type AccountEntry struct {
@@ -46,7 +48,7 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 	return accounts, nil
 }
 
-func (context *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
+func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
 	accounts, err := parseAccountsDataTable(accountsDataTable)
 	if err != nil {
 		return err
@@ -54,21 +56,21 @@ func (context *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.Dat
 
 	// Create an archive node for each account and send them funds
 	for _, account := range accounts {
-		nodeName, err := context.cluster.RunArchiveNode()
+		nodeName, err := ctx.cluster.RunArchiveNode()
 		if err != nil {
 			return err
 		}
 
-		res, err := context.cluster.Exec(nodeName, `eth.coinbase`)
+		res, err := ctx.cluster.Exec(nodeName, `eth.coinbase`)
 		if err != nil {
 			return err
 		}
 		coinbaseQuotes := res.StdOut
 
-		context.accountsNodeNames[account.AccountName] = nodeName
-		context.accountsCoinbase[account.AccountName] = strings.TrimSpace(strings.Replace(coinbaseQuotes, `"`, "", 2))
+		ctx.accountsNodeNames[account.AccountName] = nodeName
+		ctx.accountsCoinbase[account.AccountName] = strings.TrimSpace(strings.Replace(coinbaseQuotes, `"`, "", 2))
 
-		res, err = context.cluster.Exec(context.genesisValidatorName,
+		res, err = ctx.cluster.Exec(ctx.genesisValidatorName,
 			fmt.Sprintf(
 				`eth.sendTransaction({
 				from:eth.coinbase,
@@ -82,7 +84,8 @@ func (context *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.Dat
 	// Wait for funds to be available
 	for _, account := range accounts {
 		err = cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-			balance, err := context.cluster.GetBalance(context.accountsNodeNames[account.AccountName])
+			acct := common.HexToAddress(ctx.accountsCoinbase[account.AccountName])
+			balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
 			if err != nil {
 				return false
 			}
@@ -97,9 +100,10 @@ func (context *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.Dat
 	return nil
 }
 
-func (context *Context) TheBalanceIsExactly(account string, kcoin int64) error {
+func (ctx *Context) TheBalanceIsExactly(account string, kcoin int64) error {
 	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-		balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
+		acct := common.HexToAddress(ctx.accountsCoinbase[account])
+		balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
 		if err != nil {
 			return false
 		}
@@ -109,9 +113,10 @@ func (context *Context) TheBalanceIsExactly(account string, kcoin int64) error {
 	return err
 }
 
-func (context *Context) TheBalanceIsAround(account string, kcoin int64) error {
+func (ctx *Context) TheBalanceIsAround(account string, kcoin int64) error {
 	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-		balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
+		acct := common.HexToAddress(ctx.accountsCoinbase[account])
+		balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
 		if err != nil {
 			return false
 		}

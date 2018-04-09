@@ -67,6 +67,11 @@ func (cluster *kopsCluster) DockerEnv() ([]string, error) {
 	return []string{}, nil
 }
 
+// ServiceAddr returns the ip:port pair for a specific service running in the cluster
+func (cluster *kopsCluster) ServiceAddr(serviceName string) (string, error) {
+	return "", nil
+}
+
 func (cluster *kopsCluster) createCluster() error {
 	log.Println("Creating k8s cluster using kops")
 	cmd := exec.Command("kops", "create", "cluster", "--name", cluster.Name, "--yes", "--state", "s3://"+cluster.s3Bucket, "--zones", "us-east-2b")

@@ -98,6 +98,22 @@ func (cluster *minikubeCluster) DockerEnv() ([]string, error) {
 	return goodLines, nil
 }
 
+// ServiceAddr returns the ip:port pair for a specific service running in the cluster
+func (cluster *minikubeCluster) ServiceAddr(serviceName string) (string, error) {
+	statusCmd := exec.Command("minikube", "service", serviceName, "-p", cluster.Name, "-n", Namespace, "--url", "--format", "http://{{.IP}}:{{.Port}}")
+	stdout := &bytes.Buffer{}
+	statusCmd.Stdout = stdout
+	statusCmd.Stderr = os.Stderr
+	if err := statusCmd.Run(); err != nil {
+		return "", err
+	}
+	if !statusCmd.ProcessState.Success() {
+		return "", fmt.Errorf("error getting cluster IP")
+	}
+	url := strings.TrimSpace(stdout.String())
+	return url[7:], nil
+}
+
 func (cluster *minikubeCluster) assertReady() error {
 	log.Print("Checking minikube dependencies...")
 	// Make sure we have all required binaries installed

@@ -48,8 +48,33 @@ func (client *cluster) Cleanup() error {
 	if err != nil {
 		return err
 	}
-	return WaitFor(1*time.Second, 20*time.Second, func() bool {
+	err = WaitFor(1*time.Second, 20*time.Second, func() bool {
 		list, err := client.Clientset.CoreV1().Pods(Namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return false
+		}
+		return len(list.Items) == 0
+	})
+	if err != nil {
+		return err
+	}
+
+	// Services can't be deleted as a collection...
+	list, err := client.Clientset.CoreV1().Services(Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, service := range list.Items {
+		err = client.Clientset.CoreV1().Services(Namespace).Delete(service.Name, &metav1.DeleteOptions{
+			GracePeriodSeconds: &zero,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return WaitFor(1*time.Second, 20*time.Second, func() bool {
+		list, err := client.Clientset.CoreV1().Services(Namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return false
 		}
