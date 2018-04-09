@@ -53,16 +53,7 @@ func NewElection(contractBackend bind.ContractBackend, chainID *big.Int) (*elect
 }
 
 func (election *election) Join(walletAccount accounts.WalletAccount, amount uint64) error {
-	minDeposit, err := election.MinimumDeposit()
-	if err != nil {
-		return err
-	}
-
-	if amount < minDeposit {
-		return fmt.Errorf("current deposit - %d - is not enough. The minimum required is %d", amount, minDeposit)
-	}
-
-	_, err = election.ElectionContract.Join(election.transactDepositOpts(walletAccount, amount))
+	_, err := election.ElectionContract.Join(election.transactDepositOpts(walletAccount, amount))
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
 	}
