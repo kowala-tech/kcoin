@@ -1,4 +1,4 @@
-package kowala
+package tests
 
 import (
 	"time"

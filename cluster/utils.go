@@ -2,6 +2,8 @@ package cluster
 
 import "encoding/hex"
 
+const rootPath = ".."
+
 func randStringBytes(n int) string {
 	b := make([]byte, n/2)
 
