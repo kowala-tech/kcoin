@@ -77,7 +77,7 @@ func (cluster *minikubeCluster) Delete() error {
 
 // DockerEnv returns the environment variables necessary to connect to the private docker repository in the kubernetes cluster
 func (cluster *minikubeCluster) DockerEnv() ([]string, error) {
-	statusCmd := exec.Command("minikube", "docker-env", "-p", cluster.Name)
+	statusCmd := exec.Command("minikube", "docker-env", "-p", cluster.Name, "--shell", "bash")
 	stdout := &bytes.Buffer{}
 	statusCmd.Stdout = stdout
 	if err := statusCmd.Run(); err != nil {
