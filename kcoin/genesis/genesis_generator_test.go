@@ -2,15 +2,15 @@ package genesis
 
 import (
 	"encoding/json"
+	"flag"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
-	"testing"
-	"flag"
 	"path/filepath"
+	"testing"
 )
 
 var update = flag.Bool("update", false, "update .golden files")
