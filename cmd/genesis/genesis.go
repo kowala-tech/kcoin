@@ -92,42 +92,56 @@ func main() {
 }
 
 func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
-	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
+	var prefundedAccounts []genesis.PrefundedAccount
 
 	switch accounts.(type) {
-	// Accounts come from config file.
 	case []interface{}:
-		accountArray := accounts.([]interface{})
-		for _, v := range accountArray {
-			val := v.(map[string]interface{})
-
-			prefundedAccount := genesis.PrefundedAccount{
-				WalletAddress: val["walletAddress"].(string),
-				Balance:       val["balance"].(string),
-			}
-
-			prefundedAccounts = append(prefundedAccounts, prefundedAccount)
-		}
-	// Accounts come from command line param.
+		prefundedAccounts = prefundAccountsFromConfigFile(accounts)
 	case string:
-		accountsString := accounts.(string)
-		if accountsString == "" {
-			break
+		prefundedAccounts = prefundAccountsFromCommandLine(accounts)
+	}
+
+	return prefundedAccounts
+}
+
+func prefundAccountsFromCommandLine(accounts interface{}) []genesis.PrefundedAccount {
+	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
+
+	accountsString := accounts.(string)
+	if accountsString == "" {
+		return nil
+	}
+
+	a := strings.Split(accountsString, ",")
+	for _, v := range a {
+		values := strings.Split(v, ":")
+		balance := values[1]
+
+		prefundedAccount := genesis.PrefundedAccount{
+			WalletAddress: values[0],
+			Balance:       balance,
 		}
 
-		a := strings.Split(accountsString, ",")
+		prefundedAccounts = append(prefundedAccounts, prefundedAccount)
+	}
 
-		for _, v := range a {
-			values := strings.Split(v, ":")
-			balance := values[1]
+	return prefundedAccounts
+}
 
-			prefundedAccount := genesis.PrefundedAccount{
-				WalletAddress: values[0],
-				Balance:       balance,
-			}
+func prefundAccountsFromConfigFile(accounts interface{}) []genesis.PrefundedAccount {
+	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
 
-			prefundedAccounts = append(prefundedAccounts, prefundedAccount)
+	accountArray := accounts.([]interface{})
+
+	for _, v := range accountArray {
+		val := v.(map[string]interface{})
+
+		prefundedAccount := genesis.PrefundedAccount{
+			WalletAddress: val["walletAddress"].(string),
+			Balance:       val["balance"].(string),
 		}
+
+		prefundedAccounts = append(prefundedAccounts, prefundedAccount)
 	}
 
 	return prefundedAccounts
