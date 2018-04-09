@@ -1,6 +1,4 @@
-// @flow
-
-// Copyright 2017 The go-ethereum Authors
+// Copyright 2018 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -16,26 +14,22 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-import React from 'react';
-import {render} from 'react-dom';
+// +build !windows
 
-import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
-import createMuiTheme from 'material-ui/styles/createMuiTheme';
+package dashboard
 
-import Dashboard from './components/Dashboard';
+import (
+	"syscall"
 
-const theme: Object = createMuiTheme({
-	palette: {
-		type: 'dark',
-	},
-});
-const dashboard = document.getElementById('dashboard');
-if (dashboard) {
-	// Renders the whole dashboard.
-	render(
-		<MuiThemeProvider theme={theme}>
-			<Dashboard />
-		</MuiThemeProvider>,
-		dashboard,
-	);
+	"github.com/ethereum/go-ethereum/log"
+)
+
+// getProcessCPUTime retrieves the process' CPU time since program startup.
+func getProcessCPUTime() float64 {
+	var usage syscall.Rusage
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &usage); err != nil {
+		log.Warn("Failed to retrieve CPU time", "err", err)
+		return 0
+	}
+	return float64(usage.Utime.Sec+usage.Stime.Sec) + float64(usage.Utime.Usec+usage.Stime.Usec)/1000000
 }

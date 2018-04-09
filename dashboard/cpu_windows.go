@@ -1,6 +1,4 @@
-// @flow
-
-// Copyright 2017 The go-ethereum Authors
+// Copyright 2018 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -16,26 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-import React from 'react';
-import {render} from 'react-dom';
+package dashboard
 
-import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
-import createMuiTheme from 'material-ui/styles/createMuiTheme';
-
-import Dashboard from './components/Dashboard';
-
-const theme: Object = createMuiTheme({
-	palette: {
-		type: 'dark',
-	},
-});
-const dashboard = document.getElementById('dashboard');
-if (dashboard) {
-	// Renders the whole dashboard.
-	render(
-		<MuiThemeProvider theme={theme}>
-			<Dashboard />
-		</MuiThemeProvider>,
-		dashboard,
-	);
+// getProcessCPUTime returns 0 on Windows as there is no system call to resolve
+// the actual process' CPU time.
+func getProcessCPUTime() float64 {
+	return 0
 }
