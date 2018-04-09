@@ -35,9 +35,12 @@ func (client *cluster) RunGenesisValidator() (string, error) {
 // TriggerGenesisValidation sends a transaction for the genesis validator to start.
 func (client *cluster) TriggerGenesisValidation() error {
 	log.Println("Triggering genesis validation")
-	_, err := client.Exec(
+	res, err := client.Exec(
 		genesisValidatorPodName,
-		`eth.sendTransaction({from:eth.coinbase,to: "0x259be75d96876f2ada3d202722523e9cd4dd917d",value: 1})`)
+		`
+			personal.unlockAccount(eth.coinbase, "test");
+			eth.sendTransaction({from:eth.coinbase,to: "0x259be75d96876f2ada3d202722523e9cd4dd917d",value: 1})
+		`)
 	if err != nil {
 		return err
 	}
