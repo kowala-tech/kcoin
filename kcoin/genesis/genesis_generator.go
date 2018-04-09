@@ -65,7 +65,7 @@ type GenesisOptions struct {
 
 type PrefundedAccount struct {
 	WalletAddress string
-	Balance       int64
+	Balance       string
 }
 
 type validPrefundedAccount struct {
@@ -334,7 +334,7 @@ func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount
 			return nil, ErrInvalidAddressInPrefundedAccounts
 		}
 
-		balance := big.NewInt(a.Balance)
+		balance, _ := new(big.Int).SetString(a.Balance, 0)
 
 		validAccount := &validPrefundedAccount{
 			walletAddress: address,

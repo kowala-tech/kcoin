@@ -1,19 +1,19 @@
 [genesis]
 network = "test" # Only supported test and main
-maxNumValidators = "1"
-unbondingPeriod = "1"
-walletAddressGenesisValidator = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
+maxNumValidators = "100"
+unbondingPeriod = "0"
+walletAddressGenesisValidator = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
 
 # Optional values
 consensusEngine = "tendermint" # Only supported tendermint by the moment
-smartContractsOwner = "0x1234ed356e7bc4f7a8fc48cc19c958f4e640ac62"
+smartContractsOwner = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
 extraData = "extraData"
 fileName = "genesis.json" # The path of the filename.
 
 [[prefundedAccounts]]
-walletAddress = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
-balance = 15
+walletAddress = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
+balance = "0x200000000000000000000000000000000000000000000000000000000000000"
 
 [[prefundedAccounts]]
-walletAddress = "0x1234ed356e7bc4f7a8fc48cc19c958f4e640ac62"
-balance = 15
+walletAddress = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
+balance = "1000000000000000000"

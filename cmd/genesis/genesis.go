@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -104,7 +103,7 @@ func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
 
 			prefundedAccount := genesis.PrefundedAccount{
 				WalletAddress: val["walletAddress"].(string),
-				Balance:       val["balance"].(int64),
+				Balance:       val["balance"].(string),
 			}
 
 			prefundedAccounts = append(prefundedAccounts, prefundedAccount)
@@ -120,14 +119,11 @@ func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
 
 		for _, v := range a {
 			values := strings.Split(v, ":")
-			balance, err := strconv.Atoi(values[1])
-			if err != nil {
-				balance = 0
-			}
+			balance := values[1]
 
 			prefundedAccount := genesis.PrefundedAccount{
 				WalletAddress: values[0],
-				Balance:       int64(balance),
+				Balance:       balance,
 			}
 
 			prefundedAccounts = append(prefundedAccounts, prefundedAccount)
