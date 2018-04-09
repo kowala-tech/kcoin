@@ -4,10 +4,10 @@ import (
 	"math/big"
 	"time"
 
+	"errors"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/farepilot/services/errors"
 )
 
 // VotingState encapsulates the consensus state for a specific block election
@@ -46,8 +46,8 @@ func NewVotingTables(eventMux *event.TypeMux, voters types.Voters) VotingTables 
 		go eventMux.Post(core.NewMajorityEvent{})
 	}
 	tables := VotingTables{}
-	tables[0] = core.NewVotingTable(types.PreVote, voters, majorityFunc)
-	tables[1] = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
+	tables[0], _ = core.NewVotingTable(types.PreVote, voters, majorityFunc)
+	tables[1], _ = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
 	return tables
 }
 
@@ -57,20 +57,18 @@ type VotingSystem struct {
 	electionNumber *big.Int // election number
 	round          uint64
 	votesPerRound  map[uint64]VotingTables
-	signer         types.Signer
 
 	eventMux *event.TypeMux
 }
 
 // NewVotingSystem returns a new voting system
-func NewVotingSystem(eventMux *event.TypeMux, signer types.Signer, electionNumber *big.Int, voters types.Voters) *VotingSystem {
+func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters types.Voters) *VotingSystem {
 	system := &VotingSystem{
 		voters:         voters,
 		electionNumber: electionNumber,
 		round:          0,
 		votesPerRound:  make(map[uint64]VotingTables),
 		eventMux:       eventMux,
-		signer:         signer,
 	}
 
 	system.NewRound()
@@ -83,7 +81,7 @@ func (vs *VotingSystem) NewRound() {
 }
 
 // Add registers a vote
-func (vs *VotingSystem) Add(vote types.SignedVote) error {
+func (vs *VotingSystem) Add(vote types.AddressVote) error {
 	votingTable, err := vs.getVoteSet(vote.Vote().Round(), vote.Vote().Type())
 	if err != nil {
 		return err
@@ -103,6 +101,10 @@ func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) (core.
 	votingTables, ok := vs.votesPerRound[round]
 	if !ok {
 		return nil, errors.New("voting table for round doesnt exists")
+	}
+
+	if uint64(voteType) > uint64(len(votingTables)-1) {
+		return nil, errors.New("invalid voteType on add vote ")
 	}
 
 	return votingTables[int(voteType)], nil
