@@ -130,6 +130,7 @@ var (
 		"./contracts/network",
 		"./kcoin/validator",
 		"./accounts",
+		"./core/types",
 		"./params",
 		"./cluster",
 		"./tests/features",
