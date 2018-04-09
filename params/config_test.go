@@ -1,8 +1,11 @@
 package params
 
-// @TODO (rgeraldes) - review
+import (
+	"math/big"
+	"reflect"
+	"testing"
+)
 
-/*
 func TestCheckCompatible(t *testing.T) {
 	type test struct {
 		stored, new *ChainConfig
@@ -10,45 +13,19 @@ func TestCheckCompatible(t *testing.T) {
 		wantErr     *ConfigCompatError
 	}
 	tests := []test{
-		{stored: AllProtocolChanges, new: AllProtocolChanges, head: 0, wantErr: nil},
-		{stored: AllProtocolChanges, new: AllProtocolChanges, head: 100, wantErr: nil},
 		{
-			stored:  &ChainConfig{EIP150Block: big.NewInt(10)},
-			new:     &ChainConfig{EIP150Block: big.NewInt(20)},
-			head:    9,
+			stored:  AllTendermintProtocolChanges,
+			new:     AllTendermintProtocolChanges,
 			wantErr: nil,
 		},
 		{
-			stored: AllProtocolChanges,
-			new:    &ChainConfig{HomesteadBlock: nil},
-			head:   3,
+			stored: AllTendermintProtocolChanges,
+			new:    MainnetChainConfig,
 			wantErr: &ConfigCompatError{
-				What:         "Homestead fork block",
-				StoredConfig: big.NewInt(0),
-				NewConfig:    nil,
-				RewindTo:     0,
-			},
-		},
-		{
-			stored: AllProtocolChanges,
-			new:    &ChainConfig{HomesteadBlock: big.NewInt(1)},
-			head:   3,
-			wantErr: &ConfigCompatError{
-				What:         "Homestead fork block",
-				StoredConfig: big.NewInt(0),
+				What:         "Chain ID",
+				StoredConfig: big.NewInt(1337),
 				NewConfig:    big.NewInt(1),
 				RewindTo:     0,
-			},
-		},
-		{
-			stored: &ChainConfig{HomesteadBlock: big.NewInt(30), EIP150Block: big.NewInt(10)},
-			new:    &ChainConfig{HomesteadBlock: big.NewInt(25), EIP150Block: big.NewInt(20)},
-			head:   25,
-			wantErr: &ConfigCompatError{
-				What:         "EIP150 fork block",
-				StoredConfig: big.NewInt(10),
-				NewConfig:    big.NewInt(20),
-				RewindTo:     9,
 			},
 		},
 	}
@@ -60,5 +37,3 @@ func TestCheckCompatible(t *testing.T) {
 		}
 	}
 }
-
-*/

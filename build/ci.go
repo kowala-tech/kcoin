@@ -132,6 +132,7 @@ var (
 		"./kcoin/genesis",
 		"./accounts",
 		"./core/types",
+		"./params",
 		"./cluster",
 		"./tests/features",
 	}

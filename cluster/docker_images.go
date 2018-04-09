@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"sync"
 	"time"
 )
@@ -58,7 +59,7 @@ func (builder *DockerBuilder) Wait() []error {
 }
 
 func (builder *DockerBuilder) build(tag, dockerfile string) error {
-	cmd := exec.Command("docker", "build", "-t", tag, "-f", dockerfile, ".")
+	cmd := exec.Command("docker", "build", "-t", tag, "-f", path.Join(rootPath, dockerfile), rootPath)
 
 	env := os.Environ()
 	for _, e := range builder.env {
