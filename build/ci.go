@@ -131,6 +131,7 @@ var (
 		"./kcoin/validator",
 		"./accounts",
 		"./core/types",
+		"./params",
 		"./cluster",
 		"./tests/features",
 	}
