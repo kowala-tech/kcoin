@@ -85,3 +85,44 @@ func set(dst, src reflect.Value, output Argument) error {
 	}
 	return nil
 }
+
+// requireAssignable assures that `dest` is a pointer and it's not an interface.
+func requireAssignable(dst, src reflect.Value) error {
+	if dst.Kind() != reflect.Ptr && dst.Kind() != reflect.Interface {
+		return fmt.Errorf("abi: cannot unmarshal %v into %v", src.Type(), dst.Type())
+	}
+	return nil
+}
+
+// requireUnpackKind verifies preconditions for unpacking `args` into `kind`
+func requireUnpackKind(v reflect.Value, t reflect.Type, k reflect.Kind,
+	args Arguments) error {
+
+	switch k {
+	case reflect.Struct:
+	case reflect.Slice, reflect.Array:
+		if minLen := args.LengthNonIndexed(); v.Len() < minLen {
+			return fmt.Errorf("abi: insufficient number of elements in the list/array for unpack, want %d, got %d",
+				minLen, v.Len())
+		}
+	default:
+		return fmt.Errorf("abi: cannot unmarshal tuple into %v", t)
+	}
+	return nil
+}
+
+// requireUniqueStructFieldNames makes sure field names don't collide
+func requireUniqueStructFieldNames(args Arguments) error {
+	exists := make(map[string]bool)
+	for _, arg := range args {
+		field := capitalise(arg.Name)
+		if field == "" {
+			return fmt.Errorf("abi: purely underscored output cannot unpack to struct")
+		}
+		if exists[field] {
+			return fmt.Errorf("abi: multiple outputs mapping to the same struct field '%s'", field)
+		}
+		exists[field] = true
+	}
+	return nil
+}
