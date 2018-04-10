@@ -9,8 +9,11 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog/gherkin"
+<<<<<<< HEAD
 	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/common"
+=======
+>>>>>>> dev
 )
 
 type AccountEntry struct {
@@ -83,7 +86,7 @@ func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTab
 
 	// Wait for funds to be available
 	for _, account := range accounts {
-		err = cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
+		err = waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
 			acct := common.HexToAddress(ctx.accountsCoinbase[account.AccountName])
 			balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
 			if err != nil {
@@ -101,30 +104,31 @@ func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTab
 }
 
 func (ctx *Context) TheBalanceIsExactly(account string, kcoin int64) error {
-	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-		acct := common.HexToAddress(ctx.accountsCoinbase[account])
-		balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
-		if err != nil {
-			return false
-		}
-		return balance.Cmp(toWei(kcoin)) == 0
-	})
+	expected := toWei(kcoin)
 
-	return err
+	acct := common.HexToAddress(ctx.accountsCoinbase[account])
+	balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
+	if err != nil {
+		return err
+	}
+	if balance.Cmp(expected) != 0 {
+		return fmt.Errorf("Balance expected to be %v but is %v", expected, balance)
+	}
+	return nil
 }
 
 func (ctx *Context) TheBalanceIsAround(account string, kcoin int64) error {
-	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-		acct := common.HexToAddress(ctx.accountsCoinbase[account])
-		balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
-		if err != nil {
-			return false
-		}
-		diff := balance.Sub(balance, toWei(kcoin))
-		diff.Abs(diff)
+	acct := common.HexToAddress(ctx.accountsCoinbase[account])
+	balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
+	if err != nil {
+		return err
+	}
+	diff := &big.Int{}
+	diff.Sub(balance, expected)
+	diff.Abs(diff)
 
-		return diff.Cmp(big.NewInt(100000)) < 0
-	})
-
-	return err
+	if diff.Cmp(big.NewInt(100000)) >= 0 {
+		return fmt.Errorf("Balance expected to be around %v but is %v", expected, balance)
+	}
+	return nil
 }
