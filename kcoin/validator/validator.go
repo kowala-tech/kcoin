@@ -253,7 +253,11 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.votingSystem = NewVotingSystem(val.eventMux, val.blockNumber, val.voters)
+	val.votingSystem, err = NewVotingSystem(val.eventMux, val.blockNumber, val.voters)
+	if err != nil {
+		log.Error("Failed to create voting system", "err", err)
+		return nil
+	}
 
 	val.blockCh = make(chan *types.Block)
 	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})

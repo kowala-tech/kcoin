@@ -41,14 +41,24 @@ type VotingState struct {
 // VotingTables represents the voting tables available for each election round
 type VotingTables = [2]core.VotingTable
 
-func NewVotingTables(eventMux *event.TypeMux, voters types.Voters) VotingTables {
+func NewVotingTables(eventMux *event.TypeMux, voters types.Voters) (VotingTables, error) {
 	majorityFunc := func() {
 		go eventMux.Post(core.NewMajorityEvent{})
 	}
+
+	var err error
 	tables := VotingTables{}
-	tables[0], _ = core.NewVotingTable(types.PreVote, voters, majorityFunc)
-	tables[1], _ = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
-	return tables
+	tables[0], err = core.NewVotingTable(types.PreVote, voters, majorityFunc)
+	if err != nil {
+		return tables, err
+	}
+
+	tables[1], err = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
+	if err != nil {
+		return tables, err
+	}
+
+	return tables, nil
 }
 
 // VotingSystem records the election votes since round 1
@@ -62,7 +72,7 @@ type VotingSystem struct {
 }
 
 // NewVotingSystem returns a new voting system
-func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters types.Voters) *VotingSystem {
+func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters types.Voters) (*VotingSystem, error) {
 	system := &VotingSystem{
 		voters:         voters,
 		electionNumber: electionNumber,
@@ -71,13 +81,21 @@ func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters ty
 		eventMux:       eventMux,
 	}
 
-	system.NewRound()
+	err := system.NewRound()
+	if err != nil {
+		return nil, err
+	}
 
-	return system
+	return system, nil
 }
 
-func (vs *VotingSystem) NewRound() {
-	vs.votesPerRound[vs.round] = NewVotingTables(vs.eventMux, vs.voters)
+func (vs *VotingSystem) NewRound() error {
+	var err error
+	vs.votesPerRound[vs.round], err = NewVotingTables(vs.eventMux, vs.voters)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Add registers a vote
