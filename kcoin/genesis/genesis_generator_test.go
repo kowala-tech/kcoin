@@ -23,8 +23,8 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		AccountAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
 		PrefundedAccounts: []PrefundedAccount{
 			{
-				WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				Balance:       "15",
+				AccountAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				Balance:        "15",
 			},
 		},
 	}
@@ -95,8 +95,8 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 			InvalidCommandFromValid: func(command Options) Options {
 				command.PrefundedAccounts = []PrefundedAccount{
 					{
-						WalletAddress: "0xaaaaaacbae1bbbb47d157516d334e70859a1bee4",
-						Balance:       "15",
+						AccountAddress: "0xaaaaaacbae1bbbb47d157516d334e70859a1bee4",
+						Balance:        "15",
 					},
 				}
 				return command
@@ -108,12 +108,12 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 			InvalidCommandFromValid: func(command Options) Options {
 				command.PrefundedAccounts = []PrefundedAccount{
 					{
-						WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-						Balance:       "15",
+						AccountAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+						Balance:        "15",
 					},
 					{
-						WalletAddress: "0xe286cbae1bbbb47d157516d334e70859a1bee4",
-						Balance:       "15",
+						AccountAddress: "0xe286cbae1bbbb47d157516d334e70859a1bee4",
+						Balance:        "15",
 					},
 				}
 				return command
@@ -146,8 +146,8 @@ func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
 		AccountAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
 		PrefundedAccounts: []PrefundedAccount{
 			{
-				WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				Balance:       "15",
+				AccountAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				Balance:        "15",
 			},
 		},
 	}
@@ -205,8 +205,8 @@ func TestOptionalValues(t *testing.T) {
 		AccountAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
 		PrefundedAccounts: []PrefundedAccount{
 			{
-				WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				Balance:       "15",
+				AccountAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				Balance:        "15",
 			},
 		},
 	}

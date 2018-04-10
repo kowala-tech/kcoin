@@ -31,12 +31,12 @@ func (client *cluster) generateGenesis() error {
 			AccountAddressGenesisValidator: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
 			PrefundedAccounts: []genesis.PrefundedAccount{
 				{
-					WalletAddress: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
-					Balance:       "0x200000000000000000000000000000000000000000000000000000000000000",
+					AccountAddress: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
 				},
 				{
-					WalletAddress: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-					Balance:       "1000000000000000000",
+					AccountAddress: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+					Balance:        "1000000000000000000",
 				},
 			},
 			SmartContractsOwner: "0x259be75d96876f2ada3d202722523e9cd4dd917d",

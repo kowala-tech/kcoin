@@ -118,8 +118,8 @@ func prefundAccountsFromCommandLine(accounts interface{}) []genesis.PrefundedAcc
 		balance := values[1]
 
 		prefundedAccount := genesis.PrefundedAccount{
-			WalletAddress: values[0],
-			Balance:       balance,
+			AccountAddress: values[0],
+			Balance:        balance,
 		}
 
 		prefundedAccounts = append(prefundedAccounts, prefundedAccount)
@@ -137,8 +137,8 @@ func prefundAccountsFromConfigFile(accounts interface{}) []genesis.PrefundedAcco
 		val := v.(map[string]interface{})
 
 		prefundedAccount := genesis.PrefundedAccount{
-			WalletAddress: val["walletAddress"].(string),
-			Balance:       val["balance"].(string),
+			AccountAddress: val["walletAddress"].(string),
+			Balance:        val["balance"].(string),
 		}
 
 		prefundedAccounts = append(prefundedAccounts, prefundedAccount)

@@ -65,13 +65,13 @@ type Options struct {
 }
 
 type PrefundedAccount struct {
-	WalletAddress string
-	Balance       string
+	AccountAddress string
+	Balance        string
 }
 
 type validPrefundedAccount struct {
-	walletAddress *common.Address
-	balance       *big.Int
+	accountAddress *common.Address
+	balance        *big.Int
 }
 
 type validGenesisOptions struct {
@@ -252,7 +252,7 @@ func addBatchOfPrefundedAccountsIntoGenesis(genesis *core.Genesis) {
 
 func addPrefundedAccountsIntoGenesis(validPrefundedAccounts []*validPrefundedAccount, genesis *core.Genesis) {
 	for _, vAccount := range validPrefundedAccounts {
-		genesis.Alloc[*vAccount.walletAddress] = core.GenesisAccount{
+		genesis.Alloc[*vAccount.accountAddress] = core.GenesisAccount{
 			Balance: vAccount.balance,
 		}
 	}
@@ -330,7 +330,7 @@ func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount
 	}
 
 	for _, a := range accounts {
-		address, err := mapWalletAddress(a.WalletAddress)
+		address, err := mapWalletAddress(a.AccountAddress)
 		if err != nil {
 			return nil, ErrInvalidAddressInPrefundedAccounts
 		}
@@ -338,8 +338,8 @@ func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount
 		balance, _ := new(big.Int).SetString(a.Balance, 0)
 
 		validAccount := &validPrefundedAccount{
-			walletAddress: address,
-			balance:       balance,
+			accountAddress: address,
+			balance:        balance,
 		}
 
 		validAccounts = append(validAccounts, validAccount)
@@ -353,7 +353,7 @@ func prefundedIncludesValidatorWallet(
 	addresses *common.Address,
 ) bool {
 	for _, account := range accounts {
-		if bytes.Equal(account.walletAddress.Bytes(), addresses.Bytes()) {
+		if bytes.Equal(account.accountAddress.Bytes(), addresses.Bytes()) {
 			return true
 		}
 	}
