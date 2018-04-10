@@ -184,4 +184,4 @@ ifndef GODOG_BIN
 	@echo "Installing godog..."
 	@go get github.com/DATA-DOG/godog/cmd/godog
 endif
-	@godog
+	@cd tests && godog ../features
