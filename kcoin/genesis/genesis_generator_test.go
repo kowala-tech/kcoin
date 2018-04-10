@@ -3,18 +3,77 @@ package genesis
 import (
 	"encoding/json"
 	"flag"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/params"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
 	"testing"
+
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/params"
+	"github.com/stretchr/testify/assert"
 )
 
 var update = flag.Bool("update", false, "update .golden files")
 
+func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
+	opt := Options{
+		Network:                        "test",
+		MaxNumValidators:               "5",
+		UnbondingPeriod:                "5",
+		AccountAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+		PrefundedAccounts: []PrefundedAccount{
+			{
+				AccountAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+				Balance:        "15",
+			},
+		},
+	}
+
+	generatedGenesis, err := GenerateGenesis(opt)
+
+	assert.NoError(t, err)
+
+	fileName := filepath.Join("testfiles", "testnet_default.json")
+	if *update {
+		t.Log("update golden file")
+
+		out, err := json.MarshalIndent(generatedGenesis, "", "  ")
+		if err != nil {
+			t.Fatal("Error marshaling generated genesis to create golden file.")
+		}
+
+		if err := ioutil.WriteFile(fileName, out, 0644); err != nil {
+			t.Fatal("Error saving golden file.")
+		}
+	}
+
+	contents, err := ioutil.ReadFile(fileName)
+	assert.NoError(t, err)
+
+	var expectedGenesis = new(core.Genesis)
+	err = json.Unmarshal(contents, expectedGenesis)
+	assert.NoError(t, err)
+
+	assertEqualGenesis(t, expectedGenesis, generatedGenesis)
+}
+
+//assertEqualGenesis checks if two genesis are the same, it ignores some fields as the timestamp that
+//will be always different when it is generated.
+func assertEqualGenesis(t *testing.T, expectedGenesis *core.Genesis, generatedGenesis *core.Genesis) {
+	assert.Equal(t, expectedGenesis.ExtraData, generatedGenesis.ExtraData)
+	assert.Equal(t, expectedGenesis.Config, generatedGenesis.Config)
+	assert.Equal(t, expectedGenesis.GasLimit, generatedGenesis.GasLimit)
+	assert.Equal(t, expectedGenesis.GasUsed, generatedGenesis.GasUsed)
+	assert.Equal(t, expectedGenesis.Coinbase, generatedGenesis.Coinbase)
+	assert.Equal(t, expectedGenesis.ParentHash, generatedGenesis.ParentHash)
+
+	assert.Len(t, expectedGenesis.Alloc, len(generatedGenesis.Alloc))
+
+	address := DefaultSmartContractsOwner
+	expectedAlloc := core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
+	assert.Equal(t, generatedGenesis.Alloc[address], expectedAlloc)
+}
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 	baseValidCommand := Options{
 		Network:                        "test",
@@ -136,65 +195,6 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 			assert.EqualError(t, test.ExpectedError, err.Error())
 		})
 	}
-}
-
-func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
-	opt := Options{
-		Network:                        "test",
-		MaxNumValidators:               "5",
-		UnbondingPeriod:                "5",
-		AccountAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-		PrefundedAccounts: []PrefundedAccount{
-			{
-				AccountAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
-				Balance:        "15",
-			},
-		},
-	}
-
-	generatedGenesis, err := GenerateGenesis(opt)
-
-	assert.NoError(t, err)
-
-	fileName := filepath.Join("testfiles", "testnet_default.json")
-	if *update {
-		t.Log("update golden file")
-
-		out, err := json.MarshalIndent(generatedGenesis, "", "  ")
-		if err != nil {
-			t.Fatal("Error marshaling generated genesis to create golden file.")
-		}
-
-		if err := ioutil.WriteFile(fileName, out, 0644); err != nil {
-			t.Fatal("Error saving golden file.")
-		}
-	}
-
-	contents, err := ioutil.ReadFile(fileName)
-	assert.NoError(t, err)
-
-	var expectedGenesis = new(core.Genesis)
-	err = json.Unmarshal(contents, expectedGenesis)
-	assert.NoError(t, err)
-
-	assertEqualGenesis(t, expectedGenesis, generatedGenesis)
-}
-
-//assertEqualGenesis checks if two genesis are the same, it ignores some fields as the timestamp that
-//will be always different when it is generated.
-func assertEqualGenesis(t *testing.T, expectedGenesis *core.Genesis, generatedGenesis *core.Genesis) {
-	assert.Equal(t, expectedGenesis.ExtraData, generatedGenesis.ExtraData)
-	assert.Equal(t, expectedGenesis.Config, generatedGenesis.Config)
-	assert.Equal(t, expectedGenesis.GasLimit, generatedGenesis.GasLimit)
-	assert.Equal(t, expectedGenesis.GasUsed, generatedGenesis.GasUsed)
-	assert.Equal(t, expectedGenesis.Coinbase, generatedGenesis.Coinbase)
-	assert.Equal(t, expectedGenesis.ParentHash, generatedGenesis.ParentHash)
-
-	assert.Len(t, expectedGenesis.Alloc, len(generatedGenesis.Alloc))
-
-	address := DefaultSmartContractsOwner
-	expectedAlloc := core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
-	assert.Equal(t, generatedGenesis.Alloc[address], expectedAlloc)
 }
 
 func TestOptionalValues(t *testing.T) {

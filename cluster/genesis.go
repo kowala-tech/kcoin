@@ -42,7 +42,6 @@ func (client *cluster) generateGenesis() error {
 			SmartContractsOwner: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 		},
 	)
-
 	if err != nil {
 		return err
 	}
