@@ -25,7 +25,7 @@ func init() {
 				Network:                        viper.GetString("genesis.network"),
 				MaxNumValidators:               viper.GetString("genesis.maxNumValidators"),
 				UnbondingPeriod:                viper.GetString("genesis.unbondingPeriod"),
-				AccountAddressGenesisValidator: viper.GetString("genesis.walletAddressGenesisValidator"),
+				AccountAddressGenesisValidator: viper.GetString("genesis.accountAddressGenesisValidator"),
 				PrefundedAccounts:              parsePrefundedAccounts(viper.Get("prefundedAccounts")),
 				ConsensusEngine:                viper.GetString("genesis.consensusEngine"),
 				SmartContractsOwner:            viper.GetString("genesis.smartContractsOwner"),
@@ -58,8 +58,8 @@ func init() {
 	viper.BindPFlag("genesis.maxNumValidators", cmd.Flags().Lookup("maxNumValidators"))
 	cmd.Flags().StringP("unbondingPeriod", "p", "", "The unbonding period in days.")
 	viper.BindPFlag("genesis.unbondingPeriod", cmd.Flags().Lookup("unbondingPeriod"))
-	cmd.Flags().StringP("walletAddressGenesisValidator", "g", "", "The wallet address of the genesis validator.")
-	viper.BindPFlag("genesis.walletAddressGenesisValidator", cmd.Flags().Lookup("walletAddressGenesisValidator"))
+	cmd.Flags().StringP("accountAddressGenesisValidator", "g", "", "The wallet address of the genesis validator.")
+	viper.BindPFlag("genesis.accountAddressGenesisValidator", cmd.Flags().Lookup("accountAddressGenesisValidator"))
 	cmd.Flags().StringP("consensusEngine", "e", "", "The consensus engine, right now only supports tendermint")
 	viper.BindPFlag("genesis.consensusEngine", cmd.Flags().Lookup("consensusEngine"))
 	cmd.Flags().StringP("smartContractsOwner", "s", "", "The address of the smart contracts owner.")
@@ -137,7 +137,7 @@ func prefundAccountsFromConfigFile(accounts interface{}) []genesis.PrefundedAcco
 		val := v.(map[string]interface{})
 
 		prefundedAccount := genesis.PrefundedAccount{
-			AccountAddress: val["walletAddress"].(string),
+			AccountAddress: val["accountAddress"].(string),
 			Balance:        val["balance"].(string),
 		}
 

@@ -75,13 +75,13 @@ type validPrefundedAccount struct {
 }
 
 type validGenesisOptions struct {
-	network                       string
-	maxNumValidators              *big.Int
-	unbondingPeriod               *big.Int
-	walletAddressGenesisValidator *common.Address
-	prefundedAccounts             []*validPrefundedAccount
-	consensusEngine               string
-	smartContractsOwner           *common.Address
+	network                        string
+	maxNumValidators               *big.Int
+	unbondingPeriod                *big.Int
+	accountAddressGenesisValidator *common.Address
+	prefundedAccounts              []*validPrefundedAccount
+	consensusEngine                string
+	smartContractsOwner            *common.Address
 }
 
 func GenerateGenesis(options Options) (*core.Genesis, error) {
@@ -115,7 +115,7 @@ func GenerateGenesis(options Options) (*core.Genesis, error) {
 		baseDeposit,
 		validOptions.maxNumValidators,
 		validOptions.unbondingPeriod,
-		*validOptions.walletAddressGenesisValidator,
+		*validOptions.accountAddressGenesisValidator,
 	)
 	if err != nil {
 		return nil, err
@@ -233,13 +233,13 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	}
 
 	return &validGenesisOptions{
-		network:                       network,
-		maxNumValidators:              maxNumValidators,
-		unbondingPeriod:               unbondingPeriod,
-		walletAddressGenesisValidator: walletAddressValidator,
-		prefundedAccounts:             validPrefundedAccounts,
-		consensusEngine:               consensusEngine,
-		smartContractsOwner:           owner,
+		network:                        network,
+		maxNumValidators:               maxNumValidators,
+		unbondingPeriod:                unbondingPeriod,
+		accountAddressGenesisValidator: walletAddressValidator,
+		prefundedAccounts:              validPrefundedAccounts,
+		consensusEngine:                consensusEngine,
+		smartContractsOwner:            owner,
 	}, nil
 }
 

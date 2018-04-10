@@ -14,7 +14,7 @@ A typical config file should be in toml and should like like this:
 network = "test" # Only supported test and main
 maxNumValidators = "1"
 unbondingPeriod = "1"
-walletAddressGenesisValidator = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
+accountAddressGenesisValidator = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
 
 # Optional values
 consensusEngine = "tendermint" # Only supported tendermint by the moment
@@ -23,11 +23,11 @@ extraData = "extraData"
 fileName = "myFile.json"
 
 [[prefundedAccounts]]
-walletAddress = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
+accountAddress = "0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
 balance = 15
 
 [[prefundedAccounts]]
-walletAddress = "0x1234ed356e7bc4f7a8fc48cc19c958f4e640ac62"
+accountAddress = "0x1234ed356e7bc4f7a8fc48cc19c958f4e640ac62"
 balance = 15
 ```
 
