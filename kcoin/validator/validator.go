@@ -253,7 +253,11 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.voters)
+	val.votingSystem, err = NewVotingSystem(val.eventMux, val.blockNumber, val.voters)
+	if err != nil {
+		log.Error("Failed to create voting system", "err", err)
+		return nil
+	}
 
 	val.blockCh = make(chan *types.Block)
 	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
@@ -284,10 +288,16 @@ func (val *validator) AddVote(vote *types.Vote) error {
 		return ErrCantVoteNotValidating
 	}
 
-	if err := val.votingSystem.Add(vote); err != nil {
+	addressVote, err := types.NewAddressVote(val.signer, vote)
+	if err != nil {
+		return err
+	}
+
+	if err := val.votingSystem.Add(addressVote); err != nil {
 		switch err {
 		}
 	}
+
 	return nil
 }
 
@@ -545,7 +555,12 @@ func (val *validator) vote(vote *types.Vote) {
 		log.Crit("Failed to sign the vote", "err", err)
 	}
 
-	err = val.votingSystem.Add(signedVote)
+	addressVote, err := types.NewAddressVote(val.signer, signedVote)
+	if err != nil {
+		log.Crit("Failed to make address Vote", "err", err)
+	}
+
+	err = val.votingSystem.Add(addressVote)
 	if err != nil {
 		log.Warn("Failed to add own vote to voting table", "err", err)
 	}
