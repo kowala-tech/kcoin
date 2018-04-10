@@ -1,24 +1,22 @@
-Feature: Send and receive transactions
-In order to use my coins
-As a kowala user
-I need to be able to send and receive transactions
+Feature: Sending and receiving transactions
+As a user
+I want to be able to send and receive transactions
 
-  Scenario: Send 1 kcoin
+  Scenario: Send 1 kcoin successfully
     Given I have the following accounts:
       | account | funds |
       | A       | 10    |
       | B       | 5     |
     When I transfer 1 kcoin from A to B
-    Then the last transaction is successful
-    And the balance of A is around 9 kcoin
-    And the balance of B is 6 kcoin
+    Then the balance of A should be around 9 kcoins
+    And the balance of B should be 6 kcoins
 
   Scenario: Not enough funds
     Given I have the following accounts:
       | account | funds |
       | A       | 10    |
       | B       | 5     |
-    When I transfer 11 kcoin from A to B
-    Then the last transaction failed
-    And the balance of A is 10 kcoin
-    And the balance of B is 5 kcoin
+    When I try to transfer 11 kcoins from A to B
+    Then the transaction should fail
+    And the balance of A should be 10 kcoins
+    And the balance of B should be 5 kcoins

@@ -22,20 +22,33 @@ func (context *Context) ITransferKUSD(kcoin int, from, to string) error {
 	if err != nil {
 		return err
 	}
-	context.lastTxStdout = res.StdOut
+	if !txRegexp.MatchString(res.StdOut) {
+		return fmt.Errorf("Expected transaction, received: %v", res.StdOut)
+	}
+	err = waitFor("transaction in the blockhain", 1*time.Second, 5*time.Second, func() bool {
+		isInBlockchain, err := context.isTransactionInBlockchain(res.StdOut)
+		return err == nil && isInBlockchain
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (context *Context) LastTransactionSuccessful() error {
-	if !txRegexp.MatchString(context.lastTxStdout) {
-		return fmt.Errorf("invalid transaction response: %v", context.lastTxStdout)
+func (context *Context) ITryTransferKUSD(kcoin int, from, to string) error {
+	command := fmt.Sprintf(
+		`
+			personal.unlockAccount(eth.coinbase, "test");
+			eth.sendTransaction({from:eth.coinbase, to: "%s", value: web3.toWei(%v, 'ether')})
+		`,
+		context.accountsCoinbase[to],
+		kcoin)
+	res, err := context.cluster.Exec(context.accountsNodeNames[from], command)
+	if err != nil {
+		return err
 	}
-
-	err := waitFor("transaction in the blockhain", 1*time.Second, 5*time.Second, func() bool {
-		isInBlockchain, err := context.isTransactionInBlockchain(context.lastTxStdout)
-		return err == nil && isInBlockchain
-	})
-	return err
+	context.lastTxStdout = res.StdOut
+	return nil
 }
 
 func (context *Context) LastTransactionFailed() error {
