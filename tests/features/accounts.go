@@ -9,11 +9,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog/gherkin"
-<<<<<<< HEAD
-	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/common"
-=======
->>>>>>> dev
 )
 
 type AccountEntry struct {
@@ -118,6 +114,8 @@ func (ctx *Context) TheBalanceIsExactly(account string, kcoin int64) error {
 }
 
 func (ctx *Context) TheBalanceIsAround(account string, kcoin int64) error {
+	expected := toWei(kcoin)
+
 	acct := common.HexToAddress(ctx.accountsCoinbase[account])
 	balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
 	if err != nil {
