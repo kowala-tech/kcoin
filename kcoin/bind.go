@@ -12,7 +12,8 @@ import (
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/rpc"
 )
-
+//FilterLogs(ctx context.Context, query kowala.FilterQuery) ([]types.Log, error)
+//SubscribeFilterLogs(ctx context.Context, query kowala.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error)
 // ContractBackend implements bind.ContractBackend with direct calls to Kowala
 // internals to support operating on contracts within subprotocols like kcoin and
 // swarm.
@@ -24,15 +25,17 @@ type ContractBackend struct {
 	eapi  *kcoinapi.PublicKowalaAPI          // Wrapper around the Kowala object to access metadata
 	bcapi *kcoinapi.PublicBlockChainAPI      // Wrapper around the blockchain to access chain data
 	txapi *kcoinapi.PublicTransactionPoolAPI // Wrapper around the transaction pool to access transaction data
+	nilLogger
 }
 
 // NewContractBackend creates a new native contract backend using an existing
 // Kowala object.
 func NewContractBackend(apiBackend kcoinapi.Backend) *ContractBackend {
 	return &ContractBackend{
-		eapi:  kcoinapi.NewPublicKowalaAPI(apiBackend),
-		bcapi: kcoinapi.NewPublicBlockChainAPI(apiBackend),
-		txapi: kcoinapi.NewPublicTransactionPoolAPI(apiBackend, new(kcoinapi.AddrLocker)),
+		eapi:      kcoinapi.NewPublicKowalaAPI(apiBackend),
+		bcapi:     kcoinapi.NewPublicBlockChainAPI(apiBackend),
+		txapi:     kcoinapi.NewPublicTransactionPoolAPI(apiBackend, new(kcoinapi.AddrLocker)),
+		nilLogger: newNilLogger(),
 	}
 }
 
@@ -68,8 +71,8 @@ func toCallArgs(msg kowala.CallMsg) kcoinapi.CallArgs {
 		From: msg.From,
 		Data: msg.Data,
 	}
-	if msg.Gas != nil {
-		args.Gas = hexutil.Big(*msg.Gas)
+	if msg.Gas != 0 {
+		args.Gas = hexutil.Uint64(msg.Gas)
 	}
 	if msg.GasPrice != nil {
 		args.GasPrice = hexutil.Big(*msg.GasPrice)
@@ -108,9 +111,9 @@ func (b *ContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error)
 // the backend blockchain. There is no guarantee that this is the true gas limit
 // requirement as other transactions may be added or removed by validators, but it
 // should provide a basis for setting a reasonable default.
-func (b *ContractBackend) EstimateGas(ctx context.Context, msg kowala.CallMsg) (*big.Int, error) {
+func (b *ContractBackend) EstimateGas(ctx context.Context, msg kowala.CallMsg) (uint64, error) {
 	out, err := b.bcapi.EstimateGas(ctx, toCallArgs(msg))
-	return out.ToInt(), err
+	return uint64(out), err
 }
 
 // SendTransaction implements bind.ContractTransactor injects the transaction
@@ -119,4 +122,14 @@ func (b *ContractBackend) SendTransaction(ctx context.Context, tx *types.Transac
 	raw, _ := rlp.EncodeToBytes(tx)
 	_, err := b.txapi.SendRawTransaction(ctx, raw)
 	return err
+}
+
+// FilterLogs executes a filter query.
+func (b *ContractBackend) FilterLogs(ctx context.Context, q kowala.FilterQuery) ([]types.Log, error) {
+	return b.FilterLogs(ctx, q)
+}
+
+// SubscribeFilterLogs subscribes to the results of a streaming filter query.
+func (b *ContractBackend) SubscribeFilterLogs(ctx context.Context, q kowala.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error) {
+	return b.SubscribeFilterLogs(ctx, q, ch)
 }

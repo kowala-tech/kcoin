@@ -45,12 +45,10 @@ func (b *KowalaApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.Block
 		block := b.kcoin.validator.PendingBlock()
 		return block.Header(), nil
 	}
-
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
 		return b.kcoin.blockchain.CurrentBlock().Header(), nil
 	}
-
 	return b.kcoin.blockchain.GetHeaderByNumber(uint64(blockNr)), nil
 }
 
@@ -73,7 +71,6 @@ func (b *KowalaApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr r
 		block, state := b.kcoin.validator.Pending()
 		return state, block.Header(), nil
 	}
-
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
 	if header == nil || err != nil {
@@ -89,6 +86,18 @@ func (b *KowalaApiBackend) GetBlock(ctx context.Context, blockHash common.Hash) 
 
 func (b *KowalaApiBackend) GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error) {
 	return core.GetBlockReceipts(b.kcoin.chainDb, blockHash, core.GetBlockNumber(b.kcoin.chainDb, blockHash)), nil
+}
+
+func (b *KowalaApiBackend) GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error) {
+	receipts := core.GetBlockReceipts(b.kcoin.chainDb, blockHash, core.GetBlockNumber(b.kcoin.chainDb, blockHash))
+	if receipts == nil {
+		return nil, nil
+	}
+	logs := make([][]*types.Log, len(receipts))
+	for i, receipt := range receipts {
+		logs[i] = receipt.Logs
+	}
+	return logs, nil
 }
 
 func (b *KowalaApiBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {

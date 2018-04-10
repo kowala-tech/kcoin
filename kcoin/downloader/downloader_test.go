@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/consensus/tendermint"
 	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/trie"
 )
@@ -28,8 +28,8 @@ var (
 // Reduce some of the parameters to make the tester faster.
 func init() {
 	MaxForkAncestry = uint64(10000)
-	blockCacheLimit = 1024
-	fsCriticalTrials = 10
+	blockCacheItems = 1024
+	fsHeaderContCheck = 500 * time.Millisecond
 }
 
 // downloadTester is a test simulator for mocking out local block chain.
@@ -91,7 +91,7 @@ func newTester() *downloadTester {
 // reassembly.
 func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, parentReceipts types.Receipts, heavy bool) ([]common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]types.Receipts) {
 	// Generate the block chain
-	blocks, receipts := core.GenerateChain(params.TestChainConfig, parent, dl.peerDb, n, func(i int, block *core.BlockGen) {
+	blocks, receipts := core.GenerateChain(params.TestChainConfig, parent, tendermint.NewFaker(), dl.peerDb, n, func(i int, block *core.BlockGen) {
 		block.SetCoinbase(common.Address{seed})
 
 		// If a heavy chain is requested, delay blocks to raise difficulty

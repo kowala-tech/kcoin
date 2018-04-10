@@ -33,11 +33,11 @@ import (
 	"time"
 
 	"github.com/elastic/gosigar"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/metrics"
+	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/rpc"
 	"golang.org/x/net/websocket"
 )
 

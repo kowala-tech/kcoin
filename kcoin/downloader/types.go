@@ -43,7 +43,7 @@ func (p *bodyPack) Items() int {
 	}
 	return commit
 }
-func (p *bodyPack) Stats() string { return fmt.Sprintf("%d", len(p.transactions)) }
+func (p *bodyPack) Stats() string { return fmt.Sprintf("%d:%d", len(p.transactions), len(p.commits)) }
 
 // receiptPack is a batch of receipts returned by a peer.
 type receiptPack struct {

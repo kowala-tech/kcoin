@@ -11,7 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/kowala-tech/kcoin/event"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to

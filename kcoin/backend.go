@@ -40,8 +40,10 @@ import (
 type Kowala struct {
 	config      *Config
 	chainConfig *params.ChainConfig
+
 	// Channel for shutting down the service
-	shutdownChan chan bool // Channel for shutting down the service
+	shutdownChan  chan bool    // Channel for shutting down the service
+	stopDbUpgrade func() error // stop chain db sequential key upgrade
 
 	// Handlers
 	txPool          *core.TxPool
@@ -80,11 +82,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
-
 	chainDb, err := CreateDB(ctx, config, "chaindata")
 	if err != nil {
 		return nil, err
 	}
+	stopDbUpgrade := upgradeDeduplicateData(chainDb)
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
@@ -99,6 +101,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		accountManager: ctx.AccountManager,
 		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
 		shutdownChan:   make(chan bool),
+		stopDbUpgrade:  stopDbUpgrade,
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Coinbase,
@@ -118,7 +121,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	kcoin.blockchain, err = core.NewBlockChain(chainDb, kcoin.chainConfig, kcoin.engine, vmConfig)
+	cacheConfig := &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
+	kcoin.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, kcoin.chainConfig, kcoin.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}

@@ -369,7 +369,7 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := val.state.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, val.header.GasUsed, vm.Config{})
+	receipt, _, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
 	if err != nil {
 		val.state.RevertToSnapshot(snap)
 		return err, nil
@@ -410,7 +410,7 @@ func (val *validator) createBlock() *types.Block {
 		Coinbase:       val.walletAccount.Account().Address,
 		Number:         blockNumber.Add(blockNumber, common.Big1),
 		GasLimit:       core.CalcGasLimit(parent),
-		GasUsed:        new(big.Int),
+		GasUsed:        0,
 		Time:           big.NewInt(tstamp),
 		ValidatorsHash: val.validators.Hash(),
 	}
@@ -460,7 +460,7 @@ func (val *validator) propose() {
 	lockedRound := 1
 	lockedBlock := common.Hash{}
 
-	fragments, err := block.AsFragments(int(block.Size().Int64()))
+	fragments, err := block.AsFragments(int(block.Size()))
 	if err != nil {
 		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
 	}

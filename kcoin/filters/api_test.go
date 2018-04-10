@@ -166,5 +166,4 @@ func TestUnmarshalJSONNewFilterArgs(t *testing.T) {
 	if len(test7.Topics[2]) != 0 {
 		t.Fatalf("expected 0 topics, got %d topics", len(test7.Topics[2]))
 	}
-
 }

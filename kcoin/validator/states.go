@@ -194,9 +194,6 @@ func (val *validator) commitState() stateFn {
 
 	block := val.block
 	work := val.work
-	chainDb := val.backend.ChainDb()
-
-	work.state.CommitTo(chainDb, true)
 
 	// update block hash since it is now available and not when
 	// the receipt/log of individual transactions were created
@@ -209,7 +206,7 @@ func (val *validator) commitState() stateFn {
 		log.BlockHash = block.Hash()
 	}
 
-	_, err := val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
+	_, err := val.chain.WriteBlockWithState(block, val.work.receipts, val.work.state)
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return nil

@@ -2,6 +2,7 @@ package kcoin
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"
@@ -15,14 +16,18 @@ import (
 var DefaultConfig = Config{
 	SyncMode:      downloader.FastSync,
 	NetworkId:     params.MainnetChainConfig.ChainID.Uint64(),
+	// @TODO (rgeraldes) - complete with tendermint config if necessary, set rewarded to true
+	Tendermint:    params.TendermintConfig{false},
 	LightPeers:    20,
-	DatabaseCache: 128,
+	DatabaseCache: 768,
+	TrieCache:     256,
+	TrieTimeout:   5 * time.Minute,
 	GasPrice:      big.NewInt(1),
 
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
-		Blocks:     10,
-		Percentile: 50,
+		Blocks:     20,
+		Percentile: 60,
 	},
 }
 
@@ -36,22 +41,27 @@ type Config struct {
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
 	SyncMode  downloader.SyncMode
+	NoPruning bool
 
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
 	LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
-	MaxPeers   int `toml:"-"`          // Maximum number of global peers
 
 	// Database options
 	SkipBcVersionCheck bool `toml:"-"`
 	DatabaseHandles    int  `toml:"-"`
 	DatabaseCache      int
+	TrieCache          int
+	TrieTimeout        time.Duration
 
 	// consensus validation-related options
 	Coinbase  common.Address `toml:",omitempty"`
 	Deposit   uint64         `toml:",omitempty"`
 	ExtraData []byte         `toml:",omitempty"`
 	GasPrice  *big.Int
+
+	// Tendermint options
+	Tendermint params.TendermintConfig
 
 	// Transaction pool options
 	TxPool core.TxPoolConfig
