@@ -25,10 +25,10 @@ func (client *cluster) generateGenesis() error {
 
 	newGenesis, err := genesis.GenerateGenesis(
 		genesis.Options{
-			Network:                       "test",
-			MaxNumValidators:              "1",
-			UnbondingPeriod:               "0",
-			WalletAddressGenesisValidator: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+			Network:                        "test",
+			MaxNumValidators:               "1",
+			UnbondingPeriod:                "0",
+			AccountAddressGenesisValidator: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
 			PrefundedAccounts: []genesis.PrefundedAccount{
 				{
 					WalletAddress: "0xd6e579085c82329c89fca7a9f012be59028ed53f",

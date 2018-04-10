@@ -2,6 +2,11 @@ package genesis
 
 import (
 	"bytes"
+	"math/big"
+	"math/rand"
+	"strings"
+	"time"
+
 	"github.com/kowala-tech/kcoin/accounts/abi"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/contracts/network"
@@ -11,10 +16,6 @@ import (
 	"github.com/kowala-tech/kcoin/core/vm/runtime"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/pkg/errors"
-	"math/big"
-	"math/rand"
-	"strings"
-	"time"
 )
 
 const (
@@ -53,14 +54,14 @@ var (
 )
 
 type Options struct {
-	Network                       string
-	MaxNumValidators              string
-	UnbondingPeriod               string
-	WalletAddressGenesisValidator string
-	PrefundedAccounts             []PrefundedAccount
-	ConsensusEngine               string
-	SmartContractsOwner           string
-	ExtraData                     string
+	Network                        string
+	MaxNumValidators               string
+	UnbondingPeriod                string
+	AccountAddressGenesisValidator string
+	PrefundedAccounts              []PrefundedAccount
+	ConsensusEngine                string
+	SmartContractsOwner            string
+	ExtraData                      string
 }
 
 type PrefundedAccount struct {
@@ -199,7 +200,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		return nil, err
 	}
 
-	walletAddressValidator, err := mapWalletAddress(options.WalletAddressGenesisValidator)
+	walletAddressValidator, err := mapWalletAddress(options.AccountAddressGenesisValidator)
 	if err != nil {
 		return nil, err
 	}

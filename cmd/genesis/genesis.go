@@ -22,14 +22,14 @@ func init() {
 			loadFromFileConfigIfAvailable()
 
 			options := genesis.Options{
-				Network:                       viper.GetString("genesis.network"),
-				MaxNumValidators:              viper.GetString("genesis.maxNumValidators"),
-				UnbondingPeriod:               viper.GetString("genesis.unbondingPeriod"),
-				WalletAddressGenesisValidator: viper.GetString("genesis.walletAddressGenesisValidator"),
-				PrefundedAccounts:             parsePrefundedAccounts(viper.Get("prefundedAccounts")),
-				ConsensusEngine:               viper.GetString("genesis.consensusEngine"),
-				SmartContractsOwner:           viper.GetString("genesis.smartContractsOwner"),
-				ExtraData:                     viper.GetString("genesis.extraData"),
+				Network:                        viper.GetString("genesis.network"),
+				MaxNumValidators:               viper.GetString("genesis.maxNumValidators"),
+				UnbondingPeriod:                viper.GetString("genesis.unbondingPeriod"),
+				AccountAddressGenesisValidator: viper.GetString("genesis.walletAddressGenesisValidator"),
+				PrefundedAccounts:              parsePrefundedAccounts(viper.Get("prefundedAccounts")),
+				ConsensusEngine:                viper.GetString("genesis.consensusEngine"),
+				SmartContractsOwner:            viper.GetString("genesis.smartContractsOwner"),
+				ExtraData:                      viper.GetString("genesis.extraData"),
 			}
 
 			fileName := viper.GetString("genesis.fileName")

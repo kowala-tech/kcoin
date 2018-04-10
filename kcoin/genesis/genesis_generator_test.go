@@ -17,10 +17,10 @@ var update = flag.Bool("update", false, "update .golden files")
 
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 	baseValidCommand := Options{
-		Network:                       "test",
-		MaxNumValidators:              "1",
-		UnbondingPeriod:               "1",
-		WalletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+		Network:                        "test",
+		MaxNumValidators:               "1",
+		UnbondingPeriod:                "1",
+		AccountAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
 		PrefundedAccounts: []PrefundedAccount{
 			{
 				WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
@@ -61,7 +61,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		{
 			TestName: "Empty wallet address of genesis validator",
 			InvalidCommandFromValid: func(command Options) Options {
-				command.WalletAddressGenesisValidator = ""
+				command.AccountAddressGenesisValidator = ""
 				return command
 			},
 			ExpectedError: ErrEmptyWalletAddressValidator,
@@ -69,7 +69,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		{
 			TestName: "Invalid wallet address less than 20 bytes with Hex prefix",
 			InvalidCommandFromValid: func(command Options) Options {
-				command.WalletAddressGenesisValidator = "0xe2ac86cbae1bbbb47d157516d334e70859a1be"
+				command.AccountAddressGenesisValidator = "0xe2ac86cbae1bbbb47d157516d334e70859a1be"
 				return command
 			},
 			ExpectedError: ErrInvalidWalletAddressValidator,
@@ -77,7 +77,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		{
 			TestName: "Invalid wallet address less than 20 bytes without Hex prefix",
 			InvalidCommandFromValid: func(command Options) Options {
-				command.WalletAddressGenesisValidator = "e2ac86cbae1bbbb47d157516d334e70859a1be"
+				command.AccountAddressGenesisValidator = "e2ac86cbae1bbbb47d157516d334e70859a1be"
 				return command
 			},
 			ExpectedError: ErrInvalidWalletAddressValidator,
@@ -140,10 +140,10 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 
 func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
 	opt := Options{
-		Network:                       "test",
-		MaxNumValidators:              "5",
-		UnbondingPeriod:               "5",
-		WalletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+		Network:                        "test",
+		MaxNumValidators:               "5",
+		UnbondingPeriod:                "5",
+		AccountAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
 		PrefundedAccounts: []PrefundedAccount{
 			{
 				WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
@@ -199,10 +199,10 @@ func assertEqualGenesis(t *testing.T, expectedGenesis *core.Genesis, generatedGe
 
 func TestOptionalValues(t *testing.T) {
 	baseCommand := Options{
-		Network:                       "test",
-		MaxNumValidators:              "5",
-		UnbondingPeriod:               "5",
-		WalletAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
+		Network:                        "test",
+		MaxNumValidators:               "5",
+		UnbondingPeriod:                "5",
+		AccountAddressGenesisValidator: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
 		PrefundedAccounts: []PrefundedAccount{
 			{
 				WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
