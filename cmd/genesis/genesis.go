@@ -21,7 +21,7 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			loadFromFileConfigIfAvailable()
 
-			options := genesis.GenesisOptions{
+			options := genesis.Options{
 				Network:                       viper.GetString("genesis.network"),
 				MaxNumValidators:              viper.GetString("genesis.maxNumValidators"),
 				UnbondingPeriod:               viper.GetString("genesis.unbondingPeriod"),

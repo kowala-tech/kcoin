@@ -52,7 +52,7 @@ var (
 	ErrInvalidConsensusEngine                       = errors.New("invalid consensus engine")
 )
 
-type GenesisOptions struct {
+type Options struct {
 	Network                       string
 	MaxNumValidators              string
 	UnbondingPeriod               string
@@ -83,7 +83,7 @@ type validGenesisOptions struct {
 	smartContractsOwner           *common.Address
 }
 
-func GenerateGenesis(options GenesisOptions) (*core.Genesis, error) {
+func GenerateGenesis(options Options) (*core.Genesis, error) {
 	validOptions, err := validateOptions(options)
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func getNetwork(network string) *big.Int {
 	return chainId
 }
 
-func validateOptions(options GenesisOptions) (*validGenesisOptions, error) {
+func validateOptions(options Options) (*validGenesisOptions, error) {
 	network, err := mapNetwork(options.Network)
 	if err != nil {
 		return nil, err

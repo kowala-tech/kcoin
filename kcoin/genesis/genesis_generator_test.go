@@ -16,7 +16,7 @@ import (
 var update = flag.Bool("update", false, "update .golden files")
 
 func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
-	baseValidCommand := GenesisOptions{
+	baseValidCommand := Options{
 		Network:                       "test",
 		MaxNumValidators:              "1",
 		UnbondingPeriod:               "1",
@@ -31,12 +31,12 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 
 	tests := []struct {
 		TestName                string
-		InvalidCommandFromValid func(command GenesisOptions) GenesisOptions
+		InvalidCommandFromValid func(command Options) Options
 		ExpectedError           error
 	}{
 		{
 			TestName: "Invalid Network",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.Network = "fakeNetwork"
 				return command
 			},
@@ -44,7 +44,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Empty max number of validators",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.MaxNumValidators = ""
 				return command
 			},
@@ -52,7 +52,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Empty unbonding period of days",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.UnbondingPeriod = ""
 				return command
 			},
@@ -60,7 +60,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Empty wallet address of genesis validator",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.WalletAddressGenesisValidator = ""
 				return command
 			},
@@ -68,7 +68,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Invalid wallet address less than 20 bytes with Hex prefix",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.WalletAddressGenesisValidator = "0xe2ac86cbae1bbbb47d157516d334e70859a1be"
 				return command
 			},
@@ -76,7 +76,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Invalid wallet address less than 20 bytes without Hex prefix",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.WalletAddressGenesisValidator = "e2ac86cbae1bbbb47d157516d334e70859a1be"
 				return command
 			},
@@ -84,7 +84,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Empty prefunded accounts",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.PrefundedAccounts = []PrefundedAccount{}
 				return command
 			},
@@ -92,7 +92,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Prefunded accounts does not include validator address",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.PrefundedAccounts = []PrefundedAccount{
 					{
 						WalletAddress: "0xaaaaaacbae1bbbb47d157516d334e70859a1bee4",
@@ -105,7 +105,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Prefunded accounts has invalid account.",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.PrefundedAccounts = []PrefundedAccount{
 					{
 						WalletAddress: "0xe2ac86cbae1bbbb47d157516d334e70859a1bee4",
@@ -122,7 +122,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 		},
 		{
 			TestName: "Invalid consensus engine.",
-			InvalidCommandFromValid: func(command GenesisOptions) GenesisOptions {
+			InvalidCommandFromValid: func(command Options) Options {
 				command.ConsensusEngine = "fakeConsensus"
 				return command
 			},
@@ -139,7 +139,7 @@ func TestItFailsWhenRunningHandlerWithInvalidCommandValues(t *testing.T) {
 }
 
 func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
-	opt := GenesisOptions{
+	opt := Options{
 		Network:                       "test",
 		MaxNumValidators:              "5",
 		UnbondingPeriod:               "5",
@@ -198,7 +198,7 @@ func assertEqualGenesis(t *testing.T, expectedGenesis *core.Genesis, generatedGe
 }
 
 func TestOptionalValues(t *testing.T) {
-	baseCommand := GenesisOptions{
+	baseCommand := Options{
 		Network:                       "test",
 		MaxNumValidators:              "5",
 		UnbondingPeriod:               "5",

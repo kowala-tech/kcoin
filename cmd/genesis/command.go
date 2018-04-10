@@ -10,7 +10,7 @@ type generateGenesisFileCommandHandler struct {
 	w io.Writer
 }
 
-func (h *generateGenesisFileCommandHandler) handle(options genesis.GenesisOptions) error {
+func (h *generateGenesisFileCommandHandler) handle(options genesis.Options) error {
 	gns, err := genesis.GenerateGenesis(options)
 	if err != nil {
 		return err

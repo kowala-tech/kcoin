@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"encoding/json"
+
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +24,7 @@ func (client *cluster) generateGenesis() error {
 	}
 
 	newGenesis, err := genesis.GenerateGenesis(
-		genesis.GenesisOptions{
+		genesis.Options{
 			Network:                       "test",
 			MaxNumValidators:              "1",
 			UnbondingPeriod:               "0",
