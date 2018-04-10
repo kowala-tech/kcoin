@@ -1,4 +1,4 @@
-package kowala
+package tests
 
 import (
 	"time"
@@ -23,9 +23,11 @@ func FeatureContext(s *godog.Suite) {
 
 	context := features.NewTestContext(k8sCluster, genesisValidatorName)
 	s.Step(`^I have the following accounts:$`, context.IHaveTheFollowingAccounts)
-	s.Step(`^I transfer (\d+) kcoin from (\w+) to (\w+)$`, context.ITransferKUSD)
-	s.Step(`^the balance of (\w+) is eventually (\d+) kcoin$`, context.TheBalanceIsExactly)
-	s.Step(`^the balance of (\w+) is eventually around (\d+) kcoin$`, context.TheBalanceIsAround)
+	s.Step(`^I transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITransferKUSD)
+	s.Step(`^I try to transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITryTransferKUSD)
+	s.Step(`^the balance of (\w+) should be (\d+) kcoins?$`, context.TheBalanceIsExactly)
+	s.Step(`^the balance of (\w+) should be around (\d+) kcoins?$`, context.TheBalanceIsAround)
+	s.Step(`^the transaction should fail$`, context.LastTransactionFailed)
 }
 
 func prepareCluster() {
