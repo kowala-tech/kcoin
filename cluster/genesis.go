@@ -46,7 +46,10 @@ func (client *cluster) generateGenesis() error {
 		return err
 	}
 
-	out, _ := json.MarshalIndent(newGenesis, "", "  ")
+	out, err := json.MarshalIndent(newGenesis, "", "  ")
+	if err != nil {
+		return err
+	}
 
 	// Add new genesis
 	_, err = configMaps.Create(&apiv1.ConfigMap{
