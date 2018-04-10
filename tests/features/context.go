@@ -8,6 +8,8 @@ type Context struct {
 
 	accountsNodeNames map[string]string
 	accountsCoinbase  map[string]string
+
+	lastTxStdout string
 }
 
 func NewTestContext(k8sCluster cluster.Cluster, genesisValidatorName string) *Context {

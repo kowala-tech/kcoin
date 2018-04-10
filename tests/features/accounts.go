@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog/gherkin"
-	"github.com/kowala-tech/kcoin/cluster"
 )
 
 type AccountEntry struct {
@@ -81,7 +80,7 @@ func (context *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.Dat
 
 	// Wait for funds to be available
 	for _, account := range accounts {
-		err = cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
+		err = waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
 			balance, err := context.cluster.GetBalance(context.accountsNodeNames[account.AccountName])
 			if err != nil {
 				return false
@@ -98,28 +97,31 @@ func (context *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.Dat
 }
 
 func (context *Context) TheBalanceIsExactly(account string, kcoin int64) error {
-	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-		balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
-		if err != nil {
-			return false
-		}
-		return balance.Cmp(toWei(kcoin)) == 0
-	})
+	expected := toWei(kcoin)
 
-	return err
+	balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
+	if err != nil {
+		return err
+	}
+	if balance.Cmp(expected) != 0 {
+		return fmt.Errorf("Balance expected to be %v but is %v", expected, balance)
+	}
+	return nil
 }
 
 func (context *Context) TheBalanceIsAround(account string, kcoin int64) error {
-	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-		balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
-		if err != nil {
-			return false
-		}
-		diff := balance.Sub(balance, toWei(kcoin))
-		diff.Abs(diff)
+	expected := toWei(kcoin)
 
-		return diff.Cmp(big.NewInt(100000)) < 0
-	})
+	balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
+	if err != nil {
+		return err
+	}
+	diff := &big.Int{}
+	diff.Sub(balance, expected)
+	diff.Abs(diff)
 
-	return err
+	if diff.Cmp(big.NewInt(100000)) >= 0 {
+		return fmt.Errorf("Balance expected to be around %v but is %v", expected, balance)
+	}
+	return nil
 }
