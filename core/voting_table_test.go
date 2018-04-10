@@ -58,7 +58,7 @@ func TestVotingTable_Add_CheckIsVoterAndVoteNotSeen_CallsQuorum(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	signedVote := &mocks.SignedVote{}
+	signedVote := &mocks.AddressVote{}
 	signedVote.On("Address").Return(voterAddress)
 	signedVote.On("Vote").Return(types.NewVote(big.NewInt(1), common.HexToHash("123"), 0, types.PreCommit))
 
@@ -84,7 +84,7 @@ func TestVotingTable_Add_DoubleVoteFromAddressReturnsError(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	signedVote := &mocks.SignedVote{}
+	signedVote := &mocks.AddressVote{}
 	signedVote.On("Address").Return(voterAddress)
 	signedVote.On("Vote").Return(types.NewVote(big.NewInt(1), common.HexToHash("123"), 0, types.PreCommit))
 
@@ -115,7 +115,7 @@ func TestVotingTable_Add_VoteFromNonVoterReturnsError(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	signedVote := &mocks.SignedVote{}
+	signedVote := &mocks.AddressVote{}
 	signedVote.On("Address").Return(nonVoterAddress)
 	signedVote.On("Vote").Return(types.NewVote(big.NewInt(1), common.HexToHash("123"), 0, types.PreCommit))
 
