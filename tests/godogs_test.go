@@ -77,5 +77,5 @@ func prepareCluster() {
 }
 
 func cleanupCluster() {
-	// k8sCluster.Cleanup()
+	k8sCluster.Cleanup()
 }
