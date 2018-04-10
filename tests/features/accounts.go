@@ -116,10 +116,11 @@ func (context *Context) TheBalanceIsAround(account string, kcoin int64) error {
 	if err != nil {
 		return err
 	}
-	diff := balance.Sub(balance, expected)
+	diff := &big.Int{}
+	diff.Sub(balance, expected)
 	diff.Abs(diff)
 
-	if diff.Cmp(big.NewInt(100000)) < 0 {
+	if diff.Cmp(big.NewInt(100000)) >= 0 {
 		return fmt.Errorf("Balance expected to be around %v but is %v", expected, balance)
 	}
 	return nil
