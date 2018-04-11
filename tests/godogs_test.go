@@ -3,6 +3,8 @@ package tests
 import (
 	"time"
 
+	"github.com/kowala-tech/kcoin/kcoinclient"
+
 	"github.com/DATA-DOG/godog"
 	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/tests/features"
@@ -11,6 +13,7 @@ import (
 var (
 	k8sCluster           cluster.Cluster
 	genesisValidatorName string
+	client               *kcoinclient.Client
 )
 
 func FeatureContext(s *godog.Suite) {
@@ -21,7 +24,7 @@ func FeatureContext(s *godog.Suite) {
 	}
 	s.AfterSuite(cleanupCluster)
 
-	context := features.NewTestContext(k8sCluster, genesisValidatorName)
+	context := features.NewTestContext(k8sCluster, genesisValidatorName, client)
 	s.Step(`^I have the following accounts:$`, context.IHaveTheFollowingAccounts)
 	s.Step(`^I transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITransferKUSD)
 	s.Step(`^I try to transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITryTransferKUSD)
@@ -59,6 +62,16 @@ func prepareCluster() {
 	if err := k8sCluster.TriggerGenesisValidation(); err != nil {
 		panic(err)
 	}
+	name, err = k8sCluster.RunRpcNode()
+	if err != nil {
+		panic(err)
+	}
+
+	newClient, err := k8sCluster.RpcClient()
+	if err != nil {
+		panic(err)
+	}
+	client = newClient
 
 	time.Sleep(3 * time.Second) // let the genesis validator generate some blocks
 }
