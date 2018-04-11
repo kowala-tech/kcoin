@@ -48,14 +48,8 @@ func (client *cluster) Cleanup() error {
 	if err != nil {
 		return err
 	}
-	err = WaitFor(1*time.Second, 20*time.Second, func() bool {
-		list, err := client.Clientset.CoreV1().Pods(Namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return false
-		}
-		return len(list.Items) == 0
-	})
-	if err != nil {
+
+	if err := client.waitForNoPods(); err != nil {
 		return err
 	}
 
@@ -72,14 +66,7 @@ func (client *cluster) Cleanup() error {
 			return err
 		}
 	}
-
-	return WaitFor(1*time.Second, 20*time.Second, func() bool {
-		list, err := client.Clientset.CoreV1().Services(Namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return false
-		}
-		return len(list.Items) == 0
-	})
+	return client.waitForNoServices()
 }
 
 func (client *cluster) Initialize(networkID string) error {
@@ -187,5 +174,25 @@ func (client *cluster) waitForInitialSync(podName string) error {
 	return WaitFor(2*time.Second, 5*time.Minute, func() bool {
 		resp, err := client.Exec(podName, `eth.syncing`)
 		return err == nil && resp.StdOut == "false\n"
+	})
+}
+
+func (client *cluster) waitForNoPods() error {
+	return WaitFor(1*time.Second, 20*time.Second, func() bool {
+		list, err := client.Clientset.CoreV1().Pods(Namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return false
+		}
+		return len(list.Items) == 0
+	})
+}
+
+func (client *cluster) waitForNoServices() error {
+	return WaitFor(1*time.Second, 20*time.Second, func() bool {
+		list, err := client.Clientset.CoreV1().Services(Namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return false
+		}
+		return len(list.Items) == 0
 	})
 }
