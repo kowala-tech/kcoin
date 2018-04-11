@@ -3,6 +3,9 @@ package cluster
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
+	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,8 +37,25 @@ func (client *cluster) TriggerGenesisValidation() error {
 	log.Println("Triggering genesis validation")
 	_, err := client.Exec(
 		genesisValidatorPodName,
-		`eth.sendTransaction({from:eth.coinbase,to: "0x259be75d96876f2ada3d202722523e9cd4dd917d",value: 1})`)
-	return err
+		`
+			personal.unlockAccount(eth.coinbase, "test");
+			eth.sendTransaction({from:eth.coinbase,to: "0x259be75d96876f2ada3d202722523e9cd4dd917d",value: 1})
+		`)
+	if err != nil {
+		return err
+	}
+
+	return WaitFor(2*time.Second, 20*time.Second, func() bool {
+		res, err := client.Exec(genesisValidatorPodName, `eth.blockNumber`)
+		if err != nil {
+			return false
+		}
+		parsed, err := strconv.Atoi(strings.TrimSpace(res.StdOut))
+		if err != nil {
+			return false
+		}
+		return parsed > 0
+	})
 }
 
 func genesisValidatorPod(podName, networkID, pub_key, bootnode string, port int32) *apiv1.Pod {
@@ -52,8 +72,8 @@ func genesisValidatorPod(podName, networkID, pub_key, bootnode string, port int3
 			Containers: []apiv1.Container{
 				{
 					Name:            podName,
-					Image:           "kowalatech/kcoin:dev",
-					ImagePullPolicy: apiv1.PullAlways,
+					Image:           "kowalatech/kusd:dev",
+					ImagePullPolicy: apiv1.PullNever,
 					Ports: []apiv1.ContainerPort{
 						{
 							ContainerPort: port,

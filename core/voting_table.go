@@ -11,28 +11,32 @@ import (
 var ErrDuplicateVote = errors.New("duplicate vote")
 
 type VotingTable interface {
-	Add(vote types.SignedVote) error
+	Add(vote types.AddressVote) error
 }
 
 type votingTable struct {
 	voteType types.VoteType
-	voters   types.ValidatorList
+	voters   types.Voters
 	votes    types.Votes
 	quorum   QuorumFunc
 	majority QuorumReachedFunc
 }
 
-func NewVotingTable(voteType types.VoteType, voters types.ValidatorList, majority QuorumReachedFunc) *votingTable {
+func NewVotingTable(voteType types.VoteType, voters types.Voters, majority QuorumReachedFunc) (*votingTable, error) {
+	if voters == nil {
+		return nil, errors.New("cant create a voting table with nil voters")
+	}
+
 	return &votingTable{
 		voteType: voteType,
 		voters:   voters,
 		votes:    types.Votes{},
 		quorum:   TwoThirdsPlusOneVoteQuorum,
 		majority: majority,
-	}
+	}, nil
 }
 
-func (table *votingTable) Add(vote types.SignedVote) error {
+func (table *votingTable) Add(vote types.AddressVote) error {
 	if !table.isVoter(vote.Address()) {
 		return fmt.Errorf("voter address not found in voting table: %#x", vote.Address().Hash().Str())
 	}

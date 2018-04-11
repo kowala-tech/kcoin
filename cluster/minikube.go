@@ -1,15 +1,20 @@
 package cluster
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
+	"strings"
 	"time"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var exportRegexp = regexp.MustCompile(`^export\ (.*)=\"(.*)\"$`)
 
 type minikubeCluster struct {
 	k8sCluster
@@ -41,7 +46,7 @@ func (cluster *minikubeCluster) Create() error {
 		return fmt.Errorf("The cluster with this name already exists. Delete it first.")
 	}
 	log.Println("Creating k8s cluster using minikube")
-	cmd := exec.Command("minikube", "start", "-p", cluster.Name)
+	cmd := exec.Command("minikube", "start", "-p", cluster.Name, "--kubernetes-version", "v1.9.0")
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -65,9 +70,48 @@ func (cluster *minikubeCluster) Delete() error {
 		return err
 	}
 	if !cmd.ProcessState.Success() {
-		return fmt.Errorf("Error creating cluster")
+		return fmt.Errorf("error creating cluster")
 	}
 	return nil
+}
+
+// DockerEnv returns the environment variables necessary to connect to the private docker repository in the kubernetes cluster
+func (cluster *minikubeCluster) DockerEnv() ([]string, error) {
+	statusCmd := exec.Command("minikube", "docker-env", "-p", cluster.Name, "--shell", "bash")
+	stdout := &bytes.Buffer{}
+	statusCmd.Stdout = stdout
+	if err := statusCmd.Run(); err != nil {
+		return nil, err
+	}
+	if !statusCmd.ProcessState.Success() {
+		return nil, fmt.Errorf("error getting docker environment variables")
+	}
+	lines := strings.Split(stdout.String(), "\n")
+	goodLines := make([]string, 0)
+	for _, line := range lines {
+		values := exportRegexp.FindAllStringSubmatch(line, 1)
+		if values != nil {
+			goodLines = append(goodLines, fmt.Sprintf("%v=%v", values[0][1], values[0][2]))
+		}
+	}
+
+	return goodLines, nil
+}
+
+// ServiceAddr returns the ip:port pair for a specific service running in the cluster
+func (cluster *minikubeCluster) ServiceAddr(serviceName string) (string, error) {
+	statusCmd := exec.Command("minikube", "service", serviceName, "-p", cluster.Name, "-n", Namespace, "--url", "--format", "http://{{.IP}}:{{.Port}}")
+	stdout := &bytes.Buffer{}
+	statusCmd.Stdout = stdout
+	statusCmd.Stderr = os.Stderr
+	if err := statusCmd.Run(); err != nil {
+		return "", err
+	}
+	if !statusCmd.ProcessState.Success() {
+		return "", fmt.Errorf("error getting cluster IP")
+	}
+	url := strings.TrimSpace(stdout.String())
+	return url[7:], nil
 }
 
 func (cluster *minikubeCluster) assertReady() error {

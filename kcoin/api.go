@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"
@@ -125,11 +126,11 @@ func (api *PrivateValidatorAPI) GetDeposits() (GetDepositsResult, error) {
 			Amount: deposit.Amount(),
 		}
 		// @NOTE (rgeraldes) - time.IsZero works in a different way
-		if deposit.AvailableAt().Unix() == 0 {
+		if deposit.AvailableAtTimeUnix() == 0 {
 			// @NOTE (rgeraldes) - zero values are not shown for this field
 			deposits[i].AvailableAt = ""
 		} else {
-			deposits[i].AvailableAt = deposit.AvailableAt().String()
+			deposits[i].AvailableAt = time.Unix(deposit.AvailableAtTimeUnix(), 0).String()
 		}
 	}
 

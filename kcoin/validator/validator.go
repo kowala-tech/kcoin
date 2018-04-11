@@ -234,7 +234,7 @@ func (val *validator) init() error {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
 
-	if val.validatorsChecksum != checksum {
+	if val.votersChecksum != checksum {
 		if err := val.updateValidators(checksum, true); err != nil {
 			log.Crit("Failed to update the validator set", "err", err)
 		}
@@ -253,7 +253,11 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
+	val.votingSystem, err = NewVotingSystem(val.eventMux, val.blockNumber, val.voters)
+	if err != nil {
+		log.Error("Failed to create voting system", "err", err)
+		return nil
+	}
 
 	val.blockCh = make(chan *types.Block)
 	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
@@ -264,10 +268,6 @@ func (val *validator) init() error {
 	}
 
 	return nil
-}
-
-func (val *validator) isProposer() bool {
-	return val.validators.Proposer().Address() == val.walletAccount.Account().Address
 }
 
 func (val *validator) AddProposal(proposal *types.Proposal) error {
@@ -288,10 +288,16 @@ func (val *validator) AddVote(vote *types.Vote) error {
 		return ErrCantVoteNotValidating
 	}
 
-	if err := val.votingSystem.Add(vote); err != nil {
+	addressVote, err := types.NewAddressVote(val.signer, vote)
+	if err != nil {
+		return err
+	}
+
+	if err := val.votingSystem.Add(addressVote); err != nil {
 		switch err {
 		}
 	}
+
 	return nil
 }
 
@@ -412,7 +418,7 @@ func (val *validator) createBlock() *types.Block {
 		GasLimit:       core.CalcGasLimit(parent),
 		GasUsed:        0,
 		Time:           big.NewInt(tstamp),
-		ValidatorsHash: val.validators.Hash(),
+		ValidatorsHash: val.voters.Hash(),
 	}
 	val.header = header
 
@@ -549,7 +555,12 @@ func (val *validator) vote(vote *types.Vote) {
 		log.Crit("Failed to sign the vote", "err", err)
 	}
 
-	err = val.votingSystem.Add(signedVote)
+	addressVote, err := types.NewAddressVote(val.signer, signedVote)
+	if err != nil {
+		log.Crit("Failed to make address Vote", "err", err)
+	}
+
+	err = val.votingSystem.Add(addressVote)
 	if err != nil {
 		log.Warn("Failed to add own vote to voting table", "err", err)
 	}
@@ -625,8 +636,8 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 		return err
 	}
 
-	val.validators = validators
-	val.validatorsChecksum = checksum
+	val.voters = validators
+	val.votersChecksum = checksum
 
 	return nil
 }

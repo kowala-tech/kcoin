@@ -310,6 +310,10 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 
 		// If stats retrieval failed, wait a bit and retry
 		if err != nil {
+
+			// @NOTE (rgeraldes) - Unmarshalling errors are probably due to this return message:
+			// https://github.com/kowala-tech/kcoin/blob/dev/internal/kcoinapi/api.go#L698
+			// new fields in the header (required fields) must be added to that return msg.
 			if err = sendError(conn, errors.New("Faucet offline: "+err.Error())); err != nil {
 				log.Warn("Failed to send faucet error to client", "err", err)
 				return

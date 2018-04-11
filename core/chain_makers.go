@@ -6,6 +6,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/consensus"
+	"github.com/kowala-tech/kcoin/consensus/tendermint"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
@@ -168,19 +169,19 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 			gen(i, b)
 		}
 
-		if b.engine != nil {
-			block, _ := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.lastCommit, b.receipts)
-			// Write state changes to db
-			root, err := statedb.Commit(true)
-			if err != nil {
-				panic(fmt.Sprintf("state write error: %v", err))
-			}
-			if err := statedb.Database().TrieDB().Commit(root, false); err != nil {
-				panic(fmt.Sprintf("trie write error: %v", err))
-			}
-			return block, b.receipts
+		block, _ := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.lastCommit, b.receipts)
+
+		// @TODO(rgeraldes) - review/add signers
+		tendermint.AccumulateRewards(statedb, b.header, nil)
+		root, err := statedb.Commit(true)
+		if err != nil {
+			panic(fmt.Sprintf("state write error: %v", err))
 		}
-		return nil, nil
+		if err := statedb.Database().TrieDB().Commit(root, false); err != nil {
+			panic(fmt.Sprintf("trie write error: %v", err))
+		}
+		b.header.Root = root
+		return block, b.receipts
 	}
 	for i := 0; i < n; i++ {
 		statedb, err := state.New(parent.Root(), state.NewDatabase(db))
@@ -231,7 +232,8 @@ func newCanonical(engine consensus.Engine, n int, full bool) (kcoindb.Database, 
 	db, _ := kcoindb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, nil, params.AllProtocolChanges, engine, vm.Config{})
+	//todo @jeka: shell we use tendermint.NewFaker()?
+	blockchain, _ := NewBlockChain(db, nil, params.AllTendermintProtocolChanges, engine, vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil

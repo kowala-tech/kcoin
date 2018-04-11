@@ -48,18 +48,38 @@ func (client *cluster) Cleanup() error {
 	if err != nil {
 		return err
 	}
-	return WaitFor(1*time.Second, 20*time.Second, func() bool {
-		list, err := client.Clientset.CoreV1().Pods(Namespace).List(metav1.ListOptions{})
+
+	if err := client.waitForNoPods(); err != nil {
+		return err
+	}
+
+	// Services can't be deleted as a collection...
+	list, err := client.Clientset.CoreV1().Services(Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, service := range list.Items {
+		err = client.Clientset.CoreV1().Services(Namespace).Delete(service.Name, &metav1.DeleteOptions{
+			GracePeriodSeconds: &zero,
+		})
 		if err != nil {
-			return false
+			return err
 		}
-		return len(list.Items) == 0
-	})
+	}
+	return client.waitForNoServices()
 }
 
 func (client *cluster) Initialize(networkID string) error {
 	log.Println("Initializing cluster")
 	client.NetworkID = networkID
+
+	env, err := client.Backend.DockerEnv()
+	if err != nil {
+		return err
+	}
+	builder := NewDockerBuilder(env)
+	builder.Build("kowalatech/bootnode:dev", "bootnode.Dockerfile")
+	builder.Build("kowalatech/kusd:dev", "kcoin.Dockerfile")
 
 	if err := client.createNamespace(); err != nil {
 		return err
@@ -76,6 +96,10 @@ func (client *cluster) Initialize(networkID string) error {
 	if err := client.generateGenesis(); err != nil {
 		return err
 	}
+	if errs := builder.Wait(); len(errs) > 0 {
+		return errs[0] // any error will do
+	}
+
 	return nil
 }
 
@@ -85,10 +109,11 @@ func (client *cluster) DeletePod(podName string) error {
 
 func (client *cluster) createNamespace() error {
 	ns, err := client.Clientset.CoreV1().Namespaces().Get(Namespace, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	if ns != nil {
+
+	// `err`` will be a NotFound if the namespace doesn't exist, and `ns` will be
+	//   a struct with an empty Name. Just checking for the name match will cover
+	//   a not found too.
+	if ns.Name == Namespace {
 		return nil
 	}
 
@@ -149,5 +174,25 @@ func (client *cluster) waitForInitialSync(podName string) error {
 	return WaitFor(2*time.Second, 5*time.Minute, func() bool {
 		resp, err := client.Exec(podName, `eth.syncing`)
 		return err == nil && resp.StdOut == "false\n"
+	})
+}
+
+func (client *cluster) waitForNoPods() error {
+	return WaitFor(1*time.Second, 20*time.Second, func() bool {
+		list, err := client.Clientset.CoreV1().Pods(Namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return false
+		}
+		return len(list.Items) == 0
+	})
+}
+
+func (client *cluster) waitForNoServices() error {
+	return WaitFor(1*time.Second, 20*time.Second, func() bool {
+		list, err := client.Clientset.CoreV1().Services(Namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return false
+		}
+		return len(list.Items) == 0
 	})
 }

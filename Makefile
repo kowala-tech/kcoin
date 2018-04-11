@@ -164,8 +164,8 @@ kcoin-windows-amd64:
 docker-build-bootnode:
 	docker build -t kowalatech/bootnode -f bootnode.Dockerfile .
 
-docker-build-kcoin:
-	docker build -t kowalatech/kcoin -f kcoin.Dockerfile .
+docker-build-kusd:
+	docker build -t kowalatech/kusd -f kcoin.Dockerfile .
 
 docker-build-faucet:
 	docker build -t kowalatech/faucet -f faucet.Dockerfile .
@@ -174,8 +174,8 @@ docker-build-faucet:
 docker-publish-bootnode:
 	docker push kowalatech/bootnode
 
-docker-publish-kcoin:
-	docker push kowalatech/kcoin
+docker-publish-kusd:
+	docker push kowalatech/kusd
 
 docker-publish-faucet:
 	docker push kowalatech/faucet
@@ -188,4 +188,4 @@ ifndef GODOG_BIN
 	@echo "Installing godog..."
 	@go get github.com/DATA-DOG/godog/cmd/godog
 endif
-	@godog
+	@cd tests && godog ../features

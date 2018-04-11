@@ -130,8 +130,10 @@ var (
 		"./consensus/tendermint",
 		"./contracts/network",
 		"./kcoin/validator",
+		"./kcoin/genesis",
 		"./accounts",
 		"./core/types",
+		"./params",
 		"./cluster",
 		"./tests/features",
 	}

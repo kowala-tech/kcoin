@@ -130,7 +130,7 @@ func (e *GenesisMismatchError) Error() string {
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.AllProtocolChanges, common.Hash{}, errGenesisNoConfig
+		return params.AllTendermintProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no stored genesis block.
@@ -185,11 +185,10 @@ func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConf
 		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
 	}
 
-	// @NOTE (rgeraldes) - not necessary for now
-	//compatErr := storedcfg.CheckCompatible(newcfg, height)
-	//if compatErr != nil && height != 0 && compatErr.RewindTo != 0 {
-	//	return newcfg, stored, compatErr
-	//}
+	compatErr := storedcfg.CheckCompatible(newcfg, height)
+	if compatErr != nil && height != 0 && compatErr.RewindTo != 0 {
+		return newcfg, stored, compatErr
+	}
 	return newcfg, stored, WriteChainConfig(db, stored, newcfg)
 }
 
@@ -202,7 +201,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	case ghash == params.TestnetGenesisHash:
 		return params.TestnetChainConfig
 	default:
-		return params.AllProtocolChanges
+		return params.AllTendermintProtocolChanges
 	}
 }
 
@@ -265,7 +264,7 @@ func (g *Genesis) Commit(db kcoindb.Database) (*types.Block, error) {
 	}
 	config := g.Config
 	if config == nil {
-		config = params.AllProtocolChanges
+		config = params.AllTendermintProtocolChanges
 	}
 	return block, WriteChainConfig(db, block.Hash(), config)
 }
@@ -309,7 +308,7 @@ func DefaultTestnetGenesisBlock() *Genesis {
 // DevGenesisBlock returns the 'kcoin --dev' genesis block.
 func DevGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:   params.AllProtocolChanges,
+		Config:   params.AllTendermintProtocolChanges,
 		GasLimit: 4712388,
 		Alloc:    decodePrealloc(devAllocData),
 	}

@@ -111,7 +111,7 @@ func (val *validator) newElectionState() stateFn {
 func (val *validator) newRoundState() stateFn {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
-	val.validators.UpdateWeights()
+	val.voters.NextProposer()
 
 	if val.round != 0 {
 		val.round++
@@ -124,23 +124,26 @@ func (val *validator) newRoundState() stateFn {
 }
 
 func (val *validator) newProposalState() stateFn {
-	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
-
-	if val.isProposer() {
+	proposer := val.voters.NextProposer()
+	if proposer.Address() == val.walletAccount.Account().Address {
 		log.Info("Proposing a new block")
 		val.propose()
 	} else {
-		log.Info("Waiting for the proposal", "proposer", val.validators.Proposer())
-		select {
-		case block := <-val.blockCh:
-			val.block = block
-			log.Info("Received the block", "hash", val.block.Hash())
-		case <-time.After(timeout):
-			log.Info("Timeout expired", "duration", timeout)
-		}
+		log.Info("Waiting for the proposal", proposer.Address())
+		val.waitForProposal()
 	}
-
 	return val.preVoteState
+}
+
+func (val *validator) waitForProposal() {
+	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
+	select {
+	case block := <-val.blockCh:
+		val.block = block
+		log.Info("Received the block", "hash", val.block.Hash())
+	case <-time.After(timeout):
+		log.Info("Timeout expired", "duration", timeout)
+	}
 }
 
 func (val *validator) preVoteState() stateFn {
