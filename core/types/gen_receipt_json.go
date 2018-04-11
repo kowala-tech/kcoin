@@ -5,7 +5,6 @@ package types
 import (
 	"encoding/json"
 	"errors"
-	"math/big"
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"

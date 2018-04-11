@@ -68,7 +68,7 @@ func NewDatabase(db kcoindb.Database) Database {
 }
 
 type cachingDB struct {
-	db            kcoindb.Database
+	db            *trie.Database
 	mu            sync.Mutex
 	pastTries     []*trie.SecureTrie
 	codeSizeCache *lru.Cache

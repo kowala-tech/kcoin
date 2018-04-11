@@ -328,6 +328,16 @@ func (bc *BlockChain) CurrentFastBlock() *types.Block {
 	return bc.currentFastBlock.Load().(*types.Block)
 }
 
+// Status returns status information about the current chain such as the HEAD block number,
+// the HEAD hash and the hash of the genesis block.
+func (bc *BlockChain) Status() (blockNumber *big.Int, currentBlock common.Hash, genesisBlock common.Hash) {
+	bc.mu.RLock()
+	defer bc.mu.RUnlock()
+
+	bcCurrentBlock := bc.currentBlock.Load().(*types.Block)
+	return bcCurrentBlock.Number(), bcCurrentBlock.Hash(), bc.genesisBlock.Hash()
+}
+
 // SetProcessor sets the processor required for making state modifications.
 func (bc *BlockChain) SetProcessor(processor Processor) {
 	bc.procmu.Lock()
@@ -824,9 +834,6 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
-	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), td); err != nil {
-		return err
-	}
 	if err := WriteBlock(bc.db, block); err != nil {
 		return err
 	}

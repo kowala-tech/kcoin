@@ -6,7 +6,6 @@ import (
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/consensus"
-	"github.com/kowala-tech/kcoin/consensus/tendermint"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
@@ -36,6 +35,7 @@ type BlockGen struct {
 	lastCommit *types.Commit
 
 	config *params.ChainConfig
+	engine consensus.Engine
 }
 
 // SetCoinbase sets the coinbase of the generated block.
@@ -81,7 +81,7 @@ func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
 		b.SetCoinbase(common.Address{})
 	}
 	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
-	receipt, _, err := ApplyTransaction(b.config, nil, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed, vm.Config{})
+	receipt, _, err := ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, &b.header.GasUsed, vm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -169,7 +169,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		}
 
 		if b.engine != nil {
-			block, _ := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.receipts, b.lastCommit)
+			block, _ := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.lastCommit, b.receipts)
 			// Write state changes to db
 			root, err := statedb.Commit(true)
 			if err != nil {
@@ -231,7 +231,7 @@ func newCanonical(engine consensus.Engine, n int, full bool) (kcoindb.Database, 
 	db, _ := kcoindb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, nil, params.AllProtocolChanges, tendermint.NewFaker(), vm.Config{})
+	blockchain, _ := NewBlockChain(db, nil, params.AllProtocolChanges, engine, vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil

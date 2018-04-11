@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/metrics/exp"
+	"github.com/rcrowley/go-metrics/exp"
 
 	prometheusmetrics "github.com/kowala-tech/go-metrics-prometheus"
 	"github.com/prometheus/client_golang/prometheus"

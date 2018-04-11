@@ -15,7 +15,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 
-	gometrics "github.com/rcrowley/go-metrics"
+	//gometrics "github.com/rcrowley/go-metrics"
 )
 
 var OpenFileLimit = 64
@@ -24,11 +24,11 @@ type LDBDatabase struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
 
-	compTimeMeter  gometrics.Meter // Meter for measuring the total time spent in database compaction
-	compReadMeter  gometrics.Meter // Meter for measuring the data read during compaction
-	compWriteMeter gometrics.Meter // Meter for measuring the data written during compaction
-	diskReadMeter  gometrics.Meter // Meter for measuring the effective amount of data read
-	diskWriteMeter gometrics.Meter // Meter for measuring the effective amount of data written
+	compTimeMeter  metrics.Meter // Meter for measuring the total time spent in database compaction
+	compReadMeter  metrics.Meter // Meter for measuring the data read during compaction
+	compWriteMeter metrics.Meter // Meter for measuring the data written during compaction
+	diskReadMeter  metrics.Meter // Meter for measuring the effective amount of data read
+	diskWriteMeter metrics.Meter // Meter for measuring the effective amount of data written
 
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database

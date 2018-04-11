@@ -371,7 +371,7 @@ func (q *queue) Results(block bool) []*fetchResult {
 		for _, result := range results {
 			size := result.Header.Size()
 			commit := result.Commit
-			size += len(commit.Commits())
+			size += common.StorageSize(len(commit.Commits()))
 			for _, receipt := range result.Receipts {
 				size += receipt.Size()
 			}

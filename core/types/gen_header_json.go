@@ -40,8 +40,8 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.LastCommitHash = h.LastCommitHash
 	enc.Bloom = h.Bloom
 	enc.Number = (*hexutil.Big)(h.Number)
-	enc.GasLimit = hexutil.Uint64(h.GasLimit)
-	enc.GasUsed = hexutil.Uint64(h.GasUsed)
+	enc.GasLimit = (*hexutil.Uint64)(&h.GasLimit)
+	enc.GasUsed = (*hexutil.Uint64)(&h.GasUsed)
 	enc.Time = (*hexutil.Big)(h.Time)
 	enc.Extra = h.Extra
 	enc.Hash = h.Hash()

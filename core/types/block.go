@@ -8,6 +8,7 @@ import (
 	"sort"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"
@@ -40,10 +41,10 @@ type Header struct {
 }
 
 // field type overrides for gencodec
-type headerMarshalling struct {
+type headerMarshaling struct {
 	Number   *hexutil.Big
-	GasLimit uint64
-	GasUsed  uint64
+	GasLimit hexutil.Uint64
+	GasUsed  hexutil.Uint64
 	Time     *hexutil.Big
 	Extra    hexutil.Bytes
 	Hash     common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
@@ -72,6 +73,12 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.Time,
 		h.Extra,
 	})
+}
+
+// Size returns the approximate memory used by all internal contents. It is used
+// to approximate and limit the memory consumption of various caches.
+func (h *Header) Size() common.StorageSize {
+	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.Number.BitLen()+h.Time.BitLen())/8)
 }
 
 func rlpHash(x interface{}) (h common.Hash) {

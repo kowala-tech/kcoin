@@ -111,7 +111,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		c.Deposit = *dec.Deposit
 	}
 	if dec.ExtraData != nil {
-		c.ExtraData = dec.ExtraData
+		c.ExtraData = *dec.ExtraData
 	}
 	if dec.GasPrice != nil {
 		c.GasPrice = dec.GasPrice

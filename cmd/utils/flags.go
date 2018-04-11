@@ -266,7 +266,7 @@ var (
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to be proposed",
-		Value: params.GenesisGasLimit.Uint64(),
+		Value: params.GenesisGasLimit,
 	}
 	CoinbaseFlag = cli.StringFlag{
 		Name:  "coinbase",
