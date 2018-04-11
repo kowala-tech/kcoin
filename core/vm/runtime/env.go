@@ -1,8 +1,6 @@
 package runtime
 
 import (
-	"math/big"
-
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/vm"
