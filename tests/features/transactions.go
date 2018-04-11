@@ -10,15 +10,15 @@ import (
 
 var txRegexp = regexp.MustCompile(`0x[0-9a-f]{64}`)
 
-func (context *Context) ITransferKUSD(kcoin int, from, to string) error {
+func (ctx *Context) ITransferKUSD(kcoin int, from, to string) error {
 	command := fmt.Sprintf(
 		`
 			personal.unlockAccount(eth.coinbase, "test");
 			eth.sendTransaction({from:eth.coinbase, to: "%s", value: web3.toWei(%v, 'ether')})
 		`,
-		context.accountsCoinbase[to],
+		ctx.accountsCoinbase[to],
 		kcoin)
-	res, err := context.cluster.Exec(context.accountsNodeNames[from], command)
+	res, err := ctx.cluster.Exec(ctx.accountsNodeNames[from], command)
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func (context *Context) ITransferKUSD(kcoin int, from, to string) error {
 		return fmt.Errorf("Expected transaction, received: %v", res.StdOut)
 	}
 	err = waitFor("transaction in the blockhain", 1*time.Second, 5*time.Second, func() bool {
-		isInBlockchain, err := context.isTransactionInBlockchain(res.StdOut)
+		isInBlockchain, err := ctx.isTransactionInBlockchain(res.StdOut)
 		return err == nil && isInBlockchain
 	})
 	if err != nil {
@@ -35,28 +35,28 @@ func (context *Context) ITransferKUSD(kcoin int, from, to string) error {
 	return nil
 }
 
-func (context *Context) ITryTransferKUSD(kcoin int, from, to string) error {
+func (ctx *Context) ITryTransferKUSD(kcoin int, from, to string) error {
 	command := fmt.Sprintf(
 		`
 			personal.unlockAccount(eth.coinbase, "test");
 			eth.sendTransaction({from:eth.coinbase, to: "%s", value: web3.toWei(%v, 'ether')})
 		`,
-		context.accountsCoinbase[to],
+		ctx.accountsCoinbase[to],
 		kcoin)
-	res, err := context.cluster.Exec(context.accountsNodeNames[from], command)
+	res, err := ctx.cluster.Exec(ctx.accountsNodeNames[from], command)
 	if err != nil {
 		return err
 	}
-	context.lastTxStdout = res.StdOut
+	ctx.lastTxStdout = res.StdOut
 	return nil
 }
 
-func (context *Context) LastTransactionFailed() error {
-	if !txRegexp.MatchString(context.lastTxStdout) {
+func (ctx *Context) LastTransactionFailed() error {
+	if !txRegexp.MatchString(ctx.lastTxStdout) {
 		return nil // Failed at submitting the transaction, all good
 	}
 
-	isInBlockchain, err := context.isTransactionInBlockchain(context.lastTxStdout)
+	isInBlockchain, err := ctx.isTransactionInBlockchain(ctx.lastTxStdout)
 	if err != nil {
 		return err
 	}
@@ -66,9 +66,9 @@ func (context *Context) LastTransactionFailed() error {
 	return nil
 }
 
-func (context *Context) isTransactionInBlockchain(tx string) (bool, error) {
+func (ctx *Context) isTransactionInBlockchain(tx string) (bool, error) {
 	command := fmt.Sprintf(`eth.getTransaction(%v).blockNumber`, tx)
-	res, err := context.cluster.Exec(context.genesisValidatorName, command)
+	res, err := ctx.cluster.Exec(ctx.genesisValidatorName, command)
 	if err != nil {
 		return false, err
 	}
