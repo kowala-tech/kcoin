@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/kowala-tech/kcoin/kcoinclient"
@@ -14,6 +15,7 @@ var (
 	k8sCluster           cluster.Cluster
 	genesisValidatorName string
 	client               *kcoinclient.Client
+	chainID              = big.NewInt(519374298533)
 )
 
 func FeatureContext(s *godog.Suite) {
@@ -24,7 +26,7 @@ func FeatureContext(s *godog.Suite) {
 	}
 	s.AfterSuite(cleanupCluster)
 
-	context := features.NewTestContext(k8sCluster, genesisValidatorName, client)
+	context := features.NewTestContext(k8sCluster, genesisValidatorName, client, chainID)
 	s.Step(`^I have the following accounts:$`, context.IHaveTheFollowingAccounts)
 	s.Step(`^I transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITransferKUSD)
 	s.Step(`^I try to transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITryTransferKUSD)
@@ -48,7 +50,7 @@ func prepareCluster() {
 
 	k8sCluster.Cleanup() // Just in case the previous run didn't finish gracefully
 
-	if err := k8sCluster.Initialize("519374298533"); err != nil {
+	if err := k8sCluster.Initialize(chainID.String()); err != nil {
 		panic(err)
 	}
 	if err := k8sCluster.RunBootnode(); err != nil {
