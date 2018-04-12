@@ -545,6 +545,16 @@ func (bc *BlockChain) HasBlockAndState(hash common.Hash, number uint64) bool {
 	return bc.HasState(block.Root())
 }
 
+// HasBlockAndStateByHash checks if a block and associated state trie is fully present
+// in the database or not, caching it if present.
+func (bc *BlockChain) HasBlockAndStateByHash(hash common.Hash) bool {
+	block := bc.GetBlockByHash(hash)
+	if block == nil {
+		return false
+	}
+	return bc.HasState(block.Root())
+}
+
 // GetBlock retrieves a block from the database by hash and number,
 // caching it if found.
 func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
