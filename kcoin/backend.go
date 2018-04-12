@@ -149,11 +149,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kcoin.election = election
 
-	walletAccount, err := getWalletAccount(ctx.AccountManager, kcoin.coinbase)
-	if err != nil {
-		log.Warn("failed to get wallet account", "err", err)
-	}
-	kcoin.validator = validator.New(walletAccount, kcoin, kcoin.election, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
+	kcoin.validator = validator.New(kcoin, kcoin.election, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
 	kcoin.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kcoin.protocolManager, err = NewProtocolManager(kcoin.chainConfig, config.SyncMode, config.NetworkId, kcoin.eventMux, kcoin.txPool, kcoin.engine, kcoin.blockchain, chainDb, kcoin.validator); err != nil {
@@ -161,15 +157,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 
 	return kcoin, nil
-}
-
-func getWalletAccount(accountManager *accounts.Manager, address common.Address) (accounts.WalletAccount, error) {
-	account := accounts.Account{Address: address}
-	wallet, err := accountManager.Find(account)
-	if err != nil {
-		return nil, err
-	}
-	return accounts.NewWalletAccount(wallet, account)
 }
 
 func makeExtraData(extra []byte) []byte {
@@ -299,9 +286,23 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	s.coinbase = coinbase
 	s.lock.Unlock()
 
-	if err := s.validator.SetCoinbase(coinbase); err != nil {
+	walletAccount, err := s.getWalletAccount()
+	if err != nil {
 		log.Error("Error setting Coinbase on validator", "err", err)
 	}
+
+	if err := s.validator.SetCoinbase(walletAccount); err != nil {
+		log.Error("Error setting Coinbase on validator", "err", err)
+	}
+}
+
+func (s *Kowala) getWalletAccount() (accounts.WalletAccount, error) {
+	account := accounts.Account{Address: s.coinbase}
+	wallet, err := s.accountManager.Find(account)
+	if err != nil {
+		return nil, err
+	}
+	return accounts.NewWalletAccount(wallet, account)
 }
 
 // GetMinimumDeposit return minimum amount required to join the validators
@@ -319,24 +320,13 @@ func (s *Kowala) SetDeposit(deposit uint64) {
 }
 
 func (s *Kowala) StartValidating() error {
-	cb, err := s.Coinbase()
+	_, err := s.Coinbase()
 	if err != nil {
-		log.Error("Cannot start consensus validation without coinbase", "err", err)
+		log.Error("cannot start consensus validation without coinbase", "err", err)
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
-	/*
-		if clique, ok := s.engine.(*clique.Clique); ok {
-			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-			if wallet == nil || err != nil {
-				log.Error("Etherbase account unavailable locally", "err", err)
-				return fmt.Errorf("signer missing: %v", err)
-			}
-			clique.Authorize(eb, wallet.SignHash)
-		}
-	*/
-
-	dep, err := s.Deposit()
+	deposit, err := s.Deposit()
 	if err != nil {
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
 		return fmt.Errorf("insufficient funds: %v", err)
@@ -346,7 +336,12 @@ func (s *Kowala) StartValidating() error {
 	// @TODO (rgeraldes) - review (does it make sense to have a list of transactions before the election or not)
 	atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
-	go s.validator.Start(cb, dep)
+	walletAccount, err := s.getWalletAccount()
+	if err != nil {
+		return fmt.Errorf("error starting validating: %v", err)
+	}
+
+	s.validator.Start(walletAccount, deposit)
 	return nil
 }
 
@@ -364,7 +359,7 @@ func (s *Kowala) BlockChain() *core.BlockChain       { return s.blockchain }
 func (s *Kowala) TxPool() *core.TxPool               { return s.txPool }
 func (s *Kowala) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Kowala) Engine() consensus.Engine           { return s.engine }
-func (s *Kowala) ChainDb() kcoindb.Database           { return s.chainDb }
+func (s *Kowala) ChainDb() kcoindb.Database          { return s.chainDb }
 func (s *Kowala) IsListening() bool                  { return true } // Always listening
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkId }

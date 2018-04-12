@@ -37,11 +37,11 @@ type Backend interface {
 }
 
 type Validator interface {
-	Start(coinbase common.Address, deposit uint64)
+	Start(walletAccount accounts.WalletAccount, deposit uint64)
 	Stop() error
 	SetExtra(extra []byte) error
 	Validating() bool
-	SetCoinbase(addr common.Address) error
+	SetCoinbase(walletAccount accounts.WalletAccount) error
 	SetDeposit(deposit uint64)
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
@@ -85,7 +85,7 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(walletAccount accounts.WalletAccount, backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
 		config:        config,
 		backend:       backend,
@@ -96,7 +96,6 @@ func New(walletAccount accounts.WalletAccount, backend Backend, election network
 		signer:        types.NewAndromedaSigner(config.ChainID),
 		vmConfig:      vmConfig,
 		canStart:      0,
-		walletAccount: walletAccount,
 	}
 
 	go validator.sync()
@@ -117,24 +116,23 @@ func (val *validator) finishedSync() {
 	atomic.StoreInt32(&val.canStart, 1)
 	atomic.StoreInt32(&val.shouldStart, 0)
 	if start {
-		val.Start(val.walletAccount.Account().Address, val.deposit)
+		val.Start(val.walletAccount, val.deposit)
 	}
 }
 
-func (val *validator) Start(coinbase common.Address, deposit uint64) {
+func (val *validator) Start(walletAccount accounts.WalletAccount, deposit uint64) {
 	if val.Validating() {
-		log.Warn("Failed to start the validator - the state machine is already running")
+		log.Warn("failed to start the validator - the state machine is already running")
 		return
 	}
 
 	atomic.StoreInt32(&val.shouldStart, 1)
 
-	newWalletAccount, _ := accounts.NewWalletAccount(val.walletAccount, accounts.Account{Address: coinbase})
-	val.walletAccount = newWalletAccount
+	val.walletAccount = walletAccount
 	val.deposit = deposit
 
 	if atomic.LoadInt32(&val.canStart) == 0 {
-		log.Info("Network syncing, will start validator afterwards")
+		log.Info("network syncing, will start validator afterwards")
 		return
 	}
 
@@ -180,15 +178,11 @@ func (val *validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0
 }
 
-func (val *validator) SetCoinbase(address common.Address) error {
+func (val *validator) SetCoinbase(walletAccount accounts.WalletAccount) error {
 	if val.Validating() {
 		return ErrCantSetCoinbaseOnStartedValidator
 	}
-	newWalletAccount, err := accounts.NewWalletAccount(val.walletAccount, accounts.Account{Address: address})
-	if err != nil {
-		return err
-	}
-	val.walletAccount = newWalletAccount
+	val.walletAccount = walletAccount
 	return nil
 }
 
