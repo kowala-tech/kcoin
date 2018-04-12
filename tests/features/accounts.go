@@ -60,6 +60,7 @@ func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTab
 
 		ctx.accounts[accountData.AccountName] = account
 
+		// TODO: Use genesis validator key to send a transaction using the client instead of Exec
 		_, err = ctx.cluster.Exec(ctx.genesisValidatorName,
 			fmt.Sprintf(
 				`eth.sendTransaction({
