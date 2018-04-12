@@ -13,3 +13,6 @@
 /dashboard/assets/node_modules
 /dashboard/assets/stats.json
 /dashboard/assets/public/bundle.js
+
+# docs
+docs/public

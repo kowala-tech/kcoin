@@ -152,8 +152,7 @@ kcoin-windows-386:
 kcoin-windows-amd64:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kcoin
 	@echo "Windows amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-windows-* | grep amd64
-
+	@ls -ld $(GOBIN)/kcoin-windows-* | grep amd64 
 
 ## Docker
 
@@ -185,3 +184,10 @@ ifndef GODOG_BIN
 	@go get github.com/DATA-DOG/godog/cmd/godog
 endif
 	@cd tests && godog ../features
+
+## Documentation
+DOCSERVER_PORT ?= 8080
+PWD            := $(shell pwd)
+
+docserver:
+	@docker run --rm -i -v $(PWD)/docs:/kowala/kowala.tech/docs -p $(DOCSERVER_PORT):$(DOCSERVER_PORT) kowalatech/kman --output /kowala/kowala.tech/docs/public --http :$(DOCSERVER_PORT)
