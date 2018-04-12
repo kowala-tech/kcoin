@@ -40,7 +40,7 @@ pipeline:
     image: plugins/s3
     acl: public-read
     region: "us-east-1"
-    bucket: "docs.kowala.io"
+    bucket: "dev-docs.kowala.io"
     source: docs/public/**/*
     strip_prefix: docs/public
     target: /
