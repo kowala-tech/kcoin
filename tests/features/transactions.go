@@ -3,7 +3,6 @@ package features
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"regexp"
 	"time"
 
@@ -55,7 +54,6 @@ func (ctx *Context) isTransactionInBlockchain(tx *types.Transaction) (bool, erro
 }
 
 func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
-	chainID := big.NewInt(519374298533)
 	nonce, err := ctx.client.NonceAt(context.Background(), from.Address, nil)
 	if err != nil {
 		return nil, err
@@ -78,7 +76,7 @@ func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Tr
 
 	tx := types.NewTransaction(nonce, to.Address, toWei(kcoin), gas, gp, nil)
 
-	tx, err = ctx.accountsStorage.SignTxWithPassphrase(from, "test", tx, chainID)
+	tx, err = ctx.accountsStorage.SignTxWithPassphrase(from, "test", tx, ctx.chainID)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package features
 
 import (
 	"io/ioutil"
+	"math/big"
 
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/accounts/keystore"
@@ -14,6 +15,7 @@ type Context struct {
 	cluster              cluster.Cluster
 	client               *kcoinclient.Client
 	genesisValidatorName string
+	chainID              *big.Int
 
 	accountsStorage *keystore.KeyStore
 
@@ -23,7 +25,7 @@ type Context struct {
 	lastTxErr error
 }
 
-func NewTestContext(k8sCluster cluster.Cluster, genesisValidatorName string, client *kcoinclient.Client) *Context {
+func NewTestContext(k8sCluster cluster.Cluster, genesisValidatorName string, client *kcoinclient.Client, chainID *big.Int) *Context {
 	tmpdir, _ := ioutil.TempDir("", "eth-keystore-test")
 	accountsStorage := keystore.NewKeyStore(tmpdir, 2, 1)
 
