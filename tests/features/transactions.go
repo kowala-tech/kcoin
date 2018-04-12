@@ -3,15 +3,12 @@ package features
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"time"
 
 	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/core/types"
 )
-
-var txRegexp = regexp.MustCompile(`0x[0-9a-f]{64}`)
 
 func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
 
