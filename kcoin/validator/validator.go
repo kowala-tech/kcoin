@@ -87,15 +87,15 @@ type validator struct {
 // New returns a new consensus validator
 func New(backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
-		config:        config,
-		backend:       backend,
-		chain:         backend.BlockChain(),
-		engine:        engine,
-		election:      election,
-		eventMux:      eventMux,
-		signer:        types.NewAndromedaSigner(config.ChainID),
-		vmConfig:      vmConfig,
-		canStart:      0,
+		config:   config,
+		backend:  backend,
+		chain:    backend.BlockChain(),
+		engine:   engine,
+		election: election,
+		eventMux: eventMux,
+		signer:   types.NewAndromedaSigner(config.ChainID),
+		vmConfig: vmConfig,
+		canStart: 0,
 	}
 
 	go validator.sync()
