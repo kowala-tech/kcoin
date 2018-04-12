@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/DATA-DOG/godog/gherkin"
-	"github.com/kowala-tech/kcoin/common"
 )
 
 type AccountEntry struct {
@@ -48,47 +46,41 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 }
 
 func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
-	accounts, err := parseAccountsDataTable(accountsDataTable)
+	accountsData, err := parseAccountsDataTable(accountsDataTable)
 	if err != nil {
 		return err
 	}
 
 	// Create an archive node for each account and send them funds
-	for _, account := range accounts {
-		nodeName, err := ctx.cluster.RunArchiveNode()
+	for _, accountData := range accountsData {
+		account, err := ctx.accountsStorage.NewAccount("test")
 		if err != nil {
 			return err
 		}
 
-		res, err := ctx.cluster.Exec(nodeName, `eth.coinbase`)
-		if err != nil {
-			return err
-		}
-		coinbaseQuotes := res.StdOut
+		ctx.accounts[accountData.AccountName] = account
 
-		ctx.accountsNodeNames[account.AccountName] = nodeName
-		ctx.accountsCoinbase[account.AccountName] = strings.TrimSpace(strings.Replace(coinbaseQuotes, `"`, "", 2))
-
-		res, err = ctx.cluster.Exec(ctx.genesisValidatorName,
+		_, err = ctx.cluster.Exec(ctx.genesisValidatorName,
 			fmt.Sprintf(
 				`eth.sendTransaction({
 				from:eth.coinbase,
-				to: %s,
-				value: %v})`, coinbaseQuotes, toWei(account.Funds)))
+				to: "%s",
+				value: %v})`, account.Address.Hex(), toWei(accountData.Funds)))
 		if err != nil {
 			return err
 		}
 	}
 
 	// Wait for funds to be available
-	for _, account := range accounts {
+	for _, accountData := range accountsData {
+		expected := toWei(accountData.Funds)
+
 		err = waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
-			acct := common.HexToAddress(ctx.accountsCoinbase[account.AccountName])
-			balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
+			account := ctx.accounts[accountData.AccountName]
+			balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
 			if err != nil {
 				return false
 			}
-			expected := toWei(account.Funds)
 			return balance.Cmp(expected) == 0
 		})
 		if err != nil {
@@ -99,11 +91,11 @@ func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTab
 	return nil
 }
 
-func (ctx *Context) TheBalanceIsExactly(account string, kcoin int64) error {
+func (ctx *Context) TheBalanceIsExactly(accountName string, kcoin int64) error {
 	expected := toWei(kcoin)
 
-	acct := common.HexToAddress(ctx.accountsCoinbase[account])
-	balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
+	account := ctx.accounts[accountName]
+	balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
 	if err != nil {
 		return err
 	}
@@ -113,11 +105,11 @@ func (ctx *Context) TheBalanceIsExactly(account string, kcoin int64) error {
 	return nil
 }
 
-func (ctx *Context) TheBalanceIsAround(account string, kcoin int64) error {
+func (ctx *Context) TheBalanceIsAround(accountName string, kcoin int64) error {
 	expected := toWei(kcoin)
 
-	acct := common.HexToAddress(ctx.accountsCoinbase[account])
-	balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
+	account := ctx.accounts[accountName]
+	balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
 	if err != nil {
 		return err
 	}

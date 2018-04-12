@@ -1,62 +1,45 @@
 package features
 
 import (
+	"context"
 	"fmt"
+	"math/big"
 	"regexp"
-	"strconv"
-	"strings"
 	"time"
+
+	kowala "github.com/kowala-tech/kcoin"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/core/types"
 )
 
 var txRegexp = regexp.MustCompile(`0x[0-9a-f]{64}`)
 
-func (ctx *Context) ITransferKUSD(kcoin int, from, to string) error {
-	command := fmt.Sprintf(
-		`
-			personal.unlockAccount(eth.coinbase, "test");
-			eth.sendTransaction({from:eth.coinbase, to: "%s", value: web3.toWei(%v, 'ether')})
-		`,
-		ctx.accountsCoinbase[to],
-		kcoin)
-	res, err := ctx.cluster.Exec(ctx.accountsNodeNames[from], command)
+func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
+
+	tx, err := ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
 	if err != nil {
 		return err
 	}
-	if !txRegexp.MatchString(res.StdOut) {
-		return fmt.Errorf("Expected transaction, received: %v", res.StdOut)
-	}
-	err = waitFor("transaction in the blockhain", 1*time.Second, 5*time.Second, func() bool {
-		isInBlockchain, err := ctx.isTransactionInBlockchain(res.StdOut)
+
+	return waitFor("transaction in the blockhain", 1*time.Second, 5*time.Second, func() bool {
+		isInBlockchain, err := ctx.isTransactionInBlockchain(tx)
 		return err == nil && isInBlockchain
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
-func (ctx *Context) ITryTransferKUSD(kcoin int, from, to string) error {
-	command := fmt.Sprintf(
-		`
-			personal.unlockAccount(eth.coinbase, "test");
-			eth.sendTransaction({from:eth.coinbase, to: "%s", value: web3.toWei(%v, 'ether')})
-		`,
-		ctx.accountsCoinbase[to],
-		kcoin)
-	res, err := ctx.cluster.Exec(ctx.accountsNodeNames[from], command)
-	if err != nil {
-		return err
-	}
-	ctx.lastTxStdout = res.StdOut
+func (ctx *Context) ITryTransferKUSD(kcoin int64, from, to string) error {
+	tx, err := ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
+	ctx.lastTx = tx
+	ctx.lastTxErr = err
 	return nil
 }
 
 func (ctx *Context) LastTransactionFailed() error {
-	if !txRegexp.MatchString(ctx.lastTxStdout) {
+	if ctx.lastTxErr != nil {
 		return nil // Failed at submitting the transaction, all good
 	}
 
-	isInBlockchain, err := ctx.isTransactionInBlockchain(ctx.lastTxStdout)
+	isInBlockchain, err := ctx.isTransactionInBlockchain(ctx.lastTx)
 	if err != nil {
 		return err
 	}
@@ -66,15 +49,39 @@ func (ctx *Context) LastTransactionFailed() error {
 	return nil
 }
 
-func (ctx *Context) isTransactionInBlockchain(tx string) (bool, error) {
-	command := fmt.Sprintf(`eth.getTransaction(%v).blockNumber`, tx)
-	res, err := ctx.cluster.Exec(ctx.genesisValidatorName, command)
+func (ctx *Context) isTransactionInBlockchain(tx *types.Transaction) (bool, error) {
+	receipt, err := ctx.client.TransactionReceipt(context.Background(), tx.Hash())
+	return receipt.Status == types.ReceiptStatusSuccessful, err
+}
+
+func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
+	chainID := big.NewInt(519374298533)
+	nonce, err := ctx.client.NonceAt(context.Background(), from.Address, nil)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	block, err := strconv.Atoi(strings.TrimSpace(res.StdOut))
+
+	gp, err := ctx.client.SuggestGasPrice(context.Background())
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	return block > 0, nil
+
+	gas, err := ctx.client.EstimateGas(context.Background(), kowala.CallMsg{
+		From:     from.Address,
+		To:       &to.Address,
+		Value:    toWei(kcoin),
+		GasPrice: gp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	tx := types.NewTransaction(nonce, to.Address, toWei(kcoin), gas, gp, nil)
+
+	tx, err = ctx.accountsStorage.SignTxWithPassphrase(from, "test", tx, chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, ctx.client.SendTransaction(context.Background(), tx)
 }
