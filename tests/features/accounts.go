@@ -53,14 +53,17 @@ func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTab
 
 	// Create an archive node for each account and send them funds
 	for _, accountData := range accountsData {
-		account, err := ctx.accountsStorage.NewAccount("test")
+		if _, ok := ctx.accounts[accountData.AccountName]; ok {
+			return fmt.Errorf("an account with this name already exists: %s", accountData.AccountName)
+		}
+		account, err := ctx.AccountsStorage.NewAccount("test")
 		if err != nil {
 			return err
 		}
 
 		ctx.accounts[accountData.AccountName] = account
 
-		_, err = ctx.cluster.Exec(ctx.genesisValidatorName,
+		_, err = ctx.cluster.Exec("genesis-validator",
 			fmt.Sprintf(
 				`eth.sendTransaction({
 				from:eth.coinbase,

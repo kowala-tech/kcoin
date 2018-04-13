@@ -73,7 +73,7 @@ func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Tr
 
 	tx := types.NewTransaction(nonce, to.Address, toWei(kcoin), gas, gp, nil)
 
-	tx, err = ctx.accountsStorage.SignTxWithPassphrase(from, "test", tx, ctx.chainID)
+	tx, err = ctx.AccountsStorage.SignTxWithPassphrase(from, "test", tx, ctx.chainID)
 	if err != nil {
 		return nil, err
 	}
