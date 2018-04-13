@@ -18,7 +18,8 @@ type Context struct {
 	client  *kcoinclient.Client
 	chainID *big.Int
 
-	accounts map[string]accounts.Account
+	seederAccount accounts.Account
+	accounts      map[string]accounts.Account
 
 	lastTx    *types.Transaction
 	lastTxErr error

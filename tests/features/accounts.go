@@ -51,42 +51,8 @@ func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTab
 		return err
 	}
 
-	// Create an archive node for each account and send them funds
 	for _, accountData := range accountsData {
-		if _, ok := ctx.accounts[accountData.AccountName]; ok {
-			return fmt.Errorf("an account with this name already exists: %s", accountData.AccountName)
-		}
-		account, err := ctx.AccountsStorage.NewAccount("test")
-		if err != nil {
-			return err
-		}
-
-		ctx.accounts[accountData.AccountName] = account
-
-		_, err = ctx.cluster.Exec("genesis-validator",
-			fmt.Sprintf(
-				`eth.sendTransaction({
-				from:eth.coinbase,
-				to: "%s",
-				value: %v})`, account.Address.Hex(), toWei(accountData.Funds)))
-		if err != nil {
-			return err
-		}
-	}
-
-	// Wait for funds to be available
-	for _, accountData := range accountsData {
-		expected := toWei(accountData.Funds)
-
-		err = waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
-			account := ctx.accounts[accountData.AccountName]
-			balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
-			if err != nil {
-				return false
-			}
-			return balance.Cmp(expected) == 0
-		})
-		if err != nil {
+		if err := ctx.createAccountWithFunds(accountData.AccountName, accountData.Funds); err != nil {
 			return err
 		}
 	}
@@ -122,6 +88,36 @@ func (ctx *Context) TheBalanceIsAround(accountName string, kcoin int64) error {
 
 	if diff.Cmp(big.NewInt(100000)) >= 0 {
 		return fmt.Errorf("Balance expected to be around %v but is %v", expected, balance)
+	}
+	return nil
+}
+
+func (ctx *Context) createAccountWithFunds(accountName string, kcoins int64) error {
+	if _, ok := ctx.accounts[accountName]; ok {
+		return fmt.Errorf("an account with this name already exists: %s", accountName)
+	}
+	account, err := ctx.AccountsStorage.NewAccount("test")
+	if err != nil {
+		return err
+	}
+	if err := ctx.AccountsStorage.Unlock(account, "test"); err != nil {
+		return err
+	}
+
+	ctx.accounts[accountName] = account
+	if _, err := ctx.sendFunds(ctx.seederAccount, account, kcoins); err != nil {
+		return err
+	}
+	err = waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
+		account := ctx.accounts[accountName]
+		balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
+		if err != nil {
+			return false
+		}
+		return balance.Cmp(toWei(kcoins)) == 0
+	})
+	if err != nil {
+		return err
 	}
 	return nil
 }

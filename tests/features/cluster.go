@@ -11,6 +11,16 @@ func (ctx *Context) IsClusterReady() bool {
 }
 
 func (ctx *Context) PrepareCluster() error {
+	seederAccount, err := ctx.AccountsStorage.NewAccount("test")
+	if err != nil {
+		return err
+	}
+	if err := ctx.AccountsStorage.Unlock(seederAccount, "test"); err != nil {
+		return err
+	}
+
+	ctx.seederAccount = seederAccount
+
 	backend := cluster.NewMinikubeCluster("testing")
 	if !backend.Exists() {
 		if err := backend.Create(); err != nil {
@@ -25,13 +35,13 @@ func (ctx *Context) PrepareCluster() error {
 
 	ctx.cluster.Cleanup() // Just in case the previous run didn't finish gracefully
 
-	if err := ctx.cluster.Initialize(ctx.chainID.String()); err != nil {
+	if err := ctx.cluster.Initialize(ctx.chainID.String(), ctx.seederAccount.Address); err != nil {
 		return err
 	}
 	if err := ctx.cluster.RunBootnode(); err != nil {
 		return err
 	}
-	_, err := ctx.cluster.RunGenesisValidator()
+	_, err = ctx.cluster.RunGenesisValidator()
 	if err := err; err != nil {
 		return err
 	}
