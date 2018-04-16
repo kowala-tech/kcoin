@@ -3,6 +3,7 @@ package cluster
 import (
 	"math/big"
 
+	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/kcoinclient"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -41,7 +42,7 @@ type Cluster interface {
 
 	// Initialize prepares a new cluster to be ready to start. It saves the networkID for future pods
 	// to use it, generates a genesis and stores initial keys in the cluster.
-	Initialize(networkID string) error
+	Initialize(networkID string, seedAccount common.Address) error
 
 	// Cleanup deletes all pods, leaving the kluster in a fresh state
 	Cleanup() error

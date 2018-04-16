@@ -6,12 +6,13 @@ import (
 
 	"encoding/json"
 
+	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (client *cluster) generateGenesis() error {
+func (client *cluster) generateGenesis(seedAccount common.Address) error {
 	log.Println("Generating and storing genesis configmap")
 	configMaps := client.Clientset.CoreV1().ConfigMaps(Namespace)
 
@@ -32,6 +33,10 @@ func (client *cluster) generateGenesis() error {
 			PrefundedAccounts: []genesis.PrefundedAccount{
 				{
 					AccountAddress: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
+				},
+				{
+					AccountAddress: seedAccount.Hex(),
 					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
 				},
 				{

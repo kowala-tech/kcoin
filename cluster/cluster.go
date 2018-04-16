@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kowala-tech/kcoin/common"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -69,7 +70,7 @@ func (client *cluster) Cleanup() error {
 	return client.waitForNoServices()
 }
 
-func (client *cluster) Initialize(networkID string) error {
+func (client *cluster) Initialize(networkID string, seedAccount common.Address) error {
 	log.Println("Initializing cluster")
 	client.NetworkID = networkID
 
@@ -93,7 +94,7 @@ func (client *cluster) Initialize(networkID string) error {
 	if err := client.addKeysPassword(); err != nil {
 		return err
 	}
-	if err := client.generateGenesis(); err != nil {
+	if err := client.generateGenesis(seedAccount); err != nil {
 		return err
 	}
 	if errs := builder.Wait(); len(errs) > 0 {
