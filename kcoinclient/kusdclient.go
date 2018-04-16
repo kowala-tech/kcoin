@@ -88,7 +88,7 @@ func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 		return nil, ErrInvalidBlockNumber
 	}
 
-	return bN, err
+	return bN, nil
 }
 
 type rpcBlock struct {
