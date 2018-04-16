@@ -70,6 +70,8 @@ func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Bl
 	return ec.getBlock(ctx, "eth_getBlockByNumber", toBlockNumArg(number), true)
 }
 
+// BlockNumber returns the last block of the blockchain as a big interger. If there is a
+// problem, an error is returned.
 func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 	var blockNumber string
 	err := ec.c.CallContext(ctx, &blockNumber, "eth_blockNumber")
