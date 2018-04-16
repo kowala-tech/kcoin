@@ -16,6 +16,10 @@ import (
 	"github.com/kowala-tech/kcoin/rpc"
 )
 
+var (
+	ErrInvalidBlockNumber = errors.New("invalid block number received")
+)
+
 // Client defines typed wrappers for the Kowala RPC API.
 type Client struct {
 	c RpcClient
@@ -70,12 +74,12 @@ func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 	var blockNumber string
 	err := ec.c.CallContext(ctx, &blockNumber, "eth_blockNumber")
 	if err == nil && blockNumber == "" {
-		err = kowala.NotFound
+		return nil, kowala.NotFound
 	}
 
 	bN, ok := new(big.Int).SetString(blockNumber, 0)
 	if !ok {
-		return nil, kowala.NotFound
+		return nil, ErrInvalidBlockNumber
 	}
 
 	return bN, err
