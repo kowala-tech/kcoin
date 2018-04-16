@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/kcoin"
 )
 
 // ReleaseOracleABI is the input ABI used to generate the binding from.
@@ -118,7 +119,7 @@ func bindReleaseOracle(address common.Address, caller bind.ContractCaller, trans
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, nil), nil
+	return bind.NewBoundContract(address, parsed, caller, transactor, kcoin.NilLogFilter{}), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and

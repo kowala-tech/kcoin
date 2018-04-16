@@ -43,7 +43,6 @@ type Kowala struct {
 
 	// Channel for shutting down the service
 	shutdownChan  chan bool    // Channel for shutting down the service
-	stopDbUpgrade func() error // stop chain db sequential key upgrade
 
 	// Handlers
 	txPool          *core.TxPool
@@ -86,7 +85,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if err != nil {
 		return nil, err
 	}
-	stopDbUpgrade := upgradeDeduplicateData(chainDb)
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
@@ -101,7 +99,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		accountManager: ctx.AccountManager,
 		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
 		shutdownChan:   make(chan bool),
-		stopDbUpgrade:  stopDbUpgrade,
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Coinbase,

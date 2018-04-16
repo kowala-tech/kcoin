@@ -25,7 +25,7 @@ type ContractBackend struct {
 	eapi  *kcoinapi.PublicKowalaAPI          // Wrapper around the Kowala object to access metadata
 	bcapi *kcoinapi.PublicBlockChainAPI      // Wrapper around the blockchain to access chain data
 	txapi *kcoinapi.PublicTransactionPoolAPI // Wrapper around the transaction pool to access transaction data
-	nilLogger
+	filter NilLogFilter
 }
 
 // NewContractBackend creates a new native contract backend using an existing
@@ -35,7 +35,7 @@ func NewContractBackend(apiBackend kcoinapi.Backend) *ContractBackend {
 		eapi:      kcoinapi.NewPublicKowalaAPI(apiBackend),
 		bcapi:     kcoinapi.NewPublicBlockChainAPI(apiBackend),
 		txapi:     kcoinapi.NewPublicTransactionPoolAPI(apiBackend, new(kcoinapi.AddrLocker)),
-		nilLogger: newNilLogger(),
+		filter:    NilLogFilter{},
 	}
 }
 
@@ -126,10 +126,10 @@ func (b *ContractBackend) SendTransaction(ctx context.Context, tx *types.Transac
 
 // FilterLogs executes a filter query.
 func (b *ContractBackend) FilterLogs(ctx context.Context, q kowala.FilterQuery) ([]types.Log, error) {
-	return b.FilterLogs(ctx, q)
+	return b.filter.FilterLogs(ctx, q)
 }
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
 func (b *ContractBackend) SubscribeFilterLogs(ctx context.Context, q kowala.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error) {
-	return b.SubscribeFilterLogs(ctx, q, ch)
+	return b.filter.SubscribeFilterLogs(ctx, q, ch)
 }

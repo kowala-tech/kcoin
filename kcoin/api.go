@@ -277,7 +277,7 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 // the private debugging endpoint.
 type PrivateDebugAPI struct {
 	config *params.ChainConfig
-	kcoin   *Kowala
+	kcoin  *Kowala
 }
 
 // NewPrivateDebugAPI creates a new API definition for the full node-related

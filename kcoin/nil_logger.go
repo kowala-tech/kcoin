@@ -1,5 +1,23 @@
 package kcoin
 
+import (
+	"context"
+	"github.com/kowala-tech/kcoin"
+	"github.com/kowala-tech/kcoin/core/types"
+)
+
+type NilLogFilter struct{
+	nilLogger
+}
+
+func (f NilLogFilter) FilterLogs(ctx context.Context, query kowala.FilterQuery) ([]types.Log, error) {
+	return []types.Log{}, nil
+}
+
+func (f NilLogFilter) SubscribeFilterLogs(ctx context.Context, query kowala.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error) {
+	return f.nilLogger, nil
+}
+
 type nilLogger <-chan error
 
 func newNilLogger() nilLogger {

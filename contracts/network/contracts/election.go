@@ -118,7 +118,7 @@ func bindElectionContract(address common.Address, caller bind.ContractCaller, tr
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, nil), nil
+	return bind.NewBoundContract(address, parsed, caller, transactor, kcoin.NilLogFilter{}), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and

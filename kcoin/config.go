@@ -16,7 +16,6 @@ import (
 var DefaultConfig = Config{
 	SyncMode:      downloader.FastSync,
 	NetworkId:     params.MainnetChainConfig.ChainID.Uint64(),
-	// @TODO (rgeraldes) - complete with tendermint config if necessary, set rewarded to true
 	Tendermint:    params.TendermintConfig{false},
 	LightPeers:    20,
 	DatabaseCache: 768,
