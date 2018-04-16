@@ -587,6 +587,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 
+	//todo где-то здесь надо добавлять сохранение состояния в виде сообщений.
 	case msg.Code == TxMsg:
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
