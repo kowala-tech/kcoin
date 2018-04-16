@@ -75,7 +75,11 @@ func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Bl
 func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 	var blockNumber string
 	err := ec.c.CallContext(ctx, &blockNumber, "eth_blockNumber")
-	if err == nil && blockNumber == "" {
+	if err != nil {
+		return nil, err
+	}
+
+	if blockNumber == "" {
 		return nil, kowala.NotFound
 	}
 
