@@ -33,7 +33,6 @@ type RpcClient interface {
 	BatchCall(b []rpc.BatchElem) error
 	BatchCallContext(ctx context.Context, b []rpc.BatchElem) error
 	KowalaSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*rpc.ClientSubscription, error)
-	ShhSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*rpc.ClientSubscription, error)
 	Subscribe(ctx context.Context, namespace string, channel interface{}, args ...interface{}) (*rpc.ClientSubscription, error)
 }
 

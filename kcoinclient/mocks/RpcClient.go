@@ -104,32 +104,6 @@ func (_m *RpcClient) KowalaSubscribe(ctx context.Context, channel interface{}, a
 	return r0, r1
 }
 
-// ShhSubscribe provides a mock function with given fields: ctx, channel, args
-func (_m *RpcClient) ShhSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*rpc.ClientSubscription, error) {
-	var _ca []interface{}
-	_ca = append(_ca, ctx, channel)
-	_ca = append(_ca, args...)
-	ret := _m.Called(_ca...)
-
-	var r0 *rpc.ClientSubscription
-	if rf, ok := ret.Get(0).(func(context.Context, interface{}, ...interface{}) *rpc.ClientSubscription); ok {
-		r0 = rf(ctx, channel, args...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*rpc.ClientSubscription)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, interface{}, ...interface{}) error); ok {
-		r1 = rf(ctx, channel, args...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Subscribe provides a mock function with given fields: ctx, namespace, channel, args
 func (_m *RpcClient) Subscribe(ctx context.Context, namespace string, channel interface{}, args ...interface{}) (*rpc.ClientSubscription, error) {
 	var _ca []interface{}
