@@ -130,6 +130,7 @@ var (
 		"./contracts/network",
 		"./kcoin/validator",
 		"./kcoin/genesis",
+		"./kcoinclient",
 		"./accounts",
 		"./core/types",
 		"./params",
@@ -371,7 +372,7 @@ func doArchive(cmdline []string) {
 	var (
 		env      = build.Env()
 		base     = archiveBasename(*arch, env)
-		kcoin     = "kcoin-" + base + ext
+		kcoin    = "kcoin-" + base + ext
 		alltools = "kcoin-alltools-" + base + ext
 	)
 	maybeSkipArchive(env)
@@ -655,8 +656,8 @@ func doWindowsInstaller(cmdline []string) {
 
 	// Aggregate binaries that are included in the installer
 	var (
-		devTools []string
-		allTools []string
+		devTools  []string
+		allTools  []string
 		kcoinTool string
 	)
 	for _, file := range allToolsArchiveFiles {
@@ -675,7 +676,7 @@ func doWindowsInstaller(cmdline []string) {
 	// first section contains the kcoin binary, second section holds the dev tools.
 	templateData := map[string]interface{}{
 		"License":  "COPYING",
-		"kcoin":     kcoinTool,
+		"kcoin":    kcoinTool,
 		"DevTools": devTools,
 	}
 	build.Render("build/nsis.kcoin.nsi", filepath.Join(*workdir, "kcoin.nsi"), 0644, nil)
