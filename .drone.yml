@@ -25,6 +25,29 @@ pipeline:
       event: [push, tag]
       branch: [master, dev, refs/tags/*]
 
+  doc-build-dev:
+    image: kowalatech/kman
+    commands:
+      - mkdir -p docs/public
+      - kman --theme /kowala/kowala.tech/themes/kman --output docs/public
+    when:
+      event: [push, tag]
+      branch: [master, dev, feature/*]
+
+  doc-deploy-dev:
+    group: deploy
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "dev-docs.kowala.io"
+    source: docs/public/**/*
+    strip_prefix: docs/public
+    target: /
+    encryption: AES256
+    when:
+      event: [push]
+      branch: [dev, feature/end-user-docs]
+
   docker_kusd_dev:
     group: docker-deployment
     image: plugins/docker
