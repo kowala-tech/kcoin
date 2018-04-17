@@ -1,6 +1,7 @@
 package features
 
 import (
+	"os"
 	"time"
 
 	"github.com/kowala-tech/kcoin/cluster"
@@ -20,8 +21,12 @@ func (ctx *Context) PrepareCluster() error {
 	}
 
 	ctx.seederAccount = seederAccount
-
-	backend := cluster.NewMinikubeCluster("testing")
+	var backend cluster.Backend
+	if os.Getenv("CI") == "drone" {
+		backend = cluster.NewStaticCluster("172.31.94.205", 2376)
+	} else {
+		backend = cluster.NewMinikubeCluster("testing")
+	}
 	if !backend.Exists() {
 		if err := backend.Create(); err != nil {
 			return err
