@@ -1,6 +1,7 @@
 package features
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -23,12 +24,8 @@ func (ctx *Context) PrepareCluster() error {
 
 	ctx.seederAccount = seederAccount
 	var backend cluster.Backend
-	if os.Getenv("K8S_CUSTER_IP") != "" && os.Getenv("K8S_DOCKER_PORT") != "" {
-		parsedPort, err := strconv.Atoi(os.Getenv("K8S_DOCKER_PORT"))
-		if err != nil {
-			panic(err)
-		}
-		backend = cluster.NewStaticCluster(os.Getenv("K8S_CUSTER_IP"), parsedPort)
+	if ip, port := getStaticClusterConfig(); ip != "" && port != 0 {
+		backend = cluster.NewStaticCluster(ip, port)
 	} else {
 		backend = cluster.NewMinikubeCluster("testing")
 	}
@@ -75,4 +72,18 @@ func (ctx *Context) PrepareCluster() error {
 
 func (ctx *Context) DeleteCluster() error {
 	return ctx.cluster.Cleanup()
+}
+
+func getStaticClusterConfig() (string, int) {
+	rawPort := os.Getenv("K8S_DOCKER_PORT")
+	rawIp := os.Getenv("K8S_CUSTER_IP")
+	if rawIp == "" || rawPort == "" {
+		return "", 0
+	}
+	parsedPort, err := strconv.Atoi(rawPort)
+	if err != nil {
+		fmt.Println("Invalid K8S_DOCKER_PORT, must be just a number")
+		return "", 0
+	}
+	return rawIp, parsedPort
 }
