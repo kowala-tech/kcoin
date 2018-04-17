@@ -16,9 +16,24 @@ import (
 	"github.com/kowala-tech/kcoin/rpc"
 )
 
+var (
+	ErrInvalidBlockNumber = errors.New("invalid block number received")
+)
+
 // Client defines typed wrappers for the Kowala RPC API.
 type Client struct {
-	c *rpc.Client
+	c RpcClient
+}
+
+type RpcClient interface {
+	SupportedModules() (map[string]string, error)
+	Close()
+	Call(result interface{}, method string, args ...interface{}) error
+	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
+	BatchCall(b []rpc.BatchElem) error
+	BatchCallContext(ctx context.Context, b []rpc.BatchElem) error
+	KowalaSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*rpc.ClientSubscription, error)
+	Subscribe(ctx context.Context, namespace string, channel interface{}, args ...interface{}) (*rpc.ClientSubscription, error)
 }
 
 // Dial connects a client to the given URL.
@@ -52,6 +67,27 @@ func (ec *Client) BlockByHash(ctx context.Context, hash common.Hash) (*types.Blo
 // if you don't need all transactions or uncle headers.
 func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	return ec.getBlock(ctx, "eth_getBlockByNumber", toBlockNumArg(number), true)
+}
+
+// BlockNumber returns the last block of the blockchain as a big interger. If there is a
+// problem, an error is returned.
+func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
+	var blockNumber string
+	err := ec.c.CallContext(ctx, &blockNumber, "eth_blockNumber")
+	if err != nil {
+		return nil, err
+	}
+
+	if blockNumber == "" {
+		return nil, kowala.NotFound
+	}
+
+	bN, ok := new(big.Int).SetString(blockNumber, 0)
+	if !ok {
+		return nil, ErrInvalidBlockNumber
+	}
+
+	return bN, nil
 }
 
 type rpcBlock struct {
