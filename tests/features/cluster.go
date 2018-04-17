@@ -2,6 +2,7 @@ package features
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/kowala-tech/kcoin/cluster"
@@ -22,8 +23,12 @@ func (ctx *Context) PrepareCluster() error {
 
 	ctx.seederAccount = seederAccount
 	var backend cluster.Backend
-	if os.Getenv("CI") == "drone" {
-		backend = cluster.NewStaticCluster("172.31.94.205", 2376)
+	if os.Getenv("K8S_CUSTER_IP") != "" && os.Getenv("K8S_DOCKER_PORT") != "" {
+		parsedPort, err := strconv.Atoi(os.Getenv("K8S_DOCKER_PORT"))
+		if err != nil {
+			panic(err)
+		}
+		backend = cluster.NewStaticCluster(os.Getenv("K8S_CUSTER_IP"), parsedPort)
 	} else {
 		backend = cluster.NewMinikubeCluster("testing")
 	}

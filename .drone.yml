@@ -24,9 +24,11 @@ pipeline:
     image: kowalatech/go:1.0.3
     commands:
       - make e2e
+    environment:
+      - K8S_DOCKER_PORT="$$K8S_DOCKER_PORT"
+      - K8S_CUSTER_IP="$$K8S_CUSTER_IP"
     when:
-      event: [push]
-      branch: [feature/*, hotfix/*]
+      event: [pull_request]
     volumes:
       - /home/ubuntu/.minikube:/root/.minikube:ro
       - /home/ubuntu/.kube:/root/.kube:ro
