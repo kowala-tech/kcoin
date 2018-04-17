@@ -42,11 +42,11 @@ func (client *cluster) RunRpcNode() (string, error) {
 
 // RpcClient gets a client connected to the rpc node in the cluster
 func (client *cluster) RpcClient() (*kcoinclient.Client, error) {
-	addr, err := client.Backend.ServiceAddr(rpcPodName)
+	ip, err := client.Backend.IP()
 	if err != nil {
 		return nil, err
 	}
-	rpcAddr := fmt.Sprintf("http://%v", addr)
+	rpcAddr := fmt.Sprintf("http://%v:%v", ip, rpcPort)
 	return kcoinclient.Dial(rpcAddr)
 }
 
@@ -101,7 +101,8 @@ func RpcNodeService(serviceName string, port int32) *apiv1.Service {
 			},
 			Ports: []apiv1.ServicePort{
 				{
-					Port: port,
+					Port:     port,
+					NodePort: port,
 				},
 			},
 		},
