@@ -29,8 +29,8 @@ type Backend interface {
 	// DockerEnv returns the environment variables necessary to connect to the private docker repository in the kubernetes cluster
 	DockerEnv() ([]string, error)
 
-	// ServiceAddr returns the ip:port pair for a specific service running in the cluster
-	ServiceAddr(serviceName string) (string, error)
+	// IP returns a IP where the cluster can be accessed
+	IP() (string, error)
 }
 
 type Cluster interface {

@@ -1,6 +1,9 @@
 package features
 
 import (
+	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/kowala-tech/kcoin/cluster"
@@ -20,8 +23,12 @@ func (ctx *Context) PrepareCluster() error {
 	}
 
 	ctx.seederAccount = seederAccount
-
-	backend := cluster.NewMinikubeCluster("testing")
+	var backend cluster.Backend
+	if ip, port := getStaticClusterConfig(); ip != "" && port != 0 {
+		backend = cluster.NewStaticCluster(ip, port)
+	} else {
+		backend = cluster.NewMinikubeCluster("testing")
+	}
 	if !backend.Exists() {
 		if err := backend.Create(); err != nil {
 			return err
@@ -65,4 +72,18 @@ func (ctx *Context) PrepareCluster() error {
 
 func (ctx *Context) DeleteCluster() error {
 	return ctx.cluster.Cleanup()
+}
+
+func getStaticClusterConfig() (string, int) {
+	rawPort := os.Getenv("K8S_DOCKER_PORT")
+	rawIp := os.Getenv("K8S_CUSTER_IP")
+	if rawIp == "" || rawPort == "" {
+		return "", 0
+	}
+	parsedPort, err := strconv.Atoi(rawPort)
+	if err != nil {
+		fmt.Println("Invalid K8S_DOCKER_PORT, must be just a number")
+		return "", 0
+	}
+	return rawIp, parsedPort
 }
