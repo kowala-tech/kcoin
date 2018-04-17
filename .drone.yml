@@ -33,7 +33,7 @@ pipeline:
       - kman --theme /kowala/kowala.tech/themes/kman --output docs/public
     when:
       event: [push, tag]
-      branch: [dev]
+      branch: [dev, feature/end-user-docs]
 
   doc-deploy-dev:
     group: deploy
