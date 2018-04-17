@@ -14,13 +14,12 @@ var (
 func FeatureContext(s *godog.Suite) {
 	context := features.NewTestContext(chainID)
 
-	// Use this approach instead of `BeforeSuite` because we need it right away,
-	//  the `BeforeSuite` runs after executing the current function
-	if !context.IsClusterReady() {
+	s.BeforeSuite(func() {
 		if err := context.PrepareCluster(); err != nil {
 			panic(err)
 		}
-	}
+	})
+
 	s.AfterSuite(func() {
 		if err := context.DeleteCluster(); err != nil {
 			panic(err)
