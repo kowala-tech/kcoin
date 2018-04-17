@@ -33,14 +33,14 @@ pipeline:
       - kman --theme /kowala/kowala.tech/themes/kman --output docs/public
     when:
       event: [push, tag]
-      branch: [master, dev, feature/*]
+      branch: [dev]
 
   doc-deploy-dev:
     group: deploy
     image: plugins/s3
     acl: public-read
     region: "us-east-1"
-    bucket: "dev-docs.kowala.io"
+    bucket: "docs.kowala.io"
     source: docs/public/**/*
     strip_prefix: docs/public
     target: /

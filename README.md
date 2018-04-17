@@ -1,8 +1,11 @@
 [![Gitter chat](https://badges.gitter.im/kowala/kcoin.png)](https://gitter.im/kowala-tech/kcoin) [![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kcoin/status.svg)](http://ci.kowala.io/kowala-tech/kcoin) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://testnet.kowala.io)
 
-## kCoin
+_Note: This readme contains technical documentation for working with the source code and performaing low-level technical tasks. The end-user documentation can be found at [docs.kowala.io](http://docs.kowala.io)._
+
+## kCoin mining client
 
 Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kcoin`** client is the main client for the Kowala network.
+
 It is the entry point into the Kowala network, and is capable of running a full node. The client offers
 a gateway (Endpoints, WebSocket, IPC) to the Kowala network to other processes.
 
@@ -48,7 +51,7 @@ docker run -d --name kcoin-node -v /Users/alice/kcoin:/root \
 
 There aren't public networks at the moment.
 
-### Test
+### Testnet
 
 http://testnet.kowala.io/
 
@@ -176,11 +179,3 @@ $ kcoin --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0x
 Start the client with `--metrics` to collect performance metrics. This will expose a [Prometheus](https://prometheus.io/) HTTP endpoint at `/metrics` on `http://localhost:8080`.
 
 Prometheus endpoint address can be specified using flag `--metrics-prometheus-address`.
-
-## Core Contributors
-
-[Core Team Members](https://github.com/orgs/kowala-tech/people)
-
-## Contact us
-
-Feel free to email us at support@kowala.tech or talk to us on [Gitter](https://gitter.im/kowala-tech/kcoin).
