@@ -15,8 +15,7 @@ pipeline:
       - make test
       - make lint
     when:
-      event: [push]
-      branch: [feature/*, hotfix/*]
+      event: [pull_request]
 
   build:
     image: kowalatech/go:1.0.1
