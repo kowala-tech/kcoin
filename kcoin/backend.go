@@ -322,7 +322,7 @@ func (s *Kowala) SetDeposit(deposit uint64) {
 func (s *Kowala) StartValidating() error {
 	_, err := s.Coinbase()
 	if err != nil {
-		log.Error("cannot start consensus validation without coinbase", "err", err)
+		log.Error("Cannot start consensus validation without coinbase", "err", err)
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
