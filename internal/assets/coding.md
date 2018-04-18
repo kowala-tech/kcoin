@@ -29,26 +29,68 @@ mockery -name InterfaceName
 
 ## General
 
+### Valid Objects
+ 
+Create valid objects at construction time, use several constructors to have variants of the object, but all should be valid.
+
+Valid here means, that further call should be needed to use the object.
+
+Don't do this
+
+```go
+email := NewEMail()
+email.SetTo("kcoin@kowala.tech")
+``` 
+the developer might not me aware that it has to set de TO before using EMail
+
+If you require and IP why not
+
+```go
+email := NewMailer("kcoin@kowala.tech")
+```
 
 ### Avoid too many arguments
 
 "Functions should have a small number of arguments. No argument is best, followed by one, two, and three. More than three is very questionable and should be avoided with prejudice."
 (http://www.informit.com/articles/article.aspx?p=1375308)
 
-This does not apply to constructor, but even when a constructor has to many arguments consider optional params or a builder class
+Consider using struct of values, optional params or a builder.
 
 Don't do this
 
 ```go
-postLetter(string country, string town, string postcode, string streetAddress, int appartmentNumber, string careOf)
+postLetter(firstName string, lastName string, street string, city string, postcode string, flatNumber int)
 ```
 
 why not
 
 ```go
-postLetter(Address address)
+postLetter(personName PersonName, address Address)
 ```
 
+### Readability over "smart" code
+
+Write code for humans first, try to express the intent with function and variable names.
+
+From 
+```go
+currentBlock := val.chain.CurrentBlock()
+if currentBlock.Number().Cmp(big.NewInt(0)) == 0 {
+    return
+}
+```
+
+To 
+```go
+currentBlock := val.chain.CurrentBlock()
+if isFirstBlock(currentBlock) {
+    return
+}
+
+func isFirstBlock(block Block) bool {
+    return block.Number().Cmp(big.NewInt(0)) == 0
+}
+```
 ### Named returns
 
 Go supports named returns, but they are discouraged from standard go style. They should be used on very small functions only.
@@ -64,7 +106,11 @@ func ReadFull(r Reader, buf []byte) (n int, err error) {
     }
     return
 }
-``` 
+```
+
+### Interfaces
+
+To ease testing consider using interfaces  
 
 ## Formatting
 
@@ -119,13 +165,13 @@ http://www.informit.com/articles/article.aspx?p=1334908
 Don't do this
 
 ```go
-function logNotEmpty(message String) {
+func logNotEmpty(message String) {
   if message != "") {
     log(message)
   }
-//      else {
-//        log("no log message")
-//      }
+//   else {
+//      log("no log message")
+//   }
 }
 ```
 
@@ -137,4 +183,3 @@ Prioritize good code over comments, code should be self explanatory
 Consider refactor if you need to explain what the code does in a comment block
 
 Only exception is package documentation and library usage examples
-
