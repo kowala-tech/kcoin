@@ -261,10 +261,10 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 
 func (b *Block) LastCommit() *Commit { return b.lastCommit }
 
-func (b *Block) Number() *big.Int   { return new(big.Int).Set(b.header.Number) }
-func (b *Block) GasLimit() uint64   { return b.header.GasLimit }
-func (b *Block) GasUsed() uint64    { return b.header.GasUsed }
-func (b *Block) Time() *big.Int     { return new(big.Int).Set(b.header.Time) }
+func (b *Block) Number() *big.Int { return new(big.Int).Set(b.header.Number) }
+func (b *Block) GasLimit() uint64 { return b.header.GasLimit }
+func (b *Block) GasUsed() uint64  { return b.header.GasUsed }
+func (b *Block) Time() *big.Int   { return new(big.Int).Set(b.header.Time) }
 
 func (b *Block) NumberU64() uint64           { return b.header.Number.Uint64() }
 func (b *Block) Bloom() Bloom                { return b.header.Bloom }

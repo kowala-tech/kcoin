@@ -27,8 +27,8 @@ pipeline:
     when:
       event: [pull_request]
     volumes:
-      - /home/ubuntu/.minikube:/root/.minikube:ro
-      - /home/ubuntu/.kube:/root/.kube:ro
+      - /home/ubuntu/.minikube:/root/.minikube
+      - /home/ubuntu/.kube:/root/.kube
 
   build:
     image: kowalatech/go:1.0.3
