@@ -3,6 +3,7 @@ package cluster
 import (
 	"math/big"
 
+	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/kcoinclient"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -28,8 +29,8 @@ type Backend interface {
 	// DockerEnv returns the environment variables necessary to connect to the private docker repository in the kubernetes cluster
 	DockerEnv() ([]string, error)
 
-	// ServiceAddr returns the ip:port pair for a specific service running in the cluster
-	ServiceAddr(serviceName string) (string, error)
+	// IP returns a IP where the cluster can be accessed
+	IP() (string, error)
 }
 
 type Cluster interface {
@@ -41,7 +42,7 @@ type Cluster interface {
 
 	// Initialize prepares a new cluster to be ready to start. It saves the networkID for future pods
 	// to use it, generates a genesis and stores initial keys in the cluster.
-	Initialize(networkID string) error
+	Initialize(networkID string, seedAccount common.Address) error
 
 	// Cleanup deletes all pods, leaving the kluster in a fresh state
 	Cleanup() error

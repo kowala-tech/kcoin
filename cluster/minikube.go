@@ -98,9 +98,9 @@ func (cluster *minikubeCluster) DockerEnv() ([]string, error) {
 	return goodLines, nil
 }
 
-// ServiceAddr returns the ip:port pair for a specific service running in the cluster
-func (cluster *minikubeCluster) ServiceAddr(serviceName string) (string, error) {
-	statusCmd := exec.Command("minikube", "service", serviceName, "-p", cluster.Name, "-n", Namespace, "--url", "--format", "http://{{.IP}}:{{.Port}}")
+// IP returns the ip of the minikube vm
+func (cluster *minikubeCluster) IP() (string, error) {
+	statusCmd := exec.Command("minikube", "ip", "-p", cluster.Name)
 	stdout := &bytes.Buffer{}
 	statusCmd.Stdout = stdout
 	statusCmd.Stderr = os.Stderr
@@ -110,8 +110,7 @@ func (cluster *minikubeCluster) ServiceAddr(serviceName string) (string, error) 
 	if !statusCmd.ProcessState.Success() {
 		return "", fmt.Errorf("error getting cluster IP")
 	}
-	url := strings.TrimSpace(stdout.String())
-	return url[7:], nil
+	return strings.TrimSpace(stdout.String()), nil
 }
 
 func (cluster *minikubeCluster) assertReady() error {

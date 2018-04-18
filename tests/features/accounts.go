@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/DATA-DOG/godog/gherkin"
-	"github.com/kowala-tech/kcoin/common"
 )
 
 type AccountEntry struct {
@@ -48,50 +46,13 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 }
 
 func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
-	accounts, err := parseAccountsDataTable(accountsDataTable)
+	accountsData, err := parseAccountsDataTable(accountsDataTable)
 	if err != nil {
 		return err
 	}
 
-	// Create an archive node for each account and send them funds
-	for _, account := range accounts {
-		nodeName, err := ctx.cluster.RunArchiveNode()
-		if err != nil {
-			return err
-		}
-
-		res, err := ctx.cluster.Exec(nodeName, `eth.coinbase`)
-		if err != nil {
-			return err
-		}
-		coinbaseQuotes := res.StdOut
-
-		ctx.accountsNodeNames[account.AccountName] = nodeName
-		ctx.accountsCoinbase[account.AccountName] = strings.TrimSpace(strings.Replace(coinbaseQuotes, `"`, "", 2))
-
-		res, err = ctx.cluster.Exec(ctx.genesisValidatorName,
-			fmt.Sprintf(
-				`eth.sendTransaction({
-				from:eth.coinbase,
-				to: %s,
-				value: %v})`, coinbaseQuotes, toWei(account.Funds)))
-		if err != nil {
-			return err
-		}
-	}
-
-	// Wait for funds to be available
-	for _, account := range accounts {
-		err = waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
-			acct := common.HexToAddress(ctx.accountsCoinbase[account.AccountName])
-			balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
-			if err != nil {
-				return false
-			}
-			expected := toWei(account.Funds)
-			return balance.Cmp(expected) == 0
-		})
-		if err != nil {
+	for _, accountData := range accountsData {
+		if err := ctx.createAccountWithFunds(accountData.AccountName, accountData.Funds); err != nil {
 			return err
 		}
 	}
@@ -99,11 +60,11 @@ func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTab
 	return nil
 }
 
-func (ctx *Context) TheBalanceIsExactly(account string, kcoin int64) error {
+func (ctx *Context) TheBalanceIsExactly(accountName string, kcoin int64) error {
 	expected := toWei(kcoin)
 
-	acct := common.HexToAddress(ctx.accountsCoinbase[account])
-	balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
+	account := ctx.accounts[accountName]
+	balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
 	if err != nil {
 		return err
 	}
@@ -113,11 +74,11 @@ func (ctx *Context) TheBalanceIsExactly(account string, kcoin int64) error {
 	return nil
 }
 
-func (ctx *Context) TheBalanceIsAround(account string, kcoin int64) error {
+func (ctx *Context) TheBalanceIsAround(accountName string, kcoin int64) error {
 	expected := toWei(kcoin)
 
-	acct := common.HexToAddress(ctx.accountsCoinbase[account])
-	balance, err := ctx.client.BalanceAt(context.Background(), acct, nil)
+	account := ctx.accounts[accountName]
+	balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
 	if err != nil {
 		return err
 	}
@@ -127,6 +88,36 @@ func (ctx *Context) TheBalanceIsAround(account string, kcoin int64) error {
 
 	if diff.Cmp(big.NewInt(100000)) >= 0 {
 		return fmt.Errorf("Balance expected to be around %v but is %v", expected, balance)
+	}
+	return nil
+}
+
+func (ctx *Context) createAccountWithFunds(accountName string, kcoins int64) error {
+	if _, ok := ctx.accounts[accountName]; ok {
+		return fmt.Errorf("an account with this name already exists: %s", accountName)
+	}
+	account, err := ctx.AccountsStorage.NewAccount("test")
+	if err != nil {
+		return err
+	}
+	if err := ctx.AccountsStorage.Unlock(account, "test"); err != nil {
+		return err
+	}
+
+	ctx.accounts[accountName] = account
+	if _, err := ctx.sendFunds(ctx.seederAccount, account, kcoins); err != nil {
+		return err
+	}
+	err = waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
+		account := ctx.accounts[accountName]
+		balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
+		if err != nil {
+			return false
+		}
+		return balance.Cmp(toWei(kcoins)) == 0
+	})
+	if err != nil {
+		return err
 	}
 	return nil
 }
