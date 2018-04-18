@@ -36,6 +36,7 @@ func DeployElectionContract(auth *bind.TransactOpts, backend bind.ContractBacken
 type ElectionContract struct {
 	ElectionContractCaller     // Read-only binding to the contract
 	ElectionContractTransactor // Write-only binding to the contract
+	ElectionContractFilterer   // Log filterer for contract events
 }
 
 // ElectionContractCaller is an auto generated read-only Go binding around an Ethereum contract.
@@ -85,18 +86,24 @@ type ElectionContractTransactorRaw struct {
 	Contract *ElectionContractTransactor // Generic write-only contract binding to access the raw methods on
 }
 
+
+// ElectionContractFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ElectionContractFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
 // NewElectionContract creates a new instance of ElectionContract, bound to a specific deployed contract.
 func NewElectionContract(address common.Address, backend bind.ContractBackend) (*ElectionContract, error) {
-	contract, err := bindElectionContract(address, backend, backend)
+	contract, err := bindElectionContract(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &ElectionContract{ElectionContractCaller: ElectionContractCaller{contract: contract}, ElectionContractTransactor: ElectionContractTransactor{contract: contract}}, nil
+	return &ElectionContract{ ElectionContractCaller: ElectionContractCaller{contract: contract}, ElectionContractTransactor: ElectionContractTransactor{contract: contract}, ElectionContractFilterer: ElectionContractFilterer{contract: contract} }, nil
 }
 
 // NewElectionContractCaller creates a new read-only instance of ElectionContract, bound to a specific deployed contract.
 func NewElectionContractCaller(address common.Address, caller bind.ContractCaller) (*ElectionContractCaller, error) {
-	contract, err := bindElectionContract(address, caller, nil)
+	contract, err := bindElectionContract(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -105,20 +112,29 @@ func NewElectionContractCaller(address common.Address, caller bind.ContractCalle
 
 // NewElectionContractTransactor creates a new write-only instance of ElectionContract, bound to a specific deployed contract.
 func NewElectionContractTransactor(address common.Address, transactor bind.ContractTransactor) (*ElectionContractTransactor, error) {
-	contract, err := bindElectionContract(address, nil, transactor)
+	contract, err := bindElectionContract(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &ElectionContractTransactor{contract: contract}, nil
 }
 
+// NewElectionContractFilterer creates a new log filterer instance of ElectionContract, bound to a specific deployed contract.
+func NewElectionContractFilterer(address common.Address, filterer bind.ContractFilterer) (*ElectionContractFilterer, error) {
+	contract, err := bindElectionContract(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ElectionContractFilterer{contract: contract}, nil
+}
+
 // bindElectionContract binds a generic wrapper to an already deployed contract.
-func bindElectionContract(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor) (*bind.BoundContract, error) {
+func bindElectionContract(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(ElectionContractABI))
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, kcoin.NilLogFilter{}), nil
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and

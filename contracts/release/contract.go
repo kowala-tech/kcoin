@@ -4,14 +4,13 @@
 package release
 
 import (
-	"math/big"
 	"strings"
 
 	"github.com/kowala-tech/kcoin/accounts/abi"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoin"
+	"math/big"
 )
 
 // ReleaseOracleABI is the input ABI used to generate the binding from.
@@ -37,6 +36,7 @@ func DeployReleaseOracle(auth *bind.TransactOpts, backend bind.ContractBackend, 
 type ReleaseOracle struct {
 	ReleaseOracleCaller     // Read-only binding to the contract
 	ReleaseOracleTransactor // Write-only binding to the contract
+	ReleaseOracleFilterer   // Log filterer for contract events
 }
 
 // ReleaseOracleCaller is an auto generated read-only Go binding around an Ethereum contract.
@@ -86,18 +86,23 @@ type ReleaseOracleTransactorRaw struct {
 	Contract *ReleaseOracleTransactor // Generic write-only contract binding to access the raw methods on
 }
 
+// ReleaseOracleFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ReleaseOracleFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
 // NewReleaseOracle creates a new instance of ReleaseOracle, bound to a specific deployed contract.
 func NewReleaseOracle(address common.Address, backend bind.ContractBackend) (*ReleaseOracle, error) {
-	contract, err := bindReleaseOracle(address, backend, backend)
+	contract, err := bindReleaseOracle(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &ReleaseOracle{ReleaseOracleCaller: ReleaseOracleCaller{contract: contract}, ReleaseOracleTransactor: ReleaseOracleTransactor{contract: contract}}, nil
+	return &ReleaseOracle{ ReleaseOracleCaller: ReleaseOracleCaller{contract: contract}, ReleaseOracleTransactor: ReleaseOracleTransactor{contract: contract}, ReleaseOracleFilterer: ReleaseOracleFilterer{contract: contract} }, nil
 }
 
 // NewReleaseOracleCaller creates a new read-only instance of ReleaseOracle, bound to a specific deployed contract.
 func NewReleaseOracleCaller(address common.Address, caller bind.ContractCaller) (*ReleaseOracleCaller, error) {
-	contract, err := bindReleaseOracle(address, caller, nil)
+	contract, err := bindReleaseOracle(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -106,20 +111,29 @@ func NewReleaseOracleCaller(address common.Address, caller bind.ContractCaller) 
 
 // NewReleaseOracleTransactor creates a new write-only instance of ReleaseOracle, bound to a specific deployed contract.
 func NewReleaseOracleTransactor(address common.Address, transactor bind.ContractTransactor) (*ReleaseOracleTransactor, error) {
-	contract, err := bindReleaseOracle(address, nil, transactor)
+	contract, err := bindReleaseOracle(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &ReleaseOracleTransactor{contract: contract}, nil
 }
 
+// NewReleaseOracleFilterer creates a new log filterer instance of ReleaseOracle, bound to a specific deployed contract.
+func NewReleaseOracleFilterer(address common.Address, filterer bind.ContractFilterer) (*ReleaseOracleFilterer, error) {
+	contract, err := bindReleaseOracle(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ReleaseOracleFilterer{contract: contract}, nil
+}
+
 // bindReleaseOracle binds a generic wrapper to an already deployed contract.
-func bindReleaseOracle(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor) (*bind.BoundContract, error) {
+func bindReleaseOracle(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(ReleaseOracleABI))
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, kcoin.NilLogFilter{}), nil
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
