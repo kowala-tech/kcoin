@@ -12,8 +12,7 @@ import (
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/rpc"
 )
-//FilterLogs(ctx context.Context, query kowala.FilterQuery) ([]types.Log, error)
-//SubscribeFilterLogs(ctx context.Context, query kowala.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error)
+
 // ContractBackend implements bind.ContractBackend with direct calls to Kowala
 // internals to support operating on contracts within subprotocols like kcoin and
 // swarm.
