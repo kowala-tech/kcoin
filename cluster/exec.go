@@ -33,14 +33,17 @@ func (client *cluster) Exec(podName, command string) (*ExecResponse, error) {
 		return nil, err
 	}
 
-	return &ExecResponse{
+	resp := &ExecResponse{
 		StdOut: stdOut.String(),
 		StdErr: stdErr.String(),
-	}, nil
+	}
+
+	log.Println("RESPONSE: %v", *resp)
+	return resp, nil
 }
 
 func (client *cluster) getExecExecutor(podName, command string) (remotecommand.Executor, error) {
-	log.Printf("Executing command in pod named `%v`\n", podName)
+	log.Printf("Executing command in pod named `%v`\n\t%q\n", podName, command)
 	req := client.Clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).

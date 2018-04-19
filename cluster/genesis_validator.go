@@ -29,6 +29,7 @@ func (client *cluster) RunGenesisValidator() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	log.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	return genesisValidatorPodName, client.waitForKusdPod(genesisValidatorPodName)
 }
 

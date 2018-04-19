@@ -27,7 +27,7 @@ func (ctx *Context) PrepareCluster() error {
 	if ip, port := getStaticClusterConfig(); ip != "" && port != 0 {
 		backend = cluster.NewStaticCluster(ip, port)
 	} else {
-		backend = cluster.NewMinikubeCluster("testing")
+		backend = cluster.NewMinikubeCluster("minikube")
 	}
 	if !backend.Exists() {
 		if err := backend.Create(); err != nil {
