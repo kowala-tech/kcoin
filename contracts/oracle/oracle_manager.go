@@ -81,8 +81,8 @@ func (manager *oracleManager) RedeemDeposits(walletAccount accounts.WalletAccoun
 	return nil
 }
 
-func (manager *oracleManager) SubmitWork(walletAccount accounts.WalletAccount, price *big.Int) error {
-	_, err := manager.OracleManagerContract.SubmitWork(manager.transactOpts(walletAccount), price)
+func (manager *oracleManager) SubmitPrice(walletAccount accounts.WalletAccount, price *big.Int) error {
+	_, err := manager.OracleManagerContract.SubmitPrice(manager.transactOpts(walletAccount), price)
 	if err != nil {
 		return err
 	}
