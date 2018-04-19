@@ -361,7 +361,7 @@ func (s *Kowala) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *Kowala) Engine() consensus.Engine           { return s.engine }
 func (s *Kowala) ChainDb() kcoindb.Database          { return s.chainDb }
 func (s *Kowala) IsListening() bool                  { return true } // Always listening
-func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *Kowala) KowalaVersion() int                 { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkId }
 func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
 
