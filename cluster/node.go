@@ -23,5 +23,11 @@ func (client *cluster) RunNode(name string) error {
 		return err
 	}
 
-	return client.waitForKusdPod(name)
+	err = client.waitForKusdPod(name)
+	if err != nil {
+		return err
+	}
+
+	return client.waitForInitialSync(name)
+
 }

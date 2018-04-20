@@ -4,8 +4,8 @@ Feature: Joining network as a validator
 
   Scenario: Start validator
     Given I have the following accounts:
-      | account | funds |
-      | A       | 10    |
+      | account |  funds  |
+      | A       | 1000000 |
     When I start validator with 1 deposit and coinbase A
     Then I should be a validator
     And the balance of A should be around 9 kcoins

@@ -7,31 +7,31 @@ import (
 
 func (ctx *Context) IStartTheValidator(kcoin int64, accountName string) error {
 	nodeName := "somevalidator"
-	password := "password"
-	coinbase := ""
+	//password := "test"
+	//coinbase := ""
 
 	err := ctx.cluster.RunNode(nodeName)
 	if err != nil {
 		return err
 	}
 
-	response, err := ctx.cluster.Exec(nodeName, newAccountCommand(password))
+	//response, err := ctx.cluster.Exec(nodeName, newAccountCommand(password))
+	//if err != nil {
+	//	return err
+	//}
+	//coinbase = parseNewAccountResponse(response.StdOut)
+	//
+	//_, err = ctx.cluster.Exec(nodeName, unlockAccountCommand(coinbase, password))
+	//if err != nil {
+	//	return err
+	//}
+
+	_, err = ctx.cluster.Exec(nodeName, setCoinbaseCommand(ctx.accounts[accountName].Address.String()))
 	if err != nil {
 		return err
 	}
-	coinbase = parseNewAccountResponse(response.StdOut)
 
-	_, err = ctx.cluster.Exec(nodeName, unlockAccountCommand(coinbase, password))
-	if err != nil {
-		return err
-	}
-
-	_, err = ctx.cluster.Exec(nodeName, setCoinbaseCommand(coinbase))
-	if err != nil {
-		return err
-	}
-
-	response, err = ctx.cluster.Exec(nodeName, setDeposit())
+	response, err := ctx.cluster.Exec(nodeName, setDeposit())
 	print(response)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func setCoinbaseCommand(coinbase string) string {
 }
 
 func setDeposit() string {
-	return "validator.setDeposit(1000000)"
+	return "validator.setDeposit(100000)"
 }
 
 func validatorStartCommand() string {
