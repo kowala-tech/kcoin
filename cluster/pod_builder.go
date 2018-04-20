@@ -5,17 +5,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/pkg/errors"
 	"path/filepath"
+	"strconv"
 )
 
-type PodBuilder interface {
+type KcoinPodBuilder interface {
 	Build() (*apiv1.Pod, error)
-	Network(string) PodBuilder
-	Port(int32) PodBuilder
-	Name(string) PodBuilder
-	Bootnode(string) PodBuilder
+	WithNetworkId(string) KcoinPodBuilder
+	WithPort(int32) KcoinPodBuilder
+	WithName(string) KcoinPodBuilder
+	WithBootnode(string) KcoinPodBuilder
+	WithSyncMode(string) KcoinPodBuilder
+	WithLogLevel(int) KcoinPodBuilder
 }
 
-var availablePort int32 = 31301
+var availablePort int32 = 30301
 
 type Builder struct {
 	network   string
@@ -23,29 +26,44 @@ type Builder struct {
 	name      string
 	namespace string
 	bootnode  string
+	syncMode  string
+	logLevel  int
 }
 
 func NewPodBuilder() *Builder {
-	return &Builder{}
+	return &Builder{
+		syncMode: "fast",
+		logLevel: 3,
+	}
 }
 
-func (builder *Builder) Network(name string) PodBuilder {
+func (builder *Builder) WithNetworkId(name string) KcoinPodBuilder {
 	builder.network = name
 	return builder
 }
 
-func (builder *Builder) Port(port int32) PodBuilder {
+func (builder *Builder) WithPort(port int32) KcoinPodBuilder {
 	builder.port = port
 	return builder
 }
 
-func (builder *Builder) Name(name string) PodBuilder {
+func (builder *Builder) WithName(name string) KcoinPodBuilder {
 	builder.name = name
 	return builder
 }
 
-func (builder *Builder) Bootnode(address string) PodBuilder {
+func (builder *Builder) WithBootnode(address string) KcoinPodBuilder {
 	builder.bootnode = address
+	return builder
+}
+
+func (builder *Builder) WithSyncMode(mode string) KcoinPodBuilder {
+	builder.syncMode = mode
+	return builder
+}
+
+func (builder *Builder) WithLogLevel(level int) KcoinPodBuilder {
+	builder.logLevel = level
 	return builder
 }
 
@@ -68,16 +86,16 @@ func (builder *Builder) Build() (*apiv1.Pod, error) {
 
 func (builder *Builder) build() *apiv1.Pod {
 	args := []string{
-		"--syncmode", "fast",
+		"--syncmode", builder.syncMode,
 		"--bootnodes", builder.bootnode,
 		"--networkid", builder.network,
-		"--verbosity", "6",
+		"--verbosity", strconv.Itoa(builder.logLevel),
 	}
 	return &apiv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: builder.name,
 			Labels: map[string]string{
-				"network": builder.network,
+				"network": "testnet",
 				"app":     "node",
 				"name":    builder.name,
 			},

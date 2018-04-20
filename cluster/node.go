@@ -2,10 +2,17 @@ package cluster
 
 // RunNode Runs the a node
 func (client *cluster) RunNode(name string) error {
+	bootnode, err := client.GetString(bootnodeEnodeKey)
+	if err != nil {
+		return err
+	}
+
 	pod, err := NewPodBuilder().
-		Network("testnet").
-		Name("validator").
-		Bootnode(client.NetworkID).
+		WithNetworkId(client.NetworkID).
+		WithName(name).
+		WithBootnode(bootnode).
+		WithSyncMode("full").
+		WithLogLevel(3).
 		Build()
 	if err != nil {
 		return nil
