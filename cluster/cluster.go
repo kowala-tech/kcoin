@@ -134,23 +134,3 @@ func (client *cluster) waitForInitialSync(podName string) error {
 		return err == nil && resp.StdOut == "false\n"
 	})
 }
-
-func (client *cluster) waitForNoPods() error {
-	return WaitFor(1*time.Second, 20*time.Second, func() bool {
-		list, err := client.Clientset.CoreV1().Pods(client.Namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return false
-		}
-		return len(list.Items) == 0
-	})
-}
-
-func (client *cluster) waitForNoServices() error {
-	return WaitFor(1*time.Second, 20*time.Second, func() bool {
-		list, err := client.Clientset.CoreV1().Services(client.Namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return false
-		}
-		return len(list.Items) == 0
-	})
-}
