@@ -24,7 +24,7 @@ func (client *cluster) RunArchiveNode() (string, error) {
 	pod := archiveNodePod(podName, client.NetworkID, bootnode, int32(31310+idx))
 	useGenesisFromConfigmap(&pod.Spec)
 
-	_, err = client.Clientset.CoreV1().Pods(Namespace).Create(pod)
+	_, err = client.Clientset.CoreV1().Pods(client.Namespace).Create(pod)
 	if err != nil {
 		return "", err
 	}
@@ -37,7 +37,7 @@ func (client *cluster) RunArchiveNode() (string, error) {
 }
 
 func (client *cluster) getNextArchiveNodeIndex() (int, error) {
-	list, err := client.Clientset.CoreV1().Pods(Namespace).List(metav1.ListOptions{
+	list, err := client.Clientset.CoreV1().Pods(client.Namespace).List(metav1.ListOptions{
 		LabelSelector: "app=archive_node",
 	})
 	if err != nil {

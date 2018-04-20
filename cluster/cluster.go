@@ -13,12 +13,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const Namespace = "kcoin"
-
 type cluster struct {
 	Backend   Backend
 	Clientset *kubernetes.Clientset
 	NetworkID string
+	Namespace string
 }
 
 // NewClient Returns a client interface to the specified backend k8s
@@ -42,32 +41,7 @@ func (client *cluster) Connect() error {
 }
 
 func (client *cluster) Cleanup() error {
-	var zero int64 = 0
-	err := client.Clientset.CoreV1().Pods(Namespace).DeleteCollection(&metav1.DeleteOptions{
-		GracePeriodSeconds: &zero,
-	}, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	if err := client.waitForNoPods(); err != nil {
-		return err
-	}
-
-	// Services can't be deleted as a collection...
-	list, err := client.Clientset.CoreV1().Services(Namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, service := range list.Items {
-		err = client.Clientset.CoreV1().Services(Namespace).Delete(service.Name, &metav1.DeleteOptions{
-			GracePeriodSeconds: &zero,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return client.waitForNoServices()
+	return client.Clientset.CoreV1().Namespaces().Delete(client.Namespace, &metav1.DeleteOptions{})
 }
 
 func (client *cluster) Initialize(networkID string, seedAccount common.Address) error {
@@ -105,24 +79,7 @@ func (client *cluster) Initialize(networkID string, seedAccount common.Address) 
 }
 
 func (client *cluster) DeletePod(podName string) error {
-	return client.Clientset.CoreV1().Pods(Namespace).Delete(podName, &metav1.DeleteOptions{})
-}
-
-func (client *cluster) createNamespace() error {
-	ns, err := client.Clientset.CoreV1().Namespaces().Get(Namespace, metav1.GetOptions{})
-
-	// `err`` will be a NotFound if the namespace doesn't exist, and `ns` will be
-	//   a struct with an empty Name. Just checking for the name match will cover
-	//   a not found too.
-	if ns.Name == Namespace {
-		return nil
-	}
-
-	log.Printf("Creating `%v` namespace...\n", Namespace)
-	ns = &apiv1.Namespace{}
-	ns.Name = Namespace
-	_, err = client.Clientset.CoreV1().Namespaces().Create(ns)
-	return err
+	return client.Clientset.CoreV1().Pods(client.Namespace).Delete(podName, &metav1.DeleteOptions{})
 }
 
 func (client *cluster) waitForPod(podName string) error {
@@ -133,7 +90,7 @@ func (client *cluster) waitForPod(podName string) error {
 }
 
 func (client *cluster) isPodRunning(podName string) bool {
-	pod, err := client.Clientset.CoreV1().Pods(Namespace).Get(podName, metav1.GetOptions{})
+	pod, err := client.Clientset.CoreV1().Pods(client.Namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
@@ -158,7 +115,7 @@ func (client *cluster) GetBalance(podName string) (*big.Int, error) {
 }
 
 func (client *cluster) isKusdPodRunning(podName string) bool {
-	pod, err := client.Clientset.CoreV1().Pods(Namespace).Get(podName, metav1.GetOptions{})
+	pod, err := client.Clientset.CoreV1().Pods(client.Namespace).Get(podName, metav1.GetOptions{})
 	if pod == nil || err != nil {
 		return false
 	}
@@ -175,25 +132,5 @@ func (client *cluster) waitForInitialSync(podName string) error {
 	return WaitFor(2*time.Second, 5*time.Minute, func() bool {
 		resp, err := client.Exec(podName, `eth.syncing`)
 		return err == nil && resp.StdOut == "false\n"
-	})
-}
-
-func (client *cluster) waitForNoPods() error {
-	return WaitFor(1*time.Second, 20*time.Second, func() bool {
-		list, err := client.Clientset.CoreV1().Pods(Namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return false
-		}
-		return len(list.Items) == 0
-	})
-}
-
-func (client *cluster) waitForNoServices() error {
-	return WaitFor(1*time.Second, 20*time.Second, func() bool {
-		list, err := client.Clientset.CoreV1().Services(Namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return false
-		}
-		return len(list.Items) == 0
 	})
 }
