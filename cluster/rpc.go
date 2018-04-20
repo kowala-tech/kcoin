@@ -22,7 +22,7 @@ func (client *cluster) RunRpcNode() (string, error) {
 	pod := RpcNodePod(rpcPodName, client.NetworkID, bootnode, rpcPort)
 	useGenesisFromConfigmap(&pod.Spec)
 
-	_, err = client.Clientset.CoreV1().Pods(Namespace).Create(pod)
+	_, err = client.Clientset.CoreV1().Pods(client.Namespace).Create(pod)
 	if err != nil {
 		return "", err
 	}
@@ -32,7 +32,7 @@ func (client *cluster) RunRpcNode() (string, error) {
 	}
 
 	service := RpcNodeService(rpcPodName, rpcPort)
-	_, err = client.Clientset.CoreV1().Services(Namespace).Create(service)
+	_, err = client.Clientset.CoreV1().Services(client.Namespace).Create(service)
 	if err != nil {
 		return "", err
 	}

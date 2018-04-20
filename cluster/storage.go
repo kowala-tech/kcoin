@@ -14,7 +14,7 @@ const (
 // StoreString stores a configuration value in the cluster
 func (client *cluster) StoreString(key, value string) error {
 	log.Printf("Storing config string with key `%v`\n", key)
-	config_maps := client.Clientset.CoreV1().ConfigMaps(Namespace)
+	config_maps := client.Clientset.CoreV1().ConfigMaps(client.Namespace)
 
 	current, err := config_maps.Get("config", metav1.GetOptions{})
 	if err != nil {
@@ -45,7 +45,7 @@ func (client *cluster) StoreString(key, value string) error {
 
 // GetString retrieves a configuration value from the cluster
 func (client *cluster) GetString(key string) (string, error) {
-	config_maps := client.Clientset.CoreV1().ConfigMaps(Namespace)
+	config_maps := client.Clientset.CoreV1().ConfigMaps(client.Namespace)
 
 	current, err := config_maps.Get("config", metav1.GetOptions{})
 	if err != nil {

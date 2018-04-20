@@ -25,7 +25,7 @@ func (client *cluster) RunGenesisValidator() (string, error) {
 	usePasswordFromConfigmap(&pod.Spec)
 	useKeyFromConfigmap(&pod.Spec, "d6e579085c82329c89fca7a9f012be59028ed53f", "UTC--2018-01-16T16-31-38.006625000Z--d6e579085c82329c89fca7a9f012be59028ed53f")
 
-	_, err = client.Clientset.CoreV1().Pods(Namespace).Create(pod)
+	_, err = client.Clientset.CoreV1().Pods(client.Namespace).Create(pod)
 	if err != nil {
 		return "", err
 	}
