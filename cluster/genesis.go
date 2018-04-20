@@ -14,7 +14,7 @@ import (
 
 func (client *cluster) generateGenesis(seedAccount common.Address) error {
 	log.Println("Generating and storing genesis configmap")
-	configMaps := client.Clientset.CoreV1().ConfigMaps(Namespace)
+	configMaps := client.Clientset.CoreV1().ConfigMaps(client.Namespace)
 
 	// Remove existing genesis
 	err := configMaps.DeleteCollection(nil, metav1.ListOptions{

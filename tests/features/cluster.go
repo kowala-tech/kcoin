@@ -9,10 +9,6 @@ import (
 	"github.com/kowala-tech/kcoin/cluster"
 )
 
-func (ctx *Context) IsClusterReady() bool {
-	return ctx.cluster != nil
-}
-
 func (ctx *Context) PrepareCluster() error {
 	seederAccount, err := ctx.AccountsStorage.NewAccount("test")
 	if err != nil {
@@ -39,8 +35,6 @@ func (ctx *Context) PrepareCluster() error {
 	if err := ctx.cluster.Connect(); err != nil {
 		return err
 	}
-
-	ctx.cluster.Cleanup() // Just in case the previous run didn't finish gracefully
 
 	if err := ctx.cluster.Initialize(ctx.chainID.String(), ctx.seederAccount.Address); err != nil {
 		return err

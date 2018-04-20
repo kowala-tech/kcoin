@@ -13,7 +13,7 @@ import (
 
 func (client *cluster) addKeys() error {
 	log.Println("Adding keys configmaps")
-	configMaps := client.Clientset.CoreV1().ConfigMaps(Namespace)
+	configMaps := client.Clientset.CoreV1().ConfigMaps(client.Namespace)
 
 	// Remove existing keys
 	err := configMaps.DeleteCollection(nil, metav1.ListOptions{
@@ -55,7 +55,7 @@ func (client *cluster) addKeys() error {
 
 func (client *cluster) addKeysPassword() error {
 	log.Println("Adding password configmap")
-	configMaps := client.Clientset.CoreV1().ConfigMaps(Namespace)
+	configMaps := client.Clientset.CoreV1().ConfigMaps(client.Namespace)
 	// Remove existing password
 	err := configMaps.DeleteCollection(nil, metav1.ListOptions{
 		LabelSelector: "type = password",
