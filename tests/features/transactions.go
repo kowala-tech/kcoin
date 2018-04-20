@@ -80,3 +80,17 @@ func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Tr
 
 	return tx, ctx.client.SendTransaction(context.Background(), tx)
 }
+
+func (ctx *Context) sendFundsAndWait(from, to accounts.Account, kcoins int64) (*types.Transaction, error) {
+	tx, err := ctx.sendFunds(from, to, kcoins)
+	if err != nil {
+		return nil, err
+	}
+	return tx, waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
+		balance, err := ctx.client.BalanceAt(context.Background(), to.Address, nil)
+		if err != nil {
+			return false
+		}
+		return balance.Cmp(toWei(kcoins)) == 0
+	})
+}
