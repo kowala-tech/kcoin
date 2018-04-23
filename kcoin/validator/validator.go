@@ -19,6 +19,8 @@ import (
 	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/kcoin/wal"
+	"fmt"
 )
 
 var (
@@ -70,6 +72,8 @@ type validator struct {
 	engine   consensus.Engine
 	vmConfig vm.Config
 
+	wal wal.WAL
+
 	walletAccount accounts.WalletAccount
 
 	election network.Election // consensus election
@@ -85,7 +89,7 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config, wal wal.WAL) *validator {
 	validator := &validator{
 		config:   config,
 		backend:  backend,
@@ -95,6 +99,7 @@ func New(backend Backend, election network.Election, config *params.ChainConfig,
 		eventMux: eventMux,
 		signer:   types.NewAndromedaSigner(config.ChainID),
 		vmConfig: vmConfig,
+		wal:      wal,
 		canStart: 0,
 	}
 
@@ -106,9 +111,9 @@ func New(backend Backend, election network.Election, config *params.ChainConfig,
 func (val *validator) sync() {
 	if err := SyncWaiter(val.eventMux); err != nil {
 		log.Warn("Failed to sync with network", "err", err)
-	} else {
-		val.finishedSync()
 	}
+
+	val.finishedSync()
 }
 
 func (val *validator) finishedSync() {
@@ -132,6 +137,7 @@ func (val *validator) Start(walletAccount accounts.WalletAccount, deposit uint64
 	val.deposit = deposit
 
 	if atomic.LoadInt32(&val.canStart) == 0 {
+		fmt.Println("validator")
 		log.Info("network syncing, will start validator afterwards")
 		return
 	}
@@ -151,6 +157,7 @@ func (val *validator) run() {
 
 	log.Info("Starting the consensus state machine")
 	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
+		fmt.Println("=====================================", numTransitions)
 		state = state()
 		if val.maxTransitions > 0 && numTransitions == val.maxTransitions {
 			break

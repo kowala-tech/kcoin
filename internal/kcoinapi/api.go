@@ -517,6 +517,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
+		fmt.Println("PublicBlockChainAPI 0", err, state)
 		return nil, common.Big0, false, err
 	}
 	// Set sender address or use a default if none specified
@@ -555,6 +556,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Get a new instance of the EVM.
 	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
+		fmt.Println("PublicBlockChainAPI 1", err, state)
 		return nil, common.Big0, false, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
@@ -569,8 +571,10 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	gp := new(core.GasPool).AddGas(math.MaxBig256)
 	res, gas, failed, err := core.ApplyMessage(evm, msg, gp)
 	if err := vmError(); err != nil {
+		fmt.Println("PublicBlockChainAPI 2", err, state)
 		return nil, common.Big0, false, err
 	}
+	fmt.Println("PublicBlockChainAPI 3", err, failed)
 	return res, gas, failed, err
 }
 
@@ -607,6 +611,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*
 		(*big.Int)(&args.Gas).SetUint64(gas)
 		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{})
 		if err != nil || failed {
+			fmt.Println("executable", err, failed)
 			return false
 		}
 		return true
@@ -623,6 +628,7 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (*
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
 		if !executable(hi) {
+			fmt.Println("ERROR GAS 1", hi, cap)
 			return nil, fmt.Errorf("gas required exceeds allowance or always failing transaction")
 		}
 	}

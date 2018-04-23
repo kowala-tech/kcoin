@@ -4,17 +4,24 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/internal/jsre"
 	"github.com/kowala-tech/kcoin/kcoin"
 	"github.com/kowala-tech/kcoin/node"
+	"github.com/kowala-tech/kcoin/accounts/keystore"
+	"math/big"
+	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/cluster"
+	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/core/types"
+	"context"
+	"github.com/kowala-tech/kcoin"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/kcoin/downloader"
 )
 
 const (
@@ -67,27 +74,77 @@ type tester struct {
 // Please ensure you call Close() on the returned tester to avoid leaks.
 func newTester(t *testing.T, confOverride func(*kcoin.Config)) *tester {
 	// Create a temporary storage for the node keys and initialize it
-	workspace, err := ioutil.TempDir("", "console-tester-")
-	if err != nil {
-		t.Fatalf("failed to create temporary keystore: %v", err)
-	}
+	workspace := "/home/eugene/kcoin/test/"
+	//workspace, err := ioutil.TempDir("", "console-tester-")
+	//if err != nil {
+	//	t.Fatalf("failed to create temporary keystore: %v", err)
+	//}
 
 	// Create a networkless protocol stack and start an Kowala service within
 	stack, err := node.New(&node.Config{DataDir: workspace, UseLightweightKDF: true, Name: testInstance})
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)
 	}
-	kcoinConf := &kcoin.Config{
-		Genesis:  core.DeveloperGenesisBlock(15, common.Address{}),
-		Coinbase: common.HexToAddress(testAddress),
-		PowTest:  true,
+
+	accountManager := stack.AccountManager()
+	keyStore := accountManager.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	const accountPassword = "test"
+
+	fmt.Println("qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq", keyStore.Accounts(), stack.DataDir())
+
+	seederAccount, err := keyStore.NewAccount(accountPassword)
+	if err != nil {
+		t.Fatal("failed creating account", err)
 	}
+	keyStore.Unlock(seederAccount, accountPassword)
+
+	newGenesis, err := cluster.GetGenesis(seederAccount.Address)
+	if err != nil {
+		t.Fatal("cant generate genesis", err)
+	}
+
+	kcoinConf := kcoin.DefaultConfig
+	kcoinConf.Genesis = newGenesis
+
+	kcoinConf.SyncMode = downloader.FullSync
+	kcoinConf.LightPeers = 20
+	kcoinConf.DatabaseCache = 20
+	kcoinConf.GasPrice = big.NewInt(1)
+	kcoinConf.TxPool.Journal = "transactions.rlp"
+	kcoinConf.TxPool.Rejournal = time.Hour
+	kcoinConf.TxPool.PriceLimit = 1
+	kcoinConf.TxPool.PriceBump = 1
+	kcoinConf.TxPool.AccountSlots = 16
+	kcoinConf.TxPool.GlobalSlots = 4096
+	kcoinConf.TxPool.GlobalQueue = 1024
+	kcoinConf.TxPool.AccountQueue = 1024
+	kcoinConf.TxPool.Lifetime = 3*time.Hour
+	kcoinConf.GPO.Blocks = 10
+	kcoinConf.GPO.Percentile = 50
+	kcoinConf.MaxPeers = 25
+
 	if confOverride != nil {
-		confOverride(kcoinConf)
+		confOverride(&kcoinConf)
 	}
-	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return kcoin.New(ctx, kcoinConf) }); err != nil {
+
+	fmt.Println("******************************** Alloc ACCOUNT", seederAccount.Address.String())
+
+	var kowala *kcoin.Kowala
+	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		var err error
+		kowala, err = kcoin.New(ctx, &kcoinConf)
+		if err != nil {
+			return kowala, err
+		}
+
+		kowala.SetCoinbase(seederAccount.Address)
+
+		return kowala, err
+	}); err != nil {
 		t.Fatalf("failed to register Kowala protocol: %v", err)
 	}
+	fmt.Println("Test BEFORE start", kowala)
+
 	// Start the node and assemble the JavaScript console around it
 	if err = stack.Start(); err != nil {
 		t.Fatalf("failed to start test stack: %v", err)
@@ -110,9 +167,23 @@ func newTester(t *testing.T, confOverride func(*kcoin.Config)) *tester {
 	if err != nil {
 		t.Fatalf("failed to create JavaScript console: %v", err)
 	}
-	// Create the final tester and return
-	var kowala *kcoin.Kowala
-	stack.Service(&kowala)
+
+	//eth.sendTransaction({from:eth.coinbase,to: "0x259be75d96876f2ada3d202722523e9cd4dd917d",value: 1})
+	kclient := kcoinclient.NewClient(client)
+	_ = kclient
+
+	for i:=0; i<10; i++ {
+		tx, err := sendFunds(kclient, keyStore, kowala.BlockChain().Config().ChainID, seederAccount, common.HexToAddress("0x259be75d96876f2ada3d202722523e9cd4dd917d"), 1+int64(i))
+		fmt.Println("TRANSACTION RESULT", err, tx.String())
+		fmt.Println("BLOCK", kowala.ApiBackend.CurrentBlock().String())
+		time.Sleep(5*time.Second)
+		fmt.Println("\n\n\n----------------------------------------------------------------------------------------")
+	}
+
+	fmt.Println("Test start", kowala)
+	if err := kowala.StartValidating(); err != nil {
+		t.Fatalf("Failed to start validation: %v", err)
+	}
 
 	return &tester{
 		workspace: workspace,
@@ -124,15 +195,52 @@ func newTester(t *testing.T, confOverride func(*kcoin.Config)) *tester {
 	}
 }
 
+func sendFunds(client *kcoinclient.Client, keyStore *keystore.KeyStore, chainID *big.Int, from accounts.Account, to common.Address, kcoin int64) (*types.Transaction, error) {
+	nonce, err := client.NonceAt(context.Background(), from.Address, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := context.Background()
+	gp, err := client.SuggestGasPrice(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	gas, err := client.EstimateGas(ctx, kowala.CallMsg{
+		From:     from.Address,
+		To:       &to,
+		Value:    toWei(kcoin),
+		GasPrice: gp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	tx := types.NewTransaction(nonce, to, toWei(kcoin), gas, gp, nil)
+
+	tx, err = keyStore.SignTx(from, tx, chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, client.SendTransaction(ctx, tx)
+}
+
+func toWei(kcoin int64) *big.Int {
+	return new(big.Int).Mul(big.NewInt(kcoin), big.NewInt(params.Ether))
+}
+
 // Close cleans up any temporary data folders and held resources.
 func (env *tester) Close(t *testing.T) {
+	fmt.Println("^^^^^^^^^^^ tester CLOSE()")
 	if err := env.console.Stop(false); err != nil {
 		t.Errorf("failed to stop embedded console: %v", err)
 	}
 	if err := env.stack.Stop(); err != nil {
 		t.Errorf("failed to stop embedded node: %v", err)
 	}
-	os.RemoveAll(env.workspace)
+	//os.RemoveAll(env.workspace)
 }
 
 // Tests that the node lists the correct welcome message, notably that it contains
@@ -171,6 +279,8 @@ func TestEvaluate(t *testing.T) {
 	if output := string(tester.output.Bytes()); !strings.Contains(output, "4") {
 		t.Fatalf("statement evaluation failed: have %s, want %s", output, "4")
 	}
+
+	time.Sleep(20 * time.Second)
 }
 
 // Tests that the console can be used in interactive mode.

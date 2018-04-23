@@ -226,6 +226,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg)
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
 		if !executable(hi) {
+			fmt.Println("ERROR GAS 2")
 			return nil, errGasEstimationFailed
 		}
 	}

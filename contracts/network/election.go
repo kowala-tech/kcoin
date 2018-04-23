@@ -53,6 +53,7 @@ func NewElection(contractBackend bind.ContractBackend, chainID *big.Int) (*elect
 }
 
 func (election *election) Join(walletAccount accounts.WalletAccount, amount uint64) error {
+	fmt.Println("election.JOIN", walletAccount.Account().Address.String(), amount)
 	_, err := election.ElectionContract.Join(election.transactDepositOpts(walletAccount, amount))
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
@@ -98,6 +99,8 @@ func (election *election) Validators() (types.Voters, error) {
 
 		weight := big.NewInt(0)
 		voters[i] = types.NewVoter(validator.Code, validator.Deposit.Uint64(), weight)
+
+		fmt.Println("Validators", validator.Code.String())
 	}
 
 	return types.NewVoters(voters)

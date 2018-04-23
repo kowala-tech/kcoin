@@ -10,6 +10,8 @@ import (
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/kcoin/wal/wal"
+	"fmt"
 )
 
 // work is the proposer current environment and holds all of the current state information
@@ -24,8 +26,11 @@ type work struct {
 type stateFn func() stateFn
 
 func (val *validator) notLoggedInState() stateFn {
+	//fixme: возможно восстановление надо делать тут!!!
+	fmt.Println(9999999999999999)
 	isGenesis, err := val.election.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
+		fmt.Println(111, err, val.walletAccount.Account().Address.String())
 		log.Warn("Failed to verify the voter information", "err", err)
 		return nil
 	}
@@ -33,19 +38,30 @@ func (val *validator) notLoggedInState() stateFn {
 	// @NOTE (rgeraldes) - sync was already done at this point and by default the investors will be
 	// part of the initial set of validators - no need to make a deposit if the block number is 0
 	// since these validators will be marked as voters from the start
+	fmt.Println("===================== notLoggedInState", isGenesis, val.chain.CurrentBlock().NumberU64())
 	if !isGenesis || (isGenesis && val.chain.CurrentBlock().NumberU64() > 0) {
+		fmt.Println("===================== notLoggedInState ==== 1", val.chain.CurrentBlock().NumberU64())
+		fmt.Println(val.election.IsValidator(val.walletAccount.Account().Address))
+		fmt.Println("===")
+		fmt.Println("******************************** Alloc ACCOUNT", val.walletAccount.Account().Address.String())
 		chainHeadCh := make(chan core.ChainHeadEvent)
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
 
+		voters, err := val.election.Validators()
+		fmt.Println("**", voters.Len(), err)
 		if err := val.election.Join(val.walletAccount, val.deposit); err != nil {
+			fmt.Println(2222, err)
 			log.Error("Error joining validators network", "err", err)
 			return nil
 		}
+		fmt.Println("DONE election.Join")
 
 		log.Info("Waiting confirmation to participate in the consensus")
 	L:
 		for {
+			fmt.Println("//////////////")
+
 			select {
 			case _, ok := <-chainHeadCh:
 				if !ok {
@@ -54,6 +70,7 @@ func (val *validator) notLoggedInState() stateFn {
 
 				confirmed, err := val.election.IsValidator(val.walletAccount.Account().Address)
 				if err != nil {
+					fmt.Println(333)
 					log.Crit("Failed to verify the voter registration", "err", err)
 				}
 
@@ -63,12 +80,15 @@ func (val *validator) notLoggedInState() stateFn {
 			}
 		}
 	} else {
+		fmt.Println("===================== notLoggedInState ==== 2")
 		isVoter, err := val.election.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
+			fmt.Println(444)
 			log.Crit("Failed to verify the voter information", "err", err)
 			return nil
 		}
 		if !isVoter {
+			fmt.Println(555)
 			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.walletAccount.Account().Address)
 		}
 
@@ -79,8 +99,9 @@ func (val *validator) notLoggedInState() stateFn {
 	atomic.StoreInt32(&val.validating, 1)
 
 	log.Info("Voter has been accepted in the election")
+	//todo: обратить внимание!!! возможно надо тут восстанавливать состояние!!!
 	val.restoreLastCommit()
-
+	fmt.Println(6666)
 	return val.newElectionState
 }
 
@@ -104,6 +125,8 @@ func (val *validator) newElectionState() stateFn {
 			<-txCh
 		}
 	}
+
+	val.wal.Save(wal.BlockStart(val.blockNumber))
 
 	return val.newRoundState
 }
@@ -239,11 +262,14 @@ func (val *validator) commitState() stateFn {
 		return val.loggedOutState
 	}
 
+	val.wal.Save(wal.BlockCommit(block.Number()))
+
 	return val.newElectionState
 }
 
 func (val *validator) loggedOutState() stateFn {
 	log.Info("Logged out")
+	fmt.Println("00000000000000000000000000000000000000000000000000000000000000000")
 
 	atomic.StoreInt32(&val.validating, 0)
 

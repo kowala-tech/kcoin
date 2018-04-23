@@ -10,6 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/kowala-tech/kcoin/core"
 )
 
 func (client *cluster) generateGenesis(seedAccount common.Address) error {
@@ -24,29 +25,7 @@ func (client *cluster) generateGenesis(seedAccount common.Address) error {
 		return err
 	}
 
-	newGenesis, err := genesis.GenerateGenesis(
-		genesis.Options{
-			Network:                        "test",
-			MaxNumValidators:               "1",
-			UnbondingPeriod:                "0",
-			AccountAddressGenesisValidator: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
-			PrefundedAccounts: []genesis.PrefundedAccount{
-				{
-					AccountAddress: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
-					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
-				},
-				{
-					AccountAddress: seedAccount.Hex(),
-					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
-				},
-				{
-					AccountAddress: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-					Balance:        "1000000000000000000",
-				},
-			},
-			SmartContractsOwner: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-		},
-	)
+	newGenesis, err := GetGenesis(seedAccount)
 	if err != nil {
 		return err
 	}
@@ -70,6 +49,32 @@ func (client *cluster) generateGenesis(seedAccount common.Address) error {
 		},
 	})
 	return err
+}
+
+func GetGenesis(seedAccount common.Address) (*core.Genesis, error) {
+	return genesis.GenerateGenesis(
+		genesis.Options{
+			Network:                        "test",
+			MaxNumValidators:               "1",
+			UnbondingPeriod:                "0",
+			AccountAddressGenesisValidator: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+			PrefundedAccounts: []genesis.PrefundedAccount{
+				{
+					AccountAddress: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
+				},
+				{
+					AccountAddress: seedAccount.Hex(),
+					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
+				},
+				{
+					AccountAddress: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+					Balance:        "1000000000000000000",
+				},
+			},
+			SmartContractsOwner: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+		},
+	)
 }
 
 func useGenesisFromConfigmap(spec *apiv1.PodSpec) {

@@ -32,6 +32,7 @@ import (
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/kcoin/wal/wal"
 )
 
 // @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
@@ -80,7 +81,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
-
 	chainDb, err := CreateDB(ctx, config, "chaindata")
 	if err != nil {
 		return nil, err
@@ -136,12 +136,16 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	kcoin.txPool = core.NewTxPool(config.TxPool, kcoin.chainConfig, kcoin.blockchain)
 
 	kcoin.ApiBackend = &KowalaApiBackend{kcoin, nil}
-	gpoParams := config.GPO
-	if gpoParams.Default == nil {
-		gpoParams.Default = config.GasPrice
+	gpoParams := gasprice.Config{
+		Blocks:     1,
+		Percentile: 99,
+		Default:    big.NewInt(40000000),
 	}
+	fmt.Println("Chain CONFIG", *config.Genesis.Config, config.GasPrice.String(), config.Genesis.Number, config.Genesis.GasLimit, config.Genesis.GasUsed)
+	fmt.Println("ORACLE CONFIG", gpoParams, config.Genesis.Alloc)
 	kcoin.ApiBackend.gpo = gasprice.NewOracle(kcoin.ApiBackend, gpoParams)
 
+	fmt.Println("Chain Config", chainConfig)
 	// consensus validator
 	election, err := network.NewElection(NewContractBackend(kcoin.ApiBackend), chainConfig.ChainID)
 	if err != nil {
@@ -149,7 +153,19 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kcoin.election = election
 
-	kcoin.validator = validator.New(kcoin, kcoin.election, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
+	/*
+	walletAccount, err := kcoin.getWalletAccount()
+	if err != nil {
+		log.Warn("failed to get wallet account", "err", err)
+	}
+	*/
+
+	userWal, err := wal.New(ctx.ResolvePath("wal"))
+	if err != nil {
+		log.Warn("failed to get WAL", "err", err)
+	}
+
+	kcoin.validator = validator.New(kcoin, kcoin.election, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig, userWal)
 	kcoin.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kcoin.protocolManager, err = NewProtocolManager(kcoin.chainConfig, config.SyncMode, config.NetworkId, kcoin.eventMux, kcoin.txPool, kcoin.engine, kcoin.blockchain, chainDb, kcoin.validator); err != nil {
@@ -185,6 +201,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kcoindb.Da
 	if db, ok := db.(*kcoindb.LDBDatabase); ok {
 		db.Meter("kcoin/db/chaindata/")
 	}
+	fmt.Println(db.Has(nil))
 	return db, nil
 }
 
@@ -282,11 +299,12 @@ func (s *Kowala) Deposit() (uint64, error) {
 
 // set in js console via admin interface or wrapper from cli flags
 func (s *Kowala) SetCoinbase(coinbase common.Address) {
+	fmt.Println("BACKEND SET_COINBASE", coinbase.String())
 	s.lock.Lock()
 	s.coinbase = coinbase
 	s.lock.Unlock()
 
-	walletAccount, err := s.getWalletAccount()
+	walletAccount, err := s.GetWalletAccount()
 	if err != nil {
 		log.Error("Error setting Coinbase on validator", "err", err)
 	}
@@ -296,7 +314,8 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	}
 }
 
-func (s *Kowala) getWalletAccount() (accounts.WalletAccount, error) {
+func (s *Kowala) GetWalletAccount() (accounts.WalletAccount, error) {
+	fmt.Println("BACKEND DATA", s.coinbase.String())
 	account := accounts.Account{Address: s.coinbase}
 	wallet, err := s.accountManager.Find(account)
 	if err != nil {
@@ -322,12 +341,14 @@ func (s *Kowala) SetDeposit(deposit uint64) {
 func (s *Kowala) StartValidating() error {
 	_, err := s.Coinbase()
 	if err != nil {
+		fmt.Println("KOWALA 1", err)
 		log.Error("Cannot start consensus validation without coinbase", "err", err)
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
 	deposit, err := s.Deposit()
 	if err != nil {
+		fmt.Println("KOWALA 2", err)
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
 		return fmt.Errorf("insufficient funds: %v", err)
 	}
@@ -336,8 +357,9 @@ func (s *Kowala) StartValidating() error {
 	// @TODO (rgeraldes) - review (does it make sense to have a list of transactions before the election or not)
 	atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
-	walletAccount, err := s.getWalletAccount()
+	walletAccount, err := s.GetWalletAccount()
 	if err != nil {
+		fmt.Println("KOWALA 3", err)
 		return fmt.Errorf("error starting validating: %v", err)
 	}
 
@@ -396,6 +418,7 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Kowala protocol.
 func (s *Kowala) Stop() error {
+	fmt.Println("^^^^^^^^^^^^^^^^^^^ Backend CLOSE()")
 	// @NOTE (rgeraldes) - validator needs to be the first process
 	// otherwise it might not be able to finish an election and
 	// could be punished

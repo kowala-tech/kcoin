@@ -9,6 +9,7 @@ import (
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/params"
+	"fmt"
 )
 
 var (
@@ -195,6 +196,7 @@ func (st *StateTransition) preCheck() error {
 // failed. An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 	if err = st.preCheck(); err != nil {
+		fmt.Println("TransitionDb 0", err, failed)
 		return
 	}
 	msg := st.msg
@@ -206,9 +208,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	// TODO convert to uint64
 	intrinsicGas := IntrinsicGas(st.data, contractCreation, true)
 	if intrinsicGas.BitLen() > 64 {
+		fmt.Println("TransitionDb 1", err, failed)
 		return nil, nil, nil, false, vm.ErrOutOfGas
 	}
 	if err = st.useGas(intrinsicGas.Uint64()); err != nil {
+		fmt.Println("TransitionDb 2", err, failed)
 		return nil, nil, nil, false, err
 	}
 
@@ -220,8 +224,10 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		vmerr error
 	)
 	if contractCreation {
+		fmt.Println("TransitionDb 2 Create")
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
 	} else {
+		fmt.Println("TransitionDb 2 Call", sender.Address().String(), st.to().Address().String(), st.gas, st.value, string(st.data))
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(sender.Address(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = evm.Call(sender, st.to().Address(), st.data, st.gas, st.value)
@@ -232,6 +238,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
 		if vmerr == vm.ErrInsufficientBalance {
+			fmt.Println("TransitionDb 3", err, failed)
 			return nil, nil, nil, false, vmerr
 		}
 	}
@@ -240,6 +247,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	st.refundGas()
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 
+	fmt.Println("TransitionDb 4", err, vmerr != nil, vmerr)
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }
 
