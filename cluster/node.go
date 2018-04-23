@@ -12,7 +12,7 @@ func (client *cluster) RunNode(name string) error {
 		WithName(name).
 		WithBootnode(bootnode).
 		WithSyncMode("full").
-		WithLogLevel(3).
+		WithLogLevel(4).
 		Build()
 	if err != nil {
 		return nil
