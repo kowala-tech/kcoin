@@ -62,6 +62,9 @@ type Cluster interface {
 	// RunRpcNode Runs the rpc node
 	RunRpcNode() (string, error)
 
+	// RunNode runs a normal node
+	RunNode(string) error
+
 	// RunGenesisValidator Runs a genesis validator
 	RunGenesisValidator() (string, error)
 
