@@ -33,13 +33,18 @@ func (ctx *Context) IHaveMyNodeRunning() error {
 	return ctx.cluster.RunNode(nodeName)
 }
 
-func (ctx *Context) IHaveAnAccountInMyNode() error {
+func (ctx *Context) IHaveAnAccountInMyNode(kcoin int64) error {
 	response, err := ctx.cluster.Exec(nodeName, newAccountCommand(password))
 	if err != nil {
 		log.Debug(response.StdOut)
 		return err
 	}
 	coinbase = parseNewAccountResponse(response.StdOut)
+
+	if err := ctx.fundAccount(coinbase, kcoin); err != nil {
+		return err
+	}
+
 	return err
 }
 
@@ -53,10 +58,6 @@ func (ctx *Context) IStartTheValidator(kcoin int64) error {
 	response, err = ctx.cluster.Exec(nodeName, setCoinbaseCommand(coinbase))
 	if err != nil {
 		log.Debug(response.StdOut)
-		return err
-	}
-
-	if err := ctx.fundAccount(coinbase, kcoin*10); err != nil {
 		return err
 	}
 
@@ -78,7 +79,7 @@ func (ctx *Context) IStartTheValidator(kcoin int64) error {
 func (ctx *Context) fundAccount(address string, kcoin int64) error {
 	_, err := ctx.cluster.Exec(
 		"genesis-validator",
-		fmt.Sprintf(`eth.sendTransaction({from:eth.coinbase, to: "%s", value: %d})`, address, kcoin))
+		fmt.Sprintf(`eth.sendTransaction({from:eth.coinbase, to: "%s", value: %d})`, address, toWei(kcoin)))
 	if err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func setCoinbaseCommand(coinbase string) string {
 }
 
 func setDeposit(kcoin int64) string {
-	return fmt.Sprintf("validator.setDeposit(%d)", kcoin)
+	return fmt.Sprintf("validator.setDeposit(%d)", toWei(kcoin))
 }
 
 func validatorStartCommand() string {

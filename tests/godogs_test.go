@@ -54,10 +54,10 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^the transaction should fail$`, context.LastTransactionFailed)
 
 	// validator
-	s.Step(`^I start validator with (\d+) deposit$`, context.IStartTheValidator)
+	s.Step(`^I start validator with (\d+) kcoins deposit$`, context.IStartTheValidator)
 	s.Step(`^I should be a validator$`, context.IShouldBeAValidator)
 	s.Step(`^I have my node running$`, context.IHaveMyNodeRunning)
-	s.Step(`^I have an account in my node$`, context.IHaveAnAccountInMyNode)
+	s.Step(`^I have an account in my node with (\d+) kcoins$`, context.IHaveAnAccountInMyNode)
 
 	// Nodes
 	s.Step(`^I start a new node$`, context.IStartANewNode)

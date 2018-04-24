@@ -4,8 +4,8 @@ Feature: Joining network as a validator
 
   Scenario: Start validator
     Given I have my node running
-    And I have an account in my node
-    When I start validator with 5000001 deposit
+    And I have an account in my node with 10 kcoins
+    When I start validator with 5 kcoins deposit
     Then I should be a validator
 
   Scenario: Stop validator
