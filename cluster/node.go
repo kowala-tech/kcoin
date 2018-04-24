@@ -12,7 +12,7 @@ func (client *cluster) RunNode(name string) error {
 		WithName(name).
 		WithBootnode(bootnode).
 		WithSyncMode("full").
-		WithLogLevel(4).
+		WithLogLevel(3).
 		Build()
 	if err != nil {
 		return nil
@@ -29,5 +29,4 @@ func (client *cluster) RunNode(name string) error {
 	}
 
 	return client.waitForInitialSync(name)
-
 }

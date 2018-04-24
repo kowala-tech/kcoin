@@ -352,6 +352,7 @@ func (s *Kowala) StopValidating() {
 }
 
 func (s *Kowala) IsValidating() bool             { return s.validator.Validating() }
+func (s *Kowala) IsRunning() bool                { return s.validator.Running() }
 func (s *Kowala) Validator() validator.Validator { return s.validator }
 
 func (s *Kowala) AccountManager() *accounts.Manager  { return s.accountManager }

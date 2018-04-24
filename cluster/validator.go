@@ -82,6 +82,7 @@ func (client *cluster) fundValidator(podName string) error {
 	})
 	return err
 }
+
 func (client *cluster) startValidation(podName string) error {
 	log.Println("Checking initial balance")
 	initialBalance, err := client.GetBalance(podName)
