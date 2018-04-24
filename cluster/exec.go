@@ -44,7 +44,7 @@ func (client *cluster) getExecExecutor(podName, command string) (remotecommand.E
 	req := client.Clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).
-		Namespace(Namespace).
+		Namespace(client.Namespace).
 		SubResource("exec")
 
 	req.VersionedParams(&apiv1.PodExecOptions{
