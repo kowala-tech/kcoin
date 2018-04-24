@@ -1,9 +1,9 @@
 package cluster
 
 import (
+	"github.com/pkg/errors"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"github.com/pkg/errors"
 	"path/filepath"
 	"strconv"
 )
@@ -21,13 +21,12 @@ type KcoinPodBuilder interface {
 var availablePort int32 = 30301
 
 type Builder struct {
-	network   string
-	port      int32
-	name      string
-	namespace string
-	bootnode  string
-	syncMode  string
-	logLevel  int
+	network  string
+	port     int32
+	name     string
+	bootnode string
+	syncMode string
+	logLevel int
 }
 
 func NewPodBuilder() *Builder {

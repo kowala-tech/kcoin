@@ -1,14 +1,14 @@
 package features
 
 import (
+	"errors"
+	"fmt"
 	"github.com/DATA-DOG/godog"
 	"github.com/kowala-tech/kcoin/cluster"
-	"fmt"
-	"math/big"
-	"time"
 	"github.com/kowala-tech/kcoin/log"
+	"math/big"
 	"strings"
-	"errors"
+	"time"
 )
 
 var (
