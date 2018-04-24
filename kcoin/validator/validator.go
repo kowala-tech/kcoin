@@ -41,6 +41,7 @@ type Validator interface {
 	Stop() error
 	SetExtra(extra []byte) error
 	Validating() bool
+	Running() bool
 	SetCoinbase(walletAccount accounts.WalletAccount) error
 	SetDeposit(deposit uint64)
 	Pending() (*types.Block, *state.StateDB)
@@ -176,6 +177,10 @@ func (val *validator) SetExtra(extra []byte) error { return nil }
 
 func (val *validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0
+}
+
+func (val *validator) Running() bool {
+	return atomic.LoadInt32(&val.running) > 0
 }
 
 func (val *validator) SetCoinbase(walletAccount accounts.WalletAccount) error {

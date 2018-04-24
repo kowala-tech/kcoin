@@ -288,11 +288,11 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 
 	walletAccount, err := s.getWalletAccount()
 	if err != nil {
-		log.Error("Error setting Coinbase on validator", "err", err)
+		log.Error("error SetCoinbase on validator getWalletAccount", "err", err)
 	}
 
 	if err := s.validator.SetCoinbase(walletAccount); err != nil {
-		log.Error("Error setting Coinbase on validator", "err", err)
+		log.Error("error SetCoinbase on validator setCoinbase", "err", err)
 	}
 }
 
@@ -352,6 +352,7 @@ func (s *Kowala) StopValidating() {
 }
 
 func (s *Kowala) IsValidating() bool             { return s.validator.Validating() }
+func (s *Kowala) IsRunning() bool                { return s.validator.Running() }
 func (s *Kowala) Validator() validator.Validator { return s.validator }
 
 func (s *Kowala) AccountManager() *accounts.Manager  { return s.accountManager }

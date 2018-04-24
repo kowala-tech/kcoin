@@ -5,6 +5,7 @@ import (
 
 	"github.com/DATA-DOG/godog"
 	"github.com/kowala-tech/kcoin/tests/features"
+	"log"
 )
 
 var (
@@ -16,13 +17,13 @@ func FeatureContext(s *godog.Suite) {
 
 	s.BeforeSuite(func() {
 		if err := context.PrepareCluster(); err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	})
 
 	s.AfterSuite(func() {
 		if err := context.DeleteCluster(); err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	})
 
@@ -50,6 +51,13 @@ func FeatureContext(s *godog.Suite) {
 	// Balances
 	s.Step(`^the balance of (\w+) should be (\d+) kcoins?$`, context.TheBalanceIsExactly)
 	s.Step(`^the balance of (\w+) should be around (\d+) kcoins?$`, context.TheBalanceIsAround)
+	s.Step(`^the transaction should fail$`, context.LastTransactionFailed)
+
+	// validator
+	s.Step(`^I start validator with (\d+) kcoins deposit$`, context.IStartTheValidator)
+	s.Step(`^I should be a validator$`, context.IShouldBeAValidator)
+	s.Step(`^I have my node running$`, context.IHaveMyNodeRunning)
+	s.Step(`^I have an account in my node with (\d+) kcoins$`, context.IHaveAnAccountInMyNode)
 
 	// Nodes
 	s.Step(`^I start a new node$`, context.IStartANewNode)
