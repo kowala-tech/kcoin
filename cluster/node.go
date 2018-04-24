@@ -18,7 +18,7 @@ func (client *cluster) RunNode(name string) error {
 		return nil
 	}
 
-	_, err = client.Clientset.CoreV1().Pods(Namespace).Create(pod)
+	_, err = client.Clientset.CoreV1().Pods(client.Namespace).Create(pod)
 	if err != nil {
 		return err
 	}
