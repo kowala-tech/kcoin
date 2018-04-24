@@ -50,4 +50,20 @@ func FeatureContext(s *godog.Suite) {
 	// Balances
 	s.Step(`^the balance of (\w+) should be (\d+) kcoins?$`, context.TheBalanceIsExactly)
 	s.Step(`^the balance of (\w+) should be around (\d+) kcoins?$`, context.TheBalanceIsAround)
+
+	// Nodes
+	s.Step(`^I start a new node$`, context.IStartANewNode)
+	s.Step(`^My node should sync with the network$`, context.MyNodeShouldSyncWithTheNetwork)
+	s.Step(`^My node is already synchronised$`, context.MyNodeIsAlreadySynchronised)
+	s.Step(`^I disconnect my node for (\d+) blocks and reconnect it$`, context.IDisconnectMyNodeForBlocksAndReconnectIt)
+	s.Step(`^I start a new node with a different network ID$`, context.IStartANewNodeWithADifferentNetworkID)
+	s.Step(`^My node should not sync with the network$`, context.MyNodeShouldNotSyncWithTheNetwork)
+	s.Step(`^I start a new node with a different chain ID$`, context.IStartANewNodeWithADifferentChainID)
+	s.Step(`^I start validator with (\d+) deposit and coinbase A$`, context.IStartValidatorWithDepositAndCoinbaseA)
+	s.Step(`^I should be a validator$`, context.IShouldBeAValidator)
+
+	// Validation
+	s.Step(`^I stop validation$`, context.IStopValidation)
+	s.Step(`^I wait for the unbonding period to be over$`, context.IWaitForTheUnbondingPeriodToBeOver)
+	s.Step(`^I should not be a validator$`, context.IShouldNotBeAValidator)
 }
