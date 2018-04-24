@@ -117,9 +117,9 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 	if head.LastCommitHash == types.EmptyRootHash && body.Commit != nil {
 		return nil, fmt.Errorf("server returned non-nil commit but block header indicates no commit")
 	}
-	if head.LastCommitHash != types.EmptyRootHash && body.Commit == nil {
-		return nil, fmt.Errorf("server returned nil commit but block header indicates a commit ")
-	}
+	//if head.LastCommitHash != types.EmptyRootHash && body.Commit == nil {
+	//	return nil, fmt.Errorf("server returned nil commit but block header indicates a commit ")
+	//}
 	if head.TxHash == types.EmptyRootHash && len(body.Transactions) > 0 {
 		return nil, fmt.Errorf("server returned non-empty transaction list but block header indicates no transactions")
 	}
