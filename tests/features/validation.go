@@ -9,12 +9,15 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"regexp"
+	"strconv"
 )
 
 var (
 	nodeName = "somevalidator"
 	password = "test"
 	coinbase = ""
+	running  = false
 )
 
 func (ctx *Context) IStopValidation() error {
@@ -25,12 +28,89 @@ func (ctx *Context) IWaitForTheUnbondingPeriodToBeOver() error {
 	return godog.ErrPending
 }
 
-func (ctx *Context) IShouldNotBeAValidator() error {
-	return godog.ErrPending
+func (ctx *Context) IHaveMyNodeRunning() error {
+	if running {
+		return nil
+	}
+	running = true
+	return ctx.cluster.RunNode(nodeName)
 }
 
-func (ctx *Context) IHaveMyNodeRunning() error {
-	return ctx.cluster.RunNode(nodeName)
+func (ctx *Context) IWithdrawMyNodeFromValidation() error {
+	response, err := ctx.cluster.Exec(nodeName, stopValidatingCommand())
+	if err != nil {
+		log.Debug(response.StdOut)
+		return err
+	}
+	return nil
+}
+
+func (ctx *Context) ThereShouldBeTokensAvailableToMeAfterDays(expectedKcoins, days int) error {
+	response, err := ctx.cluster.Exec(nodeName, getDepositsCommand())
+	if err != nil {
+		log.Debug(response.StdOut)
+		return err
+	}
+
+	availableAt, kcoins, err := parseDepositsResponse(response.StdOut)
+	if err != nil {
+		log.Debug(response.StdOut)
+		return err
+	}
+
+	if expectedKcoins != kcoins {
+		return errors.New(fmt.Sprintf("kcoins don't match expected %d kcoins got %d", expectedKcoins, kcoins))
+	}
+
+	thirtyDays := time.Hour * 24 * time.Duration(days)
+	expectedDate := time.Now().Add(thirtyDays)
+	if isSameDay(expectedDate, availableAt) {
+		print(time.Now().Add(thirtyDays).Day())
+		return errors.New(fmt.Sprintf("deposit available not within 30 days, available at %s", availableAt))
+	}
+
+	return nil
+}
+
+func isSameDay(date1, date2 time.Time) bool {
+	expectedYear, expectedMonth, expectedDay := date1.Date()
+	availableYear, availableMonth, availableDay := date2.Date()
+	return expectedYear != availableYear ||
+		expectedMonth != availableMonth ||
+		expectedDay != availableDay
+}
+
+func parseDepositsResponse(value string) (time.Time, int, error) {
+	re := regexp.MustCompile("\"(.+)\",\\s+value:\\s(\\d+)")
+	matches := re.FindAllStringSubmatch(value, -1)
+	if len(matches) == 0 || len(matches[0]) < 3 {
+		return time.Now(), 0, errors.New("cant find AvailableAt and Value on response")
+	}
+	return parseDate(matches[0][1]), parseKCoins(matches[0][2]), nil
+}
+
+func parseKCoins(kcoins string) int {
+	result, _ := strconv.Atoi(kcoins)
+	return result
+}
+
+func parseDate(date string) time.Time {
+	const longForm = "2006-01-02 15:04:05 -0700 MST"
+	t, _ := time.Parse(longForm, date)
+	return t
+}
+
+func (ctx *Context) MyNodeShouldBeNotBeAValidator() error {
+	isValidator, err := ctx.isValidator()
+	if err != nil {
+		return err
+	}
+
+	if isValidator {
+		return errors.New("validator is still running")
+	}
+
+	return nil
 }
 
 func (ctx *Context) IHaveAnAccountInMyNode(kcoin int64) error {
@@ -97,19 +177,27 @@ func (ctx *Context) fundAccount(address string, kcoin int64) error {
 }
 
 func (ctx *Context) IShouldBeAValidator() error {
-	response, err := ctx.cluster.Exec(nodeName, isRunningCommand())
-	message := response.StdOut
+	isValidator, err := ctx.isValidator()
 	if err != nil {
-		log.Debug(message)
 		return err
 	}
 
-	if strings.TrimSpace(message) != "true" {
-		log.Debug(message)
+	if !isValidator {
 		return errors.New("validator is not running")
 	}
 
 	return nil
+}
+
+func (ctx *Context) isValidator() (bool, error) {
+	response, err := ctx.cluster.Exec(nodeName, isRunningCommand())
+	message := response.StdOut
+	if err != nil {
+		log.Debug(message)
+		return false, err
+	}
+
+	return strings.TrimSpace(message) == "true", nil
 }
 
 // parseNewAccountResponse remove first and last char, response comes in format
@@ -138,6 +226,14 @@ func validatorStartCommand() string {
 	return "validator.start()"
 }
 
+func stopValidatingCommand() string {
+	return "validator.stop()"
+}
+
 func isRunningCommand() string {
 	return "validator.isRunning()"
+}
+
+func getDepositsCommand() string {
+	return "validator.getDeposits()"
 }

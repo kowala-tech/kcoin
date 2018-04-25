@@ -73,5 +73,7 @@ func FeatureContext(s *godog.Suite) {
 	// Validation
 	s.Step(`^I stop validation$`, context.IStopValidation)
 	s.Step(`^I wait for the unbonding period to be over$`, context.IWaitForTheUnbondingPeriodToBeOver)
-	s.Step(`^I should not be a validator$`, context.IShouldNotBeAValidator)
+	s.Step(`^I withdraw my node from validation$`, context.IWithdrawMyNodeFromValidation)
+	s.Step(`^There should be (\d+) kcoins available to me after (\d+) days$`, context.ThereShouldBeTokensAvailableToMeAfterDays)
+	s.Step(`^My node should be not be a validator$`, context.MyNodeShouldBeNotBeAValidator)
 }
