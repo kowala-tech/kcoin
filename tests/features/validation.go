@@ -7,10 +7,10 @@ import (
 	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/log"
 	"math/big"
-	"strings"
-	"time"
 	"regexp"
 	"strconv"
+	"strings"
+	"time"
 )
 
 var (
@@ -65,7 +65,6 @@ func (ctx *Context) ThereShouldBeTokensAvailableToMeAfterDays(expectedKcoins, da
 	thirtyDays := time.Hour * 24 * time.Duration(days)
 	expectedDate := time.Now().Add(thirtyDays)
 	if isSameDay(expectedDate, availableAt) {
-		print(time.Now().Add(thirtyDays).Day())
 		return errors.New(fmt.Sprintf("deposit available not within 30 days, available at %s", availableAt))
 	}
 
