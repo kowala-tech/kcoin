@@ -15,7 +15,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 
 	gometrics "github.com/rcrowley/go-metrics"
-	"fmt"
 )
 
 var OpenFileLimit = 64
@@ -135,7 +134,6 @@ func (db *LDBDatabase) NewIterator() iterator.Iterator {
 }
 
 func (db *LDBDatabase) Close() {
-	fmt.Println("^^^^^^^^^^^^^^^^^^^^ LDBDatabase CLOSE()")
 	// Stop the metrics collection to avoid internal database races
 	db.quitLock.Lock()
 	defer db.quitLock.Unlock()

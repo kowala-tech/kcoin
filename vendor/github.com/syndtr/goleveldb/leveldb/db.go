@@ -1026,7 +1026,6 @@ func (db *DB) SizeOf(ranges []util.Range) (Sizes, error) {
 // It is valid to call Close multiple times. Other methods should not be
 // called after the DB has been closed.
 func (db *DB) Close() error {
-	fmt.Println("^^^^^^^^^^^^^^ LEVELDB CLOSE()")
 	if !db.setClosed() {
 		return ErrClosed
 	}

@@ -433,7 +433,6 @@ func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 
 	enc, err := t.db.Get(n)
 	if err != nil || enc == nil {
-		fmt.Println("Trie ERROR", err, enc)
 		return nil, &MissingNodeError{NodeHash: common.BytesToHash(n), Path: prefix}
 	}
 	dec := mustDecodeNode(n, enc, t.cachegen)

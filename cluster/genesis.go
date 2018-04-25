@@ -25,7 +25,30 @@ func (client *cluster) generateGenesis(seedAccount common.Address) error {
 		return err
 	}
 
-	newGenesis, err := GetGenesis(seedAccount)
+	//newGenesis, err := GetGenesis(seedAccount)
+	newGenesis, err := genesis.GenerateGenesis(
+		genesis.Options{
+			Network:                        "test",
+			MaxNumValidators:               "1",
+			UnbondingPeriod:                "0",
+			AccountAddressGenesisValidator: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+			PrefundedAccounts: []genesis.PrefundedAccount{
+				{
+					AccountAddress: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
+				},
+				{
+					AccountAddress: seedAccount.Hex(),
+					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
+				},
+				{
+					AccountAddress: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+					Balance:        "1000000000000000000",
+				},
+			},
+			SmartContractsOwner: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+		},
+	)
 	if err != nil {
 		return err
 	}

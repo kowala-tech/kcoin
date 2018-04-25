@@ -81,6 +81,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
+
 	chainDb, err := CreateDB(ctx, config, "chaindata")
 	if err != nil {
 		return nil, err
@@ -136,10 +137,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	kcoin.txPool = core.NewTxPool(config.TxPool, kcoin.chainConfig, kcoin.blockchain)
 
 	kcoin.ApiBackend = &KowalaApiBackend{kcoin, nil}
-	gpoParams := gasprice.Config{
-		Blocks:     1,
-		Percentile: 99,
-		Default:    big.NewInt(40000000),
+	gpoParams := config.GPO
+	if gpoParams.Default == nil {
+		gpoParams.Default = config.GasPrice
 	}
 	fmt.Println("Chain CONFIG", *config.Genesis.Config, config.GasPrice.String(), config.Genesis.Number, config.Genesis.GasLimit, config.Genesis.GasUsed)
 	fmt.Println("ORACLE CONFIG", gpoParams, config.Genesis.Alloc)
@@ -201,7 +201,6 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kcoindb.Da
 	if db, ok := db.(*kcoindb.LDBDatabase); ok {
 		db.Meter("kcoin/db/chaindata/")
 	}
-	fmt.Println(db.Has(nil))
 	return db, nil
 }
 

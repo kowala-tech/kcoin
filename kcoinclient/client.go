@@ -466,7 +466,6 @@ func (ec *Client) EstimateGas(ctx context.Context, msg kowala.CallMsg) (*big.Int
 // If the transaction was a contract creation use the TransactionReceipt method to get the
 // contract address after the transaction has been mined.
 func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	fmt.Println("SENT TRANSACTION", tx.ChainID(), tx.To().String(), tx.Value().String())
 	data, err := rlp.EncodeToBytes(tx)
 	if err != nil {
 		return err

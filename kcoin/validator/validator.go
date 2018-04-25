@@ -111,9 +111,9 @@ func New(backend Backend, election network.Election, config *params.ChainConfig,
 func (val *validator) sync() {
 	if err := SyncWaiter(val.eventMux); err != nil {
 		log.Warn("Failed to sync with network", "err", err)
+	} else {
+		val.finishedSync()
 	}
-
-	val.finishedSync()
 }
 
 func (val *validator) finishedSync() {
