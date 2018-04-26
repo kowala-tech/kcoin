@@ -143,6 +143,16 @@ func (api *PrivateValidatorAPI) GetDeposits() (GetDepositsResult, error) {
 	return GetDepositsResult{Deposits: deposits}, nil
 }
 
+// IsValidating returns the validator is currently validating
+func (api *PrivateValidatorAPI) IsValidating() bool {
+	return api.kcoin.IsValidating()
+}
+
+// IsValidating returns the validator is currently running
+func (api *PrivateValidatorAPI) IsRunning() bool {
+	return api.kcoin.IsRunning()
+}
+
 // RedeemDeposits requests a transfer of the unlocked deposits back
 // to the validator account
 func (api *PrivateValidatorAPI) RedeemDeposits() error {

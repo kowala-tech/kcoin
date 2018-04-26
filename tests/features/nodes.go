@@ -35,7 +35,3 @@ func (ctx *Context) IStartANewNodeWithADifferentChainID() error {
 func (ctx *Context) IStartValidatorWithDepositAndCoinbaseA(deposit int) error {
 	return godog.ErrPending
 }
-
-func (ctx *Context) IShouldBeAValidator() error {
-	return godog.ErrPending
-}
