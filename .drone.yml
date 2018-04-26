@@ -23,7 +23,7 @@ pipeline:
     image: kowalatech/go:1.0.3
     commands:
       - make e2e
-    secrets: [ k8s_docker_port, k8s_custer_ip ]
+    secrets: [ k8s_docker_host, k8s_custer_ip, k8s_cluster_master_url, k8s_cluster_token]
     when:
       event: [pull_request]
     volumes:
