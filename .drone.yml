@@ -22,6 +22,7 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.3
     commands:
+      - env
       - make e2e
     secrets: [ k8s_docker_host, k8s_cluster_ip, k8s_cluster_master_url, k8s_cluster_token]
     when:
