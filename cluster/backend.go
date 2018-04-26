@@ -2,14 +2,10 @@ package cluster
 
 import (
 	"log"
-	"os"
-	"path/filepath"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
-
-var kubeConfigPath = filepath.Join(os.Getenv("HOME"), ".kube", "config")
 
 type k8sBackend struct {
 	ip        string
