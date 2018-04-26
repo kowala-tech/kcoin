@@ -2,7 +2,7 @@
 
 set -e
 
-if [[ -z "$K8S_CLUSTER_ADDRESS" ]]; then
+if [ -z "$K8S_CLUSTER_IP" ]; then
 	echo "Kubernetes cluster not configured. Using minikube."
 
     # Export minikube docker environment
