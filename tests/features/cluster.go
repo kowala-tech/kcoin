@@ -1,12 +1,22 @@
 package features
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/kowala-tech/kcoin/cluster"
+)
+
+var (
+	k8sClusterNotConfiguredErr = errors.New("kubernetes cluster not configured")
+	dockerK8SEnvVars           = []string{
+		"DOCKER_TLS_VERIFY",
+		"DOCKER_HOST",
+		"DOCKER_CERT_PATH",
+		"DOCKER_API_VERSION",
+	}
 )
 
 func (ctx *Context) PrepareCluster() error {
@@ -19,16 +29,9 @@ func (ctx *Context) PrepareCluster() error {
 	}
 
 	ctx.seederAccount = seederAccount
-	var backend cluster.Backend
-	if ip, port := getStaticClusterConfig(); ip != "" && port != 0 {
-		backend = cluster.NewStaticCluster(ip, port)
-	} else {
-		backend = cluster.NewMinikubeCluster("testing")
-	}
-	if !backend.Exists() {
-		if err := backend.Create(); err != nil {
-			return err
-		}
+	backend, err := getBackend()
+	if err != nil {
+		return err
 	}
 	ctx.cluster = cluster.NewCluster(backend)
 
@@ -68,16 +71,30 @@ func (ctx *Context) DeleteCluster() error {
 	return ctx.cluster.Cleanup()
 }
 
-func getStaticClusterConfig() (string, int) {
-	rawPort := os.Getenv("K8S_DOCKER_PORT")
-	rawIp := os.Getenv("K8S_CUSTER_IP")
-	if rawIp == "" || rawPort == "" {
-		return "", 0
+func getBackend() (cluster.Backend, error) {
+	ip := os.Getenv("K8S_CLUSTER_IP")
+	if ip == "" {
+		return nil, k8sClusterNotConfiguredErr
 	}
-	parsedPort, err := strconv.Atoi(rawPort)
-	if err != nil {
-		fmt.Println("Invalid K8S_DOCKER_PORT, must be just a number")
-		return "", 0
+	masterUrl := os.Getenv("K8S_CLUSTER_MASTER_URL")
+	if masterUrl == "" {
+		return nil, k8sClusterNotConfiguredErr
 	}
-	return rawIp, parsedPort
+	token := os.Getenv("K8S_CLUSTER_TOKEN")
+	if token == "" {
+		return nil, k8sClusterNotConfiguredErr
+	}
+	extraEnv := make([]string, 0)
+
+	for _, envVar := range dockerK8SEnvVars {
+		prefixedEnvVar := fmt.Sprintf("K8S_%v", envVar)
+		if value := os.Getenv(prefixedEnvVar); value != "" {
+			extraEnv = append(extraEnv, fmt.Sprintf(`%v=%v`, envVar, value))
+		}
+	}
+	if len(extraEnv) == 0 {
+		return nil, k8sClusterNotConfiguredErr
+	}
+
+	return cluster.NewK8SBackend(ip, masterUrl, token, extraEnv), nil
 }

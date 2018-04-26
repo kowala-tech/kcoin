@@ -11,15 +11,6 @@ import (
 
 // Backend models a kubernetes cluster
 type Backend interface {
-	// Exists checks if the cluster exists or not.
-	Exists() bool
-
-	// Create Creates the cluster. See specific implementations of this interface for more details.
-	Create() error
-
-	// Delete deletes the cluster. See specific implementations of this interface for more details.
-	Delete() error
-
 	// Clientset returns the Clientset to the kubernetes cluster.
 	Clientset() (*kubernetes.Clientset, error)
 

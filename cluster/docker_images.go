@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"sync"
 	"time"
 )
@@ -60,8 +61,13 @@ func (builder *DockerBuilder) Wait() []error {
 
 func (builder *DockerBuilder) build(tag, dockerfile string) error {
 	cmd := exec.Command("docker", "build", "-t", tag, "-f", path.Join(rootPath, dockerfile), rootPath)
+	env := make([]string, 0)
 
-	env := os.Environ()
+	for _, e := range os.Environ() {
+		if !strings.HasPrefix(e, "DOCKER_") {
+			env = append(env, e)
+		}
+	}
 	for _, e := range builder.env {
 		env = append(env, e)
 	}
