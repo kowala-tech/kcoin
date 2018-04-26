@@ -171,6 +171,22 @@ To start a kcoin instance for block validation, run it with all your usual flags
 $ kcoin --config /path/to/your_config.toml --validate --deposit 4000 --unlock 0xc7f1d574658e7b0f37244366c40c8002d78c734f –-coinbase 0xc7f1d574658e7b0f37244366c40c8002d78c734f
 ```
 
+## E2E testing
+
+End-to-end testing runs a kcoin cluster in kubernetes. For development there's a simple way to run kubernetes, simplified in a make task:
+
+```
+make start_local_k8s
+```
+
+It will run kubernetes using minikube, which requires virtualbox to operate.
+
+Once your kubernetes is up and running, run the tests with:
+
+```
+make e2e
+```
+
 ## Mining client metrics
 
 Start the client with `--metrics` to collect performance metrics. This will expose a [Prometheus](https://prometheus.io/) HTTP endpoint at `/metrics` on `http://localhost:8080`.

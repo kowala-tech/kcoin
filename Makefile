@@ -178,10 +178,18 @@ docker-publish-faucet:
 
 ## E2E tests
 
+MINIKUBE_BIN := $(shell command -v minikube 2> /dev/null)
+start_local_k8s:
+ifndef MINIKUBE_BIN
+	@echo "You must install minikube first..."
+	@exit 1
+endif
+	@minikube start -p testing --kubernetes-version v1.9.0
+
 GODOG_BIN := $(shell command -v godog 2> /dev/null)
 e2e:
 ifndef GODOG_BIN
 	@echo "Installing godog..."
 	@go get github.com/DATA-DOG/godog/cmd/godog
 endif
-	@build/env.sh sh -c "cd tests && godog ../features"
+	@build/k8s_env.sh sh -c "cd tests && godog ../features"
