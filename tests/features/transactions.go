@@ -10,6 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/core/types"
 )
 
+//res := ctx.GetWAL()
 func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
 
 	tx, err := ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)

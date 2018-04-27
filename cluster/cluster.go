@@ -11,6 +11,9 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"io/ioutil"
+	"path"
+	"os"
 )
 
 type cluster struct {
@@ -68,6 +71,9 @@ func (client *cluster) Initialize(networkID string, seedAccount common.Address) 
 	if err := client.addKeysPassword(); err != nil {
 		return err
 	}
+	if err := client.addWAL(""); err != nil {
+		return err
+	}
 	if err := client.generateGenesis(seedAccount); err != nil {
 		return err
 	}
@@ -80,6 +86,39 @@ func (client *cluster) Initialize(networkID string, seedAccount common.Address) 
 
 func (client *cluster) DeletePod(podName string) error {
 	return client.Clientset.CoreV1().Pods(client.Namespace).Delete(podName, &metav1.DeleteOptions{})
+}
+
+
+func (client *cluster) PrintLogs(toFiles bool) error {
+	pods, err := client.Clientset.CoreV1().Pods(client.Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	podsAPI := client.Clientset.CoreV1().Pods(client.Namespace)
+
+	for _, pod := range pods.Items {
+		logStream, err := podsAPI.GetLogs(pod.Name, &apiv1.PodLogOptions{}).Stream()
+		if err != nil {
+			return err
+		}
+
+		defer logStream.Close()
+		data, err := ioutil.ReadAll(logStream)
+		if err != nil {
+			return err
+		}
+
+		log := fmt.Sprintf("Node %q logs:\n%v\n\n", pod.Name, string(data))
+
+		if toFiles {
+			ioutil.WriteFile(path.Join(pod.Name,".log"), []byte(log), os.ModePerm)
+		} else {
+			fmt.Print(log)
+		}
+	}
+
+	return nil
 }
 
 func (client *cluster) waitForPod(podName string) error {

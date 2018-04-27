@@ -10,7 +10,6 @@ import (
 	"github.com/kowala-tech/kcoin/internal/kcoinapi"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rpc"
-	"fmt"
 )
 
 var maxPrice = big.NewInt(500 * params.Shannon)
@@ -59,7 +58,6 @@ func NewOracle(backend kcoinapi.Backend, params Config) *Oracle {
 
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
-	fmt.Println("SuggestPrice")
 	gpo.cacheLock.RLock()
 	lastHead := gpo.lastHead
 	lastPrice := gpo.lastPrice
@@ -140,7 +138,6 @@ type getBlockPricesResult struct {
 // getLowestPrice calculates the lowest transaction gas price in a given block
 // and sends it to the result channel. If the block is empty, price is nil.
 func (gpo *Oracle) getBlockPrices(ctx context.Context, blockNum uint64, ch chan getBlockPricesResult) {
-	fmt.Println("getBlockPrices")
 	block, err := gpo.backend.BlockByNumber(ctx, rpc.BlockNumber(blockNum))
 	if block == nil {
 		ch <- getBlockPricesResult{nil, err}

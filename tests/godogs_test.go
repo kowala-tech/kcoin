@@ -30,6 +30,9 @@ func FeatureContext(s *godog.Suite) {
 		context.Reset()
 	})
 
+	// Genesis validated
+	s.Step(`^I have validated genesis:$`, context.IValidationSuccessed)
+
 	// Creating accounts
 	s.Step(`^I have the following accounts:$`, context.IHaveTheFollowingAccounts)
 	s.Step(`^I created an account with password '(\w+)'$`, context.ICreatedAnAccountWithPassword)

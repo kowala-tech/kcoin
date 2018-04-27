@@ -20,7 +20,6 @@ import (
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/kcoin/wal"
-	"fmt"
 )
 
 var (
@@ -137,7 +136,6 @@ func (val *validator) Start(walletAccount accounts.WalletAccount, deposit uint64
 	val.deposit = deposit
 
 	if atomic.LoadInt32(&val.canStart) == 0 {
-		fmt.Println("validator")
 		log.Info("network syncing, will start validator afterwards")
 		return
 	}
@@ -157,7 +155,6 @@ func (val *validator) run() {
 
 	log.Info("Starting the consensus state machine")
 	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
-		fmt.Println("=====================================", numTransitions)
 		state = state()
 		if val.maxTransitions > 0 && numTransitions == val.maxTransitions {
 			break

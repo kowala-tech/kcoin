@@ -26,6 +26,9 @@ faucet:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/faucet\" to launch faucet."
 
+rebuild: kcoin bootnode docker-build-bootnode docker-build-kusd
+	@echo "Done building."
+
 evm:
 	build/env.sh go run build/ci.go install ./cmd/evm
 	@echo "Done building."

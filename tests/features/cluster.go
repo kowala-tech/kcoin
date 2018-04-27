@@ -9,6 +9,8 @@ import (
 	"github.com/kowala-tech/kcoin/cluster"
 )
 
+var showLogs = os.Getenv("KOWALA_LOGS")
+
 func (ctx *Context) PrepareCluster() error {
 	seederAccount, err := ctx.AccountsStorage.NewAccount("test")
 	if err != nil {
@@ -23,7 +25,6 @@ func (ctx *Context) PrepareCluster() error {
 	if ip, port := getStaticClusterConfig(); ip != "" && port != 0 {
 		backend = cluster.NewStaticCluster(ip, port)
 	} else {
-		fmt.Println("NEW MINIKUBE cluster")
 		backend = cluster.NewMinikubeCluster("minikube")
 	}
 	if !backend.Exists() {
@@ -65,8 +66,40 @@ func (ctx *Context) PrepareCluster() error {
 	return nil
 }
 
+func (ctx *Context) GetFile(podName, fileName string) string {
+	res, err := ctx.cluster.ExecCMD(podName, []string{"cat", fileName})
+	if res != nil {
+		return res.StdOut
+	}
+
+	fmt.Printf("can't read a file %q: %s", fileName, err)
+
+	return ""
+}
+
 func (ctx *Context) DeleteCluster() error {
+	var logToFiles *bool
+	switch showLogs {
+	case "stdout":
+		logToFiles = new(bool)
+	case "files":
+		res := true
+		logToFiles = &res
+	default:
+		// nothing to do
+	}
+	if logToFiles != nil {
+		ctx.PrintLogs(*logToFiles)
+	}
+
 	return ctx.cluster.Cleanup()
+}
+
+func (ctx *Context) PrintLogs(toFiles bool) {
+	err := ctx.cluster.PrintLogs(toFiles)
+	if err != nil {
+		fmt.Println("Error on getting logs", err)
+	}
 }
 
 func getStaticClusterConfig() (string, int) {

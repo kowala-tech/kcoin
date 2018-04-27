@@ -8,6 +8,7 @@ import (
 
 	"github.com/DATA-DOG/godog/gherkin"
 	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/cluster"
 )
 
 var (
@@ -52,6 +53,11 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 		accounts = append(accounts, account)
 	}
 	return accounts, nil
+}
+
+func (ctx *Context) IValidationSuccessed(password string) error {
+	fmt.Println("WAL data", ctx.GetFile(cluster.GenesisValidatorPodName, "wal"))
+	return nil
 }
 
 func (ctx *Context) ICreatedAnAccountWithPassword(password string) error {
