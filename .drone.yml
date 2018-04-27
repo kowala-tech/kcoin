@@ -18,18 +18,6 @@ pipeline:
     when:
       event: [pull_request]
 
-  e2e:
-    group: testing
-    image: kowalatech/go:1.0.3
-    commands:
-      - make e2e
-    secrets: [ k8s_docker_port, k8s_custer_ip ]
-    when:
-      event: [pull_request]
-    volumes:
-      - /home/ubuntu/.minikube:/root/.minikube:ro
-      - /home/ubuntu/.kube:/root/.kube:ro
-
   build:
     image: kowalatech/go:1.0.3
     commands:
