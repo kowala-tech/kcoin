@@ -24,7 +24,7 @@ type ValidationContext struct {
 func NewValidationContext(parentCtx *Context) *ValidationContext {
 	return &ValidationContext{
 		globalCtx:       parentCtx,
-		nodeName:        "validator_under_test",
+		nodeName:        "validator-under-test",
 		accountPassword: "test",
 		nodeRunning:     false,
 	}
