@@ -85,18 +85,7 @@ func TxSender(signer Signer, tx *Transaction) (common.Address, error) {
 		}
 	}
 
-	var h common.Hash
-	V := tx.data.V
-	if !tx.Protected() {
-		h = tx.UnprotectedHash()
-		signer = &UnprotectedSigner{}
-	} else {
-		V = new(big.Int).Sub(V, signer.ChainIDMul())
-		V.Sub(V, big8)
-		h = tx.ProtectedHash(signer.ChainID())
-	}
-
-	addr, err := signer.Sender(h, tx.data.R, tx.data.S, V)
+	addr, err := signer.Sender(tx.Hash(), tx.data.R, tx.data.S, tx.data.V)
 	if err != nil {
 		return common.Address{}, err
 	}
