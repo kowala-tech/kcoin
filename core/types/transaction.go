@@ -155,6 +155,16 @@ func (tx *Transaction) To() *common.Address {
 	}
 }
 
+func (tx *Transaction) From() *common.Address {
+	if sender := tx.from.Load(); sender != nil {
+		sigCache := sender.(sigCache)
+		from := sigCache.from
+		return &from
+	}
+
+	return nil
+}
+
 // Hash hashes the RLP encoding of tx.
 // It uniquely identifies the transaction.
 func (tx *Transaction) Hash() common.Hash {
