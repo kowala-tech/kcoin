@@ -33,21 +33,43 @@ func (client *cluster) Exec(podName, command string) (*ExecResponse, error) {
 		return nil, err
 	}
 
-	resp := &ExecResponse{
+	return &ExecResponse{
 		StdOut: stdOut.String(),
 		StdErr: stdErr.String(),
+	}, nil
+}
+
+func (client *cluster) ExecCMD(podName string, commands []string) (*ExecResponse, error) {
+	executor, err := client.getCmdExecExecutor(podName, commands)
+	if err != nil {
+		return nil, err
 	}
 
-	log.Println("RESPONSE: %v", *resp)
-	return resp, nil
+	var (
+		stdOut bytes.Buffer
+		stdErr bytes.Buffer
+	)
+
+	err = executor.Stream(remotecommand.StreamOptions{
+		Stdout: &stdOut,
+		Stderr: &stdErr,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecResponse{
+		StdOut: stdOut.String(),
+		StdErr: stdErr.String(),
+	}, nil
 }
 
 func (client *cluster) getExecExecutor(podName, command string) (remotecommand.Executor, error) {
-	log.Printf("Executing command in pod named `%v`\n\t%q\n", podName, command)
+	log.Printf("Executing command in pod named `%v`\n", podName)
 	req := client.Clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).
-		Namespace(Namespace).
+		Namespace(client.Namespace).
 		SubResource("exec")
 
 	req.VersionedParams(&apiv1.PodExecOptions{
@@ -61,6 +83,30 @@ func (client *cluster) getExecExecutor(podName, command string) (remotecommand.E
 		Stdout: true,
 		Stderr: true,
 	}, scheme.ParameterCodec)
+
+	config, err := client.Backend.RestConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return remotecommand.NewSPDYExecutor(config, "POST", req.URL())
+}
+
+func (client *cluster) getCmdExecExecutor(podName string, commands []string) (remotecommand.Executor, error) {
+	log.Printf("Executing command in pod named `%v`\n", podName)
+	req := client.Clientset.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(podName).
+		Namespace(client.Namespace).
+		SubResource("exec")
+
+	options := apiv1.PodExecOptions{
+		Container: podName,
+		Command: commands,
+		Stdout: true,
+		Stderr: true,
+	}
+	req.VersionedParams(&options, scheme.ParameterCodec)
 
 	config, err := client.Backend.RestConfig()
 	if err != nil {

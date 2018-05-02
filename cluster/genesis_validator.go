@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const genesisValidatorPodName = "genesis-validator"
+const GenesisValidatorPodName = "genesis-validator"
 
 // RunGenesisValidator Runs a genesis validator
 func (client *cluster) RunGenesisValidator() (string, error) {
@@ -20,24 +20,23 @@ func (client *cluster) RunGenesisValidator() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	pod := genesisValidatorPod(genesisValidatorPodName, client.NetworkID, "d6e579085c82329c89fca7a9f012be59028ed53f", bootnode, 31300)
+	pod := genesisValidatorPod(GenesisValidatorPodName, client.NetworkID, "d6e579085c82329c89fca7a9f012be59028ed53f", bootnode, 31300)
 	useGenesisFromConfigmap(&pod.Spec)
 	usePasswordFromConfigmap(&pod.Spec)
 	useKeyFromConfigmap(&pod.Spec, "d6e579085c82329c89fca7a9f012be59028ed53f", "UTC--2018-01-16T16-31-38.006625000Z--d6e579085c82329c89fca7a9f012be59028ed53f")
 
-	_, err = client.Clientset.CoreV1().Pods(Namespace).Create(pod)
+	_, err = client.Clientset.CoreV1().Pods(client.Namespace).Create(pod)
 	if err != nil {
 		return "", err
 	}
-	log.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-	return genesisValidatorPodName, client.waitForKusdPod(genesisValidatorPodName)
+	return GenesisValidatorPodName, client.waitForKusdPod(GenesisValidatorPodName)
 }
 
 // TriggerGenesisValidation sends a transaction for the genesis validator to start.
 func (client *cluster) TriggerGenesisValidation() error {
 	log.Println("Triggering genesis validation")
 	_, err := client.Exec(
-		genesisValidatorPodName,
+		GenesisValidatorPodName,
 		`
 			personal.unlockAccount(eth.coinbase, "test");
 			eth.sendTransaction({from:eth.coinbase,to: "0x259be75d96876f2ada3d202722523e9cd4dd917d",value: 1})
@@ -47,7 +46,7 @@ func (client *cluster) TriggerGenesisValidation() error {
 	}
 
 	return WaitFor(2*time.Second, 20*time.Second, func() bool {
-		res, err := client.Exec(genesisValidatorPodName, `eth.blockNumber`)
+		res, err := client.Exec(GenesisValidatorPodName, `eth.blockNumber`)
 		if err != nil {
 			return false
 		}

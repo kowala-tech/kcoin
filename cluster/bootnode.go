@@ -27,7 +27,7 @@ func (client *cluster) RunBootnode() error {
 	log.Println("Running bootnode")
 	pod := bootnodePod("bootnode", randStringBytes(64))
 
-	_, err := client.Clientset.CoreV1().Pods(Namespace).Create(pod)
+	_, err := client.Clientset.CoreV1().Pods(client.Namespace).Create(pod)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (client *cluster) RunBootnode() error {
 
 func (client *cluster) bootnodeEnode() (string, error) {
 	log.Println("Reading bootnode enode from its stdout")
-	pods := client.Clientset.CoreV1().Pods(Namespace)
+	pods := client.Clientset.CoreV1().Pods(client.Namespace)
 	pod, err := pods.Get("bootnode", metav1.GetOptions{})
 	if err != nil {
 		return "", err

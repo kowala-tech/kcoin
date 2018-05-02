@@ -23,6 +23,8 @@ type Context struct {
 
 	lastTx    *types.Transaction
 	lastTxErr error
+
+	lastUnlockErr error
 }
 
 func NewTestContext(chainID *big.Int) *Context {

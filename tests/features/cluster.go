@@ -9,9 +9,7 @@ import (
 	"github.com/kowala-tech/kcoin/cluster"
 )
 
-func (ctx *Context) IsClusterReady() bool {
-	return ctx.cluster != nil
-}
+var showLogs = os.Getenv("KOWALA_LOGS")
 
 func (ctx *Context) PrepareCluster() error {
 	seederAccount, err := ctx.AccountsStorage.NewAccount("test")
@@ -39,8 +37,6 @@ func (ctx *Context) PrepareCluster() error {
 	if err := ctx.cluster.Connect(); err != nil {
 		return err
 	}
-
-	ctx.cluster.Cleanup() // Just in case the previous run didn't finish gracefully
 
 	if err := ctx.cluster.Initialize(ctx.chainID.String(), ctx.seederAccount.Address); err != nil {
 		return err
@@ -70,8 +66,40 @@ func (ctx *Context) PrepareCluster() error {
 	return nil
 }
 
+func (ctx *Context) GetFile(podName, fileName string) string {
+	res, err := ctx.cluster.ExecCMD(podName, []string{"cat", fileName})
+	if res != nil {
+		return res.StdOut
+	}
+
+	fmt.Printf("can't read a file %q: %s", fileName, err)
+
+	return ""
+}
+
 func (ctx *Context) DeleteCluster() error {
+	var logToFiles *bool
+	switch showLogs {
+	case "stdout":
+		logToFiles = new(bool)
+	case "files":
+		res := true
+		logToFiles = &res
+	default:
+		// nothing to do
+	}
+	if logToFiles != nil {
+		ctx.PrintLogs(*logToFiles)
+	}
+
 	return ctx.cluster.Cleanup()
+}
+
+func (ctx *Context) PrintLogs(toFiles bool) {
+	err := ctx.cluster.PrintLogs(toFiles)
+	if err != nil {
+		fmt.Println("Error on getting logs", err)
+	}
 }
 
 func getStaticClusterConfig() (string, int) {

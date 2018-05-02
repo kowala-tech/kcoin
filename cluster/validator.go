@@ -45,7 +45,7 @@ func (client *cluster) runValidatorPod(podName string, port int32) error {
 	pod := validatorPod(podName, client.NetworkID, bootnode, port)
 	useGenesisFromConfigmap(&pod.Spec)
 
-	if _, err = client.Clientset.CoreV1().Pods(Namespace).Create(pod); err != nil {
+	if _, err = client.Clientset.CoreV1().Pods(client.Namespace).Create(pod); err != nil {
 		return err
 	}
 	if err = client.waitForKusdPod(podName); err != nil {
@@ -66,7 +66,7 @@ func (client *cluster) fundValidator(podName string) error {
 
 	log.Println("Transferring 50x min deposit to the new validator")
 	_, err = client.Exec(
-		"genesis-validator",
+		GenesisValidatorPodName,
 		fmt.Sprintf(`eth.sendTransaction({from:eth.coinbase, to: %v, value: 50*validator.getMinimumDeposit()})`, coinbaseQuotes))
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (client *cluster) startValidation(podName string) error {
 }
 
 func (client *cluster) getNextValidatorIndex() (int, error) {
-	list, err := client.Clientset.CoreV1().Pods(Namespace).List(metav1.ListOptions{
+	list, err := client.Clientset.CoreV1().Pods(client.Namespace).List(metav1.ListOptions{
 		LabelSelector: "app=standard_validator",
 	})
 	if err != nil {

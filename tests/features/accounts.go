@@ -5,14 +5,22 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"time"
 
 	"github.com/DATA-DOG/godog/gherkin"
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/cluster"
+)
+
+var (
+	NoAccount = accounts.Account{}
+
+	unnamedAccountName = "no-name"
 )
 
 type AccountEntry struct {
-	AccountName string
-	Funds       int64
+	AccountName     string
+	AccountPassword string
+	Funds           int64
 }
 
 func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEntry, error) {
@@ -30,6 +38,8 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 			switch head[n].Value {
 			case "account":
 				account.AccountName = cell.Value
+			case "password":
+				account.AccountPassword = cell.Value
 			case "funds":
 				parsed, err := strconv.ParseInt(cell.Value, 10, 64)
 				if err != nil {
@@ -45,6 +55,16 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 	return accounts, nil
 }
 
+func (ctx *Context) IValidationSucceeded() error {
+	fmt.Println("WAL data", ctx.GetFile(cluster.GenesisValidatorPodName, "wal"))
+	return nil
+}
+
+func (ctx *Context) ICreatedAnAccountWithPassword(password string) error {
+	_, err := ctx.createAccount(unnamedAccountName, password)
+	return err
+}
+
 func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
 	accountsData, err := parseAccountsDataTable(accountsDataTable)
 	if err != nil {
@@ -52,11 +72,42 @@ func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTab
 	}
 
 	for _, accountData := range accountsData {
-		if err := ctx.createAccountWithFunds(accountData.AccountName, accountData.Funds); err != nil {
+		acct, err := ctx.createAccount(accountData.AccountName, accountData.AccountPassword)
+		if err != nil {
+			return err
+		}
+		if _, err := ctx.sendFundsAndWait(ctx.seederAccount, acct, accountData.Funds); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (ctx *Context) ITryUnlockMyAccountWithPassword(password string) error {
+	return ctx.ITryUnlockAccountWithPassword(unnamedAccountName, password)
+}
+
+func (ctx *Context) ITryUnlockAccountWithPassword(accountName, password string) error {
+	ctx.lastUnlockErr = ctx.IUnlockAccountWithPassword(accountName, password)
+	return nil
+}
+
+func (ctx *Context) IUnlockAccountWithPassword(accountName, password string) error {
+	acct, found := ctx.accounts[accountName]
+	if !found {
+		return fmt.Errorf("account not created")
+	}
+	return ctx.AccountsStorage.Unlock(acct, password)
+}
+
+func (ctx *Context) IGotAccountUnlocked() error {
+	return ctx.lastUnlockErr
+}
+func (ctx *Context) IGotErrorUnlocking() error {
+	if ctx.lastUnlockErr == nil {
+		return fmt.Errorf("unlocking expected to fail, but didn't fail.")
+	}
 	return nil
 }
 
@@ -92,32 +143,15 @@ func (ctx *Context) TheBalanceIsAround(accountName string, kcoin int64) error {
 	return nil
 }
 
-func (ctx *Context) createAccountWithFunds(accountName string, kcoins int64) error {
+func (ctx *Context) createAccount(accountName string, password string) (accounts.Account, error) {
 	if _, ok := ctx.accounts[accountName]; ok {
-		return fmt.Errorf("an account with this name already exists: %s", accountName)
+		return NoAccount, fmt.Errorf("an account with this name already exists: %s", accountName)
 	}
-	account, err := ctx.AccountsStorage.NewAccount("test")
+	account, err := ctx.AccountsStorage.NewAccount(password)
 	if err != nil {
-		return err
-	}
-	if err := ctx.AccountsStorage.Unlock(account, "test"); err != nil {
-		return err
+		return NoAccount, err
 	}
 
 	ctx.accounts[accountName] = account
-	if _, err := ctx.sendFunds(ctx.seederAccount, account, kcoins); err != nil {
-		return err
-	}
-	err = waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
-		account := ctx.accounts[accountName]
-		balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
-		if err != nil {
-			return false
-		}
-		return balance.Cmp(toWei(kcoins)) == 0
-	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return account, nil
 }

@@ -50,6 +50,8 @@ type Cluster interface {
 	// Exec runs arbitrary console commands on a specific pod running kcoin.
 	Exec(podName, command string) (*ExecResponse, error)
 
+	ExecCMD(podName string, commands []string) (*ExecResponse, error)
+
 	// GetBalance returns the balance of the coinbase of the specified node
 	GetBalance(podName string) (*big.Int, error)
 
@@ -79,4 +81,6 @@ type Cluster interface {
 
 	// GetString retrieves a configuration value from the cluster
 	GetString(key string) (string, error)
+
+	PrintLogs(toFiles bool) error
 }

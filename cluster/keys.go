@@ -13,7 +13,7 @@ import (
 
 func (client *cluster) addKeys() error {
 	log.Println("Adding keys configmaps")
-	configMaps := client.Clientset.CoreV1().ConfigMaps(Namespace)
+	configMaps := client.Clientset.CoreV1().ConfigMaps(client.Namespace)
 
 	// Remove existing keys
 	err := configMaps.DeleteCollection(nil, metav1.ListOptions{
@@ -55,7 +55,7 @@ func (client *cluster) addKeys() error {
 
 func (client *cluster) addKeysPassword() error {
 	log.Println("Adding password configmap")
-	configMaps := client.Clientset.CoreV1().ConfigMaps(Namespace)
+	configMaps := client.Clientset.CoreV1().ConfigMaps(client.Namespace)
 	// Remove existing password
 	err := configMaps.DeleteCollection(nil, metav1.ListOptions{
 		LabelSelector: "type = password",
@@ -79,6 +79,32 @@ func (client *cluster) addKeysPassword() error {
 	return err
 }
 
+func (client *cluster) addWAL(walContent string) error {
+	log.Println("Adding WAL file configmap")
+	configMaps := client.Clientset.CoreV1().ConfigMaps(client.Namespace)
+	// Remove existing password
+	err := configMaps.DeleteCollection(nil, metav1.ListOptions{
+		LabelSelector: "type = wal",
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = configMaps.Create(&apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "wal",
+			Labels: map[string]string{
+				"network": "testnet",
+				"type":    "wal",
+			},
+		},
+		Data: map[string]string{
+			"wal": walContent,
+		},
+	})
+	return err
+}
+
 func usePasswordFromConfigmap(spec *apiv1.PodSpec) {
 	volume := apiv1.Volume{
 		Name: "password-v",
@@ -96,6 +122,28 @@ func usePasswordFromConfigmap(spec *apiv1.PodSpec) {
 		MountPath: filepath.Join("/kcoin", "password.txt"),
 		SubPath:   "password.txt",
 	}
+	addVolume(spec, volume)
+	addVolumeMount(&spec.Containers[0], volumeMount)
+}
+
+func useWALFromConfigmap(spec *apiv1.PodSpec) {
+	volume := apiv1.Volume{
+		Name: "wal-v",
+		VolumeSource: apiv1.VolumeSource{
+			ConfigMap: &apiv1.ConfigMapVolumeSource{
+				LocalObjectReference: apiv1.LocalObjectReference{
+					Name: "wal",
+				},
+			},
+		},
+	}
+
+	volumeMount := apiv1.VolumeMount{
+		Name:      "wal-v",
+		MountPath: filepath.Join("/kcoin", "wal"),
+		SubPath:   "wal",
+	}
+
 	addVolume(spec, volume)
 	addVolumeMount(&spec.Containers[0], volumeMount)
 }
