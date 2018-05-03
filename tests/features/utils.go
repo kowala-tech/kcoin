@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/params"
 )
 
@@ -14,9 +13,17 @@ func toWei(kcoin int64) *big.Int {
 }
 
 func waitFor(errorMessage string, tickTime, timeout time.Duration, condition func() bool) error {
-	err := cluster.WaitFor(tickTime, timeout, condition)
-	if err == cluster.WaitForTimeout {
-		return fmt.Errorf("Timeout error at: %v", errorMessage)
+	timeoutTime := time.After(timeout)
+	tick := time.Tick(tickTime)
+
+	for {
+		select {
+		case <-timeoutTime:
+			return fmt.Errorf("Timeout error: %v", errorMessage)
+		case <-tick:
+			if condition() {
+				return nil
+			}
+		}
 	}
-	return err
 }

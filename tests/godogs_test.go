@@ -3,9 +3,10 @@ package tests
 import (
 	"math/big"
 
+	"log"
+
 	"github.com/DATA-DOG/godog"
 	"github.com/kowala-tech/kcoin/tests/features"
-	"log"
 )
 
 var (
@@ -21,11 +22,11 @@ func FeatureContext(s *godog.Suite) {
 		}
 	})
 
-	s.AfterSuite(func() {
-		if err := context.DeleteCluster(); err != nil {
-			log.Fatal(err)
-		}
-	})
+	// s.AfterSuite(func() {
+	// 	if err := context.DeleteCluster(); err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// })
 
 	s.BeforeScenario(func(interface{}) {
 		context.Reset()

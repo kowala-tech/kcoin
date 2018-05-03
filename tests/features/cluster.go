@@ -1,83 +1,170 @@
 package features
 
 import (
+	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
+	"regexp"
 	"time"
 
+	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/cluster"
+	"github.com/kowala-tech/kcoin/kcoin/genesis"
+)
+
+var (
+	enodeSecretRegexp = regexp.MustCompile(`enode://([a-f0-9]*)@`)
 )
 
 func (ctx *Context) PrepareCluster() error {
-	seederAccount, err := ctx.AccountsStorage.NewAccount("test")
+	nodeRunner, err := cluster.NewDockerNodeRunner()
 	if err != nil {
 		return err
 	}
-	if err := ctx.AccountsStorage.Unlock(seederAccount, "test"); err != nil {
-		return err
-	}
+	ctx.nodeRunner = nodeRunner
 
-	ctx.seederAccount = seederAccount
-	var backend cluster.Backend
-	if ip, port := getStaticClusterConfig(); ip != "" && port != 0 {
-		backend = cluster.NewStaticCluster(ip, port)
-	} else {
-		backend = cluster.NewMinikubeCluster("testing")
-	}
-	if !backend.Exists() {
-		if err := backend.Create(); err != nil {
-			return err
-		}
-	}
-	ctx.cluster = cluster.NewCluster(backend)
-
-	if err := ctx.cluster.Connect(); err != nil {
+	if err := ctx.generateAccounts(); err != nil {
 		return err
 	}
-
-	if err := ctx.cluster.Initialize(ctx.chainID.String(), ctx.seederAccount.Address); err != nil {
+	if err := ctx.buildGenesis(); err != nil {
 		return err
 	}
-	if err := ctx.cluster.RunBootnode(); err != nil {
+	if err := ctx.buildDockerImages(); err != nil {
 		return err
 	}
-	_, err = ctx.cluster.RunGenesisValidator()
-	if err := err; err != nil {
+	if err := ctx.runBootnode(); err != nil {
 		return err
 	}
-	if err := ctx.cluster.TriggerGenesisValidation(); err != nil {
+	if err := ctx.runGenesisValidator(); err != nil {
 		return err
 	}
-	_, err = ctx.cluster.RunRpcNode()
-	if err != nil {
-		return err
-	}
-
-	newClient, err := ctx.cluster.RpcClient()
-	if err != nil {
-		return err
-	}
-	ctx.client = newClient
-
-	time.Sleep(3 * time.Second) // let the genesis validator generate some blocks
 	return nil
 }
 
-func (ctx *Context) DeleteCluster() error {
-	return ctx.cluster.Cleanup()
+func (ctx *Context) generateAccounts() error {
+	seederAccount, err := ctx.newAccount()
+	if err != nil {
+		return err
+	}
+	ctx.seederAccount = *seederAccount
+
+	genesisValidatorAccount, err := ctx.newAccount()
+	if err != nil {
+		return err
+	}
+	ctx.genesisValidatorAccount = *genesisValidatorAccount
+
+	contractOwnerAccount, err := ctx.newAccount()
+	if err != nil {
+		return err
+	}
+	ctx.contractOwnerAccount = *contractOwnerAccount
+
+	return nil
 }
 
-func getStaticClusterConfig() (string, int) {
-	rawPort := os.Getenv("K8S_DOCKER_PORT")
-	rawIp := os.Getenv("K8S_CUSTER_IP")
-	if rawIp == "" || rawPort == "" {
-		return "", 0
-	}
-	parsedPort, err := strconv.Atoi(rawPort)
+func (ctx *Context) newAccount() (*accounts.Account, error) {
+	acc, err := ctx.AccountsStorage.NewAccount("test")
 	if err != nil {
-		fmt.Println("Invalid K8S_DOCKER_PORT, must be just a number")
-		return "", 0
+		return nil, err
 	}
-	return rawIp, parsedPort
+	if err := ctx.AccountsStorage.Unlock(acc, "test"); err != nil {
+		return nil, err
+	}
+	return &acc, nil
+}
+
+func (ctx *Context) buildDockerImages() error {
+	if err := ctx.nodeRunner.BuildDockerImage("kowalatech/bootnode:dev", "bootnode.Dockerfile"); err != nil {
+		return err
+	}
+	if err := ctx.nodeRunner.BuildDockerImage("kowalatech/kusd:dev", "kcoin.Dockerfile"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ctx *Context) runBootnode() error {
+	bootnode, err := cluster.BootnodeNode()
+	if err != nil {
+		return err
+	}
+	if err := ctx.nodeRunner.Run(bootnode); err != nil {
+		return err
+	}
+	err = waitFor("fetching bootnode enode", 1*time.Second, 20*time.Second, func() bool {
+		bootnodeStdout, err := ctx.nodeRunner.Log(bootnode)
+		if err != nil {
+			return false
+		}
+		found := enodeSecretRegexp.FindStringSubmatch(bootnodeStdout)
+		if len(found) != 2 {
+			return false
+		}
+		enodeSecret := found[1]
+		bootnodeIP, err := ctx.nodeRunner.IP(bootnode)
+		if err != nil {
+			return false
+		}
+		ctx.bootnode = fmt.Sprintf("enode://%v@%v:33445", enodeSecret, bootnodeIP)
+		return true
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ctx *Context) runGenesisValidator() error {
+
+	genesisValidatorNode := cluster.NewKcoinNodeBuilder().
+		WithBootnode(ctx.bootnode).
+		WithLogLevel(3).
+		WithName("genesis-validator").
+		WithSyncMode("full").
+		WithNetworkId(ctx.chainID.String()).
+		WithGenesis(ctx.genesis).
+		Node()
+
+	if err := ctx.nodeRunner.Run(genesisValidatorNode); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ctx *Context) buildGenesis() error {
+	newGenesis, err := genesis.GenerateGenesis(
+		genesis.Options{
+			Network:                        "test",
+			MaxNumValidators:               "1",
+			UnbondingPeriod:                "0",
+			AccountAddressGenesisValidator: ctx.genesisValidatorAccount.Address.Hex(),
+			SmartContractsOwner:            ctx.contractOwnerAccount.Address.Hex(),
+			PrefundedAccounts: []genesis.PrefundedAccount{
+				{
+					AccountAddress: ctx.genesisValidatorAccount.Address.Hex(),
+					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
+				},
+				{
+					AccountAddress: ctx.seederAccount.Address.Hex(),
+					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
+				},
+				{
+					AccountAddress: ctx.contractOwnerAccount.Address.Hex(),
+					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
+				},
+			},
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	rawJson, err := json.Marshal(newGenesis)
+	if err != nil {
+		return err
+	}
+	ctx.genesis = rawJson
+
+	return nil
 }
