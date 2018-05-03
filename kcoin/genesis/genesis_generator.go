@@ -9,8 +9,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/accounts/abi"
 	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/contracts/network"
-	"github.com/kowala-tech/kcoin/contracts/network/contracts"
+	"github.com/kowala-tech/kcoin/contracts/ownership"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/core/vm/runtime"
@@ -53,37 +52,6 @@ var (
 	ErrInvalidConsensusEngine                       = errors.New("invalid consensus engine")
 )
 
-type Options struct {
-	Network                        string
-	MaxNumValidators               string
-	UnbondingPeriod                string
-	AccountAddressGenesisValidator string
-	PrefundedAccounts              []PrefundedAccount
-	ConsensusEngine                string
-	SmartContractsOwner            string
-	ExtraData                      string
-}
-
-type PrefundedAccount struct {
-	AccountAddress string
-	Balance        string
-}
-
-type validPrefundedAccount struct {
-	accountAddress *common.Address
-	balance        *big.Int
-}
-
-type validGenesisOptions struct {
-	network                        string
-	maxNumValidators               *big.Int
-	unbondingPeriod                *big.Int
-	accountAddressGenesisValidator *common.Address
-	prefundedAccounts              []*validPrefundedAccount
-	consensusEngine                string
-	smartContractsOwner            *common.Address
-}
-
 func GenerateGenesis(options Options) (*core.Genesis, error) {
 	validOptions, err := validateOptions(options)
 	if err != nil {
@@ -101,16 +69,94 @@ func GenerateGenesis(options Options) (*core.Genesis, error) {
 		ExtraData: getExtraData(options.ExtraData),
 	}
 
-	genesis.Alloc[*validOptions.smartContractsOwner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
+	// @TODO (rgeraldes) - confirm if it's necessary
+	// genesis.Alloc[*validOptions.smartContractsOwner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
 
-	baseDeposit := common.Big0
-
-	electionABI, err := abi.JSON(strings.NewReader(contracts.ElectionContractABI))
+	multiSigAddr, err := addMultiSigWallet(genesis, []validOptions.smartContractsOwners, )
+	if err != nil {
+		return nil, err
+	}
+	
+	// contractsOwner add core contracts owned by Kowala's multi signature wallet
+	contractsOwner = multiSigAddr
+	
+	_, err = addOracleMgr(validOptions.oracleMgr, genesis, contractsOwner)
+	if err != nil {
+		return nil, err
+	}
+	
+	_, err = addValidatorMgr(validOpts.validatorMgr, genesis, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
 
-	electionParams, err := electionABI.Pack(
+	addPrefundedAccountsIntoGenesis(validOptions.validatorMgr, prefundedAccounts, genesis)
+	addBatchOfPrefundedAccountsIntoGenesis(genesis)
+
+	return genesis, nil
+}
+
+func addAccountIntoGenesis(addr common.Address, balance *big.Int, code ...string) {
+	account = core.GenesisAccount{
+		Storage: contract.storage,
+		Balance: new(big.Int).Mul(baseDeposit, new(big.Int).SetUint64(params.Ether)),
+	}
+	
+	// contract 
+	if len > 0 {
+		account.code = code[0]
+	}
+	
+	genesis.Alloc[contract.addr] = account
+}
+
+func getDefaultRuntimeConfig() *runtime.Config{
+	return &runtime.Config{
+		EVMConfig: vm.Config{
+			Debug:  true,
+			Tracer: newVmTracer(),
+		},
+	}
+}
+
+// addMultiSigWallet includes kowala's multi sig wallet in the genesis state. The creator - tx originator - has no influence 
+// in this specific contract (MultiSigWallet does not satisfy the Ownable contract) but we should use the same one all the 
+// time in order to have the same contract addresses.
+func addMultiSigWallet(genesis *core.Genesis, owners []common.Address, creator common.Address) (common.Address, error) {
+	multiSigWalletABI, err := abi.JSON(strings.NewReader(ownership.MultiSigWalletABI))
+	if err != nil {
+		return nil, err
+	}
+
+	multiSigParams, err := multiSigWalletABI.Pack(
+		"",
+		owners,
+	)
+	if err != nil {
+		return nil, err	
+	}
+
+	runtimeCfg := getDefaultRuntimeConfig()
+	runtimeCfg.Origin = creator
+	contract, err := createContract(runtimeCfg, append(common.FromHex(ownership.MultiSigWalletBin, multiSigParams...)))
+	if err != nil {
+		return nil, err
+	}
+
+	addAccountIntoGenesis(contract.addr, contract.balance, contract.storage)
+
+	return contract.addr, nil
+}
+
+// addValidatorManager includes the validator manager in the genesis block. The contract creator
+// is also the owner - Oracle Manager satisfies the Ownable interface.
+func addValidatorManager(genesis *core.Genesis, owner *common.Address) (common.Address, error) {
+	managerABI, err := abi.JSON(strings.NewReader(consensus.ValidatorManagerABI))
+	if err != nil {
+		return nil, err
+	}
+
+	managerParams, err := electionABI.Pack(
 		"",
 		baseDeposit,
 		validOptions.maxNumValidators,
@@ -121,29 +167,47 @@ func GenerateGenesis(options Options) (*core.Genesis, error) {
 		return nil, err
 	}
 
-	runtimeCfg := &runtime.Config{
-		Origin: *validOptions.smartContractsOwner,
-		EVMConfig: vm.Config{
-			Debug:  true,
-			Tracer: newVmTracer(),
-		},
-	}
-
+	runtimeCfg := getDefaultRuntimeConfig()
+	runtimeCfg.Origin = *creator
 	contract, err := createContract(runtimeCfg, append(common.FromHex(contracts.ElectionContractBin), electionParams...))
 	if err != nil {
 		return nil, err
 	}
 
-	genesis.Alloc[contract.addr] = core.GenesisAccount{
-		Code:    contract.code,
-		Storage: contract.storage,
-		Balance: new(big.Int).Mul(baseDeposit, new(big.Int).SetUint64(params.Ether)),
+	addAccountIntoGenesis(contract.addr, contract.balance, contract.storage)
+
+	return contract.addr, nil
+}
+
+// addOracleMgr includes the oracle manager in the genesis block. The contract creator
+// is also the owner - Oracle Manager satisfies the Ownable interface.
+func addOracleMgr(genesis *core.Genesis, owner *common.Address) (common.Address, error) {
+	managerABI, err := abi.JSON(strings.NewReader(oracle.OracleManagerABI))
+	if err != nil {
+		return nil, err
 	}
 
-	addPrefundedAccountsIntoGenesis(validOptions.prefundedAccounts, genesis)
-	addBatchOfPrefundedAccountsIntoGenesis(genesis)
+	managerParams, err := electionABI.Pack(
+		"",
+		baseDeposit,
+		validOptions.maxNumOracales,
+		validOptions.unbondingPeriod,
+		*validOptions.accountAddressGenesisValidator,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-	return genesis, nil
+	runtimeCfg := getDefaultRuntimeConfig()
+	runtimeCfg.Origin = *creator
+	contract, err := createContract(runtimeCfg, append(common.FromHex(contracts.ElectionContractBin), electionParams...))
+	if err != nil {
+		return nil, err
+	}
+
+	addAccountIntoGenesis(contract.addr, contract.balance, contract.storage)
+
+	return nil, 
 }
 
 func getExtraData(extraData string) []byte {
@@ -182,65 +246,6 @@ func getNetwork(network string) *big.Int {
 	}
 
 	return chainId
-}
-
-func validateOptions(options Options) (*validGenesisOptions, error) {
-	network, err := mapNetwork(options.Network)
-	if err != nil {
-		return nil, err
-	}
-
-	maxNumValidators, err := mapMaxNumValidators(options.MaxNumValidators)
-	if err != nil {
-		return nil, err
-	}
-
-	unbondingPeriod, err := mapUnbondingPeriod(options.UnbondingPeriod)
-	if err != nil {
-		return nil, err
-	}
-
-	walletAddressValidator, err := mapWalletAddress(options.AccountAddressGenesisValidator)
-	if err != nil {
-		return nil, err
-	}
-
-	validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
-	if err != nil {
-		return nil, err
-	}
-
-	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, walletAddressValidator) {
-		return nil, ErrWalletAddressValidatorNotInPrefundedAccounts
-	}
-
-	consensusEngine := TendermintConsensus
-	if options.ConsensusEngine != "" {
-		consensusEngine, err = mapConsensusEngine(options.ConsensusEngine)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	owner := &DefaultSmartContractsOwner
-	if options.SmartContractsOwner != "" {
-		strAddr := options.SmartContractsOwner
-
-		owner, err = mapWalletAddress(strAddr)
-		if err != nil {
-			return nil, ErrInvalidContractsOwnerAddress
-		}
-	}
-
-	return &validGenesisOptions{
-		network:                        network,
-		maxNumValidators:               maxNumValidators,
-		unbondingPeriod:                unbondingPeriod,
-		accountAddressGenesisValidator: walletAddressValidator,
-		prefundedAccounts:              validPrefundedAccounts,
-		consensusEngine:                consensusEngine,
-		smartContractsOwner:            owner,
-	}, nil
 }
 
 func addBatchOfPrefundedAccountsIntoGenesis(genesis *core.Genesis) {

@@ -1,9 +1,8 @@
 pragma solidity 0.4.21;
 
-import "./Ownable.sol";
-import "./Pausable.sol";
+import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 
-contract OracleManager is Pausable {
+contract OracleManager is pausable.Pausable {
     uint public baseDeposit;       
     uint public maxOracles;
     // period in days
