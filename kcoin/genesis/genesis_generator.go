@@ -12,6 +12,7 @@ import (
 	"github.com/kowala-tech/kcoin/contracts/ownership"
 	"github.com/kowala-tech/kcoin/contracts/nameservice"
 	"github.com/kowala-tech/kcoin/contracts/consensus"
+	"github.com/kowala-tech/kcoin/contracts/oracle"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/vm"
@@ -44,8 +45,8 @@ var (
 
 	ErrEmptyMaxNumValidators                        = errors.New("max number of validators is mandatory")
 	ErrInvalidMaxNumValidators                      = errors.New("invalid max num of validators")
-	ErrEmptyUnbondingPeriod                         = errors.New("unbonding period in days is mandatory")
-	ErrInvalidUnbondingPeriod                       = errors.New("unbonding period is invalid")
+	ErrEmptyFreezePeriod                         = errors.New("freeze period in days is mandatory")
+	ErrInvalidFreezePeriod                       = errors.New("freeze period is invalid")
 	ErrEmptyWalletAddressValidator                  = errors.New("wallet address of genesis validator is mandatory")
 	ErrInvalidWalletAddressValidator                = errors.New("wallet address of genesis validator is invalid")
 	ErrEmptyPrefundedAccounts                       = errors.New("empty prefunded accounts, at least the validator wallet address should be included")
@@ -95,7 +96,7 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 		return nil, err
 	}
 
-	domains := []*domain{&domain{params.ConsensusServiceDomain, *validatorMgrAddr}, &domain{params.OracleServiceDomain, oracleMgrAddr}}
+	domains := []*domain{&domain{params.ConsensusServiceDomain, *validatorMgrAddr}, &domain{params.OracleServiceDomain, *oracleMgrAddr}}
 	_, err = addNameServiceWithDomains(genesis, contractsOwner, domains)
 	if err != nil {
 		return nil, err
@@ -170,6 +171,9 @@ func addNameServiceWithDomains(genesis *core.Genesis, owner *common.Address, dom
 			domain.name,
 			domain.addr,
 		)
+		if err != nil {
+			return nil, err
+		}
 		// register domain
 		runtime.Call(contractAddr, append(common.FromHex(nameservice.NameServiceBin), nameServiceRegParams...), runtimeCfg)
 	}
@@ -227,7 +231,7 @@ func addValidatorMgr(opts *validValidatorMgrOpts, genesis *core.Genesis, owner *
 		"",
 		opts.baseDeposit,
 		opts.maxNumValidators,
-		opts.unbondingPeriod,
+		opts.freezePeriod,
 		opts.validators[0],
 	)
 	if err != nil {
@@ -246,39 +250,38 @@ func addValidatorMgr(opts *validValidatorMgrOpts, genesis *core.Genesis, owner *
 		Code: contractCode,
 	}
 
-	return contractAddr, nil
+	return &contractAddr, nil
 }
 
 // addOracleMgr includes the oracle manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
-func addOracleMgr(opts *validOracleMgrOpts, genesis *core.Genesis, owner *common.Address) (common.Address, error) {
+func addOracleMgr(opts *validOracleMgrOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
 	managerABI, err := abi.JSON(strings.NewReader(oracle.OracleManagerABI))
 	if err != nil {
 		return nil, err
 	}
 
-	managerParams, err := electionABI.Pack(
+	managerParams, err := managerABI.Pack(
 		"",
 		opts.baseDeposit,
 		opts.maxNumOracles,
-		opts.unbondingPeriod,
-		opts.accountAddressGenesisValidator,
+		opts.freezePeriod,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	runtimeCfg := getDefaultRuntimeConfig()
-	runtimeCfg.Origin = *creator
+	runtimeCfg.Origin = *owner
 	// create contract
-	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(contracts.ElectionContractBin), electionParams...), runtimeCfg)
+	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(oracle.OracleManagerBin), managerParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
 	}
 
 	genesis.Alloc[contractAddr] = core.GenesisAccount{
-		storage: cfg.EVMConfig.Tracer.(*vmTracer).data[addr],
-		code: contractCode,
+		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
+		Code: contractCode,
 	}
 
 	return &contractAddr, nil
@@ -369,12 +372,12 @@ func mapMaxNumValidators(s string) (*big.Int, error) {
 func mapUnbondingPeriod(uP string) (*big.Int, error) {
 	var text string
 	if text = strings.TrimSpace(uP); text == "" {
-		return nil, ErrEmptyUnbondingPeriod
+		return nil, ErrEmptyFreezePeriod
 	}
 
 	unbondingPeriod, ok := new(big.Int).SetString(text, 0)
 	if !ok {
-		return nil, ErrInvalidUnbondingPeriod
+		return nil, ErrInvalidFreezePeriod
 	}
 
 	return unbondingPeriod, nil

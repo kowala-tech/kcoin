@@ -1,27 +1,26 @@
 package genesis
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/common"
 )
 
-// @TODO (rgeraldes) - verify if it matters having pointer or not
-
 type Options struct {
 	Network           string
-	Governance        GovernanceOpts
-	Consensus         ConsensusOpts
-	DataFeedSystem    DataFeedSystemOpts
+	Governance        *GovernanceOpts
+	Consensus         *ConsensusOpts
+	DataFeedSystem    *DataFeedSystemOpts
 	PrefundedAccounts []PrefundedAccount
 	ExtraData         string
 }
 
 type ConsensusOpts struct {
-	Paused           bool
+	Engine           string
 	MaxNumValidators uint64
-	UnbondingPeriod  string
-	BaseDeposit      string
+	FreezePeriod     uint64
+	BaseDeposit      uint64
 	Validators       []string
 }
 
@@ -32,10 +31,9 @@ type GovernanceOpts struct {
 }
 
 type DataFeedSystemOpts struct {
-	Paused          bool
-	MaxNumOracles   string
-	UnbondingPeriod string // in days
-	baseDeposit     string // in kUSD
+	MaxNumOracles uint64
+	FreezePeriod  uint64 // in days
+	BaseDeposit   uint64 // in kUSD
 }
 
 type PrefundedAccount struct {
@@ -44,18 +42,16 @@ type PrefundedAccount struct {
 }
 
 type validValidatorMgrOpts struct {
-	paused           bool
 	maxNumValidators *big.Int
-	unbondingPeriod  *big.Int
+	freezePeriod     *big.Int
 	baseDeposit      *big.Int
 	validators       []common.Address
 }
 
 type validOracleMgrOpts struct {
-	paused          *big.Int
-	maxNumOracles   *big.Int
-	unbondingPeriod *big.Int
-	baseDeposit     *big.Int
+	maxNumOracles *big.Int
+	freezePeriod  *big.Int
+	baseDeposit   *big.Int
 }
 
 type validMultiSigOpts struct {
@@ -71,11 +67,12 @@ type validPrefundedAccount struct {
 
 type validGenesisOptions struct {
 	network           string
+	consensusEngine   string
+	prefundedAccounts []*validPrefundedAccount
+	multiSig          *validMultiSigOpts
 	validatorMgr      *validValidatorMgrOpts
 	oracleMgr         *validOracleMgrOpts
-	multiSig          *validMultiSigOpts
-	prefundedAccounts []*validPrefundedAccount
-	consensusEngine   string
+	ExtraData         string
 }
 
 func validateOptions(options Options) (*validGenesisOptions, error) {
@@ -85,8 +82,8 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	}
 
 	consensusEngine := TendermintConsensus
-	if options.ConsensusEngine != "" {
-		consensusEngine, err = mapConsensusEngine(options.ConsensusEngine)
+	if options.Consensus.Engine != "" {
+		consensusEngine, err = mapConsensusEngine(options.Consensus.Engine)
 		if err != nil {
 			return nil, err
 		}
@@ -98,9 +95,13 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		return nil, err
 	}
 
-	multiSigOwners = make([]common.Address, len(options.Governance.Governors))
+	multiSigOwners := make([]common.Address, len(options.Governance.Governors), 0)
 	for _, governor := range options.Governance.Governors {
-		multiSigOwners = append(multiSigOwners, governor)
+		owner, err := getAddress(governor)
+		if err != nil {
+			return nil, err
+		}
+		multiSigOwners = append(multiSigOwners, *owner)
 	}
 
 	numConfirmations := new(big.Int).SetUint64(options.Governance.NumConfirmations)
@@ -110,14 +111,16 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	consensusBaseDeposit := new(big.Int).SetUint64(options.Consensus.BaseDeposit)
 
-	consensusUnbondingPeriod := new(big.Int).SetUint64(options.Consensus.UnbondingPeriod)
+	consensusFreezePeriod := new(big.Int).SetUint64(options.Consensus.FreezePeriod)
 
-	validators = make([]common.Address, len(options.Consensus.Validators))
+	validators := make([]common.Address, len(options.Consensus.Validators), 0)
 	for _, validator := range options.Consensus.Validators {
 		validator, err := getAddress(validator)
 		if err != nil {
 			return nil, err
 		}
+
+		validators = append(validators, *validator)
 	}
 
 	// data feed system
@@ -125,7 +128,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	oracleBaseDeposit := new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit)
 
-	oracleUnbondingPeriod := new(big.Int).SetUint64(options.DataFeedSystem.UnbondingPeriod)
+	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
 
 	// optional
 	validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
@@ -133,7 +136,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		return nil, err
 	}
 
-	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, walletAddressValidator) {
+	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, &validators[0]) {
 		return nil, ErrWalletAddressValidatorNotInPrefundedAccounts
 	}
 
@@ -141,31 +144,31 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		network:         network,
 		consensusEngine: consensusEngine,
 		multiSig: &validMultiSigOpts{
-			multiSigCreator: multiSigCreator,
-			multiSigOwners, multiSigOwners,
+			multiSigCreator:  multiSigCreator,
+			multiSigOwners:   multiSigOwners,
 			numConfirmations: numConfirmations,
 		},
 		validatorMgr: &validValidatorMgrOpts{
-			paused:           options.Consensus.Paused,
 			maxNumValidators: maxNumValidators,
-			unbondingPeriod:  consensusUnbondingPeriod,
+			freezePeriod:     consensusFreezePeriod,
 			baseDeposit:      consensusBaseDeposit,
 			validators:       validators,
 		},
-		oracleMgrOpts: &validOracleMgrOpts{
-			paused:          options.DataFeedSystem.Paused,
-			maxNumOracles:   maxNumOracles,
-			unbondingPeriod: oracleUnbondingPeriod,
-			baseDeposit:     oracleBaseDeposit,
+		oracleMgr: &validOracleMgrOpts{
+			maxNumOracles: maxNumOracles,
+			freezePeriod:  oracleFreezePeriod,
+			baseDeposit:   oracleBaseDeposit,
 		},
-		prefundedAccounts:   validPrefundedAccounts,
-		smartContractsOwner: owner,
+		prefundedAccounts: validPrefundedAccounts,
+		ExtraData:         options.ExtraData,
 	}, nil
 }
 
 func getAddress(s string) (*common.Address, error) {
 	if !common.IsHexAddress(s) {
-		return nil, ErrInvalidAddress
+		return nil, fmt.Errorf("", "")
 	}
-	return &common.HexToAddress(s), nil
+	address := common.HexToAddress(s)
+
+	return &address, nil
 }

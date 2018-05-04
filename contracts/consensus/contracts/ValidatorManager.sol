@@ -3,7 +3,7 @@ pragma solidity 0.4.21;
 import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 import "github.com/kowala-tech/kcoin/contracts/token/contracts/TokenReceiver.sol" as receiver;
 
-contract ValidatorManager is receiver.TokenReceiver, pausable.Pausable {
+contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
     uint public baseDeposit;       
     uint public maxValidators;
     // period in days
@@ -233,6 +233,8 @@ contract ValidatorManager is receiver.TokenReceiver, pausable.Pausable {
         if (!isTokenFallback) revert();
         _;
     }
+
+    function tokenFallback(address _from, uint _value, bytes _data) public {}
 
     // @NOTE (rgeraldes) - limitation - this is necessary for now since the golang bindings do not support
     // method overloading and the choosen method for the bindings will be the method with the

@@ -2,11 +2,7 @@
 
     # network decides the network that should be used
     # available options: test, main.
-    network = "test" 
-
-    # consensusEngine specifies the consensus protocol that is going to be used in the network.
-    # tendermint is the only available option at the moment.
-    consensusEngine = "tendermint" 
+    network = "test"
 
     # Governance Options
     [genesis.governance]
@@ -14,47 +10,39 @@
         # origin should stay the same (during dev) as the name service address (the only contract with an address hardcoded)
         # is hardcoded based on this key. By changing the origin we will have to change the hardcoded value, otherwise we won't be
         # able to locate the name service. The creator of this contract does not have any power over the contract, it's just used
-        to define the location/origin of Kowala's multi sig wallet address which is going to be used as the owner the core contracts.   
+        # to define the location/origin of Kowala's multi sig wallet address which is going to be used as the owner the core contracts.   
         origin = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
 
-        // governors are the set of keys that have permission to govern the key.
+        # governors are the set of keys that have permission to govern the key.
         governors = ["0x259be75d96876f2ada3d202722523e9cd4dd917d"]
 
-        // numConfirmations represents the number of required confirmations by governors, to post a transaction.
+        # numConfirmations represents the number of required confirmations by governors, to post a transaction.
         NumConfirmations = 1
 
     # Consensus Options
     [genesis.consensus]
+        # engine specifies the consensus protocol that is going to be used in the network.
+        # tendermint is the only available option at the moment.
+        engine = "tendermint" 
 
-        # paused defines whether the service is paused or not. By service we mean the registration service.
-        # The consensus continues even if the service is paused but the contract state remains immutable as long
-        # as the service is paused.
-        paused = false
+        maxNumValidators = 100
 
-        maxNumValidators = "100"
-
-        unbondingPeriod = "0" # in days
+        unbondingPeriod = 0 # in days
         
-        baseDeposit = "0" # in mUSD
+        baseDeposit = 0 # in mUSD
         
-        // validators represents the set of initial validators aka genesis validators
-        // @NOTE (rgeraldes) - the code currently supports one validator but this might change in the future
+        # validators represents the set of initial validators aka genesis validators
+        # @NOTE (rgeraldes) - the code currently supports one validator but this might change in the future
         validators = ["0xd6e579085c82329c89fca7a9f012be59028ed53f"]
 
     # Authenticated Data Feed System
     [genesis.dataFeedSystem]
-
-        # paused defines whether the service is paused or not. In this specific case, pausing means, oracle registration services and 
-        # the price submission service won't be able. Ex: Multiple exchanges get hacked in a single day and Kowala temporarly pauses the price
-        # submission service.
-        paused = false
-
-        maxNumOracles = "1000"
+        maxNumOracles = 1000
 
         # unbondingPeriod period in days that coins get retained until they can be redeemed
-        unbondingPeriod = "0"
+        unbondingPeriod = 0
 
-        baseDeposit = "0"
+        baseDeposit = 0
 
     # Other
 
