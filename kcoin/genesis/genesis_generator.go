@@ -90,12 +90,14 @@ func GenerateGenesis(options Options) (*core.Genesis, error) {
 		return nil, err
 	}
 
+	chainID := getNetwork(validOptions.network)
+
 	genesis := &core.Genesis{
 		Timestamp: uint64(time.Now().Unix()),
 		GasLimit:  4700000,
 		Alloc:     make(core.GenesisAlloc),
 		Config: &params.ChainConfig{
-			ChainID:    getNetwork(validOptions.network),
+			ChainID:    chainID,
 			Tendermint: getConsensusEngine(validOptions.consensusEngine),
 		},
 		ExtraData: getExtraData(options.ExtraData),
@@ -134,7 +136,9 @@ func GenerateGenesis(options Options) (*core.Genesis, error) {
 		return nil, err
 	}
 
-	genesis.Alloc[contract.addr] = core.GenesisAccount{
+	contractAddr := network.MapChainIDToAddr[chainID.Uint64()]
+
+	genesis.Alloc[contractAddr] = core.GenesisAccount{
 		Code:    contract.code,
 		Storage: contract.storage,
 		Balance: new(big.Int).Mul(baseDeposit, new(big.Int).SetUint64(params.Ether)),
@@ -362,7 +366,6 @@ func prefundedIncludesValidatorWallet(
 }
 
 type contractData struct {
-	addr    common.Address
 	code    []byte
 	storage map[common.Hash]common.Hash
 }
@@ -373,7 +376,6 @@ func createContract(cfg *runtime.Config, code []byte) (*contractData, error) {
 		return nil, err
 	}
 	return &contractData{
-		addr:    addr,
 		code:    out,
 		storage: cfg.EVMConfig.Tracer.(*vmTracer).data[addr],
 	}, nil
