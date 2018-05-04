@@ -10,9 +10,13 @@ import (
 	"github.com/kowala-tech/kcoin/accounts/abi"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/contracts/ownership"
+	"github.com/kowala-tech/kcoin/contracts/nameservice"
+	"github.com/kowala-tech/kcoin/contracts/consensus"
 	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/core/vm/runtime"
+	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/pkg/errors"
 )
@@ -26,7 +30,7 @@ const (
 )
 
 var (
-	DefaultSmartContractsOwner = network.MapChainIDToAddr[params.TestnetChainConfig.ChainID.Uint64()]
+	//DefaultSmartContractsOwner = network.MapChainIDToAddr[params.TestnetChainConfig.ChainID.Uint64()]
 
 	availableNetworks = map[string]bool{
 		MainNetwork:  true,
@@ -52,8 +56,13 @@ var (
 	ErrInvalidConsensusEngine                       = errors.New("invalid consensus engine")
 )
 
-func GenerateGenesis(options Options) (*core.Genesis, error) {
-	validOptions, err := validateOptions(options)
+type domain struct {
+	name string
+	addr common.Address
+}
+
+func GenerateGenesis(opts Options) (*core.Genesis, error) {
+	validOptions, err := validateOptions(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -66,49 +75,53 @@ func GenerateGenesis(options Options) (*core.Genesis, error) {
 			ChainID:    getNetwork(validOptions.network),
 			Tendermint: getConsensusEngine(validOptions.consensusEngine),
 		},
-		ExtraData: getExtraData(options.ExtraData),
+		// @TODO (rgeraldes) - 
+		ExtraData: getExtraData(opts.ExtraData),
 	}
 
-	// @TODO (rgeraldes) - confirm if it's necessary
-	// genesis.Alloc[*validOptions.smartContractsOwner] = core.GenesisAccount{Balance: new(big.Int).Mul(common.Big1, big.NewInt(params.Ether))}
+	multiSigAddr, err := addMultiSigWallet(validOptions.multiSig, genesis)
+	if err != nil {
+		return nil, err
+	}
+	contractsOwner := multiSigAddr
 
-	multiSigAddr, err := addMultiSigWallet(genesis, []validOptions.smartContractsOwners, )
+	oracleMgrAddr, err := addOracleMgr(validOptions.oracleMgr, genesis, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
 	
-	// contractsOwner add core contracts owned by Kowala's multi signature wallet
-	contractsOwner = multiSigAddr
-	
-	_, err = addOracleMgr(validOptions.oracleMgr, genesis, contractsOwner)
-	if err != nil {
-		return nil, err
-	}
-	
-	_, err = addValidatorMgr(validOpts.validatorMgr, genesis, contractsOwner)
+	validatorMgrAddr, err := addValidatorMgr(validOptions.validatorMgr, genesis, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
 
-	addPrefundedAccountsIntoGenesis(validOptions.validatorMgr, prefundedAccounts, genesis)
+	domains := []*domain{&domain{params.ConsensusServiceDomain, *validatorMgrAddr}, &domain{params.OracleServiceDomain, oracleMgrAddr}}
+	_, err = addNameServiceWithDomains(genesis, contractsOwner, domains)
+	if err != nil {
+		return nil, err
+	}
+
+	addPrefundedAccountsIntoGenesis(validOptions.prefundedAccounts, genesis)
 	addBatchOfPrefundedAccountsIntoGenesis(genesis)
 
 	return genesis, nil
 }
 
+/*
 func addAccountIntoGenesis(addr common.Address, balance *big.Int, code ...string) {
-	account = core.GenesisAccount{
-		Storage: contract.storage,
+	account := core.GenesisAccount{
 		Balance: new(big.Int).Mul(baseDeposit, new(big.Int).SetUint64(params.Ether)),
 	}
 	
 	// contract 
 	if len > 0 {
+		account.storage = storage
 		account.code = code[0]
 	}
 	
 	genesis.Alloc[contract.addr] = account
 }
+*/
 
 func getDefaultRuntimeConfig() *runtime.Config{
 	return &runtime.Config{
@@ -119,10 +132,61 @@ func getDefaultRuntimeConfig() *runtime.Config{
 	}
 }
 
+func addNameServiceWithDomains(genesis *core.Genesis, owner *common.Address, domains []*domain) (*common.Address, error) {
+	db, err := kcoindb.NewMemDatabase()
+	if err != nil {
+		return nil, err
+	}
+	
+	stateDB, err := state.New(common.Hash{}, state.NewDatabase(db))
+	if err != nil {
+		return nil, err
+	}
+	
+	runtimeCfg := getDefaultRuntimeConfig()
+	runtimeCfg.Origin = *owner
+	runtimeCfg.State = stateDB
+
+	nameServiceABI, err := abi.JSON(strings.NewReader(nameservice.NameServiceABI))
+	if err != nil {
+		return nil, err
+	}
+	
+	// nameServiceParams params for the name service creation
+	nameServiceParams, err := nameServiceABI.Pack("")
+	if err != nil {
+		return nil, err
+	}
+
+	// create contract
+	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(nameservice.NameServiceBin), nameServiceParams...), runtimeCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, domain := range domains {
+		nameServiceRegParams, err := nameServiceABI.Pack(
+			"register(string,address)",
+			domain.name,
+			domain.addr,
+		)
+		// register domain
+		runtime.Call(contractAddr, append(common.FromHex(nameservice.NameServiceBin), nameServiceRegParams...), runtimeCfg)
+	}
+	
+	genesis.Alloc[contractAddr] = core.GenesisAccount{
+		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
+		Code: contractCode,
+	}
+
+	return &contractAddr, nil
+}
+
+
 // addMultiSigWallet includes kowala's multi sig wallet in the genesis state. The creator - tx originator - has no influence 
 // in this specific contract (MultiSigWallet does not satisfy the Ownable contract) but we should use the same one all the 
 // time in order to have the same contract addresses.
-func addMultiSigWallet(genesis *core.Genesis, owners []common.Address, creator common.Address) (common.Address, error) {
+func addMultiSigWallet(opts *validMultiSigOpts, genesis *core.Genesis) (*common.Address, error) {
 	multiSigWalletABI, err := abi.JSON(strings.NewReader(ownership.MultiSigWalletABI))
 	if err != nil {
 		return nil, err
@@ -130,58 +194,64 @@ func addMultiSigWallet(genesis *core.Genesis, owners []common.Address, creator c
 
 	multiSigParams, err := multiSigWalletABI.Pack(
 		"",
-		owners,
+		opts.multiSigOwners,
 	)
 	if err != nil {
 		return nil, err	
 	}
 
 	runtimeCfg := getDefaultRuntimeConfig()
-	runtimeCfg.Origin = creator
-	contract, err := createContract(runtimeCfg, append(common.FromHex(ownership.MultiSigWalletBin, multiSigParams...)))
+	runtimeCfg.Origin = *opts.multiSigCreator
+	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(ownership.MultiSigWalletBin), multiSigParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
 	}
+	
+	genesis.Alloc[contractAddr] = core.GenesisAccount{
+		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
+		Code: contractCode,
+	}
 
-	addAccountIntoGenesis(contract.addr, contract.balance, contract.storage)
-
-	return contract.addr, nil
+	return &contractAddr, nil
 }
 
 // addValidatorManager includes the validator manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
-func addValidatorManager(genesis *core.Genesis, owner *common.Address) (common.Address, error) {
+func addValidatorMgr(opts *validValidatorMgrOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
 	managerABI, err := abi.JSON(strings.NewReader(consensus.ValidatorManagerABI))
 	if err != nil {
 		return nil, err
 	}
 
-	managerParams, err := electionABI.Pack(
+	managerParams, err := managerABI.Pack(
 		"",
-		baseDeposit,
-		validOptions.maxNumValidators,
-		validOptions.unbondingPeriod,
-		*validOptions.accountAddressGenesisValidator,
+		opts.baseDeposit,
+		opts.maxNumValidators,
+		opts.unbondingPeriod,
+		opts.validators[0],
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	runtimeCfg := getDefaultRuntimeConfig()
-	runtimeCfg.Origin = *creator
-	contract, err := createContract(runtimeCfg, append(common.FromHex(contracts.ElectionContractBin), electionParams...))
+	runtimeCfg.Origin = *owner
+	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(consensus.ValidatorManagerBin), managerParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
 	}
+	
+	genesis.Alloc[contractAddr] = core.GenesisAccount{
+		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
+		Code: contractCode,
+	}
 
-	addAccountIntoGenesis(contract.addr, contract.balance, contract.storage)
-
-	return contract.addr, nil
+	return contractAddr, nil
 }
 
 // addOracleMgr includes the oracle manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
-func addOracleMgr(genesis *core.Genesis, owner *common.Address) (common.Address, error) {
+func addOracleMgr(opts *validOracleMgrOpts, genesis *core.Genesis, owner *common.Address) (common.Address, error) {
 	managerABI, err := abi.JSON(strings.NewReader(oracle.OracleManagerABI))
 	if err != nil {
 		return nil, err
@@ -189,10 +259,10 @@ func addOracleMgr(genesis *core.Genesis, owner *common.Address) (common.Address,
 
 	managerParams, err := electionABI.Pack(
 		"",
-		baseDeposit,
-		validOptions.maxNumOracales,
-		validOptions.unbondingPeriod,
-		*validOptions.accountAddressGenesisValidator,
+		opts.baseDeposit,
+		opts.maxNumOracles,
+		opts.unbondingPeriod,
+		opts.accountAddressGenesisValidator,
 	)
 	if err != nil {
 		return nil, err
@@ -200,14 +270,18 @@ func addOracleMgr(genesis *core.Genesis, owner *common.Address) (common.Address,
 
 	runtimeCfg := getDefaultRuntimeConfig()
 	runtimeCfg.Origin = *creator
-	contract, err := createContract(runtimeCfg, append(common.FromHex(contracts.ElectionContractBin), electionParams...))
+	// create contract
+	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(contracts.ElectionContractBin), electionParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
 	}
 
-	addAccountIntoGenesis(contract.addr, contract.balance, contract.storage)
+	genesis.Alloc[contractAddr] = core.GenesisAccount{
+		storage: cfg.EVMConfig.Tracer.(*vmTracer).data[addr],
+		code: contractCode,
+	}
 
-	return nil, 
+	return &contractAddr, nil
 }
 
 func getExtraData(extraData string) []byte {

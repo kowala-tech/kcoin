@@ -1,27 +1,41 @@
 package genesis
 
+import (
+	"math/big"
+
+	"github.com/kowala-tech/kcoin/common"
+)
+
+// @TODO (rgeraldes) - verify if it matters having pointer or not
+
 type Options struct {
-	Network                        	string
-	ValidatorMgrOpts		   		ValidatorMgrOpts
-	OracleMgrOpts					OracleMgrOpts
-	AccountAddressGenesisValidator string
-	PrefundedAccounts              []PrefundedAccount
-	ConsensusEngine                string
-	MultiSigCreator string // should be the same every time (during testing) in order to maintain the same addresses for core contracts
-	MultiSigOwners					[]string
-	ExtraData                      string
+	Network           string
+	Governance        GovernanceOpts
+	Consensus         ConsensusOpts
+	DataFeedSystem    DataFeedSystemOpts
+	PrefundedAccounts []PrefundedAccount
+	ExtraData         string
 }
 
-type ValidatorMgrOpts struct {
-	MaxNumValidators string
-	UnbondingPeriod  string // in days
-	BaseDeposit string // in mUSD
+type ConsensusOpts struct {
+	Paused           bool
+	MaxNumValidators uint64
+	UnbondingPeriod  string
+	BaseDeposit      string
+	Validators       []string
 }
 
-type OracleMgrOpts struct {
-	MaxNumOracles string
+type GovernanceOpts struct {
+	Origin           string
+	Governors        []string
+	NumConfirmations uint64
+}
+
+type DataFeedSystemOpts struct {
+	Paused          bool
+	MaxNumOracles   string
 	UnbondingPeriod string // in days
-	baseDeposit string // in kUSD
+	baseDeposit     string // in kUSD
 }
 
 type PrefundedAccount struct {
@@ -30,15 +44,24 @@ type PrefundedAccount struct {
 }
 
 type validValidatorMgrOpts struct {
+	paused           bool
 	maxNumValidators *big.Int
 	unbondingPeriod  *big.Int
-	baseDeposit *big.Int
+	baseDeposit      *big.Int
+	validators       []common.Address
 }
 
 type validOracleMgrOpts struct {
-	maxNumValidators *big.Int
-	unbondingPeriod  *big.Int
-	baseDeposit *big.Int
+	paused          *big.Int
+	maxNumOracles   *big.Int
+	unbondingPeriod *big.Int
+	baseDeposit     *big.Int
+}
+
+type validMultiSigOpts struct {
+	multiSigCreator  *common.Address
+	multiSigOwners   []common.Address
+	numConfirmations *big.Int
 }
 
 type validPrefundedAccount struct {
@@ -47,45 +70,18 @@ type validPrefundedAccount struct {
 }
 
 type validGenesisOptions struct {
-	network                        string
-	validatorMgrOpts			    validValidatorMgrOpts
-	OracleMgrOpts					validOracleMgrOpts
-	accountAddressGenesisValidator *common.Address
-	prefundedAccounts              []*validPrefundedAccount
-	consensusEngine                string
-	// @TODO (rgeraldes) - replace for non pointers
-	multiSigCreator *common.Address
-	multiSigOwners           []common.Address
+	network           string
+	validatorMgr      *validValidatorMgrOpts
+	oracleMgr         *validOracleMgrOpts
+	multiSig          *validMultiSigOpts
+	prefundedAccounts []*validPrefundedAccount
+	consensusEngine   string
 }
 
 func validateOptions(options Options) (*validGenesisOptions, error) {
 	network, err := mapNetwork(options.Network)
 	if err != nil {
 		return nil, err
-	}
-
-	maxNumValidators, err := mapMaxNumValidators(options.MaxNumValidators)
-	if err != nil {
-		return nil, err
-	}
-
-	unbondingPeriod, err := mapUnbondingPeriod(options.UnbondingPeriod)
-	if err != nil {
-		return nil, err
-	}
-
-	walletAddressValidator, err := mapWalletAddress(options.AccountAddressGenesisValidator)
-	if err != nil {
-		return nil, err
-	}
-
-	validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
-	if err != nil {
-		return nil, err
-	}
-
-	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, walletAddressValidator) {
-		return nil, ErrWalletAddressValidatorNotInPrefundedAccounts
 	}
 
 	consensusEngine := TendermintConsensus
@@ -96,23 +92,80 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		}
 	}
 
-	owner := &DefaultSmartContractsOwner
-	if options.SmartContractsOwner != "" {
-		strAddr := options.SmartContractsOwner
+	// governance
+	multiSigCreator, err := getAddress(options.Governance.Origin)
+	if err != nil {
+		return nil, err
+	}
 
-		owner, err = mapWalletAddress(strAddr)
+	multiSigOwners = make([]common.Address, len(options.Governance.Governors))
+	for _, governor := range options.Governance.Governors {
+		multiSigOwners = append(multiSigOwners, governor)
+	}
+
+	numConfirmations := new(big.Int).SetUint64(options.Governance.NumConfirmations)
+
+	// consensus
+	maxNumValidators := new(big.Int).SetUint64(options.Consensus.MaxNumValidators)
+
+	consensusBaseDeposit := new(big.Int).SetUint64(options.Consensus.BaseDeposit)
+
+	consensusUnbondingPeriod := new(big.Int).SetUint64(options.Consensus.UnbondingPeriod)
+
+	validators = make([]common.Address, len(options.Consensus.Validators))
+	for _, validator := range options.Consensus.Validators {
+		validator, err := getAddress(validator)
 		if err != nil {
-			return nil, ErrInvalidContractsOwnerAddress
+			return nil, err
 		}
 	}
 
+	// data feed system
+	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
+
+	oracleBaseDeposit := new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit)
+
+	oracleUnbondingPeriod := new(big.Int).SetUint64(options.DataFeedSystem.UnbondingPeriod)
+
+	// optional
+	validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
+	if err != nil {
+		return nil, err
+	}
+
+	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, walletAddressValidator) {
+		return nil, ErrWalletAddressValidatorNotInPrefundedAccounts
+	}
+
 	return &validGenesisOptions{
-		network:                        network,
-		maxNumValidators:               maxNumValidators,
-		unbondingPeriod:                unbondingPeriod,
-		accountAddressGenesisValidator: walletAddressValidator,
-		prefundedAccounts:              validPrefundedAccounts,
-		consensusEngine:                consensusEngine,
-		smartContractsOwner:            owner,
+		network:         network,
+		consensusEngine: consensusEngine,
+		multiSig: &validMultiSigOpts{
+			multiSigCreator: multiSigCreator,
+			multiSigOwners, multiSigOwners,
+			numConfirmations: numConfirmations,
+		},
+		validatorMgr: &validValidatorMgrOpts{
+			paused:           options.Consensus.Paused,
+			maxNumValidators: maxNumValidators,
+			unbondingPeriod:  consensusUnbondingPeriod,
+			baseDeposit:      consensusBaseDeposit,
+			validators:       validators,
+		},
+		oracleMgrOpts: &validOracleMgrOpts{
+			paused:          options.DataFeedSystem.Paused,
+			maxNumOracles:   maxNumOracles,
+			unbondingPeriod: oracleUnbondingPeriod,
+			baseDeposit:     oracleBaseDeposit,
+		},
+		prefundedAccounts:   validPrefundedAccounts,
+		smartContractsOwner: owner,
 	}, nil
+}
+
+func getAddress(s string) (*common.Address, error) {
+	if !common.IsHexAddress(s) {
+		return nil, ErrInvalidAddress
+	}
+	return &common.HexToAddress(s), nil
 }

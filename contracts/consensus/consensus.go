@@ -13,8 +13,8 @@ import (
 	"github.com/kowala-tech/kcoin/params"
 )
 
-//go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/contracts/=/usr/local/include/solidity/ contract/ValidatorManager.sol
-//go:generate abigen -abi build/VMC.abi -bin build/VMC.bin -pkg consensus -type ValidatorManager -out ./gen_vmc.go
+//go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/contracts/=/usr/local/include/solidity/ contracts/ValidatorManager.sol
+//go:generate abigen -abi build/ValidatorManager.abi -bin build/ValidatorManager.bin -pkg consensus -type ValidatorManager -out ./gen_manager.go
 
 // RegistrationHandler represesnts the manager handler responsible for the registration
 // of a user in the consensus. For token trasnfers (ERC233 model) we must specify the target method.

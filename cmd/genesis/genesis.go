@@ -23,12 +23,23 @@ func init() {
 
 			options := genesis.Options{
 				Network:                        viper.GetString("genesis.network"),
-				MaxNumValidators:               viper.GetString("genesis.maxNumValidators"),
-				UnbondingPeriod:                viper.GetString("genesis.unbondingPeriod"),
-				AccountAddressGenesisValidator: viper.GetString("genesis.accountAddressGenesisValidator"),
-				PrefundedAccounts:              parsePrefundedAccounts(viper.Get("prefundedAccounts")),
 				ConsensusEngine:                viper.GetString("genesis.consensusEngine"),
-				SmartContractsOwner:            viper.GetString("genesis.smartContractsOwner"),
+				PrefundedAccounts:              parsePrefundedAccounts(viper.Get("prefundedAccounts")),				
+				Consensus:						&genesis.ConsensusOpts{
+					MaxNumValidators:               viper.GetString("consensus.maxNumValidators"),
+					UnbondingPeriod:                viper.GetString("consensus.UnbondingPeriod"),
+					BaseDeposit:					viper.GetString("consensus.BaseDeposit"),
+					Validators: []string{viper.GetString("consensus.Validators")},
+				},
+				DataFeedSystem: &genesis.DataFeedSystemOpts{
+					MaxNumOracles:		viper.GetString("datafeed.MaxNumOracles")
+					UnbondingPeriod:                viper.GetString("datafeed.oracleUnbondingPeriod"),
+					BaseDeposit:					viper.GetString("datafeed.oracleBaseDeposit"),
+				},
+				Governance: &genesis.MultiSigOpts{
+					Origin:            viper.GetString("governance.origin"),
+					Governors:					[]string{},
+				},
 				ExtraData:                      viper.GetString("genesis.extraData"),
 			}
 
@@ -52,24 +63,44 @@ func init() {
 	}
 
 	cmd.Flags().StringP("config", "c", "", "Use to load configuration from config file.")
-	cmd.Flags().StringP("network", "n", "", "The network to use, test or main")
-	viper.BindPFlag("genesis.network", cmd.Flags().Lookup("network"))
-	cmd.Flags().StringP("maxNumValidators", "v", "", "The maximum num of validators.")
-	viper.BindPFlag("genesis.maxNumValidators", cmd.Flags().Lookup("maxNumValidators"))
-	cmd.Flags().StringP("unbondingPeriod", "p", "", "The unbonding period in days.")
-	viper.BindPFlag("genesis.unbondingPeriod", cmd.Flags().Lookup("unbondingPeriod"))
-	cmd.Flags().StringP("accountAddressGenesisValidator", "g", "", "The wallet address of the genesis validator.")
-	viper.BindPFlag("genesis.accountAddressGenesisValidator", cmd.Flags().Lookup("accountAddressGenesisValidator"))
-	cmd.Flags().StringP("consensusEngine", "e", "", "The consensus engine, right now only supports tendermint")
-	viper.BindPFlag("genesis.consensusEngine", cmd.Flags().Lookup("consensusEngine"))
-	cmd.Flags().StringP("smartContractsOwner", "s", "", "The address of the smart contracts owner.")
-	viper.BindPFlag("genesis.smartContractsOwner", cmd.Flags().Lookup("smartContractsOwner"))
-	cmd.Flags().StringP("extraData", "d", "", "Extra data")
-	viper.BindPFlag("genesis.extraData", cmd.Flags().Lookup("extraData"))
-	cmd.Flags().StringP("prefundedAccounts", "a", "", "The prefunded accounts in format 0x212121:12,0x212121:14")
-	viper.BindPFlag("prefundedAccounts", cmd.Flags().Lookup("prefundedAccounts"))
 	cmd.Flags().StringP("fileName", "o", "genesis.json", "The output filename (default:genesis.json).")
 	viper.BindPFlag("genesis.fileName", cmd.Flags().Lookup("fileName"))
+	
+	// system
+	cmd.Flags().StringP("network", "n", "", "The network to use, test or main")
+	viper.BindPFlag("genesis.network", cmd.Flags().Lookup("network"))
+	cmd.Flags().StringP("consensusEngine", "e", "", "The consensus engine, right now only supports tendermint")
+	viper.BindPFlag("genesis.consensusEngine", cmd.Flags().Lookup("consensusEngine"))
+	cmd.Flags().StringP("prefundedAccounts", "a", "", "The prefunded accounts in format 0x212121:12,0x212121:14")
+	viper.BindPFlag("prefundedAccounts", cmd.Flags().Lookup("prefundedAccounts"))	
+	
+	// validator mgr
+	cmd.Flags().StringP("maxNumValidators", "v", "", "The maximum num of validators.")
+	viper.BindPFlag("genesis.maxNumValidators", cmd.Flags().Lookup("maxNumValidators"))
+	cmd.Flags().StringP("consensusUnbondingPeriod", "p", "", "The consensus unbounding period in days.")
+	viper.BindPFlag("genesis.consensusUnbondingPeriod", cmd.Flags().Lookup("consensusUnbondingPeriod"))
+	cmd.Flags().StringP("consensusBaseDeposit", "", "", "Base deposit for the consensus")
+	viper.BindPFlag("genesis.consensusBaseDeposit", cmd.Flags().Lookup("consensusBaseDeposit"))
+	cmd.Flags().StringP("accountAddressGenesisValidator", "g", "", "The wallet address of the genesis validator.")
+	viper.BindPFlag("genesis.accountAddressGenesisValidator", cmd.Flags().Lookup("accountAddressGenesisValidator"))
+
+	// oracle mgr
+	cmd.Flags().StringP("maxNumOracles", "o", "", "The maximum num of oracles.")
+	viper.BindPFlag("genesis.maxNumOracles", cmd.Flags().Lookup("maxNumOracles"))
+	cmd.Flags().StringP("oracleUnbondingPeriod", "", "", "The oracle unbounding period in days.")
+	viper.BindPFlag("genesis.oracleUnbondingPeriod", cmd.Flags().Lookup("oracleUnbondingPeriod"))
+	cmd.Flags().StringP("oracleBaseDeposit", "", "", "Base deposit for the oracle activity")
+	viper.BindPFlag("genesis.oracleBaseDeposit", cmd.Flags().Lookup("oracleBaseDeposit"))
+
+	// multi sig
+	cmd.Flags().StringP("multiSigOnwers", "s", "", "The addresses of core multi signature wallet owners.")
+	viper.BindPFlag("genesis.multiSigOwners", cmd.Flags().Lookup("multiSigOwners"))
+	cmd.Flags().StringP("multiSigCreator", "s", "", "The address of core multi signature wallet creator.")
+	viper.BindPFlag("genesis.multiSigOwners", cmd.Flags().Lookup("multiSigOwners"))
+
+	// other
+	cmd.Flags().StringP("extraData", "d", "", "Extra data")
+	viper.BindPFlag("genesis.extraData", cmd.Flags().Lookup("extraData"))
 }
 
 func loadFromFileConfigIfAvailable() {
