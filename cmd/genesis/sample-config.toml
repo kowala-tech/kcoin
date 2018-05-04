@@ -1,19 +1,18 @@
 [genesis]
 
-    # network decides the network that should be used
-    # available options: test, main.
+    # Available networks: "test", "main".
     network = "test"
 
     # Governance Options
     [genesis.governance]
 
         # origin should stay the same (during dev) as the name service address (the only contract with an address hardcoded)
-        # is hardcoded based on this key. By changing the origin we will have to change the hardcoded value, otherwise we won't be
+        # is generated based on this key. By changing the origin we will have to change the hardcoded value because if we don't, we won't be
         # able to locate the name service. The creator of this contract does not have any power over the contract, it's just used
-        # to define the location/origin of Kowala's multi sig wallet address which is going to be used as the owner the core contracts.   
+        # to define the origin of Kowala's multi sig wallet address - owner the core contracts.   
         origin = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
 
-        # governors are the set of keys that have permission to govern the key.
+        # governors are the set of keys that have permission to govern kowala's blockchain.
         governors = ["0x259be75d96876f2ada3d202722523e9cd4dd917d"]
 
         # numConfirmations represents the number of required confirmations by governors, to post a transaction.
@@ -22,13 +21,16 @@
     # Consensus Options
     [genesis.consensus]
         # engine specifies the consensus protocol that is going to be used in the network.
-        # tendermint is the only available option at the moment.
+        # "tendermint" is the only available option at the moment.
         engine = "tendermint" 
 
         maxNumValidators = 100
 
-        unbondingPeriod = 0 # in days
+        # freezePeriod period of time, in days, that coins remained locked as soon as a validator decides to
+        # leave the consensus
+        freezePeriod = 0 # in days
         
+        # baseDeposit minimum deposit, in mUSD, required to be a consensus validator
         baseDeposit = 0 # in mUSD
         
         # validators represents the set of initial validators aka genesis validators
@@ -39,9 +41,11 @@
     [genesis.dataFeedSystem]
         maxNumOracles = 1000
 
-        # unbondingPeriod period in days that coins get retained until they can be redeemed
-        unbondingPeriod = 0
+        # freezePeriod period of time, in days, that coins remained locked as soon as a validator decides to
+        # leave the consensus
+        freezePeriod = 0
 
+        # baseDeposit minimum deposit, in kUSD, required to be an oracle
         baseDeposit = 0
 
     # Other
