@@ -18,7 +18,6 @@ type ValidationContext struct {
 	globalCtx       *Context
 	nodeID          cluster.NodeID
 	accountPassword string
-	account         string
 	nodeRunning     bool
 }
 
@@ -87,13 +86,6 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 	}
 
 	return nil
-}
-
-func (ctx *ValidationContext) stopNode() error {
-	if !ctx.nodeRunning {
-		return nil
-	}
-	return ctx.globalCtx.nodeRunner.Stop(ctx.nodeID)
 }
 
 func (ctx *ValidationContext) IWithdrawMyNodeFromValidation() error {

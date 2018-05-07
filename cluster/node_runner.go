@@ -201,7 +201,7 @@ func (runner *dockerNodeRunner) copyFile(nodeID NodeID, filename string, content
 	if err := tw.WriteHeader(hdr); err != nil {
 		return err
 	}
-	if _, err := tw.Write([]byte(contents)); err != nil {
+	if _, err := tw.Write(contents); err != nil {
 		return err
 	}
 	if err := tw.Close(); err != nil {
