@@ -12,11 +12,12 @@ func (id NodeID) String() string {
 }
 
 type NodeSpec struct {
-	ID        NodeID
-	Image     string
-	Files     map[string][]byte
-	Cmd       []string
-	IsReadyFn func(runner NodeRunner) bool
+	ID          NodeID
+	Image       string
+	Files       map[string][]byte
+	PortMapping map[int32]int32
+	Cmd         []string
+	IsReadyFn   func(runner NodeRunner) bool
 }
 
 func BootnodeSpec() (*NodeSpec, error) {

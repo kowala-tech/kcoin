@@ -19,6 +19,7 @@ type KcoinNodeBuilder struct {
 	syncMode       string
 	logLevel       int16
 	validate       bool
+	rpcPort        *int32
 	deposit        *big.Int
 	unlockAccount  string
 
@@ -43,9 +44,17 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 		"--verbosity", strconv.Itoa(int(builder.logLevel)),
 	}
 	files := make(map[string][]byte, 0)
+	portMapping := make(map[int32]int32, 0)
 
 	if builder.validate {
 		cmd = append(cmd, "--validate")
+	}
+	if builder.rpcPort != nil {
+		cmd = append(cmd, "--rpc")
+		cmd = append(cmd, "--rpcaddr", "0.0.0.0")
+		cmd = append(cmd, "--rpccorsdomain", "*")
+		cmd = append(cmd, "--rpcport", fmt.Sprintf("%v", *builder.rpcPort))
+		portMapping[*builder.rpcPort] = *builder.rpcPort
 	}
 	if builder.deposit != nil {
 		cmd = append(cmd, "--deposit", builder.deposit.String())
@@ -65,11 +74,12 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 	}
 
 	spec := &NodeSpec{
-		ID:        builder.id,
-		Image:     builder.image,
-		Cmd:       cmd,
-		Files:     files,
-		IsReadyFn: kcoinIsReadyFn(builder.id),
+		ID:          builder.id,
+		Image:       builder.image,
+		Cmd:         cmd,
+		Files:       files,
+		IsReadyFn:   kcoinIsReadyFn(builder.id),
+		PortMapping: portMapping,
 	}
 	return spec
 }
@@ -122,5 +132,10 @@ func (builder *KcoinNodeBuilder) WithAccount(ks *keystore.KeyStore, account acco
 	}
 	builder.accounts = append(builder.accounts, raw)
 	builder.unlockAccount = account.Address.Hex()
+	return builder
+}
+
+func (builder *KcoinNodeBuilder) WithRpc(port int32) *KcoinNodeBuilder {
+	builder.rpcPort = &port
 	return builder
 }

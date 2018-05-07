@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/docker/go-connections/nat"
 	"github.com/kowala-tech/kcoin/common"
 )
 
@@ -48,9 +49,31 @@ func NewDockerNodeRunner() (*dockerNodeRunner, error) {
 }
 
 func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
+	portSet := make(nat.PortSet, 0)
+	portMap := make(nat.PortMap, 0)
+
+	for hostPortRaw, containerPortRaw := range node.PortMapping {
+		hostPort, err := nat.NewPort("tcp", fmt.Sprintf("%v", hostPortRaw))
+		if err != nil {
+			return err
+		}
+		containerPort, err := nat.NewPort("tcp", fmt.Sprintf("%v", containerPortRaw))
+		if err != nil {
+			return err
+		}
+
+		portSet[containerPort] = struct{}{}
+		portMap[hostPort] = []nat.PortBinding{
+			{
+				HostIP:   "0.0.0.0",
+				HostPort: fmt.Sprintf("%v", hostPortRaw),
+			},
+		}
+	}
 	_, err := runner.client.ContainerCreate(context.Background(), &container.Config{
-		Image: node.Image,
-		Cmd:   node.Cmd,
+		Image:        node.Image,
+		Cmd:          node.Cmd,
+		ExposedPorts: portSet,
 	}, nil, nil, node.ID.String())
 	if err != nil {
 		return err

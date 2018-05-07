@@ -14,6 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
+	"github.com/kowala-tech/kcoin/kcoinclient"
 )
 
 var (
@@ -43,6 +44,9 @@ func (ctx *Context) PrepareCluster() error {
 		return err
 	}
 	if err := ctx.triggerGenesisValidation(); err != nil {
+		return err
+	}
+	if err := ctx.runRpc(); err != nil {
 		return err
 	}
 	return nil
@@ -152,6 +156,36 @@ func (ctx *Context) runGenesisValidator() error {
 	}
 
 	ctx.genesisValidatorNodeID = spec.ID
+	return nil
+}
+
+func (ctx *Context) runRpc() error {
+	spec := cluster.NewKcoinNodeBuilder().
+		WithBootnode(ctx.bootnode).
+		WithLogLevel(3).
+		WithID("rpc").
+		WithSyncMode("full").
+		WithNetworkId(ctx.chainID.String()).
+		WithGenesis(ctx.genesis).
+		WithRpc(8080).
+		NodeSpec()
+
+	if err := ctx.nodeRunner.Run(spec); err != nil {
+		return err
+	}
+
+	rpcIP, err := ctx.nodeRunner.IP(spec.ID)
+	if err != nil {
+		return err
+	}
+
+	rpcAddr := fmt.Sprintf("http://%v:%v", rpcIP, 8080)
+	client, err := kcoinclient.Dial(rpcAddr)
+	if err != nil {
+		return err
+	}
+
+	ctx.client = client
 	return nil
 }
 
