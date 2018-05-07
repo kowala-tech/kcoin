@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/kowala-tech/kcoin/accounts"
@@ -15,6 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/lazada/awg"
 )
 
 var (
@@ -91,30 +91,15 @@ func (ctx *Context) newAccount() (*accounts.Account, error) {
 }
 
 func (ctx *Context) buildDockerImages() error {
-	var wg sync.WaitGroup
-	wg.Add(2)
-	errors := make([]error, 0)
+	wg := awg.AdvancedWaitGroup{}
+	wg.Add(func() error {
+		return ctx.nodeRunner.BuildDockerImage("kowalatech/bootnode:dev", "bootnode.Dockerfile")
+	})
+	wg.Add(func() error {
+		return ctx.nodeRunner.BuildDockerImage("kowalatech/kusd:dev", "kcoin.Dockerfile")
+	})
 
-	go func() {
-		if err := ctx.nodeRunner.BuildDockerImage("kowalatech/bootnode:dev", "bootnode.Dockerfile"); err != nil {
-			errors = append(errors, err)
-		}
-		wg.Done()
-	}()
-
-	go func() {
-		if err := ctx.nodeRunner.BuildDockerImage("kowalatech/kusd:dev", "kcoin.Dockerfile"); err != nil {
-			errors = append(errors, err)
-		}
-		wg.Done()
-	}()
-	wg.Wait()
-
-	if len(errors) > 0 {
-		return errors[0]
-	}
-
-	return nil
+	return wg.SetStopOnError(true).Start().GetLastError()
 }
 
 func (ctx *Context) runBootnode() error {

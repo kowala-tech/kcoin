@@ -572,6 +572,12 @@
 			"revisionTime": "2018-02-01T09:30:40Z"
 		},
 		{
+			"checksumSHA1": "tBmNzUvZuza7z0rjJZNhzdAYTIk=",
+			"path": "github.com/lazada/awg",
+			"revision": "a74bd21c83596ea4bfff55cb48046430bab20f6f",
+			"revisionTime": "2017-05-03T08:10:44Z"
+		},
+		{
 			"checksumSHA1": "NiPRC0JDsfCFir75S1TrFHPP8+M=",
 			"path": "github.com/magiconair/properties",
 			"revision": "2c9e9502788518c97fe44e8955cd069417ee89df",
