@@ -14,12 +14,18 @@ import (
 type Context struct {
 	AccountsStorage *keystore.KeyStore
 
-	cluster cluster.Cluster
-	client  *kcoinclient.Client
-	chainID *big.Int
+	// cluster config
+	genesis  []byte
+	bootnode string
 
-	seederAccount accounts.Account
-	accounts      map[string]accounts.Account
+	nodeRunner             cluster.NodeRunner
+	genesisValidatorNodeID cluster.NodeID
+	client                 *kcoinclient.Client
+	chainID                *big.Int
+
+	genesisValidatorAccount accounts.Account
+	seederAccount           accounts.Account
+	accounts                map[string]accounts.Account
 
 	lastTx    *types.Transaction
 	lastTxErr error

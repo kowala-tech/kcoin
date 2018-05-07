@@ -16,6 +16,7 @@ import (
 	"github.com/kowala-tech/kcoin/core/vm/runtime"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/pkg/errors"
+	"fmt"
 )
 
 const (
@@ -133,6 +134,12 @@ func GenerateGenesis(options Options) (*core.Genesis, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("^^^^^^^^^^^^^\n\n\n\n")
+	for k, v := range contract.storage {
+		fmt.Printf("\"%v\": \"%v\",\n", k.Hex(), v.Hex())
+	}
+	fmt.Println("^^^^^^^^^^^^^\n\n\n\n", validOptions.accountAddressGenesisValidator.String())
 
 	genesis.Alloc[contract.addr] = core.GenesisAccount{
 		Code:    contract.code,

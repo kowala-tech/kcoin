@@ -117,9 +117,9 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 	if head.LastCommitHash == types.EmptyRootHash && body.Commit != nil {
 		return nil, fmt.Errorf("server returned non-nil commit but block header indicates no commit")
 	}
-	if head.LastCommitHash != types.EmptyRootHash && body.Commit == nil {
-		return nil, fmt.Errorf("server returned nil commit but block header indicates a commit ")
-	}
+	//if head.LastCommitHash != types.EmptyRootHash && body.Commit == nil {
+	//	return nil, fmt.Errorf("server returned nil commit but block header indicates a commit ")
+	//}
 	if head.TxHash == types.EmptyRootHash && len(body.Transactions) > 0 {
 		return nil, fmt.Errorf("server returned non-empty transaction list but block header indicates no transactions")
 	}
@@ -470,7 +470,15 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	if err != nil {
 		return err
 	}
-	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(data))
+	return ec.SendRawTransaction(ctx, data)
+}
+
+// SendRawTransaction injects a raw signed transaction into the pending pool for execution.
+//
+// If the transaction was a contract creation use the TransactionReceipt method to get the
+// contract address after the transaction has been mined.
+func (ec *Client) SendRawTransaction(ctx context.Context, rawTx []byte) error {
+	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(rawTx))
 }
 
 func toCallArg(msg kowala.CallMsg) interface{} {

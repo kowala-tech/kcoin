@@ -7,10 +7,10 @@ import (
 
 	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 )
 
-//res := ctx.GetWAL()
 func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
 
 	tx, err := ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
@@ -18,7 +18,7 @@ func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
 		return err
 	}
 
-	return waitFor("transaction in the blockhain", 1*time.Second, 5*time.Second, func() bool {
+	return common.WaitFor("transaction in the blockhain", 1*time.Second, 5*time.Second, func() bool {
 		isInBlockchain, err := ctx.isTransactionInBlockchain(tx)
 		return err == nil && isInBlockchain
 	})
@@ -87,7 +87,7 @@ func (ctx *Context) sendFundsAndWait(from, to accounts.Account, kcoins int64) (*
 	if err != nil {
 		return nil, err
 	}
-	return tx, waitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
+	return tx, common.WaitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
 		balance, err := ctx.client.BalanceAt(context.Background(), to.Address, nil)
 		if err != nil {
 			return false

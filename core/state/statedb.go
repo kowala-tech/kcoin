@@ -29,6 +29,7 @@ import (
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/trie"
+	"github.com/kowala-tech/kcoin/kcoindb"
 )
 
 type revision struct {
@@ -623,6 +624,41 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		return nil
 	})
+	log.Debug("Trie cache stats after commit", "misses", trie.CacheMisses(), "unloads", trie.CacheUnloads())
+	return root, err
+}
+
+// CommitTo writes the state to the given database.
+func (s *StateDB) CommitTo(dbw kcoindb.Putter, deleteEmptyObjects bool) (root common.Hash, err error) {
+	defer s.clearJournalAndRefund()
+
+	// Commit objects to the trie.
+	for addr, stateObject := range s.stateObjects {
+		_, isDirty := s.stateObjectsDirty[addr]
+		switch {
+		case stateObject.suicided || (isDirty && deleteEmptyObjects && stateObject.empty()):
+			// If the object has been removed, don't bother syncing it
+			// and just mark it for deletion in the trie.
+			s.deleteStateObject(stateObject)
+		case isDirty:
+			// Write any contract code associated with the state object
+			if stateObject.code != nil && stateObject.dirtyCode {
+				if err := dbw.Put(stateObject.CodeHash(), stateObject.code); err != nil {
+					return common.Hash{}, err
+				}
+				stateObject.dirtyCode = false
+			}
+			// Write any storage changes in the state object to its storage trie.
+			if err := stateObject.CommitTrie(s.db); err != nil {
+				return common.Hash{}, err
+			}
+			// Update the object in the main account trie.
+			s.updateStateObject(stateObject)
+		}
+		delete(s.stateObjectsDirty, addr)
+	}
+	// Write trie changes.
+	root, err = s.trie.Commit(nil)
 	log.Debug("Trie cache stats after commit", "misses", trie.CacheMisses(), "unloads", trie.CacheUnloads())
 	return root, err
 }

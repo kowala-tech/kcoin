@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -24,8 +25,10 @@ type work struct {
 type stateFn func() stateFn
 
 func (val *validator) notLoggedInState() stateFn {
+	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", val.walletAccount.Account().Address.String())
 	isGenesis, err := val.election.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
+		fmt.Printf("states.go ===> %[2]v: %[1]v\n", err, `err`)
 		log.Warn("Failed to verify the voter information", "err", err)
 		return nil
 	}
@@ -197,6 +200,9 @@ func (val *validator) commitState() stateFn {
 
 	block := val.block
 	work := val.work
+	chainDb := val.backend.ChainDb()
+
+	work.state.CommitTo(chainDb, true)
 
 	// update block hash since it is now available and not when
 	// the receipt/log of individual transactions were created
@@ -209,7 +215,7 @@ func (val *validator) commitState() stateFn {
 		log.BlockHash = block.Hash()
 	}
 
-	_, err := val.chain.WriteBlockWithState(block, val.work.receipts, val.work.state)
+	_, err := val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return nil

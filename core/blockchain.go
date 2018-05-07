@@ -940,6 +940,53 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	return
 }
 
+
+// WriteBlock writes the block to the chain.
+func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
+	// Make sure no inconsistent state is leaked during insertion
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+	// Write other block data using a batch.
+	batch := bc.db.NewBatch()
+	if err := WriteBlock(batch, block); err != nil {
+		return NonStatTy, err
+	}
+
+	if _, err := state.CommitTo(batch, true); err != nil {
+		return NonStatTy, err
+	}
+	if err := WriteBlockReceipts(batch, block.Hash(), block.NumberU64(), receipts); err != nil {
+		return NonStatTy, err
+	}
+
+	// Reorganise the chain if the parent is not the head block
+	currentBlock := bc.CurrentBlock()
+	if block.ParentHash() != currentBlock.Hash() {
+		if err := bc.reorg(currentBlock, block); err != nil {
+			return NonStatTy, err
+		}
+	}
+
+	// Write the positional metadata for transaction and receipt lookups
+	if err := WriteTxLookupEntries(batch, block); err != nil {
+		return NonStatTy, err
+	}
+	// Write hash preimages
+	if err := WritePreimages(bc.db, block.NumberU64(), state.Preimages()); err != nil {
+		return NonStatTy, err
+	}
+	status = CanonStatTy
+	if err := batch.Write(); err != nil {
+		return NonStatTy, err
+	}
+	bc.insert(block)
+	bc.futureBlocks.Remove(block.Hash())
+	return status, nil
+}
+
 // InsertChain attempts to insert the given batch of blocks in to the canonical
 // chain or, otherwise, create a fork. If an error is returned it will return
 // the index number of the failing block as well an error describing what went
