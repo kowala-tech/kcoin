@@ -15,4 +15,5 @@ ADD release/kcoin_with_new_account.sh .
 ADD release/testnet_console.toml .
 ADD release/testnet_genesis.json genesis.json
 ENTRYPOINT ["./kcoin_with_new_account.sh"]
+RUN mkdir -p /root/.kcoin/keystore
 CMD ["--config", "/kcoin/testnet_console.toml", "console"]

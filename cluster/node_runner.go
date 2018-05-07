@@ -10,17 +10,27 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 type NodeRunner interface {
-	Run(node *Node) error
-	Log(node *Node) (string, error)
-	IP(node *Node) (string, error)
+	Run(node *NodeSpec) error
+	Log(nodeID NodeID) (string, error)
+	IP(nodeID NodeID) (string, error)
+	Exec(nodeID NodeID, command []string) (*ExecResponse, error)
 	BuildDockerImage(tag, dockerFile string) error
+}
+
+type ExecResponse struct {
+	StdOut string
+	StdErr string
 }
 
 type dockerNodeRunner struct {
@@ -37,30 +47,36 @@ func NewDockerNodeRunner() (*dockerNodeRunner, error) {
 	}, nil
 }
 
-func (runner *dockerNodeRunner) Run(node *Node) error {
+func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 	_, err := runner.client.ContainerCreate(context.Background(), &container.Config{
 		Image: node.Image,
 		Cmd:   node.Cmd,
-	}, nil, nil, node.Name)
+	}, nil, nil, node.ID.String())
 	if err != nil {
 		return err
 	}
 
 	for filename, contents := range node.Files {
-		if err := runner.copyFile(node, filename, contents); err != nil {
+		if err := runner.copyFile(node.ID, filename, contents); err != nil {
 			return err
 		}
 	}
 
-	err = runner.client.ContainerStart(context.Background(), node.Name, types.ContainerStartOptions{})
+	err = runner.client.ContainerStart(context.Background(), node.ID.String(), types.ContainerStartOptions{})
 	if err != nil {
 		return err
+	}
+
+	if node.IsReadyFn != nil {
+		return common.WaitFor("Node starts", 1*time.Second, 20*time.Second, func() bool {
+			return node.IsReadyFn(runner)
+		})
 	}
 	return nil
 }
 
-func (runner *dockerNodeRunner) Log(node *Node) (string, error) {
-	log, err := runner.client.ContainerLogs(context.Background(), node.Name, types.ContainerLogsOptions{
+func (runner *dockerNodeRunner) Log(nodeID NodeID) (string, error) {
+	log, err := runner.client.ContainerLogs(context.Background(), nodeID.String(), types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 	})
@@ -76,12 +92,41 @@ func (runner *dockerNodeRunner) Log(node *Node) (string, error) {
 	return string(all), nil
 }
 
-func (runner *dockerNodeRunner) IP(node *Node) (string, error) {
-	container, err := runner.client.ContainerInspect(context.Background(), node.Name)
+func (runner *dockerNodeRunner) IP(nodeID NodeID) (string, error) {
+	container, err := runner.client.ContainerInspect(context.Background(), nodeID.String())
 	if err != nil {
 		return "", err
 	}
 	return container.NetworkSettings.IPAddress, nil
+}
+
+func (runner *dockerNodeRunner) Exec(nodeID NodeID, command []string) (*ExecResponse, error) {
+	contExec, err := runner.client.ContainerExecCreate(context.Background(), nodeID.String(), types.ExecConfig{
+		Cmd:          command,
+		AttachStdout: true,
+		AttachStderr: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	res, err := runner.client.ContainerExecAttach(context.Background(), contExec.ID, types.ExecStartCheck{})
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
+
+	var stdOut bytes.Buffer
+	var stdErr bytes.Buffer
+
+	_, err = stdcopy.StdCopy(&stdOut, &stdErr, res.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecResponse{
+		StdOut: strings.TrimSpace(stdOut.String()),
+		StdErr: strings.TrimSpace(stdErr.String()),
+	}, nil
 }
 
 func (runner *dockerNodeRunner) BuildDockerImage(tag, dockerFile string) error {
@@ -96,7 +141,7 @@ func (runner *dockerNodeRunner) BuildDockerImage(tag, dockerFile string) error {
 	return nil
 }
 
-func (runner *dockerNodeRunner) copyFile(node *Node, filename string, contents []byte) error {
+func (runner *dockerNodeRunner) copyFile(nodeID NodeID, filename string, contents []byte) error {
 	dir := filepath.Dir(filename)
 	file := filepath.Base(filename)
 
@@ -118,7 +163,7 @@ func (runner *dockerNodeRunner) copyFile(node *Node, filename string, contents [
 	}
 
 	err := runner.client.CopyToContainer(context.Background(),
-		node.Name,
+		nodeID.String(),
 		dir,
 		&buf,
 		types.CopyToContainerOptions{})
@@ -127,4 +172,8 @@ func (runner *dockerNodeRunner) copyFile(node *Node, filename string, contents [
 	}
 
 	return nil
+}
+
+func KcoinExecCommand(command string) []string {
+	return []string{"./kcoin", "attach", "--exec", command}
 }

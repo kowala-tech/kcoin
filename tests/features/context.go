@@ -18,11 +18,11 @@ type Context struct {
 	genesis  []byte
 	bootnode string
 
-	nodeRunner cluster.NodeRunner
-	client     *kcoinclient.Client
-	chainID    *big.Int
+	nodeRunner             cluster.NodeRunner
+	genesisValidatorNodeID cluster.NodeID
+	client                 *kcoinclient.Client
+	chainID                *big.Int
 
-	contractOwnerAccount    accounts.Account
 	genesisValidatorAccount accounts.Account
 	seederAccount           accounts.Account
 	accounts                map[string]accounts.Account

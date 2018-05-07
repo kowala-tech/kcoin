@@ -1,24 +1,40 @@
 package cluster
 
-import "strconv"
+import (
+	"fmt"
+	"math/big"
+	"strconv"
+
+	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/accounts/keystore"
+)
 
 type KcoinNodeBuilder struct {
 	image          string
 	networkId      string
 	genesisContent []byte
-	name           string
+	accounts       [][]byte
+	id             NodeID
 	bootnode       string
 	syncMode       string
 	logLevel       int16
+	validate       bool
+	deposit        *big.Int
+	unlockAccount  string
+
+	err error
 }
 
 func NewKcoinNodeBuilder() *KcoinNodeBuilder {
 	return &KcoinNodeBuilder{
-		image: "kowalatech/kusd:dev",
+		image:    "kowalatech/kusd:dev",
+		logLevel: 3,
+		syncMode: "fast",
+		accounts: make([][]byte, 0),
 	}
 }
 
-func (builder *KcoinNodeBuilder) Node() *Node {
+func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 	cmd := []string{
 		"--gasprice", "1",
 		"--networkid", builder.networkId,
@@ -26,16 +42,36 @@ func (builder *KcoinNodeBuilder) Node() *Node {
 		"--syncmode", builder.syncMode,
 		"--verbosity", strconv.Itoa(int(builder.logLevel)),
 	}
+	files := make(map[string][]byte, 0)
 
-	node := &Node{
-		Image: builder.image,
-		Name:  builder.name,
-		Cmd:   cmd,
-		Files: map[string][]byte{
-			"/kcoin/genesis.json": builder.genesisContent,
-		},
+	if builder.validate {
+		cmd = append(cmd, "--validate")
 	}
-	return node
+	if builder.deposit != nil {
+		cmd = append(cmd, "--deposit", builder.deposit.String())
+	}
+	if builder.unlockAccount != "" {
+		files["/kcoin/password.txt"] = []byte("test")
+		cmd = append(cmd, "--password", "/kcoin/password.txt", "--unlock", builder.unlockAccount)
+	}
+
+	if len(builder.genesisContent) > 0 {
+		files["/kcoin/genesis.json"] = builder.genesisContent
+	}
+
+	for i, account := range builder.accounts {
+		file := fmt.Sprintf("/root/.kcoin/keystore/%v.json", i)
+		files[file] = account
+	}
+
+	spec := &NodeSpec{
+		ID:        builder.id,
+		Image:     builder.image,
+		Cmd:       cmd,
+		Files:     files,
+		IsReadyFn: kcoinIsReadyFn(builder.id),
+	}
+	return spec
 }
 
 func (builder *KcoinNodeBuilder) WithNetworkId(networkID string) *KcoinNodeBuilder {
@@ -43,8 +79,8 @@ func (builder *KcoinNodeBuilder) WithNetworkId(networkID string) *KcoinNodeBuild
 	return builder
 }
 
-func (builder *KcoinNodeBuilder) WithName(name string) *KcoinNodeBuilder {
-	builder.name = name
+func (builder *KcoinNodeBuilder) WithID(id string) *KcoinNodeBuilder {
+	builder.id = NodeID(id)
 	return builder
 }
 
@@ -65,5 +101,26 @@ func (builder *KcoinNodeBuilder) WithLogLevel(logLevel int16) *KcoinNodeBuilder 
 
 func (builder *KcoinNodeBuilder) WithGenesis(genesis []byte) *KcoinNodeBuilder {
 	builder.genesisContent = genesis
+	return builder
+}
+
+func (builder *KcoinNodeBuilder) WithValidation() *KcoinNodeBuilder {
+	builder.validate = true
+	return builder
+}
+
+func (builder *KcoinNodeBuilder) WithDeposit(deposit *big.Int) *KcoinNodeBuilder {
+	builder.deposit = deposit
+	return builder
+}
+
+func (builder *KcoinNodeBuilder) WithAccount(ks *keystore.KeyStore, account accounts.Account) *KcoinNodeBuilder {
+	raw, err := ks.Export(account, "test", "test")
+	if err != nil {
+		builder.err = err
+		return builder
+	}
+	builder.accounts = append(builder.accounts, raw)
+	builder.unlockAccount = account.Address.Hex()
 	return builder
 }
