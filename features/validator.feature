@@ -3,14 +3,20 @@ Feature: Joining network as a validator
   I want to be able to join validators set
 
   Scenario: Start validator
-    Given I have my node running
-    And I have an account in my node with 10 kcoins
+    Given I have the following accounts:
+      | account | password | funds |
+      | A       | test     | 10    |
+    And I have my node running using account A
+    And My node is already synchronised
     When I start validator with 5 kcoins deposit
     Then I should be a validator
 
   Scenario: Stop mining
-    Given I have my node running
-    And I have an account in my node with 10 kcoins
+    Given I have the following accounts:
+      | account | password | funds |
+      | A       | test     | 10    |
+    And I have my node running using account A
+    And My node is already synchronised
     And I start validator with 5 kcoins deposit
     When I withdraw my node from validation
     Then There should be 5 kcoins available to me after 0 days
