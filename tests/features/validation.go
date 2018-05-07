@@ -159,16 +159,6 @@ func parseDate(date string) time.Time {
 }
 
 func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
-	// isValidator, err := ctx.isValidator()
-	// if err != nil {
-	// 	return err
-	// }
-
-	// if isValidator {
-	// 	return errors.New("validator is still running")
-	// }
-
-	// return nil
 	return godog.ErrPending
 }
 
