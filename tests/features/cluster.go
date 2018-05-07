@@ -28,24 +28,31 @@ func (ctx *Context) PrepareCluster() error {
 	}
 	ctx.nodeRunner = nodeRunner
 
+	fmt.Sprintf("Generating accounts")
 	if err := ctx.generateAccounts(); err != nil {
 		return err
 	}
+	fmt.Sprintf("Building genesis")
 	if err := ctx.buildGenesis(); err != nil {
 		return err
 	}
+	fmt.Sprintf("Building docker images")
 	if err := ctx.buildDockerImages(); err != nil {
 		return err
 	}
+	fmt.Sprintf("Running bootnode")
 	if err := ctx.runBootnode(); err != nil {
 		return err
 	}
+	fmt.Sprintf("Running genesis validator")
 	if err := ctx.runGenesisValidator(); err != nil {
 		return err
 	}
+	fmt.Sprintf("Triggering genesis validation")
 	if err := ctx.triggerGenesisValidation(); err != nil {
 		return err
 	}
+	fmt.Sprintf("Running RPC node")
 	if err := ctx.runRpc(); err != nil {
 		return err
 	}
