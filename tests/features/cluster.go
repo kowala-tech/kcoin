@@ -28,31 +28,31 @@ func (ctx *Context) PrepareCluster() error {
 	}
 	ctx.nodeRunner = nodeRunner
 
-	fmt.Sprintf("Generating accounts")
+	fmt.Println("Generating accounts")
 	if err := ctx.generateAccounts(); err != nil {
 		return err
 	}
-	fmt.Sprintf("Building genesis")
+	fmt.Println("Building genesis")
 	if err := ctx.buildGenesis(); err != nil {
 		return err
 	}
-	fmt.Sprintf("Building docker images")
+	fmt.Println("Building docker images")
 	if err := ctx.buildDockerImages(); err != nil {
 		return err
 	}
-	fmt.Sprintf("Running bootnode")
+	fmt.Println("Running bootnode")
 	if err := ctx.runBootnode(); err != nil {
 		return err
 	}
-	fmt.Sprintf("Running genesis validator")
+	fmt.Println("Running genesis validator")
 	if err := ctx.runGenesisValidator(); err != nil {
 		return err
 	}
-	fmt.Sprintf("Triggering genesis validation")
+	fmt.Println("Triggering genesis validation")
 	if err := ctx.triggerGenesisValidation(); err != nil {
 		return err
 	}
-	fmt.Sprintf("Running RPC node")
+	fmt.Println("Running RPC node")
 	if err := ctx.runRpc(); err != nil {
 		return err
 	}
@@ -181,12 +181,7 @@ func (ctx *Context) runRpc() error {
 		return err
 	}
 
-	rpcIP, err := ctx.nodeRunner.IP(spec.ID)
-	if err != nil {
-		return err
-	}
-
-	rpcAddr := fmt.Sprintf("http://%v:%v", rpcIP, 8080)
+	rpcAddr := fmt.Sprintf("http://%v:%v", ctx.nodeRunner.HostIP(), 8080)
 	client, err := kcoinclient.Dial(rpcAddr)
 	if err != nil {
 		return err

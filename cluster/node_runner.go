@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -24,6 +25,7 @@ import (
 type NodeRunner interface {
 	Run(node *NodeSpec) error
 	Log(nodeID NodeID) (string, error)
+	HostIP() string
 	IP(nodeID NodeID) (string, error)
 	Exec(nodeID NodeID, command []string) (*ExecResponse, error)
 	BuildDockerImage(tag, dockerFile string) error
@@ -49,32 +51,23 @@ func NewDockerNodeRunner() (*dockerNodeRunner, error) {
 }
 
 func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
-	portSet := make(nat.PortSet, 0)
-	portMap := make(nat.PortMap, 0)
+	portSpec := make([]string, 0)
 
 	for hostPortRaw, containerPortRaw := range node.PortMapping {
-		hostPort, err := nat.NewPort("tcp", fmt.Sprintf("%v", hostPortRaw))
-		if err != nil {
-			return err
-		}
-		containerPort, err := nat.NewPort("tcp", fmt.Sprintf("%v", containerPortRaw))
-		if err != nil {
-			return err
-		}
-
-		portSet[containerPort] = struct{}{}
-		portMap[hostPort] = []nat.PortBinding{
-			{
-				HostIP:   "0.0.0.0",
-				HostPort: fmt.Sprintf("%v", hostPortRaw),
-			},
-		}
+		portSpec = append(portSpec, fmt.Sprintf("%v:%v", hostPortRaw, containerPortRaw))
 	}
-	_, err := runner.client.ContainerCreate(context.Background(), &container.Config{
+
+	portSet, portMap, err := nat.ParsePortSpecs(portSpec)
+	if err != nil {
+		return err
+	}
+	_, err = runner.client.ContainerCreate(context.Background(), &container.Config{
 		Image:        node.Image,
 		Cmd:          node.Cmd,
 		ExposedPorts: portSet,
-	}, nil, nil, node.ID.String())
+	}, &container.HostConfig{
+		PortBindings: portMap,
+	}, nil, node.ID.String())
 	if err != nil {
 		return err
 	}
@@ -113,6 +106,15 @@ func (runner *dockerNodeRunner) Log(nodeID NodeID) (string, error) {
 		return "", err
 	}
 	return string(all), nil
+}
+
+func (runner *dockerNodeRunner) HostIP() string {
+	hostIP := runner.client.DaemonHost()
+	if addr := net.ParseIP(hostIP); addr == nil {
+		// Assume non-ip based hosts mean localhost
+		return "localhost"
+	}
+	return hostIP
 }
 
 func (runner *dockerNodeRunner) IP(nodeID NodeID) (string, error) {
