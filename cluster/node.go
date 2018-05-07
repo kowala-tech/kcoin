@@ -1,32 +1,42 @@
 package cluster
 
-// RunNode Runs the a node
-func (client *cluster) RunNode(name string) error {
-	bootnode, err := client.GetString(bootnodeEnodeKey)
-	if err != nil {
-		return err
-	}
+import (
+	"fmt"
+	"strings"
+)
 
-	pod, err := NewPodBuilder().
-		WithNetworkId(client.NetworkID).
-		WithName(name).
-		WithBootnode(bootnode).
-		WithSyncMode("full").
-		WithLogLevel(3).
-		Build()
-	if err != nil {
-		return nil
-	}
+type NodeID string
 
-	_, err = client.Clientset.CoreV1().Pods(client.Namespace).Create(pod)
-	if err != nil {
-		return err
-	}
+func (id NodeID) String() string {
+	return string(id)
+}
 
-	err = client.waitForKusdPod(name)
-	if err != nil {
-		return err
-	}
+type NodeSpec struct {
+	ID          NodeID
+	Image       string
+	Files       map[string][]byte
+	PortMapping map[int32]int32
+	Cmd         []string
+	IsReadyFn   func(runner NodeRunner) bool
+}
 
-	return client.waitForInitialSync(name)
+func BootnodeSpec() (*NodeSpec, error) {
+	id := NodeID("bootnode")
+	spec := &NodeSpec{
+		ID:    id,
+		Image: "kowalatech/bootnode:dev",
+		Cmd: []string{
+			"--nodekeyhex", randStringBytes(64),
+		},
+		Files: map[string][]byte{},
+	}
+	return spec, nil
+}
+
+func kcoinIsReadyFn(nodeID NodeID) func(NodeRunner) bool {
+	return func(runner NodeRunner) bool {
+		randomStr := randStringBytes(64)
+		res, err := runner.Exec(nodeID, KcoinExecCommand(fmt.Sprintf(`console.log("%v");`, randomStr)))
+		return err == nil && strings.Contains(res.StdOut, randomStr)
+	}
 }

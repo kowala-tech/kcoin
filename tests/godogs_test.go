@@ -3,9 +3,10 @@ package tests
 import (
 	"math/big"
 
+	"log"
+
 	"github.com/DATA-DOG/godog"
 	"github.com/kowala-tech/kcoin/tests/features"
-	"log"
 )
 
 var (
@@ -58,8 +59,7 @@ func FeatureContext(s *godog.Suite) {
 	// validation
 	s.Step(`^I start validator with (\d+) kcoins deposit$`, validationCtx.IStartTheValidator)
 	s.Step(`^I should be a validator$`, validationCtx.IShouldBeAValidator)
-	s.Step(`^I have my node running$`, validationCtx.IHaveMyNodeRunning)
-	s.Step(`^I have an account in my node with (\d+) kcoins$`, validationCtx.IHaveAnAccountInMyNode)
+	s.Step(`^I have my node running using account (\w+)$`, validationCtx.IHaveMyNodeRunning)
 	s.Step(`^I should be a validator$`, validationCtx.IShouldBeAValidator)
 	s.Step(`^I stop validation$`, validationCtx.IStopValidation)
 	s.Step(`^I wait for the unbonding period to be over$`, validationCtx.IWaitForTheUnbondingPeriodToBeOver)
