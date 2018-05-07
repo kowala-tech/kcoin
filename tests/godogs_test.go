@@ -23,11 +23,11 @@ func FeatureContext(s *godog.Suite) {
 		}
 	})
 
-	// s.AfterSuite(func() {
-	// 	if err := context.DeleteCluster(); err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// })
+	s.AfterSuite(func() {
+		if err := context.DeleteCluster(); err != nil {
+			log.Fatal(err)
+		}
+	})
 
 	s.BeforeScenario(func(interface{}) {
 		context.Reset()

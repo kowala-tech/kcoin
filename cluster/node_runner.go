@@ -25,6 +25,7 @@ import (
 type NodeRunner interface {
 	Run(node *NodeSpec) error
 	Stop(nodeID NodeID) error
+	StopAll() error
 	Log(nodeID NodeID) (string, error)
 	HostIP() string
 	IP(nodeID NodeID) (string, error)
@@ -38,7 +39,8 @@ type ExecResponse struct {
 }
 
 type dockerNodeRunner struct {
-	client *client.Client
+	runningNodes map[NodeID]bool
+	client       *client.Client
 }
 
 func NewDockerNodeRunner() (*dockerNodeRunner, error) {
@@ -47,7 +49,8 @@ func NewDockerNodeRunner() (*dockerNodeRunner, error) {
 		return nil, err
 	}
 	return &dockerNodeRunner{
-		client: client,
+		client:       client,
+		runningNodes: make(map[NodeID]bool, 0),
 	}, nil
 }
 
@@ -72,6 +75,7 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 	if err != nil {
 		return err
 	}
+	runner.runningNodes[node.ID] = true
 
 	for filename, contents := range node.Files {
 		if err := runner.copyFile(node.ID, filename, contents); err != nil {
@@ -93,7 +97,19 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 }
 
 func (runner *dockerNodeRunner) Stop(nodeID NodeID) error {
+	runner.runningNodes[nodeID] = false
 	return runner.client.ContainerRemove(context.Background(), nodeID.String(), types.ContainerRemoveOptions{Force: true})
+}
+
+func (runner *dockerNodeRunner) StopAll() error {
+	for id, running := range runner.runningNodes {
+		if running {
+			if err := runner.Stop(id); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (runner *dockerNodeRunner) Log(nodeID NodeID) (string, error) {

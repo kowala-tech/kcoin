@@ -21,6 +21,10 @@ var (
 	enodeSecretRegexp = regexp.MustCompile(`enode://([a-f0-9]*)@`)
 )
 
+func (ctx *Context) DeleteCluster() error {
+	return ctx.nodeRunner.StopAll()
+}
+
 func (ctx *Context) PrepareCluster() error {
 	nodeRunner, err := cluster.NewDockerNodeRunner()
 	if err != nil {
