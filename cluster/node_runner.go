@@ -24,6 +24,7 @@ import (
 
 type NodeRunner interface {
 	Run(node *NodeSpec) error
+	Stop(nodeID NodeID) error
 	Log(nodeID NodeID) (string, error)
 	HostIP() string
 	IP(nodeID NodeID) (string, error)
@@ -89,6 +90,10 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 		})
 	}
 	return nil
+}
+
+func (runner *dockerNodeRunner) Stop(nodeID NodeID) error {
+	return runner.client.ContainerRemove(context.Background(), nodeID.String(), types.ContainerRemoveOptions{Force: true})
 }
 
 func (runner *dockerNodeRunner) Log(nodeID NodeID) (string, error) {
