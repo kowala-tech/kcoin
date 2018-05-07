@@ -25,12 +25,6 @@ contract OracleManager is pausable.Pausable {
         // will have a new deposit for the current session.
         Deposit[] deposits; 
     }
-
-    // Work represents the work done by an oracle
-    struct Work {
-        address oracle;
-        uint price;
-    }
     
     mapping (address => Oracle) private oracleRegistry;
     
@@ -38,7 +32,7 @@ contract OracleManager is pausable.Pausable {
     // the smallest deposit.
     address[] oraclePool;
 
-    Work[] submissions;
+    uint price = 1 ether; // equals to one dollar in kUSD format
 
     // onlyWithMinDeposit requires a minimum deposit to proceed
     modifier onlyWithMinDeposit {
@@ -173,17 +167,11 @@ contract OracleManager is pausable.Pausable {
         }
     }
 
-    function submitPrice(uint price) public whenNotPaused onlyOracle {
-        submissions.push(Work(msg.sender, price));
-    }
-
-    function getSubmissionCount() public view returns (uint count) {
-        return submissions.length;
-    }
-
-    function getSubmissionAtIndex(uint index) public view returns (address sender, uint price) {
-        Work work = submissions[index];
-        sender = work.oracle;
-        price = work.price;
+    // @NOTE (rgeraldes) - delayed computation cannot be used since
+    // we have a timit limit for validators.
+    function submitPrice(uint _price) public whenNotPaused onlyOracle {
+        require(price > 0);
+        // @TODO (calculate new average value based on the submission)
+        price = _price;
     }
 }
