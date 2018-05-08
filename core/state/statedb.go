@@ -208,8 +208,13 @@ func (self *StateDB) GetNonce(addr common.Address) uint64 {
 func (self *StateDB) GetCode(addr common.Address) []byte {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.Code(self.db)
+		code := stateObject.Code(self.db)
+		if len(code) == 0 {
+			fmt.Println("BACKEND 'simulatedBackend': result == 0")
+		}
+		return code
 	}
+	fmt.Println("BACKEND 'simulatedBackend': result == 0, stateObject == nil")
 	return nil
 }
 
@@ -586,6 +591,8 @@ func (s *StateDB) clearJournalAndRefund() {
 func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) {
 	defer s.clearJournalAndRefund()
 
+	fmt.Println("\t ==== START COMMIT")
+
 	// Commit objects to the trie.
 	for addr, stateObject := range s.stateObjects {
 		_, isDirty := s.stateObjectsDirty[addr]
@@ -597,6 +604,8 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		case isDirty:
 			// Write any contract code associated with the state object
 			if stateObject.code != nil && stateObject.dirtyCode {
+				fmt.Println("\t ==== TO INSERT CODE", common.BytesToHash(stateObject.CodeHash()).String(), addr.String())
+				//fixme!!! тут не происходит вставка!!!!
 				s.db.TrieDB().Insert(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
 				stateObject.dirtyCode = false
 			}

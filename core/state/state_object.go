@@ -318,13 +318,16 @@ func (c *stateObject) Address() common.Address {
 // Code returns the contract code associated with this object, if any.
 func (self *stateObject) Code(db Database) []byte {
 	if self.code != nil {
+		fmt.Println("**** EXIT 0")
 		return self.code
 	}
 	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
+		fmt.Println("**** EXIT 1")
 		return nil
 	}
 	code, err := db.ContractCode(self.addrHash, common.BytesToHash(self.CodeHash()))
 	if err != nil {
+		fmt.Println("**** EXIT 2", self.addrHash.String(), err)
 		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
 	self.code = code

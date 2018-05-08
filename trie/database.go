@@ -7,6 +7,7 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/log"
+	"fmt"
 )
 
 // secureKeyPrefix is the database key prefix used to store trie node preimages.
@@ -108,7 +109,12 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 	// Retrieve the node from cache if available
 	db.lock.RLock()
 	node := db.nodes[hash]
+	fmt.Println("\t###### DATABASE:", len(db.nodes))
+	for k := range db.nodes {
+		fmt.Println("\t###### DATABASE:", k.String(), hash.String())
+	}
 	db.lock.RUnlock()
+
 
 	if node != nil {
 		return node.blob, nil

@@ -518,6 +518,9 @@ func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Addres
 		return nil, err
 	}
 	code := state.GetCode(address)
+	if len(code) == 0 {
+		fmt.Println("BACKEND 'ContractBackend': result == 0", blockNr)
+	}
 	return code, state.Error()
 }
 

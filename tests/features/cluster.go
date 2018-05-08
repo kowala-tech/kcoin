@@ -50,10 +50,12 @@ func (ctx *Context) PrepareCluster() error {
 	}
 	fmt.Println("Running genesis validator")
 	if err := ctx.runGenesisValidator(); err != nil {
+		fmt.Println(ctx.nodeRunner.Log(ctx.genesisValidatorNodeID))
 		return err
 	}
 	fmt.Println("Triggering genesis validation")
 	if err := ctx.triggerGenesisValidation(); err != nil {
+		fmt.Println(ctx.nodeRunner.Log(ctx.genesisValidatorNodeID))
 		return err
 	}
 	fmt.Println("Running RPC node")
@@ -193,7 +195,6 @@ func (ctx *Context) triggerGenesisValidation() error {
 
 	return common.WaitFor("validation starts", 2*time.Second, 20*time.Second, func() bool {
 		res, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand("eth.blockNumber"))
-		fmt.Println(ctx.nodeRunner.Log(ctx.genesisValidatorNodeID))
 		if err != nil {
 			return false
 		}

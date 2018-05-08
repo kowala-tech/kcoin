@@ -70,6 +70,8 @@ type BoundContract struct {
 // NewBoundContract creates a low level contract interface through which calls
 // and transactions may be made through.
 func NewBoundContract(address common.Address, abi abi.ABI, caller ContractCaller, transactor ContractTransactor, filterer ContractFilterer) *BoundContract {
+	fmt.Println("NEW NewBoundContract", address.String())
+
 	return &BoundContract{
 		address:    address,
 		abi:        abi,
@@ -128,6 +130,7 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 			if code, err = pb.PendingCodeAt(ctx, c.address); err != nil {
 				return err
 			} else if len(code) == 0 {
+				fmt.Println("Wrong code address CASE 0: len(code) == 0")
 				return ErrNoCode
 			}
 		}
@@ -138,6 +141,7 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 			if code, err = c.caller.CodeAt(ctx, c.address, nil); err != nil {
 				return err
 			} else if len(code) == 0 {
+				fmt.Println("Wrong code address CASE 1: len(code) == 0")
 				return ErrNoCode
 			}
 		}
@@ -198,6 +202,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 			if code, err := c.transactor.PendingCodeAt(ensureContext(opts.Context), c.address); err != nil {
 				return nil, err
 			} else if len(code) == 0 {
+				fmt.Println("Wrong code address CASE 2: len(code) == 0")
 				return nil, ErrNoCode
 			}
 		}
