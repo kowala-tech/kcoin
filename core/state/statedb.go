@@ -208,13 +208,8 @@ func (self *StateDB) GetNonce(addr common.Address) uint64 {
 func (self *StateDB) GetCode(addr common.Address) []byte {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		code := stateObject.Code(self.db)
-		if len(code) == 0 {
-			fmt.Println("BACKEND 'simulatedBackend': result == 0")
-		}
-		return code
+		return stateObject.Code(self.db)
 	}
-	fmt.Println("BACKEND 'simulatedBackend': result == 0, stateObject == nil")
 	return nil
 }
 
@@ -591,8 +586,6 @@ func (s *StateDB) clearJournalAndRefund() {
 func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) {
 	defer s.clearJournalAndRefund()
 
-	fmt.Println("\t ==== START COMMIT")
-
 	// Commit objects to the trie.
 	for addr, stateObject := range s.stateObjects {
 		_, isDirty := s.stateObjectsDirty[addr]
@@ -604,8 +597,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		case isDirty:
 			// Write any contract code associated with the state object
 			if stateObject.code != nil && stateObject.dirtyCode {
-				fmt.Println("\t ==== TO INSERT CODE", common.BytesToHash(stateObject.CodeHash()).String(), addr.String())
-				//fixme!!! тут не происходит вставка!!!!
 				s.db.TrieDB().Insert(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
 				stateObject.dirtyCode = false
 			}
@@ -655,6 +646,7 @@ func (s *StateDB) CommitTo(dbw kcoindb.Putter, deleteEmptyObjects bool) (root co
 				if err := dbw.Put(stateObject.CodeHash(), stateObject.code); err != nil {
 					return common.Hash{}, err
 				}
+				s.db.TrieDB().Insert(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
 				stateObject.dirtyCode = false
 			}
 			// Write any storage changes in the state object to its storage trie.
@@ -667,7 +659,20 @@ func (s *StateDB) CommitTo(dbw kcoindb.Putter, deleteEmptyObjects bool) (root co
 		delete(s.stateObjectsDirty, addr)
 	}
 	// Write trie changes.
-	root, err = s.trie.Commit(nil)
+	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash) error {
+		var account Account
+		if err := rlp.DecodeBytes(leaf, &account); err != nil {
+			return nil
+		}
+		if account.Root != emptyState {
+			s.db.TrieDB().Reference(account.Root, parent)
+		}
+		code := common.BytesToHash(account.CodeHash)
+		if code != emptyCode {
+			s.db.TrieDB().Reference(code, parent)
+		}
+		return nil
+	})
 	log.Debug("Trie cache stats after commit", "misses", trie.CacheMisses(), "unloads", trie.CacheUnloads())
 	return root, err
 }

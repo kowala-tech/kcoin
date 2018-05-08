@@ -467,7 +467,6 @@ func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 
 // BlockNumber returns the block number of the chain head.
 func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
-	fmt.Println("###################################")
 	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
 	return header.Number
 }
@@ -517,11 +516,7 @@ func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Addres
 	if state == nil || err != nil {
 		return nil, err
 	}
-	code := state.GetCode(address)
-	if len(code) == 0 {
-		fmt.Println("BACKEND 'ContractBackend': result == 0", blockNr)
-	}
-	return code, state.Error()
+	return state.GetCode(address), state.Error()
 }
 
 // GetStorageAt returns the storage from the state at the given address, key and

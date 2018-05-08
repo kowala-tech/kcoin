@@ -25,7 +25,6 @@ type work struct {
 type stateFn func() stateFn
 
 func (val *validator) notLoggedInState() stateFn {
-	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", val.walletAccount.Account().Address.String())
 	isGenesis, err := val.election.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
 		fmt.Printf("states.go ===> %[2]v: %[1]v\n", err, `err`)

@@ -142,15 +142,13 @@ func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConf
 		} else {
 			log.Info("Writing custom genesis block")
 		}
-		block, err := genesis.Commit(db)
 
-		// @TODO (rgeraldes) - since we removed the difficulty calculation inside
-		// commit, there's the possibility that the method returns a nil block
-		// in case of an error, and that will trigger a segmentation violation
-		// while trying to get the block.Hash(), block is nil at this point.
+		block, err := genesis.Commit(db)
 		if err != nil {
 			log.Warn("Error information", "err", err)
+			return nil, common.Hash{}, err
 		}
+
 		return genesis.Config, block.Hash(), err
 	}
 
@@ -236,8 +234,16 @@ func (g *Genesis) ToBlock(db kcoindb.Database) *types.Block {
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
 	}
-	statedb.Commit(false)
-	statedb.Database().TrieDB().Commit(root, true)
+
+	_, err := statedb.CommitTo(db, false)
+	if err != nil {
+		log.Error("can't store Genesis into the stateDB:", "err", err)
+	}
+
+	err = statedb.Database().TrieDB().Commit(root, true)
+	if err != nil {
+		log.Error("can't store Genesis into the state TrieDB:", "err", err)
+	}
 
 	return types.NewBlock(head, nil, nil, nil)
 }

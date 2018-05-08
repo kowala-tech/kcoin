@@ -332,10 +332,6 @@ func (ec *Client) StorageAt(ctx context.Context, account common.Address, key com
 func (ec *Client) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "eth_getCode", account, toBlockNumArg(blockNumber))
-
-	if len(result) == 0 {
-		fmt.Println("BACKEND 'client': result == 0")
-	}
 	return result, err
 }
 

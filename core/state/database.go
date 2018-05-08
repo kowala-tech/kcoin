@@ -124,10 +124,11 @@ func (db *cachingDB) CopyTrie(t Trie) Trie {
 func (db *cachingDB) ContractCode(addrHash, codeHash common.Hash) ([]byte, error) {
 	code, err := db.db.Node(codeHash)
 	if err == nil {
-		fmt.Println("cachingDB err==nil => .Add()")
 		db.codeSizeCache.Add(codeHash, len(code))
 	}
-	fmt.Println("cachingDB err!=nil =>", err.Error())
+	if err != nil {
+		fmt.Println("cachingDB err!=nil =>", err.Error())
+	}
 	return code, err
 }
 

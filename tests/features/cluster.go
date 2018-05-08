@@ -77,7 +77,8 @@ func (ctx *Context) generateAccounts() error {
 		return err
 	}
 	ctx.genesisValidatorAccount = *genesisValidatorAccount
-	fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@ GENESIS ACC", ctx.genesisValidatorAccount.Address.String(), ctx.genesisValidatorAccount.Address.Hex())
+
+	fmt.Println("Genesis validator", ctx.genesisValidatorAccount.Address.String())
 
 	return nil
 }

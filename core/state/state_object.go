@@ -322,12 +322,11 @@ func (self *stateObject) Code(db Database) []byte {
 		return self.code
 	}
 	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
-		fmt.Println("**** EXIT 1")
 		return nil
 	}
 	code, err := db.ContractCode(self.addrHash, common.BytesToHash(self.CodeHash()))
 	if err != nil {
-		fmt.Println("**** EXIT 2", self.addrHash.String(), err)
+		fmt.Println("**** EXIT 1", self.addrHash.String(), err)
 		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
 	self.code = code

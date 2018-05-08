@@ -102,7 +102,6 @@ func (b *SimulatedBackend) CodeAt(ctx context.Context, contract common.Address, 
 	}
 	statedb, _ := b.State()
 
-	fmt.Println("SimulatedBackend BLOCK", b.CurrentBlock().NumberU64(), b.CurrentBlock().Hash().String(), b.CurrentBlock().Root().String())
 	return statedb.GetCode(contract), nil
 }
 
