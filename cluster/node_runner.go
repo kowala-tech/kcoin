@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -20,6 +21,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 type NodeRunner interface {
@@ -41,9 +43,11 @@ type ExecResponse struct {
 type dockerNodeRunner struct {
 	runningNodes map[NodeID]bool
 	client       *client.Client
+	logsDir      string
+	logsCount    int
 }
 
-func NewDockerNodeRunner() (*dockerNodeRunner, error) {
+func NewDockerNodeRunner(logsDir string) (*dockerNodeRunner, error) {
 	client, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
@@ -51,6 +55,7 @@ func NewDockerNodeRunner() (*dockerNodeRunner, error) {
 	return &dockerNodeRunner{
 		client:       client,
 		runningNodes: make(map[NodeID]bool, 0),
+		logsDir:      logsDir,
 	}, nil
 }
 
@@ -87,6 +92,20 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 	if err != nil {
 		return err
 	}
+
+	logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%v-%v.log", runner.logsCount, node.ID))
+	runner.logsCount += 1
+	logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		return err
+	}
+	go func() {
+		defer logFile.Close()
+		err := runner.logStream(node.ID, logFile)
+		if err != nil {
+			log.Error("error saving container logs to file", err)
+		}
+	}()
 
 	if node.IsReadyFn != nil {
 		return common.WaitFor("Node starts", 1*time.Second, 20*time.Second, func() bool {
@@ -222,4 +241,19 @@ func (runner *dockerNodeRunner) copyFile(nodeID NodeID, filename string, content
 
 func KcoinExecCommand(command string) []string {
 	return []string{"./kcoin", "attach", "--exec", command}
+}
+
+func (runner *dockerNodeRunner) logStream(nodeID NodeID, w io.Writer) error {
+	log, err := runner.client.ContainerLogs(context.Background(), nodeID.String(), types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	})
+	if err != nil {
+		return err
+	}
+	defer log.Close()
+
+	_, err = stdcopy.StdCopy(w, w, log)
+	return err
 }
