@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -26,7 +27,12 @@ func (ctx *Context) DeleteCluster() error {
 }
 
 func (ctx *Context) PrepareCluster() error {
-	nodeRunner, err := cluster.NewDockerNodeRunner()
+	logsDir := "./logs"
+	os.RemoveAll(logsDir)
+	if err := os.Mkdir(logsDir, 0700); err != nil {
+		return err
+	}
+	nodeRunner, err := cluster.NewDockerNodeRunner(logsDir)
 	if err != nil {
 		return err
 	}
