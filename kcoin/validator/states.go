@@ -41,6 +41,7 @@ func (val *validator) notLoggedInState() stateFn {
 		defer chainHeadSub.Unsubscribe()
 
 		if err := val.election.Join(val.walletAccount, val.deposit); err != nil {
+			fmt.Printf("Error joining validators network. Account %q. Error %q\n", val.walletAccount.Account().Address.String(), err)
 			log.Error("Error joining validators network", "err", err)
 			return nil
 		}
