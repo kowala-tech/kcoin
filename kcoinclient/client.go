@@ -470,7 +470,15 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	if err != nil {
 		return err
 	}
-	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(data))
+	return ec.SendRawTransaction(ctx, data)
+}
+
+// SendRawTransaction injects a raw signed transaction into the pending pool for execution.
+//
+// If the transaction was a contract creation use the TransactionReceipt method to get the
+// contract address after the transaction has been mined.
+func (ec *Client) SendRawTransaction(ctx context.Context, rawTx []byte) error {
+	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(rawTx))
 }
 
 func toCallArg(msg kowala.CallMsg) interface{} {
