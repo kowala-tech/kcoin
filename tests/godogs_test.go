@@ -66,11 +66,12 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^I withdraw my node from validation$`, validationCtx.IWithdrawMyNodeFromValidation)
 	s.Step(`^There should be (\d+) kcoins available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
 	s.Step(`^My node should be not be a validator$`, validationCtx.MyNodeShouldBeNotBeAValidator)
+	s.Step(`^I wait for my node to be synced$`, validationCtx.IWaitForMyNodeToBeSynced)
 
 	// Nodes
 	s.Step(`^I start a new node$`, context.IStartANewNode)
 	s.Step(`^My node should sync with the network$`, context.MyNodeShouldSyncWithTheNetwork)
-	s.Step(`^My node is already synchronised$`, context.MyNodeIsAlreadySynchronised)
+	s.Step(`^My node is already synchronised$`, validationCtx.MyNodeIsAlreadySynchronised)
 	s.Step(`^I disconnect my node for (\d+) blocks and reconnect it$`, context.IDisconnectMyNodeForBlocksAndReconnectIt)
 	s.Step(`^I start a new node with a different network ID$`, context.IStartANewNodeWithADifferentNetworkID)
 	s.Step(`^My node should not sync with the network$`, context.MyNodeShouldNotSyncWithTheNetwork)
