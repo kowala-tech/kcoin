@@ -7,7 +7,6 @@ Feature: Joining network as a validator
       | account | password | funds |
       | A       | test     | 10    |
     And I have my node running using account A
-    And My node is already synchronised
     When I start validator with 5 kcoins deposit
     Then I should be a validator
 
@@ -16,7 +15,6 @@ Feature: Joining network as a validator
       | account | password | funds |
       | A       | test     | 10    |
     And I have my node running using account A
-    And My node is already synchronised
     And I start validator with 5 kcoins deposit
     When I withdraw my node from validation
     Then There should be 5 kcoins available to me after 0 days
