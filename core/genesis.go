@@ -184,7 +184,6 @@ func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConf
 	if height == missingNumber {
 		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
 	}
-
 	compatErr := storedcfg.CheckCompatible(newcfg, height)
 	if compatErr != nil && height != 0 && compatErr.RewindTo != 0 {
 		return newcfg, stored, compatErr
@@ -239,7 +238,6 @@ func (g *Genesis) ToBlock(db kcoindb.Database) *types.Block {
 	if err != nil {
 		log.Error("can't store Genesis into the stateDB:", "err", err)
 	}
-
 	err = statedb.Database().TrieDB().Commit(root, true)
 	if err != nil {
 		log.Error("can't store Genesis into the state TrieDB:", "err", err)

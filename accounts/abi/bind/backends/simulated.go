@@ -200,6 +200,7 @@ func (b *SimulatedBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error
 // EstimateGas executes the requested code against the currently pending block/state and
 // returns the used amount of gas.
 func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg) (uint64, error) {
+	fmt.Println("!!! SimulatedBackend.EstimateGas")
 	b.mu.Lock()
 	defer b.mu.Unlock()
 

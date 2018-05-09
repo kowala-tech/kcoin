@@ -541,10 +541,20 @@ type CallArgs struct {
 	Data     hexutil.Bytes   `json:"data"`
 }
 
+var first = true
+
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
 	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if first {
+		address := "fe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"
+		tx := state.RawDump().Accounts[address]
+		fmt.Printf("!!! DB dump:\n\taddress %s\n\troot %s\n\tcode hash %v\n\tstorage %v\n\n",
+			address, tx.Root, tx.CodeHash, tx.Storage)
+
+		first = false
+	}
 	if state == nil || err != nil {
 		return nil, 0, false, err
 	}

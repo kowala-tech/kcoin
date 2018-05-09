@@ -205,6 +205,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 		msg := kowala.CallMsg{From: opts.From, To: contract, Value: value, Data: input}
 		gasLimit, err = c.transactor.EstimateGas(ensureContext(opts.Context), msg)
 		if err != nil {
+			fmt.Printf("GAS. From: %v, To: %v, Value: %v, Data: %v\n\n", opts.From.String(), contract.String(), value.String(), string(input))
 			return nil, fmt.Errorf("failed to estimate gas needed: %v", err)
 		}
 	}

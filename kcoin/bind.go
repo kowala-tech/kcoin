@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/internal/kcoinapi"
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/rpc"
+	"fmt"
 )
 
 // ContractBackend implements bind.ContractBackend with direct calls to Kowala
@@ -111,6 +112,7 @@ func (b *ContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error)
 // requirement as other transactions may be added or removed by validators, but it
 // should provide a basis for setting a reasonable default.
 func (b *ContractBackend) EstimateGas(ctx context.Context, msg kowala.CallMsg) (uint64, error) {
+	fmt.Println("!!! ContractBackend.EstimateGas")
 	out, err := b.bcapi.EstimateGas(ctx, toCallArgs(msg))
 	return uint64(out), err
 }

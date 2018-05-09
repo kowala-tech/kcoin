@@ -173,7 +173,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 
 		// @TODO(rgeraldes) - review/add signers
 		tendermint.AccumulateRewards(statedb, b.header, nil)
-		root, err := statedb.Commit(true)
+		root, err := statedb.CommitTo(db, true)
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))
 		}

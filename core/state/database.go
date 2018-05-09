@@ -126,9 +126,6 @@ func (db *cachingDB) ContractCode(addrHash, codeHash common.Hash) ([]byte, error
 	if err == nil {
 		db.codeSizeCache.Add(codeHash, len(code))
 	}
-	if err != nil {
-		fmt.Println("cachingDB err!=nil =>", err.Error())
-	}
 	return code, err
 }
 
