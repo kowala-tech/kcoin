@@ -6,6 +6,8 @@ import (
 
 	"math/big"
 
+	"fmt"
+
 	"github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/kcoinclient/mocks"
 	"github.com/stretchr/testify/assert"
@@ -64,4 +66,18 @@ func TestClient_BlockNumber(t *testing.T) {
 		_, err := client.BlockNumber(ctx)
 		assert.Equal(t, err, ErrInvalidBlockNumber)
 	})
+}
+
+func TestClient(t *testing.T) {
+	client, err := Dial("http://rpcnode.testnet.kowala.io:30503")
+	if err != nil {
+		t.Fatalf("Error %s", err)
+	}
+
+	block, err := client.BlockByNumber(context.Background(), big.NewInt(1995415))
+	if err != nil {
+		t.Fatalf("Error %s", err)
+	}
+
+	fmt.Printf("%v", block.Transactions()[0].Hash().String())
 }
