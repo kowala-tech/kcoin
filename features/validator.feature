@@ -21,6 +21,8 @@ Feature: Joining network as a validator
     Given I have my node running using account A
     And I start validator with 5 kcoins deposit
     And I wait for my node to be synced
+    And My node is already synchronised
+    And the balance of A should be around 995 kcoins
     And I should be a validator
     When I withdraw my node from validation
     Then There should be 5 kcoins available to me after 5 days
@@ -29,12 +31,14 @@ Feature: Joining network as a validator
     Given I have my node running using account A
     And I start validator with 5 kcoins deposit
     And I wait for my node to be synced
+    And My node is already synchronised
+    And the balance of A should be around 995 kcoins
     And I should be a validator
 
      # do some transactions
     When I unlock the account A with password 'test'
-    And I transfer 1 kcoin from A to B
-    And the balance of A should be around 9 kcoins
+    And I transfer 10 kcoin from A to B
+    And the balance of A should be around 985 kcoins
 
     # check if some reward was generated
     # Then the balance of B should be 20 kcoins
