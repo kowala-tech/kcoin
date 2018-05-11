@@ -101,6 +101,7 @@ func (ctx *ValidationContext) IWithdrawMyNodeFromValidation() error {
 		log.Debug(res.StdOut)
 		return err
 	}
+	time.Sleep(time.Second * 5)
 	return nil
 }
 
@@ -185,6 +186,7 @@ func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
 		log.Debug(res.StdOut)
 		return errors.New("node is not synced")
 	}
+	time.Sleep(time.Second * 5)
 	return nil
 }
 

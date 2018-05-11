@@ -13,6 +13,7 @@ Feature: Joining network as a validator
     When I start validator with 5 kcoins deposit
     And I wait for my node to be synced
     And My node is already synchronised
+    And the balance of A should be around 995 kcoins
     Then I should be a validator
     And I withdraw my node from validation
 
@@ -20,7 +21,6 @@ Feature: Joining network as a validator
     Given I have my node running using account A
     And I start validator with 5 kcoins deposit
     And I wait for my node to be synced
-    And My node is already synchronised
     And I should be a validator
     When I withdraw my node from validation
     Then There should be 5 kcoins available to me after 5 days
