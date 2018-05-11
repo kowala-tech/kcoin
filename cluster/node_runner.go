@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -22,10 +21,11 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/log"
+	"io"
 )
 
 type NodeRunner interface {
-	Run(node *NodeSpec) error
+	Run(node *NodeSpec, scenarioNumber int) error
 	Stop(nodeID NodeID) error
 	StopAll() error
 	Log(nodeID NodeID) (string, error)
@@ -44,7 +44,6 @@ type dockerNodeRunner struct {
 	runningNodes map[NodeID]bool
 	client       *client.Client
 	logsDir      string
-	logsCount    int
 }
 
 func NewDockerNodeRunner(logsDir string) (*dockerNodeRunner, error) {
@@ -59,7 +58,7 @@ func NewDockerNodeRunner(logsDir string) (*dockerNodeRunner, error) {
 	}, nil
 }
 
-func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
+func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int) error {
 	portSpec := make([]string, 0)
 
 	for hostPortRaw, containerPortRaw := range node.PortMapping {
@@ -93,17 +92,17 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 		return err
 	}
 
-	logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%v-%v.log", runner.logsCount, node.ID))
-	runner.logsCount += 1
+	logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%03d-%v.log", scenarioNumber, node.ID))
 	logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
+		log.Error(fmt.Sprintf("error creating container logs file %q: %s", logFilename, err))
 		return err
 	}
 	go func() {
 		defer logFile.Close()
 		err := runner.logStream(node.ID, logFile)
 		if err != nil {
-			log.Error("error saving container logs to file", err)
+			log.Error(fmt.Sprintf("error saving container logs to file %q: %s", logFilename, err))
 		}
 	}()
 

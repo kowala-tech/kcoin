@@ -50,22 +50,32 @@ func (ctx *Context) PrepareCluster() error {
 	if err := ctx.buildDockerImages(); err != nil {
 		return err
 	}
-	fmt.Println("Running bootnode")
+
+	fmt.Println("Starting nodes")
+	if err := ctx.runNodes(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ctx *Context) runNodes() error {
 	if err := ctx.runBootnode(); err != nil {
 		return err
 	}
-	fmt.Println("Running genesis validator")
+
 	if err := ctx.runGenesisValidator(); err != nil {
 		return err
 	}
-	fmt.Println("Triggering genesis validation")
+
 	if err := ctx.triggerGenesisValidation(); err != nil {
 		return err
 	}
-	fmt.Println("Running RPC node")
+
 	if err := ctx.runRpc(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -113,7 +123,7 @@ func (ctx *Context) runBootnode() error {
 	if err != nil {
 		return err
 	}
-	if err := ctx.nodeRunner.Run(bootnode); err != nil {
+	if err := ctx.nodeRunner.Run(bootnode, ctx.scenarioNumber); err != nil {
 		return err
 	}
 	err = common.WaitFor("fetching bootnode enode", 1*time.Second, 20*time.Second, func() bool {
@@ -153,7 +163,7 @@ func (ctx *Context) runGenesisValidator() error {
 		WithDeposit(big.NewInt(1)).
 		NodeSpec()
 
-	if err := ctx.nodeRunner.Run(spec); err != nil {
+	if err := ctx.nodeRunner.Run(spec, ctx.scenarioNumber); err != nil {
 		return err
 	}
 
@@ -172,7 +182,7 @@ func (ctx *Context) runRpc() error {
 		WithRpc(8080).
 		NodeSpec()
 
-	if err := ctx.nodeRunner.Run(spec); err != nil {
+	if err := ctx.nodeRunner.Run(spec, ctx.scenarioNumber); err != nil {
 		return err
 	}
 

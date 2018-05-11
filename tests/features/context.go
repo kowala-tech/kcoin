@@ -31,6 +31,8 @@ type Context struct {
 	lastTxErr error
 
 	lastUnlockErr error
+
+	scenarioNumber int
 }
 
 func NewTestContext(chainID *big.Int) *Context {
@@ -47,4 +49,8 @@ func NewTestContext(chainID *big.Int) *Context {
 
 func (ctx *Context) Reset() {
 	ctx.accounts = make(map[string]accounts.Account)
+	ctx.nodeRunner.StopAll()
+
+	ctx.scenarioNumber++
+	ctx.runNodes()
 }

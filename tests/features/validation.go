@@ -12,6 +12,7 @@ import (
 	"github.com/DATA-DOG/godog"
 	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/common"
 )
 
 type ValidationContext struct {
@@ -19,6 +20,7 @@ type ValidationContext struct {
 	nodeID          cluster.NodeID
 	accountPassword string
 	nodeRunning     bool
+	scenarioNumber  *int
 }
 
 func NewValidationContext(parentCtx *Context) *ValidationContext {
@@ -27,6 +29,7 @@ func NewValidationContext(parentCtx *Context) *ValidationContext {
 		nodeID:          cluster.NodeID("validator-under-test"),
 		accountPassword: "test",
 		nodeRunning:     false,
+		scenarioNumber:  &parentCtx.scenarioNumber,
 	}
 }
 
@@ -50,6 +53,12 @@ func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
 		return err
 	}
 	return nil
+}
+
+func (ctx *ValidationContext) IWaitForMyNodeToBeSynced() error {
+	return common.WaitFor("timeout waiting for node sync", time.Second, time.Second*5, func() bool {
+		return ctx.MyNodeIsAlreadySynchronised() == nil
+	})
 }
 
 func (ctx *ValidationContext) IShouldBeAValidator() error {
@@ -81,7 +90,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.accounts[account]).
 		NodeSpec()
 
-	if err := ctx.globalCtx.nodeRunner.Run(spec); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(spec, *ctx.scenarioNumber); err != nil {
 		return err
 	}
 
@@ -151,12 +160,38 @@ func parseDate(date string) time.Time {
 }
 
 func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
-	return godog.ErrPending
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID, isRunningCommand())
+	if err != nil {
+		log.Debug(res.StdOut)
+		return err
+	}
+	if strings.TrimSpace(res.StdOut) != "false" {
+		log.Debug(res.StdOut)
+		return errors.New("validator running")
+	}
+	return nil
 }
 
 func (ctx *ValidationContext) Reset() {
 	ctx.nodeRunning = false
 	ctx.globalCtx.nodeRunner.Stop(ctx.nodeID)
+}
+
+func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID, isSyncedCommand())
+	if err != nil {
+		log.Debug(res.StdOut)
+		return err
+	}
+	if strings.TrimSpace(res.StdOut) != "true" {
+		log.Debug(res.StdOut)
+		return errors.New("node is not synced")
+	}
+	return nil
+}
+
+func isSyncedCommand() []string {
+	return cluster.KcoinExecCommand("eth.blockNumber > 0 && eth.syncing == false")
 }
 
 func setDeposit(kcoin int64) []string {
