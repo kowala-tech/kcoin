@@ -48,7 +48,10 @@ func (ctx *Context) LastTransactionFailed() error {
 
 func (ctx *Context) isTransactionInBlockchain(tx *types.Transaction) (bool, error) {
 	receipt, err := ctx.client.TransactionReceipt(context.Background(), tx.Hash())
-	return receipt.Status == types.ReceiptStatusSuccessful, err
+	if err != nil {
+		return false, err
+	}
+	return receipt.Status == types.ReceiptStatusSuccessful, nil
 }
 
 func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
