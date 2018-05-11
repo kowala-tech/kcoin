@@ -128,18 +128,9 @@ func (ctx *Context) TheBalanceIsAround(accountName string, kcoin int64) error {
 		return err
 	}
 
-	// diff is the percent (0-100) difference between the expected and the balance
-	// diff = abs(100 - ((expected * 100) / balance)
-	diff := &big.Int{}
-	diff.Set(expected)
-	diff.Mul(diff, big.NewInt(100))
-	diff.Div(diff, balance)
-	diff.Sub(big.NewInt(100), diff)
-	diff.Abs(diff)
-
 	maxDiff := big.NewInt(3) // Allow up to 3% difference
-	if diff.Cmp(maxDiff) >= 0 {
-		return fmt.Errorf("Balance expected to be around %v but is %v", expected, balance)
+	if !bigIntWithin(expected, balance, maxDiff) {
+		return fmt.Errorf("Balance expected to be around %v ± %v%% but is %v", expected, maxDiff.Int64(), balance)
 	}
 	return nil
 }
@@ -155,4 +146,16 @@ func (ctx *Context) createAccount(accountName string, password string) (accounts
 
 	ctx.accounts[accountName] = account
 	return account, nil
+}
+
+func bigIntWithin(x, y, delta *big.Int) bool {
+	// diff = abs(100 - ((x * 100) / y)
+	diff := &big.Int{}
+	diff.Set(x)
+	diff.Mul(diff, big.NewInt(100))
+	diff.Div(diff, y)
+	diff.Sub(big.NewInt(100), diff)
+	diff.Abs(diff)
+
+	return diff.Cmp(delta) <= 0
 }
