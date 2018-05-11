@@ -190,7 +190,7 @@ func (val *validator) preCommitWaitState() stateFn {
 		return val.commitState
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
-		return val.commitState
+		return val.newRoundState
 	}
 }
 
