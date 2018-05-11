@@ -24,23 +24,23 @@ func init() {
 
 			options := genesis.Options{
 				Network:           viper.GetString("genesis.network"),
-				PrefundedAccounts: parsePrefundedAccounts(viper.Get("genesis.prefundedAccounts")),
+				PrefundedAccounts: parsePrefundedAccounts(viper.Get("prefundedAccounts")),
 				Consensus: &genesis.ConsensusOpts{
-					Engine:           viper.GetString("consensus.engine"),
-					MaxNumValidators: uint64(viper.GetInt64("consensus.maxNumValidators")),
-					FreezePeriod:     uint64(viper.GetInt64("consensus.freezePeriod")),
-					BaseDeposit:      uint64(viper.GetInt64("consensus.baseDeposit")),
-					Validators:       viper.GetStringSlice("consensus.validators"),
+					Engine:           viper.GetString("genesis.consensus.engine"),
+					MaxNumValidators: uint64(viper.GetInt64("genesis.consensus.maxNumValidators")),
+					FreezePeriod:     uint64(viper.GetInt64("genesis.consensus.freezePeriod")),
+					BaseDeposit:      uint64(viper.GetInt64("genesis.consensus.baseDeposit")),
+					Validators:       viper.GetStringSlice("genesis.consensus.validators"),
 				},
 				DataFeedSystem: &genesis.DataFeedSystemOpts{
-					MaxNumOracles: uint64(viper.GetInt64("datafeed.maxNumOracles")),
-					FreezePeriod:  uint64(viper.GetInt64("datafeed.freezePeriod")),
-					BaseDeposit:   uint64(viper.GetInt64("datafeed.baseDeposit")),
+					MaxNumOracles: uint64(viper.GetInt64("genesis.dataFeed.maxNumOracles")),
+					FreezePeriod:  uint64(viper.GetInt64("genesis.dataFeed.freezePeriod")),
+					BaseDeposit:   uint64(viper.GetInt64("genesis.dataFeed.baseDeposit")),
 				},
 				Governance: &genesis.GovernanceOpts{
-					Origin:           viper.GetString("governance.origin"),
-					Governors:        viper.GetStringSlice("governance.governors"),
-					NumConfirmations: uint64(viper.GetInt64("governance.numConfirmations")),
+					Origin:           viper.GetString("genesis.governance.origin"),
+					Governors:        viper.GetStringSlice("genesis.governance.governors"),
+					NumConfirmations: uint64(viper.GetInt64("genesis.governance.numConfirmations")),
 				},
 				ExtraData: viper.GetString("genesis.extraData"),
 			}
@@ -49,7 +49,7 @@ func init() {
 
 			file, err := os.Create(fileName)
 			if err != nil {
-				fmt.Printf("Error generating file: %s", err)
+				fmt.Printf("Error during file creation: %s", err)
 				os.Exit(1)
 			}
 
@@ -65,42 +65,42 @@ func init() {
 	}
 
 	cmd.Flags().StringP("config", "c", "", "Use to load configuration from config file.")
-	cmd.Flags().StringP("fileName", "o", "genesis.json", "The output filename (default:genesis.json).")
+	cmd.Flags().StringP("fileName", "f", "genesis.json", "The output filename (default:genesis.json).")
 	viper.BindPFlag("genesis.fileName", cmd.Flags().Lookup("fileName"))
 
 	// governance
 	cmd.Flags().StringP("origin", "", "", "The creator's address")
-	viper.BindPFlag("governance.origin", cmd.Flags().Lookup("origin"))
+	viper.BindPFlag("genesis.governance.origin", cmd.Flags().Lookup("origin"))
 	cmd.Flags().StringSliceP("governors", "", []string{}, "Kowala blockchain governors")
-	viper.BindPFlag("genesis.governors", cmd.Flags().Lookup("governors"))
+	viper.BindPFlag("genesis.governance.governors", cmd.Flags().Lookup("governors"))
 	cmd.Flags().Uint64P("numConfirmations", "", 0, "Number of required confirmations to post a transaction")
-	viper.BindPFlag("genesis.numConfirmations", cmd.Flags().Lookup("numConfirmations"))
+	viper.BindPFlag("genesis.governance.numConfirmations", cmd.Flags().Lookup("numConfirmations"))
 
 	// system
-	cmd.Flags().StringP("network", "n", "", "The network to use, test or main")
+	cmd.Flags().StringP("network", "n", "test", "The network to use, test or main")
 	viper.BindPFlag("genesis.network", cmd.Flags().Lookup("network"))
 	cmd.Flags().StringP("prefundedAccounts", "a", "", "The prefunded accounts in format 0x212121:12,0x212121:14")
 	viper.BindPFlag("prefundedAccounts", cmd.Flags().Lookup("prefundedAccounts"))
 
 	// consensus
 	cmd.Flags().StringP("engine", "e", "", "The consensus engine, right now, tendermint is the only available option")
-	viper.BindPFlag("consensus.engine", cmd.Flags().Lookup("consensusEngine"))
+	viper.BindPFlag("genesis.consensus.engine", cmd.Flags().Lookup("engine"))
 	cmd.Flags().Uint64P("maxNumValidators", "v", 100, "The maximum number of validators.")
-	viper.BindPFlag("consensus.maxNumValidators", cmd.Flags().Lookup("maxNumValidators"))
+	viper.BindPFlag("genesis.consensus.maxNumValidators", cmd.Flags().Lookup("maxNumValidators"))
 	cmd.Flags().Uint64P("consensusFreeze", "", 0, "The consensus's deposit freeze period in days.")
-	viper.BindPFlag("consensus.freezePeriod", cmd.Flags().Lookup("consensusFreeze"))
+	viper.BindPFlag("genesis.consensus.freezePeriod", cmd.Flags().Lookup("consensusFreeze"))
 	cmd.Flags().Uint64P("consensusBaseDeposit", "", 0, "Base deposit for the consensus")
-	viper.BindPFlag("consensus.baseDeposit", cmd.Flags().Lookup("consensusBaseDeposit"))
+	viper.BindPFlag("genesis.consensus.baseDeposit", cmd.Flags().Lookup("consensusBaseDeposit"))
 	cmd.Flags().StringSliceP("validators", "", []string{}, "List of consensus validators")
-	viper.BindPFlag("consensus.validators", cmd.Flags().Lookup("validators"))
+	viper.BindPFlag("genesis.consensus.validators", cmd.Flags().Lookup("validators"))
 
 	// data feed system
 	cmd.Flags().Uint64P("maxNumOracles", "o", 0, "The maximum num of oracles.")
-	viper.BindPFlag("datafeed.maxNumOracles", cmd.Flags().Lookup("maxNumOracles"))
+	viper.BindPFlag("genesis.dataFeed.maxNumOracles", cmd.Flags().Lookup("maxNumOracles"))
 	cmd.Flags().Uint64P("oracleFreezePeriod", "", 0, "The oracle's deposit freeze period in days.")
-	viper.BindPFlag("datafeed.freezePeriod", cmd.Flags().Lookup("oracleUnbondingPeriod"))
+	viper.BindPFlag("genesis.dataFeed.freezePeriod", cmd.Flags().Lookup("oracleFreezePeriod"))
 	cmd.Flags().StringP("oracleBaseDeposit", "", "", "Base deposit for the oracle activity")
-	viper.BindPFlag("datafeed.baseDeposit", cmd.Flags().Lookup("oracleBaseDeposit"))
+	viper.BindPFlag("genesis.dataFeed.baseDeposit", cmd.Flags().Lookup("oracleBaseDeposit"))
 
 	// other
 	cmd.Flags().StringP("extraData", "d", "", "Extra data")

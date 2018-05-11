@@ -5,6 +5,11 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/pkg/errors"
+)
+
+var (
+	ErrInvalidAddress = errors.New("Invalid address")
 )
 
 type Options struct {
@@ -95,7 +100,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		return nil, err
 	}
 
-	multiSigOwners := make([]common.Address, len(options.Governance.Governors), 0)
+	multiSigOwners := make([]common.Address, 0, len(options.Governance.Governors))
 	for _, governor := range options.Governance.Governors {
 		owner, err := getAddress(governor)
 		if err != nil {
@@ -108,12 +113,10 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// consensus
 	maxNumValidators := new(big.Int).SetUint64(options.Consensus.MaxNumValidators)
-
 	consensusBaseDeposit := new(big.Int).SetUint64(options.Consensus.BaseDeposit)
-
 	consensusFreezePeriod := new(big.Int).SetUint64(options.Consensus.FreezePeriod)
 
-	validators := make([]common.Address, len(options.Consensus.Validators), 0)
+	validators := make([]common.Address, 0, len(options.Consensus.Validators))
 	for _, validator := range options.Consensus.Validators {
 		validator, err := getAddress(validator)
 		if err != nil {
@@ -125,12 +128,10 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// data feed system
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
-
 	oracleBaseDeposit := new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit)
-
 	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
 
-	// optional
+	// funds
 	validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
 	if err != nil {
 		return nil, err
@@ -166,7 +167,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 func getAddress(s string) (*common.Address, error) {
 	if !common.IsHexAddress(s) {
-		return nil, fmt.Errorf("", "")
+		return nil, fmt.Errorf("%s:%s", ErrInvalidAddress, s)
 	}
 	address := common.HexToAddress(s)
 

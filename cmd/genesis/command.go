@@ -2,8 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	"io"
+
+	"github.com/kowala-tech/kcoin/kcoin/genesis"
 )
 
 type generateGenesisFileCommandHandler struct {

@@ -22,7 +22,7 @@ const RegistrationHandler = "RegisterValidator()"
 
 // MapChainIDToAddr maps the contract address (const) per network
 var MapChainIDToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"),
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x80eDa603028fe504B57D14d947c8087c1798D800"),
 }
 
 // ValidatorsChecksum lets a validator know if there are changes in the validator set
