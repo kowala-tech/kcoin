@@ -6,6 +6,9 @@ import (
 )
 
 func WaitFor(errorMessage string, tickTime, timeout time.Duration, condition func() bool) error {
+	if condition() {
+		return nil
+	}
 	timeoutTime := time.After(timeout)
 	tick := time.Tick(tickTime)
 
