@@ -14,6 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/contracts/nameservice"
 	"github.com/kowala-tech/kcoin/contracts/oracle"
 	"github.com/kowala-tech/kcoin/contracts/ownership"
+	"github.com/kowala-tech/kcoin/contracts/token"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/vm"
@@ -90,7 +91,7 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 	stateDB, err := state.New(common.Hash{}, state.NewDatabase(db))
 	if err != nil {
 		return nil, err
-	} 
+	}
 
 	multiSigAddr, err := addMultiSigWallet(stateDB, validOptions.multiSig, genesis)
 	if err != nil {
@@ -108,7 +109,16 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 		return nil, err
 	}
 
-	domains := []*domain{&domain{params.ConsensusServiceDomain, *validatorMgrAddr}, &domain{params.OracleServiceDomain, *oracleMgrAddr}}
+	miningTokenAddr, err := addMiningToken(stateDB, validOptions.miningToken, genesis, contractsOwner)
+	if err != nil {
+		return nil, err
+	}
+
+	domains := []*domain{
+		&domain{params.ConsensusServiceDomain, *validatorMgrAddr}, 
+		&domain{params.OracleServiceDomain, *oracleMgrAddr},
+		&domain{params.MiningTokenDomain, *miningTokenAddr},
+	}
 	_, err = addNameServiceWithDomains(stateDB, genesis, contractsOwner, domains)
 	if err != nil {
 		return nil, err
@@ -243,6 +253,54 @@ func addValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesi
 	return &contractAddr, nil
 }
 
+// addMiningToken includes the mUSD token contract in the genesis block
+func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
+	tokenABI, err := abi.JSON(strings.NewReader(oracle.OracleManagerABI))
+	if err != nil {
+		return nil, err
+	}
+
+	tokenParams, err := tokenABI.Pack(
+		"",
+		opts.name,
+		opts.symbol,
+		opts.cap,
+		opts.decimals,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	runtimeCfg := getDefaultRuntimeConfig(stateDB)
+	runtimeCfg.Origin = *owner
+	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(oracle.OracleManagerBin), tokenParams...), runtimeCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, account := range opts.prefundedAccounts {
+		mintParams, err := tokenABI.Pack(
+			"mint",
+			account,
+			new(big.Int).SetUint64(1),
+		)
+		if err != nil {
+			return nil, err
+		}
+		// mint tokens
+		runtime.Call(contractAddr, append(common.FromHex(token.MiningTokenBin), mintParams...), runtimeCfg)
+	}
+
+
+	genesis.Alloc[contractAddr] = core.GenesisAccount{
+		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
+		Code:    contractCode,
+		Balance: new(big.Int),
+	}
+
+	return &contractAddr, nil
+}
+
 // addOracleMgr includes the oracle manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
 func addOracleMgr(stateDB *state.StateDB, opts *validOracleMgrOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
@@ -263,7 +321,6 @@ func addOracleMgr(stateDB *state.StateDB, opts *validOracleMgrOpts, genesis *cor
 
 	runtimeCfg := getDefaultRuntimeConfig(stateDB)
 	runtimeCfg.Origin = *owner
-	// create contract
 	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(oracle.OracleManagerBin), managerParams...), runtimeCfg)
 	if err != nil {
 		return nil, err

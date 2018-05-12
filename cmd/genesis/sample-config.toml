@@ -10,10 +10,16 @@
 
     [genesis.consensus]
         engine = "tendermint" 
-        maxNumValidators = 100
+        maxNumValidators = 1000
         freezePeriod = 0
         baseDeposit = 0
         validators = ["0xd6e579085c82329c89fca7a9f012be59028ed53f"]
+
+        [genesis.consensus.token]
+            name = "mUSD"
+            symbol = "mUSD"
+            cap = 1073741824
+            decimals = 18
 
     [genesis.dataFeed]
         maxNumOracles = 1000

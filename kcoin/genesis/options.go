@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/params"
 	"github.com/pkg/errors"
 )
 
@@ -21,12 +22,20 @@ type Options struct {
 	ExtraData         string
 }
 
+type MiningTokenOpts struct {
+	Name     string
+	Symbol   string
+	Cap      uint64
+	Decimals uint8
+}
+
 type ConsensusOpts struct {
 	Engine           string
 	MaxNumValidators uint64
 	FreezePeriod     uint64
 	BaseDeposit      uint64
 	Validators       []string
+	MiningToken      *MiningTokenOpts
 }
 
 type GovernanceOpts struct {
@@ -59,6 +68,14 @@ type validOracleMgrOpts struct {
 	baseDeposit   *big.Int
 }
 
+type validMiningTokenOpts struct {
+	name              string
+	symbol            string
+	cap               *big.Int
+	decimals          *big.Int
+	prefundedAccounts []common.Address
+}
+
 type validMultiSigOpts struct {
 	multiSigCreator  *common.Address
 	multiSigOwners   []common.Address
@@ -77,6 +94,7 @@ type validGenesisOptions struct {
 	multiSig          *validMultiSigOpts
 	validatorMgr      *validValidatorMgrOpts
 	oracleMgr         *validOracleMgrOpts
+	miningToken       *validMiningTokenOpts
 	ExtraData         string
 }
 
@@ -131,6 +149,11 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	oracleBaseDeposit := new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit)
 	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
 
+	// mining tokens
+	// @TODO (rgeraldes) - calculate the cap based on the decimals provided
+	decimals := new(big.Int).SetUint64(uint64(options.Consensus.MiningToken.Decimals))
+	cap := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.MiningToken.Cap), big.NewInt(params.Ether))
+
 	// funds
 	validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
 	if err != nil {
@@ -159,6 +182,13 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			maxNumOracles: maxNumOracles,
 			freezePeriod:  oracleFreezePeriod,
 			baseDeposit:   oracleBaseDeposit,
+		},
+		miningToken: &validMiningTokenOpts{
+			name:              options.Consensus.MiningToken.Name,
+			symbol:            options.Consensus.MiningToken.Symbol,
+			cap:               cap,
+			decimals:          decimals,
+			prefundedAccounts: validators,
 		},
 		prefundedAccounts: validPrefundedAccounts,
 		ExtraData:         options.ExtraData,

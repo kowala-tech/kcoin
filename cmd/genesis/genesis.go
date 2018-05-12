@@ -31,6 +31,12 @@ func init() {
 					FreezePeriod:     uint64(viper.GetInt64("genesis.consensus.freezePeriod")),
 					BaseDeposit:      uint64(viper.GetInt64("genesis.consensus.baseDeposit")),
 					Validators:       viper.GetStringSlice("genesis.consensus.validators"),
+					MiningToken: &genesis.MiningTokenOpts{
+						Name:   viper.GetString("genesis.consensus.token.name"),
+						Symbol: viper.GetString("genesis.consensus.token.symbol"),
+						Cap:    uint64(viper.GetInt64("genesis.consensus.token.cap")),
+						Decimals: uint8(viper.GetInt("genesis.consensus.token.decimals")),
+					},
 				},
 				DataFeedSystem: &genesis.DataFeedSystemOpts{
 					MaxNumOracles: uint64(viper.GetInt64("genesis.dataFeed.maxNumOracles")),
