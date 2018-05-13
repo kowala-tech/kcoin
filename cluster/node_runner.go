@@ -44,9 +44,10 @@ type dockerNodeRunner struct {
 	runningNodes map[NodeID]bool
 	client       *client.Client
 	logsDir      string
+	feature      string
 }
 
-func NewDockerNodeRunner(logsDir string) (*dockerNodeRunner, error) {
+func NewDockerNodeRunner(logsDir, feature string) (*dockerNodeRunner, error) {
 	client, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
@@ -55,6 +56,7 @@ func NewDockerNodeRunner(logsDir string) (*dockerNodeRunner, error) {
 		client:       client,
 		runningNodes: make(map[NodeID]bool, 0),
 		logsDir:      logsDir,
+		feature:      feature,
 	}, nil
 }
 
@@ -92,7 +94,7 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int) error {
 		return err
 	}
 
-	logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%03d-%v.log", scenarioNumber, node.ID))
+	logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%03d-%v.log", runner.feature, scenarioNumber, node.ID))
 	logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		log.Error(fmt.Sprintf("error creating container logs file %q: %s", logFilename, err))

@@ -17,20 +17,20 @@ import (
 
 type ValidationContext struct {
 	globalCtx       *Context
-	nodeID          cluster.NodeID
 	accountPassword string
 	nodeRunning     bool
-	scenarioNumber  *int
 }
 
 func NewValidationContext(parentCtx *Context) *ValidationContext {
 	return &ValidationContext{
 		globalCtx:       parentCtx,
-		nodeID:          cluster.NodeID("validator-under-test"),
 		accountPassword: "test",
 		nodeRunning:     false,
-		scenarioNumber:  &parentCtx.scenarioNumber,
 	}
+}
+
+func (ctx *ValidationContext) nodeID() cluster.NodeID {
+	return cluster.NodeID("validator-under-test-"+ctx.globalCtx.nodeSuffix)
 }
 
 func (ctx *ValidationContext) IStopValidation() error {
@@ -42,12 +42,12 @@ func (ctx *ValidationContext) IWaitForTheUnbondingPeriodToBeOver() error {
 }
 
 func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID, setDeposit(kcoin))
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), setDeposit(kcoin))
 	if err != nil {
 		log.Debug(res.StdOut)
 		return err
 	}
-	res, err = ctx.globalCtx.nodeRunner.Exec(ctx.nodeID, validatorStartCommand())
+	res, err = ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), validatorStartCommand())
 	if err != nil {
 		log.Debug(res.StdOut)
 		return err
@@ -62,7 +62,7 @@ func (ctx *ValidationContext) IWaitForMyNodeToBeSynced() error {
 }
 
 func (ctx *ValidationContext) IShouldBeAValidator() error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID, isRunningCommand())
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isRunningCommand())
 	if err != nil {
 		log.Debug(res.StdOut)
 		return err
@@ -83,14 +83,14 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.globalCtx.bootnode).
 		WithLogLevel(3).
-		WithID(ctx.nodeID.String()).
+		WithID(ctx.nodeID().String()).
 		WithSyncMode("full").
 		WithNetworkId(ctx.globalCtx.chainID.String()).
 		WithGenesis(ctx.globalCtx.genesis).
 		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.accounts[account]).
 		NodeSpec()
 
-	if err := ctx.globalCtx.nodeRunner.Run(spec, *ctx.scenarioNumber); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.scenarioNumber); err != nil {
 		return err
 	}
 
@@ -98,7 +98,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 }
 
 func (ctx *ValidationContext) IWithdrawMyNodeFromValidation() error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID, stopValidatingCommand())
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), stopValidatingCommand())
 	if err != nil {
 		log.Debug(res.StdOut)
 		return err
@@ -107,7 +107,7 @@ func (ctx *ValidationContext) IWithdrawMyNodeFromValidation() error {
 }
 
 func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expectedKcoins, days int) error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID, getDepositsCommand())
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), getDepositsCommand())
 	if err != nil {
 		log.Debug(res.StdOut)
 		return err
@@ -160,7 +160,7 @@ func parseDate(date string) time.Time {
 }
 
 func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID, isRunningCommand())
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isRunningCommand())
 	if err != nil {
 		log.Debug(res.StdOut)
 		return err
@@ -174,11 +174,11 @@ func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
 
 func (ctx *ValidationContext) Reset() {
 	ctx.nodeRunning = false
-	ctx.globalCtx.nodeRunner.Stop(ctx.nodeID)
+	ctx.globalCtx.nodeRunner.Stop(ctx.nodeID())
 }
 
 func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID, isSyncedCommand())
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isSyncedCommand())
 	if err != nil {
 		log.Debug(res.StdOut)
 		return err
