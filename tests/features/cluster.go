@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kowala-tech/kcoin/accounts"
@@ -15,8 +17,6 @@ import (
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	"github.com/kowala-tech/kcoin/kcoinclient"
 	"github.com/lazada/awg"
-	"sync"
-	"os"
 )
 
 var (
@@ -59,6 +59,7 @@ func (ctx *Context) PrepareCluster() error {
 }
 
 var initLogsOnce sync.Once
+
 func (ctx *Context) initLogs(logsDir string) error {
 	var err error
 	initLogsOnce.Do(func() {
@@ -203,7 +204,7 @@ func (ctx *Context) runRpc() error {
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.bootnode).
 		WithLogLevel(3).
-		WithID("rpc-"+ctx.nodeSuffix).
+		WithID("rpc-" + ctx.nodeSuffix).
 		WithSyncMode("full").
 		WithNetworkId(ctx.chainID.String()).
 		WithGenesis(ctx.genesis).

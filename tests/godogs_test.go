@@ -1,15 +1,14 @@
 package tests
 
 import (
-	"math/big"
-
 	"log"
+	"math/big"
+	"regexp"
+	"strings"
 
 	"github.com/DATA-DOG/godog"
-	"github.com/kowala-tech/kcoin/tests/features"
 	"github.com/DATA-DOG/godog/gherkin"
-	"strings"
-	"regexp"
+	"github.com/kowala-tech/kcoin/tests/features"
 )
 
 var (

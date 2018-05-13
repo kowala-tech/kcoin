@@ -3,16 +3,15 @@ package features
 import (
 	"errors"
 	"fmt"
-	"strings"
-
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/DATA-DOG/godog"
 	"github.com/kowala-tech/kcoin/cluster"
-	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 type ValidationContext struct {
@@ -30,7 +29,7 @@ func NewValidationContext(parentCtx *Context) *ValidationContext {
 }
 
 func (ctx *ValidationContext) nodeID() cluster.NodeID {
-	return cluster.NodeID("validator-under-test-"+ctx.globalCtx.nodeSuffix)
+	return cluster.NodeID("validator-under-test-" + ctx.globalCtx.nodeSuffix)
 }
 
 func (ctx *ValidationContext) IStopValidation() error {

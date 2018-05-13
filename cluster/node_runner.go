@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -21,7 +22,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/log"
-	"io"
 )
 
 type NodeRunner interface {

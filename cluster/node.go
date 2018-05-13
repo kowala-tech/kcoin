@@ -21,7 +21,7 @@ type NodeSpec struct {
 }
 
 func BootnodeSpec(nodeSuffix string) (*NodeSpec, error) {
-	id := NodeID("bootnode-"+nodeSuffix)
+	id := NodeID("bootnode-" + nodeSuffix)
 	spec := &NodeSpec{
 		ID:    id,
 		Image: "kowalatech/bootnode:dev",
