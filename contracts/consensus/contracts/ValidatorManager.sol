@@ -3,7 +3,7 @@ pragma solidity 0.4.21;
 import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 import "github.com/kowala-tech/kcoin/contracts/token/contracts/TokenReceiver.sol" as receiver;
 
-contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
+contract ValidatorManager is pausable.Pausable {
     uint public baseDeposit;       
     uint public maxValidators;
     // period in days
@@ -39,7 +39,7 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
 
     // onlyWithMinDeposit requires a minimum deposit to proceed
     modifier onlyWithMinDeposit {
-        require(msg.value >= getMinimumDeposit());
+        require(tkn.value >= getMinimumDeposit());
         _;
     }
 
@@ -51,7 +51,7 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
 
     // onlyNewCandidate required the sender to be a new candidate
     modifier onlyNewCandidate {
-        require(!isValidator(msg.sender));
+        require(!isValidator(tkn.sender));
         _;
     }
 
@@ -167,7 +167,7 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
         return (deposit.amount / 1 ether, deposit.availableAt);
     }
 
-    function _registerValidator() public tokenPayable whenNotPaused onlyNewCandidate onlyWithMinDeposit {
+    function _registerValidator() public whenNotPaused onlyNewCandidate onlyWithMinDeposit {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
         }
@@ -216,31 +216,19 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
         }
     }
 
-    // ERC223 - mUSD support
     struct TKN {
         address sender;
         uint value;
-        bytes data;
-        bytes4 sig;
+        //bytes data;
+        //bytes4 sig;
     }
 
     TKN tkn;
 
-    bool isTokenFallback = true;
-
-    modifier tokenPayable {
-        if (!isTokenFallback) revert();
-        _;
-    }
-
-    function tokenFallback(address _from, uint _value, bytes _data) public {}
-
-    // @NOTE (rgeraldes) - limitation - this is necessary for now since the golang bindings do not support
-    // method overloading and the choosen method for the bindings will be the method with the
-    // biggest signature which requires a custom fallback for ERC233 token transfer.
-    function tokenReceiver(address _from, uint _value, bytes _data) public {
-        uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
-        tkn = TKN(_from, _value, _data, bytes4(u));
+    function registerValidator(address _from, uint _value, bytes _data) public {
+        //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
+        // SSTORE
+        tkn = TKN(_from, _value/*, _data, bytes4(u)*/);
         _registerValidator();
     }
 }
