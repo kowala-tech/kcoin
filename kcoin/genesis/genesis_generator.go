@@ -115,10 +115,15 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 	}
 
 	domains := []*domain{
-		&domain{params.ConsensusServiceDomain, *validatorMgrAddr}, 
+		&domain{params.ConsensusServiceDomain, *validatorMgrAddr},
 		&domain{params.OracleServiceDomain, *oracleMgrAddr},
 		&domain{params.MiningTokenDomain, *miningTokenAddr},
 	}
+
+	for _, domain := range domains {
+		fmt.Printf("%s:%s\n", domain.name, domain.addr.Hex())
+	}
+
 	_, err = addNameServiceWithDomains(stateDB, genesis, contractsOwner, domains)
 	if err != nil {
 		return nil, err
@@ -248,14 +253,13 @@ func addValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesi
 		Code:    contractCode,
 		Balance: new(big.Int),
 	}
-	fmt.Printf("Do not forget to replace the hardcoded contract address @ contracts/consensus/consensus.go to %s!\n", contractAddr.Hex())
 
 	return &contractAddr, nil
 }
 
 // addMiningToken includes the mUSD token contract in the genesis block
 func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
-	tokenABI, err := abi.JSON(strings.NewReader(oracle.OracleManagerABI))
+	tokenABI, err := abi.JSON(strings.NewReader(token.MiningTokenABI))
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +269,8 @@ func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis 
 		opts.name,
 		opts.symbol,
 		opts.cap,
-		opts.decimals,
+		// @TODO (rgeraldes) - modify type
+		uint8(opts.decimals.Uint64()),
 	)
 	if err != nil {
 		return nil, err
@@ -273,7 +278,7 @@ func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis 
 
 	runtimeCfg := getDefaultRuntimeConfig(stateDB)
 	runtimeCfg.Origin = *owner
-	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(oracle.OracleManagerBin), tokenParams...), runtimeCfg)
+	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(token.MiningTokenBin), tokenParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +295,6 @@ func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis 
 		// mint tokens
 		runtime.Call(contractAddr, append(common.FromHex(token.MiningTokenBin), mintParams...), runtimeCfg)
 	}
-
 
 	genesis.Alloc[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],

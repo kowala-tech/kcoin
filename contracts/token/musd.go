@@ -12,7 +12,7 @@ import (
 //go:generate abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg token -type MiningToken -out ./gen_mtoken.go
 
 var MapChainIDToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"),
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
 }
 
 type MUSD struct {
@@ -25,5 +25,5 @@ func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*MUSD, er
 		return nil, err
 	}
 
-	return &MUSD{MiningToken: token} , nil
+	return &MUSD{MiningToken: token}, nil
 }

@@ -32,16 +32,16 @@ func init() {
 					BaseDeposit:      uint64(viper.GetInt64("genesis.consensus.baseDeposit")),
 					Validators:       viper.GetStringSlice("genesis.consensus.validators"),
 					MiningToken: &genesis.MiningTokenOpts{
-						Name:   viper.GetString("genesis.consensus.token.name"),
-						Symbol: viper.GetString("genesis.consensus.token.symbol"),
-						Cap:    uint64(viper.GetInt64("genesis.consensus.token.cap")),
-						Decimals: uint8(viper.GetInt("genesis.consensus.token.decimals")),
+						Name:     viper.GetString("genesis.consensus.token.name"),
+						Symbol:   viper.GetString("genesis.consensus.token.symbol"),
+						Cap:      uint64(viper.GetInt64("genesis.consensus.token.cap")),
+						Decimals: uint64(viper.GetInt64("genesis.consensus.token.decimals")),
 					},
 				},
 				DataFeedSystem: &genesis.DataFeedSystemOpts{
-					MaxNumOracles: uint64(viper.GetInt64("genesis.dataFeed.maxNumOracles")),
-					FreezePeriod:  uint64(viper.GetInt64("genesis.dataFeed.freezePeriod")),
-					BaseDeposit:   uint64(viper.GetInt64("genesis.dataFeed.baseDeposit")),
+					MaxNumOracles: uint64(viper.GetInt64("genesis.datafeed.maxNumOracles")),
+					FreezePeriod:  uint64(viper.GetInt64("genesis.datafeed.freezePeriod")),
+					BaseDeposit:   uint64(viper.GetInt64("genesis.datafeed.baseDeposit")),
 				},
 				Governance: &genesis.GovernanceOpts{
 					Origin:           viper.GetString("genesis.governance.origin"),
@@ -100,13 +100,23 @@ func init() {
 	cmd.Flags().StringSliceP("validators", "", []string{}, "List of consensus validators")
 	viper.BindPFlag("genesis.consensus.validators", cmd.Flags().Lookup("validators"))
 
+	// mining token
+	cmd.Flags().StringP("token.name", "", "", "The mining token name")
+	viper.BindPFlag("genesis.consensus.token.name", cmd.Flags().Lookup("token.name"))
+	cmd.Flags().StringP("token.symbol", "", "", "The mining token symbol")
+	viper.BindPFlag("genesis.consensus.token.symbol", cmd.Flags().Lookup("token.symbol"))
+	cmd.Flags().Uint64P("token.cap", "", 0, "The mining token cap")
+	viper.BindPFlag("genesis.consensus.token.cap", cmd.Flags().Lookup("token.cap"))
+	cmd.Flags().Uint64P("token.decimals", "", 0, "The mining token decimals")
+	viper.BindPFlag("genesis.consensus.token.decimals", cmd.Flags().Lookup("token.decimals"))
+
 	// data feed system
 	cmd.Flags().Uint64P("maxNumOracles", "o", 0, "The maximum num of oracles.")
-	viper.BindPFlag("genesis.dataFeed.maxNumOracles", cmd.Flags().Lookup("maxNumOracles"))
+	viper.BindPFlag("genesis.datafeed.maxNumOracles", cmd.Flags().Lookup("maxNumOracles"))
 	cmd.Flags().Uint64P("oracleFreezePeriod", "", 0, "The oracle's deposit freeze period in days.")
-	viper.BindPFlag("genesis.dataFeed.freezePeriod", cmd.Flags().Lookup("oracleFreezePeriod"))
+	viper.BindPFlag("genesis.datafeed.freezePeriod", cmd.Flags().Lookup("oracleFreezePeriod"))
 	cmd.Flags().StringP("oracleBaseDeposit", "", "", "Base deposit for the oracle activity")
-	viper.BindPFlag("genesis.dataFeed.baseDeposit", cmd.Flags().Lookup("oracleBaseDeposit"))
+	viper.BindPFlag("genesis.datafeed.baseDeposit", cmd.Flags().Lookup("oracleBaseDeposit"))
 
 	// other
 	cmd.Flags().StringP("extraData", "d", "", "Extra data")

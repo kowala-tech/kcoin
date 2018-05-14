@@ -1,30 +1,30 @@
 [genesis]
-    fileName = "genesis.json"
-    network = "test"
-    extraData = "Kowala's first block!"
+fileName = "genesis.json"
+network = "test"
+extraData = "Kowala's first block!"
 
-    [genesis.governance]
-        origin = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
-        governors = ["0x259be75d96876f2ada3d202722523e9cd4dd917d"]
-        numConfirmations = 1
+[genesis.governance]
+origin = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
+governors = ["0x259be75d96876f2ada3d202722523e9cd4dd917d"]
+numConfirmations = 1
 
-    [genesis.consensus]
-        engine = "tendermint" 
-        maxNumValidators = 1000
-        freezePeriod = 0
-        baseDeposit = 0
-        validators = ["0xd6e579085c82329c89fca7a9f012be59028ed53f"]
+[genesis.consensus]
+engine = "tendermint" 
+maxNumValidators = 1000
+freezePeriod = 0
+baseDeposit = 0
+validators = ["0xd6e579085c82329c89fca7a9f012be59028ed53f"]
 
-        [genesis.consensus.token]
-            name = "mUSD"
-            symbol = "mUSD"
-            cap = 1073741824
-            decimals = 18
+[genesis.consensus.token]
+name = "mUSD"
+symbol = "mUSD"
+cap = 1073741824
+decimals = 18
 
-    [genesis.dataFeed]
-        maxNumOracles = 1000
-        freezePeriod = 0
-        baseDeposit = 0
+[genesis.datafeed]
+maxNumOracles = 1000
+freezePeriod = 0
+baseDeposit = 0
 
 [[prefundedAccounts]]
 accountAddress = "0xd6e579085c82329c89fca7a9f012be59028ed53f"

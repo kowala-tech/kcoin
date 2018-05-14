@@ -217,7 +217,6 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
     }
 
     // ERC223 - mUSD support
-
     struct TKN {
         address sender;
         uint value;
@@ -227,7 +226,7 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
 
     TKN tkn;
 
-    bool isTokenFallback = false;
+    bool isTokenFallback = true;
 
     modifier tokenPayable {
         if (!isTokenFallback) revert();

@@ -26,7 +26,7 @@ type MiningTokenOpts struct {
 	Name     string
 	Symbol   string
 	Cap      uint64
-	Decimals uint8
+	Decimals uint64
 }
 
 type ConsensusOpts struct {
