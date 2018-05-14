@@ -3,7 +3,6 @@ package features
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -41,16 +40,16 @@ func (ctx *ValidationContext) IWaitForTheUnbondingPeriodToBeOver() error {
 }
 
 func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), setDeposit(kcoin))
+	_, err := ctx.Do(setDeposit(kcoin))
 	if err != nil {
-		log.Debug(res.StdOut)
 		return err
 	}
-	res, err = ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), validatorStartCommand())
+
+	_, err = ctx.Do(validatorStartCommand())
 	if err != nil {
-		log.Debug(res.StdOut)
 		return err
 	}
+
 	return nil
 }
 
@@ -97,11 +96,11 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 }
 
 func (ctx *ValidationContext) IWithdrawMyNodeFromValidation() error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), stopValidatingCommand())
+	_, err := ctx.Do(stopValidatingCommand())
 	if err != nil {
-		log.Debug(res.StdOut)
 		return err
 	}
+
 	return nil
 }
 
@@ -111,20 +110,21 @@ func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expected
 		log.Debug(res.StdOut)
 		return err
 	}
-	availableAt, kcoins, err := parseDepositsResponse(res.StdOut)
+
+	deposit, err := parseDepositResponse(res.StdOut)
 	if err != nil {
 		log.Debug(res.StdOut)
 		return err
 	}
 
-	if expectedKcoins != kcoins {
-		return errors.New(fmt.Sprintf("kcoins don't match expected %d kcoins got %d", expectedKcoins, kcoins))
+	if expectedKcoins != *deposit.Value {
+		return errors.New(fmt.Sprintf("kcoins don't match expected %d kcoins got %d", expectedKcoins, *deposit.Value))
 	}
 
 	daysExpected := time.Hour * 24 * time.Duration(days)
 	expectedDate := time.Now().Add(daysExpected)
-	if isSameDay(expectedDate, availableAt) {
-		return errors.New(fmt.Sprintf("deposit available not within %d days, available at %s", daysExpected, availableAt))
+	if isSameDay(expectedDate, deposit.AvailableAt.Time()) {
+		return errors.New(fmt.Sprintf("deposit available not within %d days, available at %s", daysExpected, deposit.AvailableAt.Time().String()))
 	}
 
 	return nil
@@ -136,26 +136,6 @@ func isSameDay(date1, date2 time.Time) bool {
 	return expectedYear != availableYear ||
 		expectedMonth != availableMonth ||
 		expectedDay != availableDay
-}
-
-func parseDepositsResponse(value string) (time.Time, int, error) {
-	re := regexp.MustCompile("\"(.+)\",\\s+value:\\s(\\d+)")
-	matches := re.FindAllStringSubmatch(value, -1)
-	if len(matches) == 0 || len(matches[0]) < 3 {
-		return time.Now(), 0, errors.New("cant find AvailableAt and Value on response")
-	}
-	return parseDate(matches[0][1]), parseKCoins(matches[0][2]), nil
-}
-
-func parseKCoins(kcoins string) int {
-	result, _ := strconv.Atoi(kcoins)
-	return result
-}
-
-func parseDate(date string) time.Time {
-	const longForm = "2006-01-02 15:04:05 -0700 MST"
-	t, _ := time.Parse(longForm, date)
-	return t
 }
 
 func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
@@ -187,6 +167,83 @@ func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
 		return errors.New("node is not synced")
 	}
 	return nil
+}
+
+// Do executes the command on the node and waits 1 block then
+func (ctx *ValidationContext) Do(command []string) (*cluster.ExecResponse, error) {
+	currentBlock, err := ctx.currentBlock()
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), command)
+	if err != nil {
+		log.Debug(res.StdOut)
+		return nil, err
+	}
+
+	err = ctx.waitBlocksFrom(currentBlock,1)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (ctx *ValidationContext) waitBlocksFrom(block, n int) error {
+	t := time.NewTicker(200*time.Millisecond)
+	timeout := time.NewTimer(20*time.Second)
+	defer t.Stop()
+
+	var (
+		err error
+		newBlock int
+	)
+
+waitLoop:
+	for {
+		select {
+		case <-timeout.C:
+			return fmt.Errorf("timeout. started with block %d, finished with %d", block, newBlock)
+		case <-t.C:
+			newBlock, err = ctx.currentBlock()
+			if err != nil {
+				return err
+			}
+
+			blocks := newBlock - block
+
+			if blocks >= n {
+				break waitLoop
+			}
+		}
+	}
+
+
+	return nil
+}
+
+func (ctx *ValidationContext) waitBlocks(n int) error {
+	currentBlock, err := ctx.currentBlock()
+	if err != nil {
+		return err
+	}
+
+	return ctx.waitBlocksFrom(currentBlock, n)
+}
+
+func (ctx *ValidationContext) currentBlock() (int, error) {
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), blockNumberCommand())
+	if err != nil {
+		log.Debug(res.StdOut)
+		return 0, err
+	}
+
+	return strconv.Atoi(strings.TrimSpace(res.StdOut))
+}
+
+func blockNumberCommand() []string {
+	return cluster.KcoinExecCommand("eth.blockNumber")
 }
 
 func isSyncedCommand() []string {

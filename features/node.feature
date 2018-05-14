@@ -5,7 +5,7 @@ Feature: Joining network
   Scenario: Connect a node to the network
     When I start a new node
     Then My node should sync with the network
- 
+
   Scenario: Disconnect and reconnect a node
     Given I start a new node
     And My node is already synchronised
