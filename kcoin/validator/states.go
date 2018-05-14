@@ -190,7 +190,7 @@ func (val *validator) preCommitWaitState() stateFn {
 		return val.commitState
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
-		return val.commitState
+		return val.newRoundState
 	}
 }
 
@@ -201,7 +201,11 @@ func (val *validator) commitState() stateFn {
 	work := val.work
 	chainDb := val.backend.ChainDb()
 
-	work.state.CommitTo(chainDb, true)
+	_, err := work.state.CommitTo(chainDb, true)
+	if err != nil {
+		log.Error("Failed writing block to chain", "err", err)
+		return nil
+	}
 
 	// update block hash since it is now available and not when
 	// the receipt/log of individual transactions were created
@@ -214,7 +218,7 @@ func (val *validator) commitState() stateFn {
 		log.BlockHash = block.Hash()
 	}
 
-	_, err := val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
+	_, err = val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return nil

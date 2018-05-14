@@ -20,8 +20,8 @@ type NodeSpec struct {
 	IsReadyFn   func(runner NodeRunner) bool
 }
 
-func BootnodeSpec() (*NodeSpec, error) {
-	id := NodeID("bootnode")
+func BootnodeSpec(nodeSuffix string) (*NodeSpec, error) {
+	id := NodeID("bootnode-" + nodeSuffix)
 	spec := &NodeSpec{
 		ID:    id,
 		Image: "kowalatech/bootnode:dev",
