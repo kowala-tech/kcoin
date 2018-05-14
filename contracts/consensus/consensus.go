@@ -71,7 +71,7 @@ func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensu
 }
 
 func (consensus *consensus) Join(walletAccount accounts.WalletAccount, amount uint64) error {
-	_, err := consensus.account.Transfer(consensus.transactOpts(walletAccount), consensus.managerAddr, new(big.Int).SetUint64(amount), []byte(RegistrationHandler), "customFallback")
+	_, err := consensus.account.Transfer(consensus.transactOpts(walletAccount), consensus.managerAddr, new(big.Int).SetUint64(amount), []byte(RegistrationHandler), "tokenReceiver")
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
 	}

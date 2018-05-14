@@ -238,9 +238,9 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
     // @NOTE (rgeraldes) - limitation - this is necessary for now since the golang bindings do not support
     // method overloading and the choosen method for the bindings will be the method with the
     // biggest signature which requires a custom fallback for ERC233 token transfer.
-    function customFallback(address _from, uint _value, bytes _data) public {
+    function tokenReceiver(address _from, uint _value, bytes _data) public {
         uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
         tkn = TKN(_from, _value, _data, bytes4(u));
-        if (!address(this).delegatecall(_data)) revert();
+        registerValidator();
     }
 }
