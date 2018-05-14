@@ -1,24 +1,11 @@
 package features
 
-import (
-	"sync"
-)
+import "sync/atomic"
 
-type atomicCounter struct {
-	n int
-	sync.Mutex
-}
+type atomicCounter int32
 
-var portCounter = newCounter()
+var portCounter = new(atomicCounter)
 
-func newCounter() *atomicCounter {
-	return &atomicCounter{}
-}
-
-func (c *atomicCounter) Get() int {
-	c.Lock()
-	c.n++
-	v := c.n
-	c.Unlock()
-	return v
+func (c *atomicCounter) Get() int32 {
+	return atomic.AddInt32((*int32)(c), 1)
 }

@@ -198,7 +198,7 @@ func (ctx *Context) runGenesisValidator() error {
 
 func (ctx *Context) runRpc() error {
 	if ctx.rpcPort == 0 {
-		ctx.rpcPort = 8080 + int32(portCounter.Get())
+		ctx.rpcPort = 8080 + portCounter.Get()
 	}
 
 	spec := cluster.NewKcoinNodeBuilder().
