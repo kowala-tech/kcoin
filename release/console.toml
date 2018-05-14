@@ -1,0 +1,5 @@
+[Kowala]
+SyncMode = "fast"
+
+[Node.P2P]
+ListenAddr = ":22334"
