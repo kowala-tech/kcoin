@@ -7,7 +7,7 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
     uint public baseDeposit;       
     uint public maxValidators;
     // period in days
-    uint public unbondingPeriod;
+    uint public freezePeriod;
     address public genesisValidator;
 
     // validatorsChecksum is a representation of the current set of validators
@@ -55,12 +55,12 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
         _;
     }
 
-    function ValidatorManager(uint _baseDeposit, uint _maxValidators, uint _unbondingPeriod, address _genesis) public {
+    function ValidatorManager(uint _baseDeposit, uint _maxValidators, uint _freezePeriod, address _genesis) public {
         require(_maxValidators >= 1);
 
         baseDeposit = _baseDeposit * 1 ether;
         maxValidators = _maxValidators;
-        unbondingPeriod = _unbondingPeriod * 1 days;
+        freezePeriod = _freezePeriod * 1 days;
         genesisValidator = _genesis;
     
         _insertValidator(_genesis, baseDeposit);
@@ -138,7 +138,7 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
         validatorPool.length--;
 
         validator.isValidator = false;
-        validator.deposits[validator.deposits.length - 1].availableAt = now + unbondingPeriod;
+        validator.deposits[validator.deposits.length - 1].availableAt = now + freezePeriod;
 
         _updateChecksum();
     }
@@ -167,7 +167,7 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
         return (deposit.amount / 1 ether, deposit.availableAt);
     }
 
-    function registerValidator() public tokenPayable whenNotPaused onlyNewCandidate onlyWithMinDeposit {
+    function _registerValidator() public tokenPayable whenNotPaused onlyNewCandidate onlyWithMinDeposit {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
         }
@@ -193,7 +193,7 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
     }
 
     // releaseDeposits transfers locked deposit(s) back the user account if they
-    // are past the unbonding period
+    // are past the freeze period
     function releaseDeposits() public whenNotPaused {
         uint refund = 0;
         uint i = 0;
@@ -241,6 +241,6 @@ contract ValidatorManager is pausable.Pausable, receiver.TokenReceiver {
     function tokenReceiver(address _from, uint _value, bytes _data) public {
         uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
         tkn = TKN(_from, _value, _data, bytes4(u));
-        registerValidator();
+        _registerValidator();
     }
 }
