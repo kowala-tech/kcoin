@@ -1,4 +1,6 @@
-Feature: As a node maintainer, I want to be able to connect to a network
+Feature: Joining network
+  As a node maintainer
+  I want to be able to connect to a network
 
   Scenario: Connect a node to the network
     When I start a new node

@@ -7,11 +7,13 @@ import (
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/accounts/keystore"
 	"github.com/kowala-tech/kcoin/cluster"
+	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/kcoinclient"
 )
 
 type Context struct {
+	Name            string
 	AccountsStorage *keystore.KeyStore
 
 	// cluster config
@@ -20,6 +22,7 @@ type Context struct {
 
 	nodeRunner             cluster.NodeRunner
 	genesisValidatorNodeID cluster.NodeID
+	rpcPort                int32
 	client                 *kcoinclient.Client
 	chainID                *big.Int
 
@@ -31,6 +34,9 @@ type Context struct {
 	lastTxErr error
 
 	lastUnlockErr error
+
+	scenarioNumber int
+	nodeSuffix     string
 }
 
 func NewTestContext(chainID *big.Int) *Context {
@@ -41,10 +47,15 @@ func NewTestContext(chainID *big.Int) *Context {
 		AccountsStorage: accountsStorage,
 		chainID:         chainID,
 
-		accounts: make(map[string]accounts.Account),
+		accounts:   make(map[string]accounts.Account),
+		nodeSuffix: common.RandomString(4),
 	}
 }
 
 func (ctx *Context) Reset() {
 	ctx.accounts = make(map[string]accounts.Account)
+	ctx.nodeRunner.StopAll()
+
+	ctx.scenarioNumber++
+	ctx.runNodes()
 }
