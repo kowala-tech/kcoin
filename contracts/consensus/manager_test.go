@@ -126,7 +126,7 @@ func (suite *ElectionContractSuite) TestDeployElectionContract() {
 	req.Equal(crypto.PubkeyToAddress(suite.genesisValidator.PublicKey), genesisValidator)
 }
 
-func (suite *ElectionContractSuite) TestDeployElectionContract_MaxValidatorsEqualZero() {
+func (suite *ElectionContractSuite) TestDeployElectionContract_MaxNumValidatorsEqualZero() {
 	req := suite.Require()
 
 	maxValidators := common.Big0
@@ -213,7 +213,7 @@ func (suite *ElectionContractSuite) TestIsValidator() {
 	}
 }
 
-func (suite *ElectionContractSuite) TestGetMinimumDeposit_ElectionFull() {
+func (suite *ElectionContractSuite) TestGetMinimumDeposit_Full() {
 	req := suite.Require()
 
 	// leave a position available for the genesis validator - max validators = 1
@@ -227,7 +227,7 @@ func (suite *ElectionContractSuite) TestGetMinimumDeposit_ElectionFull() {
 	req.Equal((new(big.Int).Add(suite.baseDeposit, common.Big1)), minDeposit)
 }
 
-func (suite *ElectionContractSuite) TestGetMinimumDeposit_ElectionNotFull() {
+func (suite *ElectionContractSuite) TestGetMinimumDeposit_NotFull() {
 	// by default the contract has one validator (genesis) and 99 (100 - 1)
 	// positions available
 	req := suite.Require()

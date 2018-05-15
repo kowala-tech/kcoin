@@ -4,25 +4,17 @@ import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol"
 
 contract OracleManager is pausable.Pausable {
     uint public baseDeposit;       
-    uint public maxOracles;
-    // period in days
+    uint public maxNumOracles;
     uint public freezePeriod;
 
-    // Deposit represents the collateral - staked tokens
     struct Deposit {
         uint amount;
         uint availableAt;
     }
 
-    // Oracle represents a price oracle      
     struct Oracle {
         uint index;
         bool isOracle;
-
-        // @NOTE (rgeraldes) - users can have more than one deposit
-        // Example: user leaves and re-enters the election. At this point
-        // the initial deposit will have a release date and the oracle 
-        // will have a new deposit for the current session.
         Deposit[] deposits; 
     }
     
@@ -32,31 +24,29 @@ contract OracleManager is pausable.Pausable {
     // the smallest deposit.
     address[] oraclePool;
 
-    uint price = 1 ether; // equals to one dollar in kUSD format
+    // price - initial price is 1$ in kUSD (same decimals as ether - 18)
+    uint price = 1 ether; 
 
-    // onlyWithMinDeposit requires a minimum deposit to proceed
     modifier onlyWithMinDeposit {
         require(msg.value >= getMinimumDeposit());
         _;
     }
 
-    // onlyOracle requires the sender to be a oracle
     modifier onlyOracle {
         require(_isOracle(msg.sender));
         _;
     }
 
-    // onlyNewCandidate required the sender to be a new candidate
     modifier onlyNewCandidate {
         require(!_isOracle(msg.sender));
         _;
     }
 
-    function OracleManager(uint _baseDeposit, uint _maxOracles, uint _freezePeriod) public {
-        require(_maxOracles >= 1);
+    function OracleManager(uint _baseDeposit, uint _maxNumOracles, uint _freezePeriod) public {
+        require(_maxNumOracles > 0);
 
         baseDeposit = _baseDeposit * 1 ether;
-        maxOracles = _maxOracles;
+        maxNumOracles = _maxNumOracles;
         freezePeriod = _freezePeriod * 1 days;
     }
 
@@ -65,7 +55,7 @@ contract OracleManager is pausable.Pausable {
     }
 
     function _hasAvailability() public view returns (bool available) {
-        return (maxOracles - oraclePool.length) > 0;
+        return (maxNumOracles - oraclePool.length) > 0;
     }
 
     function _deleteOracle(address identity) private {
@@ -152,9 +142,6 @@ contract OracleManager is pausable.Pausable {
         
         for (; i < deposits.length && deposits[i].availableAt != 0; i++) {
             if (now < deposits[i].availableAt) {
-                // @NOTE (rgeraldes) - no need to iterate further since the 
-                // release date (if is different than 0) of the following deposits
-                // will always be past than the current one.
                 break;
             }
             refund += deposits[i].amount;
@@ -167,11 +154,8 @@ contract OracleManager is pausable.Pausable {
         }
     }
 
-    // @NOTE (rgeraldes) - delayed computation cannot be used since
-    // we have a timit limit for validators.
     function submitPrice(uint _price) public whenNotPaused onlyOracle {
         require(price > 0);
-        // @TODO (calculate new average value based on the submission)
         price = _price;
     }
 }
