@@ -52,7 +52,7 @@ func (suite *OracleMgrSuite) SetupSuite() {
 	suite.contractOwner = contractOwner
 	suite.randomUser = randomUser
 	suite.initialBalance = kusd(new(big.Int).SetUint64(initialBalance))
-	suite.baseDeposit = new(big.Int).SetUint64(baseDeposit)
+	suite.baseDeposit = kusd(new(big.Int).SetUint64(baseDeposit))
 	suite.maxNumOracles = new(big.Int).SetUint64(maxNumOracles)
 	suite.freezePeriod = new(big.Int).SetUint64(freezePeriod)
 }
@@ -66,12 +66,16 @@ func (suite *OracleMgrSuite) NewSimulatedBackend() *backends.SimulatedBackend {
 		randomUserAddr:    defaultAccount,
 	})
 
+	backend.Commit()
+
 	return backend
 }
 
 func (suite *OracleMgrSuite) SetupTest() {
 	suite.backend = suite.NewSimulatedBackend()
 }
+
+/*
 
 func (suite *OracleMgrSuite) TestDeployOracleManager() {
 	req := suite.Require()
@@ -152,7 +156,7 @@ func (suite *OracleMgrSuite) TestGetMinimumDeposit_Full() {
 	req.Equal(new(big.Int).Add(deposit, common.Big1), minDeposit)
 }
 
-func (suite *OracleMgrSuite) TestRegisterOracle_Paused() {
+func (suite *OracleMgrSuite) TestRegisterOracle_WhenNotPaused() {
 	req := suite.Require()
 
 	// deploy oracle manager with one spot available
@@ -172,7 +176,7 @@ func (suite *OracleMgrSuite) TestRegisterOracle_Paused() {
 	req.Equal(errAlwaysFailingTransaction, err)
 }
 
-func (suite *OracleMgrSuite) TestRegisterOracle_Duplicate() {
+func (suite *OracleMgrSuite) TestRegisterOracle_OnlyNewCandidate() {
 	req := suite.Require()
 
 	// deploy oracle manager
@@ -192,7 +196,7 @@ func (suite *OracleMgrSuite) TestRegisterOracle_Duplicate() {
 	req.Equal(errAlwaysFailingTransaction, err)
 }
 
-func (suite *OracleMgrSuite) TestRegisterOracle_InsufficientDeposit() {
+func (suite *OracleMgrSuite) TestRegisterOracle_OnlyWithMinDeposit() {
 	req := suite.Require()
 
 	// deploy oracle manager
@@ -233,7 +237,211 @@ func (suite *OracleMgrSuite) TestRegisterOracle_LessOrEqualTo() {
 func (suite *OracleMgrSuite) TestRegisterOracle_Replacement() {
 
 }
+
+
+func (suite *OracleMgrSuite) TestDeregisterOracle() {
+	req := suite.Require()
+
+	// deploy oracle manager
+	ownerAuth := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployOracleManager(ownerAuth, suite.backend, suite.baseDeposit, common.Big1, suite.freezePeriod)
+	req.NoError(err)
+
+	// register oracle
+	deposit := kusd(suite.baseDeposit)
+	userAuth := bind.NewKeyedTransactor(suite.randomUser)
+	userAuth.Value = deposit
+	_, err = mgr.RegisterOracle(userAuth)
+	req.NoError(err)
+
+	// deregister oracle
+	_, err = mgr.DeregisterOracle(userAuth)
+	req.NoError(err)
+}
+
+
+func (suite *OracleMgrSuite) TestDeregisterOracle_WhenNotPaused() {
+	req := suite.Require()
+
+	// deploy oracle manager
+	ownerAuth := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployOracleManager(ownerAuth, suite.backend, suite.baseDeposit, common.Big1, suite.freezePeriod)
+	req.NoError(err)
+
+	// register oracle
+	deposit := kusd(suite.baseDeposit)
+	userAuth := bind.NewKeyedTransactor(suite.randomUser)
+	userAuth.Value = deposit
+	_, err = mgr.RegisterOracle(userAuth)
+	req.NoError(err)
+
+	// pause service
+	_, err = mgr.Pause(ownerAuth)
+	req.NoError(err)
+
+	// deregister oracle
+	_, err = mgr.DeregisterOracle(userAuth)
+	req.Equal(errAlwaysFailingTransaction, err)
+}
+
+func (suite *OracleMgrSuite) TestDeregisterOracle_OnlyOracle() {
+	req := suite.Require()
+
+	// deploy oracle manager
+	ownerAuth := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployOracleManager(ownerAuth, suite.backend, suite.baseDeposit, common.Big1, suite.freezePeriod)
+	req.NoError(err)
+
+	// deregister oracle
+	userAuth := bind.NewKeyedTransactor(suite.randomUser)
+	_, err = mgr.DeregisterOracle(userAuth)
+	req.Equal(errAlwaysFailingTransaction, err)
+}
 */
+
+func (suite *OracleMgrSuite) TestReleaseDeposits_WhenNotPaused() {
+	req := suite.Require()
+
+	// deploy oracle manager
+	deployOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployOracleManager(deployOpts, suite.backend, suite.baseDeposit, common.Big32, suite.freezePeriod)
+	req.NoError(err)
+
+	// pause service
+	pauseOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, err = mgr.Pause(pauseOpts)
+	req.NoError(err)
+
+	// release deposits
+	depositsOpts := bind.NewKeyedTransactor(suite.randomUser)
+	_, err = mgr.ReleaseDeposits(depositsOpts)
+	req.Equal(errAlwaysFailingTransaction, err)
+}
+
+func (suite *OracleMgrSuite) TestReleaseDeposits_NoAssets() {
+	// deploy oracle manager
+	deployOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployOracleManager(deployOpts, suite.backend, suite.baseDeposit, common.Big32, suite.freezePeriod)
+	req.NoError(err)
+
+	// release deposits
+	depositsOpts := bind.NewKeyedTransactor(suite.randomUser)
+	_, err = mgr.ReleaseDeposits(depositsOpts)
+	req.Equal(errAlwaysFailingTransaction, err)
+
+	suite.backend.Commit()
+
+	// @TODO (rgeraldes)
+	// deposit count must be zero
+
+	// balance must be <= initial balance (tx fees and no deposits)
+	userBalance, err := suite.backend.BalanceAt(context.TODO(), getAddress(suite.randomUser), suite.backend.CurrentBlock().Number())
+	req.NoError(err)
+	
+	req.True(userBalance.Cmp(suite.initialBalance) < 0)
+
+	// @TODO (rgeraldes)
+	// contract balance must be the same
+
+}
+
+func (suite *OracleMgrSuite) TestReleaseDeposits_FrozenAssets() {}
+func (suite *OracleMgrSuite) TestReleaseDeposits_UnfrozenAssets() {}
+
+func (suite *OracleMgrSuite) TestAddPrice_WhenNotPaused() {
+	req := suite.Require()
+
+	// deploy oracle manager
+	deployOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployOracleManager(deployOpts, suite.backend, suite.baseDeposit, common.Big32, suite.freezePeriod)
+	req.NoError(err)
+
+	// register oracle
+	deposit := suite.baseDeposit
+	registrationOpts := bind.NewKeyedTransactor(suite.randomUser)
+	registrationOpts.Value = deposit
+	_, err = mgr.RegisterOracle(registrationOpts)
+	req.NoError(err)
+
+	// pause service
+	pauseOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, err = mgr.Pause(pauseOpts)
+	req.NoError(err)
+
+	// oracle submits price
+	newPrice := common.Big1
+	priceOpts := bind.NewKeyedTransactor(suite.randomUser)
+	_, err = mgr.AddPrice(priceOpts, newPrice)
+	req.Equal(errAlwaysFailingTransaction, err)
+}
+
+func (suite *OracleMgrSuite) TestAddPrice_OnlyOracle() {
+	req := suite.Require()
+
+	// deploy oracle manager
+	deployOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployOracleManager(deployOpts, suite.backend, suite.baseDeposit, common.Big32, suite.freezePeriod)
+	req.NoError(err)
+
+	// not-oracle submits price
+	invalidPrice := common.Big1
+	priceOpts := bind.NewKeyedTransactor(suite.randomUser)
+	_, err = mgr.AddPrice(priceOpts, invalidPrice)
+	req.Equal(errAlwaysFailingTransaction, err)
+}
+
+func (suite *OracleMgrSuite) TestAddPrice_OnlyValidPrice() {
+	req := suite.Require()
+
+	// deploy oracle manager
+	deployOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployOracleManager(deployOpts, suite.backend, suite.baseDeposit, common.Big32, suite.freezePeriod)
+	req.NoError(err)
+
+	// register oracle
+	deposit := suite.baseDeposit
+	registrationOpts := bind.NewKeyedTransactor(suite.randomUser)
+	registrationOpts.Value = deposit
+	_, err = mgr.RegisterOracle(registrationOpts)
+	req.NoError(err)
+
+	// oracle submits price
+	invalidPrice := common.Big0
+	priceOpts := bind.NewKeyedTransactor(suite.randomUser)
+	_, err = mgr.AddPrice(priceOpts, invalidPrice)
+	req.Equal(errAlwaysFailingTransaction, err)
+}
+
+func (suite *OracleMgrSuite) TestAddPrice() {
+	req := suite.Require()
+
+	// deploy oracle manager
+	deployOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployOracleManager(deployOpts, suite.backend, suite.baseDeposit, common.Big32, suite.freezePeriod)
+	req.NoError(err)
+
+	// register oracle
+	deposit := suite.baseDeposit
+	registrationOpts := bind.NewKeyedTransactor(suite.randomUser)
+	registrationOpts.Value = deposit
+	_, err = mgr.RegisterOracle(registrationOpts)
+	req.NoError(err)
+
+	// oracle submits price
+	newPrice := common.Big1
+	priceOpts := bind.NewKeyedTransactor(suite.randomUser)
+	_, err = mgr.AddPrice(priceOpts, newPrice)
+	req.NoError(err)
+
+	suite.backend.Commit()
+
+	// confirm price update
+	storedPrice, err := mgr.Price(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(storedPrice)
+
+	req.Equal(newPrice, storedPrice)
+}
 
 // dtos converts days to seconds
 func dtos(days *big.Int) *big.Int {

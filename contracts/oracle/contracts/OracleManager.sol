@@ -22,10 +22,10 @@ contract OracleManager is pausable.Pausable {
     
     // oraclePool contains the oracle identity ordered by the biggest deposit to
     // the smallest deposit.
-    address[] oraclePool;
+    address[] private oraclePool;
 
     // price - initial price is 1$ in kUSD (same decimals as ether - 18)
-    uint price = 1 ether; 
+    uint public price = 1 ether; 
 
     modifier onlyWithMinDeposit {
         require(msg.value >= getMinimumDeposit());
@@ -45,7 +45,7 @@ contract OracleManager is pausable.Pausable {
     function OracleManager(uint _baseDeposit, uint _maxNumOracles, uint _freezePeriod) public {
         require(_maxNumOracles > 0);
 
-        baseDeposit = _baseDeposit * 1 ether;
+        baseDeposit = _baseDeposit;
         maxNumOracles = _maxNumOracles;
         freezePeriod = _freezePeriod * 1 days;
     }
@@ -154,8 +154,13 @@ contract OracleManager is pausable.Pausable {
         }
     }
 
-    function submitPrice(uint _price) public whenNotPaused onlyOracle {
-        require(price > 0);
+    modifier onlyValidPrice(uint _price) {
+        // @TODO (rgeraldes) - define an interval of valid prices
+        require(_price > 0);
+        _;
+    }
+
+    function addPrice(uint _price) public whenNotPaused  onlyOracle onlyValidPrice(_price) {
         price = _price;
     }
 }
