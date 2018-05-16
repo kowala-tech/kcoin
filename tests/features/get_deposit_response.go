@@ -1,10 +1,10 @@
 package features
 
 import (
-	"time"
-	"regexp"
 	"encoding/json"
 	"errors"
+	"regexp"
+	"time"
 )
 
 type DepositResponse struct {

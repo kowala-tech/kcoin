@@ -21,7 +21,7 @@ func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
 		return err
 	}
 
-	err = ctx.waitBlocksFrom(currentBlock,1)
+	err = ctx.waitBlocksFrom(currentBlock, 1)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (ctx *Context) sendFundsAndWait(from, to accounts.Account, kcoins int64) (*
 		return nil, err
 	}
 
-	err = ctx.waitBlocksFrom(currentBlock,1)
+	err = ctx.waitBlocksFrom(currentBlock, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,6 @@ func (ctx *Context) sendFundsAndWait(from, to accounts.Account, kcoins int64) (*
 	return tx, nil
 }
 
-
 // Do executes the command on the node and waits 1 block then
 func (ctx *Context) Do(f func() error) error {
 	currentBlock, err := ctx.currentBlock()
@@ -139,7 +138,7 @@ func (ctx *Context) Do(f func() error) error {
 		return err
 	}
 
-	err = ctx.waitBlocksFrom(currentBlock,1)
+	err = ctx.waitBlocksFrom(currentBlock, 1)
 	if err != nil {
 		return err
 	}
@@ -148,12 +147,12 @@ func (ctx *Context) Do(f func() error) error {
 }
 
 func (ctx *Context) waitBlocksFrom(block, n uint64) error {
-	t := time.NewTicker(200*time.Millisecond)
-	timeout := time.NewTimer(20*time.Second)
+	t := time.NewTicker(200 * time.Millisecond)
+	timeout := time.NewTimer(20 * time.Second)
 	defer t.Stop()
 
 	var (
-		err error
+		err      error
 		newBlock uint64
 	)
 

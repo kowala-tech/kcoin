@@ -182,7 +182,7 @@ func (ctx *ValidationContext) Do(command []string) (*cluster.ExecResponse, error
 		return nil, err
 	}
 
-	err = ctx.waitBlocksFrom(currentBlock,1)
+	err = ctx.waitBlocksFrom(currentBlock, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -191,12 +191,12 @@ func (ctx *ValidationContext) Do(command []string) (*cluster.ExecResponse, error
 }
 
 func (ctx *ValidationContext) waitBlocksFrom(block, n int) error {
-	t := time.NewTicker(200*time.Millisecond)
-	timeout := time.NewTimer(20*time.Second)
+	t := time.NewTicker(200 * time.Millisecond)
+	timeout := time.NewTimer(20 * time.Second)
 	defer t.Stop()
 
 	var (
-		err error
+		err      error
 		newBlock int
 	)
 
@@ -219,17 +219,7 @@ waitLoop:
 		}
 	}
 
-
 	return nil
-}
-
-func (ctx *ValidationContext) waitBlocks(n int) error {
-	currentBlock, err := ctx.currentBlock()
-	if err != nil {
-		return err
-	}
-
-	return ctx.waitBlocksFrom(currentBlock, n)
 }
 
 func (ctx *ValidationContext) currentBlock() (int, error) {
