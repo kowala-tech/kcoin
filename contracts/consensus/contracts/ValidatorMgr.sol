@@ -51,14 +51,13 @@ contract ValidatorMgr is pausable.Pausable {
         _;
     }
 
-    function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address miningTokenAddr) public {
+    function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _miningTokenAddr) public {
         require(_maxNumValidators >= 1);
 
         baseDeposit = _baseDeposit;
         maxNumValidators = _maxNumValidators;
         freezePeriod = _freezePeriod * 1 days;
-    
-        _insertValidator(_genesis, baseDeposit);
+        miningTokenAddr = _miningTokenAddr;
     }
 
     function isGenesisValidator(address code) public view returns (bool isIndeed) {

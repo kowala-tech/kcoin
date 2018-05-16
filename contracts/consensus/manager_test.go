@@ -3,13 +3,13 @@ package consensus
 import (
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 	"math/big"
 	"testing"
 
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/contracts/token"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/params"
@@ -17,33 +17,50 @@ import (
 )
 
 const (
+	// prefund
+	initialBalance = 10 // 10 kUSD
+
 	// ValidatorMgr
-	initialBalance   = 10 // 10 kUSD
-	baseDeposit      = 1  // 1 mUSD
+	baseDeposit      = 1 // 1 mUSD
 	maxNumValidators = 100
 	freezePeriod     = 10 // 10 days
-	secondsPerDay    = 86400
 
-	// mUSD
-	miningToken         = "mUSD"
-	cap                 = 1073741824
-	miningTokenDecimals = uint8(18)
-	customFallback      = "registerValidator(address,uint256,bytes)"
+	// MiningToken
+	miningToken               = "mUSD"
+	miningTokenCap            = 1073741824
+	miningTokenDecimals       = uint8(18)
+	miningTokenCustomFallback = "registerValidator(address,uint256,bytes)"
+
+	secondsPerDay = 86400
 )
 
 var (
 	errAlwaysFailingTransaction = errors.New("failed to estimate gas needed: gas required exceeds allowance or always failing transaction")
 )
 
+type validMgrArgs struct {
+	baseDeposit      *big.Int
+	maxNumValidators *big.Int
+	freezePeriod     *big.Int
+}
+
+type validTokenArgs struct {
+	name           string
+	symbol         string
+	cap            *big.Int
+	decimals       uint8
+	customFallback string
+}
+
 type ValidatorMgrSuite struct {
 	suite.Suite
-	backend                   *backends.SimulatedBackend
-	contractOwner, randomUser *ecdsa.PrivateKey
-	genesisValidator          *ecdsa.PrivateKey
-	initialBalance            *big.Int
-	baseDeposit               *big.Int
-	maxNumValidators          *big.Int
-	freezePeriod              *big.Int
+	backend          *backends.SimulatedBackend
+	contractOwner    *ecdsa.PrivateKey
+	randomUser       *ecdsa.PrivateKey
+	genesisValidator *ecdsa.PrivateKey
+	initialBalance   *big.Int
+	mgrArgs          *validMgrArgs
+	tokenArgs        *validTokenArgs
 }
 
 func TestValidatorMgrSuite(t *testing.T) {
@@ -60,16 +77,24 @@ func (suite *ValidatorMgrSuite) SetupSuite() {
 	genesisValidator, err := crypto.GenerateKey()
 	req.NoError(err)
 
-	// users
 	suite.contractOwner = contractOwner
 	suite.randomUser = randomUser
 	suite.genesisValidator = genesisValidator
-
-	// valid params
 	suite.initialBalance = musd(new(big.Int).SetUint64(initialBalance))
-	suite.baseDeposit = musd(new(big.Int).SetUint64(baseDeposit))
-	suite.maxNumValidators = new(big.Int).SetUint64(maxNumValidators)
-	suite.freezePeriod = new(big.Int).SetUint64(freezePeriod)
+
+	suite.mgrArgs = &validMgrArgs{
+		baseDeposit:      musd(new(big.Int).SetUint64(baseDeposit)),
+		maxNumValidators: new(big.Int).SetUint64(maxNumValidators),
+		freezePeriod:     new(big.Int).SetUint64(freezePeriod),
+	}
+
+	suite.tokenArgs = &validTokenArgs{
+		name:           miningToken,
+		symbol:         miningToken,
+		decimals:       miningTokenDecimals,
+		cap:            new(big.Int).SetUint64(miningTokenCap),
+		customFallback: miningTokenCustomFallback,
+	}
 }
 
 func (suite *ValidatorMgrSuite) NewSimulatedBackend() *backends.SimulatedBackend {
@@ -93,8 +118,14 @@ func (suite *ValidatorMgrSuite) SetupTest() {
 func (suite *ValidatorMgrSuite) TestDeployValidatorMgr() {
 	req := suite.Require()
 
-	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, suite.maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
+	ownerTransactOpts := bind.NewKeyedTransactor(suite.contractOwner)
+
+	tokenAddr, _, mUSD, err := token.DeployMiningToken(ownerTransactOpts, suite.backend, suite.tokenArgs.name, suite.tokenArgs.symbol, suite.tokenArgs.cap, suite.tokenArgs.decimals)
+	req.NoError(err)
+	req.NotNil(mUSD)
+	req.NotZero(tokenAddr)
+
+	_, _, mgr, err := DeployValidatorMgr(ownerTransactOpts, suite.backend, suite.mgrArgs.baseDeposit, suite.mgrArgs.maxNumValidators, suite.mgrArgs.freezePeriod, tokenAddr)
 	req.NoError(err)
 	req.NotNil(mgr)
 
@@ -103,62 +134,42 @@ func (suite *ValidatorMgrSuite) TestDeployValidatorMgr() {
 	storedBaseDeposit, err := mgr.BaseDeposit(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedBaseDeposit)
-	req.Equal(suite.baseDeposit, storedBaseDeposit)
+	req.Equal(suite.mgrArgs.baseDeposit, storedBaseDeposit)
 
 	storedMaxNumValidators, err := mgr.MaxNumValidators(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedMaxNumValidators)
-	req.Equal(suite.maxNumValidators, storedMaxNumValidators)
+	req.Equal(suite.mgrArgs.maxNumValidators, storedMaxNumValidators)
 
 	storedFreezePeriod, err := mgr.FreezePeriod(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedFreezePeriod)
-	req.Equal(dtos(suite.freezePeriod), storedFreezePeriod)
+	req.Equal(dtos(suite.mgrArgs.freezePeriod), storedFreezePeriod)
 
-	req.True(mgr.IsGenesisValidator(&bind.CallOpts{}, getAddress(suite.genesisValidator)))
+	storedMiningTokenAddr, err := mgr.MiningTokenAddr(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotZero(storedFreezePeriod)
+	req.Equal(tokenAddr, storedMiningTokenAddr)
 }
 
 func (suite *ValidatorMgrSuite) TestDeployValidatorMgr_MaxNumValidators_Zero() {
 	req := suite.Require()
 
-	maxNumValidators := common.Big0
-	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, _, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
+	ownerTransactOpts := bind.NewKeyedTransactor(suite.contractOwner)
+
+	tokenAddr, _, mUSD, err := token.DeployMiningToken(ownerTransactOpts, suite.backend, suite.tokenArgs.name, suite.tokenArgs.symbol, suite.tokenArgs.cap, suite.tokenArgs.decimals)
+	req.NoError(err)
+	req.NotNil(mUSD)
+	req.NotZero(tokenAddr)
+
+	zeroValidators := common.Big0
+	_, _, _, err = DeployValidatorMgr(ownerTransactOpts, suite.backend, suite.mgrArgs.baseDeposit, zeroValidators, suite.mgrArgs.freezePeriod, tokenAddr)
 	req.Equal(errAlwaysFailingTransaction, err)
 }
 
-func (suite *ValidatorMgrSuite) TestIsGenesis() {
-	req := suite.Require()
+/*
 
-	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, suite.maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
-	req.NoError(err)
-	req.NotNil(mgr)
 
-	suite.backend.Commit()
-
-	testCases := []struct {
-		input  common.Address
-		output bool
-	}{
-		{
-			input:  getAddress(suite.genesisValidator),
-			output: true,
-		},
-		{
-			input:  getAddress(suite.randomUser),
-			output: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		suite.T().Run(fmt.Sprintf("Address %s", tc.input.Hex()), func(t *testing.T) {
-			isGenesis, err := mgr.IsGenesisValidator(&bind.CallOpts{}, tc.input)
-			req.NoError(err)
-			req.Equal(tc.output, isGenesis)
-		})
-	}
-}
 
 func (suite *ValidatorMgrSuite) TestIsValidator() {
 	req := suite.Require()
@@ -253,7 +264,7 @@ func (suite *ValidatorMgrSuite) TestGetValidatorAtIndex() {
 }
 
 func (suite *ValidatorMgrSuite) TestGetValidatorCount() {
-	
+
 }
 
 /*
