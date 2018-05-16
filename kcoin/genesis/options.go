@@ -22,11 +22,17 @@ type Options struct {
 	ExtraData         string
 }
 
+type TokenHolder struct {
+	Address   string
+	NumTokens uint64
+}
+
 type MiningTokenOpts struct {
 	Name     string
 	Symbol   string
 	Cap      uint64
 	Decimals uint64
+	Holders  []TokenHolder
 }
 
 type ConsensusOpts struct {
@@ -34,7 +40,7 @@ type ConsensusOpts struct {
 	MaxNumValidators uint64
 	FreezePeriod     uint64
 	BaseDeposit      uint64
-	Validators       []string
+	Validators       []Validator
 	MiningToken      *MiningTokenOpts
 }
 
@@ -55,11 +61,21 @@ type PrefundedAccount struct {
 	Balance        string
 }
 
+type Validator struct {
+	Address string
+	Deposit uint64
+}
+
+type validValidator struct {
+	address common.Address
+	deposit *big.Int
+}
+
 type validValidatorMgrOpts struct {
 	maxNumValidators *big.Int
 	freezePeriod     *big.Int
 	baseDeposit      *big.Int
-	validators       []common.Address
+	validators       []*validValidator
 }
 
 type validOracleMgrOpts struct {
@@ -68,12 +84,17 @@ type validOracleMgrOpts struct {
 	baseDeposit   *big.Int
 }
 
+type validTokenHolder struct {
+	address common.Address
+	balance *big.Int
+}
+
 type validMiningTokenOpts struct {
-	name              string
-	symbol            string
-	cap               *big.Int
-	decimals          *big.Int
-	prefundedAccounts []common.Address
+	name     string
+	symbol   string
+	cap      *big.Int
+	decimals *big.Int
+	holders  []*validTokenHolder
 }
 
 type validMultiSigOpts struct {
@@ -134,14 +155,16 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	consensusBaseDeposit := new(big.Int).SetUint64(options.Consensus.BaseDeposit)
 	consensusFreezePeriod := new(big.Int).SetUint64(options.Consensus.FreezePeriod)
 
-	validators := make([]common.Address, 0, len(options.Consensus.Validators))
+	validators := make([]*validValidator, 0, len(options.Consensus.Validators))
 	for _, validator := range options.Consensus.Validators {
-		validator, err := getAddress(validator)
+		addr, err := getAddress(validator.Address)
 		if err != nil {
 			return nil, err
 		}
-
-		validators = append(validators, *validator)
+		validators = append(validators, &validValidator{
+			address: *addr,
+			deposit: new(big.Int).Mul(new(big.Int).SetUint64(validator.Deposit), big.NewInt(params.Ether)),
+		})
 	}
 
 	// data feed system
@@ -153,14 +176,26 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	// @TODO (rgeraldes) - calculate the cap based on the decimals provided
 	decimals := new(big.Int).SetUint64(uint64(options.Consensus.MiningToken.Decimals))
 	cap := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.MiningToken.Cap), big.NewInt(params.Ether))
+	
+	holders := make([]*validTokenHolder, 0, len(options.Consensus.MiningToken.Holders))
+	for _, holder := range options.Consensus.MiningToken.Holders {
+		addr, err := getAddress(holder.Address)
+		if err != nil {
+			return nil, err
+		}
+		holders = append(holders, &validTokenHolder{
+			address: *addr,
+			balance: new(big.Int).Mul(new(big.Int).SetUint64(holder.NumTokens), big.NewInt(params.Ether)),
+		})
+	}
 
-	// funds
+	// prefund accounts
 	validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
 	if err != nil {
 		return nil, err
 	}
 
-	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, &validators[0]) {
+	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, &validators[0].address) {
 		return nil, ErrWalletAddressValidatorNotInPrefundedAccounts
 	}
 
@@ -184,11 +219,11 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			baseDeposit:   oracleBaseDeposit,
 		},
 		miningToken: &validMiningTokenOpts{
-			name:              options.Consensus.MiningToken.Name,
-			symbol:            options.Consensus.MiningToken.Symbol,
-			cap:               cap,
-			decimals:          decimals,
-			prefundedAccounts: validators,
+			name:     options.Consensus.MiningToken.Name,
+			symbol:   options.Consensus.MiningToken.Symbol,
+			cap:      cap,
+			decimals: decimals,
+			holders:  holders,
 		},
 		prefundedAccounts: validPrefundedAccounts,
 		ExtraData:         options.ExtraData,

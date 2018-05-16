@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
@@ -30,12 +31,13 @@ func init() {
 					MaxNumValidators: uint64(viper.GetInt64("genesis.consensus.maxNumValidators")),
 					FreezePeriod:     uint64(viper.GetInt64("genesis.consensus.freezePeriod")),
 					BaseDeposit:      uint64(viper.GetInt64("genesis.consensus.baseDeposit")),
-					Validators:       viper.GetStringSlice("genesis.consensus.validators"),
+					Validators:       parseValidators(viper.Get("genesis.consensus.validators")),
 					MiningToken: &genesis.MiningTokenOpts{
 						Name:     viper.GetString("genesis.consensus.token.name"),
 						Symbol:   viper.GetString("genesis.consensus.token.symbol"),
 						Cap:      uint64(viper.GetInt64("genesis.consensus.token.cap")),
 						Decimals: uint64(viper.GetInt64("genesis.consensus.token.decimals")),
+						Holders:  parseTokenHolders(viper.Get("genesis.consensus.token.holders")),
 					},
 				},
 				DataFeedSystem: &genesis.DataFeedSystemOpts{
@@ -97,7 +99,7 @@ func init() {
 	viper.BindPFlag("genesis.consensus.freezePeriod", cmd.Flags().Lookup("consensusFreeze"))
 	cmd.Flags().Uint64P("consensusBaseDeposit", "", 0, "Base deposit for the consensus")
 	viper.BindPFlag("genesis.consensus.baseDeposit", cmd.Flags().Lookup("consensusBaseDeposit"))
-	cmd.Flags().StringSliceP("validators", "", []string{}, "List of consensus validators")
+	cmd.Flags().StringP("validators", "", "", "The genesis validators in format (address):(deposit),0x212121:14")
 	viper.BindPFlag("genesis.consensus.validators", cmd.Flags().Lookup("validators"))
 
 	// mining token
@@ -109,6 +111,8 @@ func init() {
 	viper.BindPFlag("genesis.consensus.token.cap", cmd.Flags().Lookup("token.cap"))
 	cmd.Flags().Uint64P("token.decimals", "", 0, "The mining token decimals")
 	viper.BindPFlag("genesis.consensus.token.decimals", cmd.Flags().Lookup("token.decimals"))
+	cmd.Flags().StringP("holders", "", "", "The token holders in format (address):(numTokens),0x212121:14")
+	viper.BindPFlag("genesis.consensus.token.holders", cmd.Flags().Lookup("holders"))
 
 	// data feed system
 	cmd.Flags().Uint64P("maxNumOracles", "o", 0, "The maximum num of oracles.")
@@ -155,6 +159,32 @@ func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
 	return prefundedAccounts
 }
 
+func parseValidators(input interface{}) []genesis.Validator {
+	var validators []genesis.Validator
+
+	switch input.(type) {
+	case []interface{}:
+		validators = validatorsFromConfigFile(input)
+	case string:
+		validators = validatorsFromCommandLine(input)
+	}
+
+	return validators
+}
+
+func parseTokenHolders(input interface{}) []genesis.TokenHolder {
+	var holders []genesis.TokenHolder
+
+	switch input.(type) {
+	case []interface{}:
+		holders = tokenHoldersFromConfigFile(input)
+	case string:
+		holders = tokenHoldersFromCommandLine(input)
+	}
+
+	return holders
+}
+
 func prefundAccountsFromCommandLine(accounts interface{}) []genesis.PrefundedAccount {
 	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
 
@@ -179,6 +209,60 @@ func prefundAccountsFromCommandLine(accounts interface{}) []genesis.PrefundedAcc
 	return prefundedAccounts
 }
 
+func validatorsFromCommandLine(input interface{}) []genesis.Validator {
+	validators := make([]genesis.Validator, 0)
+
+	validatorsStr := input.(string)
+	if validatorsStr == "" {
+		return nil
+	}
+
+	values := strings.Split(validatorsStr, ",")
+	for _, value := range values {
+		parts := strings.Split(value, ":")
+
+		deposit, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			panic(fmt.Errorf("Fatal error parsing deposit: %s \n", err))
+		}
+		validator := genesis.Validator{
+			Address: parts[0],
+			Deposit: deposit,
+		}
+
+		validators = append(validators, validator)
+	}
+
+	return validators
+}
+
+func tokenHoldersFromCommandLine(input interface{}) []genesis.TokenHolder {
+	holders := make([]genesis.TokenHolder, 0)
+
+	holdersStr := input.(string)
+	if holdersStr == "" {
+		return nil
+	}
+
+	values := strings.Split(holdersStr, ",")
+	for _, value := range values {
+		parts := strings.Split(value, ":")
+		
+		numTokens, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			panic(fmt.Errorf("Fatal error parsing numTokens: %s \n", err))
+		}
+		holder := genesis.TokenHolder{
+			Address:   parts[0],
+			NumTokens: numTokens,
+		}
+
+		holders = append(holders, holder)
+	}
+
+	return holders
+}
+
 func prefundAccountsFromConfigFile(accounts interface{}) []genesis.PrefundedAccount {
 	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
 
@@ -196,4 +280,42 @@ func prefundAccountsFromConfigFile(accounts interface{}) []genesis.PrefundedAcco
 	}
 
 	return prefundedAccounts
+}
+
+func validatorsFromConfigFile(input interface{}) []genesis.Validator {
+	validators := make([]genesis.Validator, 0)
+
+	validatorArray := input.([]interface{})
+
+	for _, value := range validatorArray {
+		parts := value.(map[string]interface{})
+
+		validator := genesis.Validator{
+			Address: parts["address"].(string),
+			Deposit: parts["deposit"].(uint64),
+		}
+
+		validators = append(validators, validator)
+	}
+
+	return validators
+}
+
+func tokenHoldersFromConfigFile(input interface{}) []genesis.TokenHolder {
+	holders := make([]genesis.TokenHolder, 0)
+
+	holdersArray := input.([]interface{})
+
+	for _, value := range holdersArray {
+		parts := value.(map[string]interface{})
+
+		holder := genesis.TokenHolder{
+			Address:   parts["address"].(string),
+			NumTokens: parts["numTokens"].(uint64),
+		}
+
+		holders = append(holders, holder)
+	}
+
+	return holders
 }

@@ -3,23 +3,18 @@ pragma solidity 0.4.21;
 import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 import "github.com/kowala-tech/kcoin/contracts/token/contracts/TokenReceiver.sol" as receiver;
 
-contract ValidatorManager is pausable.Pausable {
+contract ValidatorMgr is pausable.Pausable {
     uint public baseDeposit;       
-    uint public maxValidators;
-    // period in days
-    uint public freezePeriod;
+    uint public maxNumValidators;
+    uint public freezePeriod; // period in days
     address public genesisValidator;
-
-    // validatorsChecksum is a representation of the current set of validators
     bytes32 public validatorsChecksum;
 
-    // Deposit represents the collateral - staked tokens
     struct Deposit {
         uint amount;
         uint availableAt;
     }
 
-    // Validator represents a consensus validator      
     struct Validator {
         uint index;
         bool isValidator;
@@ -37,29 +32,26 @@ contract ValidatorManager is pausable.Pausable {
     // the smallest deposit.
     address[] validatorPool;
 
-    // onlyWithMinDeposit requires a minimum deposit to proceed
     modifier onlyWithMinDeposit {
         require(tkn.value >= getMinimumDeposit());
         _;
     }
 
-    // onlyValidator requires the sender to be a validator
     modifier onlyValidator {
         require(isValidator(msg.sender));
         _;
     }
 
-    // onlyNewCandidate required the sender to be a new candidate
     modifier onlyNewCandidate {
         require(!isValidator(tkn.sender));
         _;
     }
 
-    function ValidatorManager(uint _baseDeposit, uint _maxValidators, uint _freezePeriod, address _genesis) public {
-        require(_maxValidators >= 1);
+    function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _genesis) public {
+        require(_maxNumValidators >= 1);
 
-        baseDeposit = _baseDeposit * 1 ether;
-        maxValidators = _maxValidators;
+        baseDeposit = _baseDeposit;
+        maxNumValidators = _maxNumValidators;
         freezePeriod = _freezePeriod * 1 days;
         genesisValidator = _genesis;
     
@@ -67,7 +59,7 @@ contract ValidatorManager is pausable.Pausable {
     }
 
     function isGenesisValidator(address code) public view returns (bool isIndeed) {
-        return code == genesisValidator;
+        return isValidator(code) && code == genesisValidator;
     }
 
     function isValidator(address code) public view returns (bool isIndeed) {
@@ -85,7 +77,7 @@ contract ValidatorManager is pausable.Pausable {
     }
 
     function _hasAvailability() public view returns (bool available) {
-        return (maxValidators - validatorPool.length) > 0;
+        return (maxNumValidators - validatorPool.length) > 0;
     }
 
     // getMinimumDeposit returns the base deposit if there are positions available or
@@ -126,9 +118,21 @@ contract ValidatorManager is pausable.Pausable {
         _updateChecksum();
     }
 
+    /*
     function setBaseDeposit(uint deposit) public onlyOwner {
         baseDeposit = deposit;
     }
+
+    function setMaxValidators(uint max) public onlyOwner { 
+        if (max < validatorPool.length) {
+            uint toRemove = validatorPool.length - max;
+            for (uint i = 0; i < toRemove; i++) {
+                _deleteSmallestBidder();
+            }
+        }
+        maxNumValidators = max;   
+    }
+    */
 
     function _deleteValidator(address account) private {
         Validator validator = validatorRegistry[account];
@@ -146,16 +150,6 @@ contract ValidatorManager is pausable.Pausable {
     // _deleteSmallestBidder removes the validator with the smallest deposit
     function _deleteSmallestBidder() private {
         _deleteValidator(validatorPool[validatorPool.length - 1]);
-    }
-
-    function setMaxValidators(uint max) public onlyOwner { 
-        if (max < validatorPool.length) {
-            uint toRemove = validatorPool.length - max;
-            for (uint i = 0; i < toRemove; i++) {
-                _deleteSmallestBidder();
-            }
-        }
-        maxValidators = max;   
     }
 
     function getDepositCount() public view returns (uint count) {

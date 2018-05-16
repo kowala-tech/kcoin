@@ -13,8 +13,8 @@ import (
 	"github.com/kowala-tech/kcoin/params"
 )
 
-//go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/contracts/=/usr/local/include/solidity/ contracts/ValidatorManager.sol
-//go:generate abigen -abi build/ValidatorManager.abi -bin build/ValidatorManager.bin -pkg consensus -type ValidatorManager -out ./gen_manager.go
+//go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/contracts/=/usr/local/include/solidity/ contracts/ValidatorMgr.sol
+//go:generate abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
 
 // RegistrationHandler represesnts the manager handler responsible for the registration
 // of a user in the consensus. For token trasnfers (ERC233 model) we must specify the target method.
@@ -42,7 +42,7 @@ type Consensus interface {
 }
 
 type consensus struct {
-	manager     *ValidatorManager
+	manager     *ValidatorMgr
 	managerAddr common.Address
 	account     *token.MUSD
 	chainID     *big.Int
@@ -52,7 +52,7 @@ type consensus struct {
 func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
 	addr := MapChainIDToAddr[chainID.Uint64()]
 
-	manager, err := NewValidatorManager(addr, contractBackend)
+	manager, err := NewValidatorMgr(addr, contractBackend)
 	if err != nil {
 		return nil, err
 	}

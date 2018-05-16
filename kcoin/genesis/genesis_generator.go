@@ -109,6 +109,16 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 		return nil, err
 	}
 
+	// prefund the validator mgr contract with the genesis validators deposits
+	sum := new(big.Int)
+	for _, validator := range validOptions.validatorMgr.validators {
+		sum.Add(sum, validator.deposit)
+	}
+	validOptions.miningToken.holders = append(validOptions.miningToken.holders, &validTokenHolder{
+		address: *validatorMgrAddr,
+		balance: sum,
+	})
+
 	miningTokenAddr, err := addMiningToken(stateDB, validOptions.miningToken, genesis, contractsOwner)
 	if err != nil {
 		return nil, err
@@ -222,10 +232,10 @@ func addMultiSigWallet(stateDB *state.StateDB, opts *validMultiSigOpts, genesis 
 	return &contractAddr, nil
 }
 
-// addValidatorManager includes the validator manager in the genesis block. The contract creator
+// addValidatorMgr includes the validator manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
 func addValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
-	managerABI, err := abi.JSON(strings.NewReader(consensus.ValidatorManagerABI))
+	managerABI, err := abi.JSON(strings.NewReader(consensus.ValidatorMgrABI))
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +253,7 @@ func addValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesi
 
 	runtimeCfg := getDefaultRuntimeConfig(stateDB)
 	runtimeCfg.Origin = *owner
-	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(consensus.ValidatorManagerBin), managerParams...), runtimeCfg)
+	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(consensus.ValidatorMgrBin), managerParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -283,11 +293,11 @@ func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis 
 		return nil, err
 	}
 
-	for _, account := range opts.prefundedAccounts {
+	for _, holder := range opts.holders {
 		mintParams, err := tokenABI.Pack(
 			"mint",
-			account,
-			new(big.Int).SetUint64(1),
+			holder.address,
+			holder.balance,
 		)
 		if err != nil {
 			return nil, err
@@ -308,7 +318,7 @@ func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis 
 // addOracleMgr includes the oracle manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
 func addOracleMgr(stateDB *state.StateDB, opts *validOracleMgrOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
-	managerABI, err := abi.JSON(strings.NewReader(oracle.OracleManagerABI))
+	managerABI, err := abi.JSON(strings.NewReader(oracle.OracleMgrABI))
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +335,7 @@ func addOracleMgr(stateDB *state.StateDB, opts *validOracleMgrOpts, genesis *cor
 
 	runtimeCfg := getDefaultRuntimeConfig(stateDB)
 	runtimeCfg.Origin = *owner
-	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(oracle.OracleManagerBin), managerParams...), runtimeCfg)
+	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(oracle.OracleMgrBin), managerParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
 	}

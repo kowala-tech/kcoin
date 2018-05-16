@@ -2,10 +2,11 @@ pragma solidity 0.4.21;
 
 import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 
-contract OracleManager is pausable.Pausable {
+contract OracleMgr is pausable.Pausable {
     uint public baseDeposit;       
     uint public maxNumOracles;
     uint public freezePeriod;
+    uint public price = 1 ether; // one dollar
 
     struct Deposit {
         uint amount;
@@ -24,9 +25,6 @@ contract OracleManager is pausable.Pausable {
     // the smallest deposit.
     address[] private oraclePool;
 
-    // price - initial price is 1$ in kUSD (same decimals as ether - 18)
-    uint public price = 1 ether; 
-
     modifier onlyWithMinDeposit {
         require(msg.value >= getMinimumDeposit());
         _;
@@ -42,7 +40,12 @@ contract OracleManager is pausable.Pausable {
         _;
     }
 
-    function OracleManager(uint _baseDeposit, uint _maxNumOracles, uint _freezePeriod) public {
+    modifier onlyValidPrice(uint _price) {
+        require(_price > 0);
+        _;
+    }
+
+    function OracleMgr(uint _baseDeposit, uint _maxNumOracles, uint _freezePeriod) public {
         require(_maxNumOracles > 0);
 
         baseDeposit = _baseDeposit;
@@ -95,7 +98,7 @@ contract OracleManager is pausable.Pausable {
     }
 
     // getMinimumDeposit returns the base deposit if there are positions available or
-    // the current smallest deposit required if there aren't positions availabe.
+    // the current smallest deposit required if there aren't positions available.
     function getMinimumDeposit() public view returns (uint deposit) {
         // there are positions for validator available
         if (_hasAvailability()) {
@@ -114,7 +117,7 @@ contract OracleManager is pausable.Pausable {
         _insertOracle(msg.sender, msg.value);
     }
 
-    // deregisterOracle deregisters the msg sender from the validator set
+    // deregisterOracle deregisters the msg sender from the oracle set
     function deregisterOracle() public whenNotPaused onlyOracle {
         _deleteOracle(msg.sender);
     }
@@ -134,7 +137,7 @@ contract OracleManager is pausable.Pausable {
     }
 
     // releaseDeposits transfers locked deposit(s) back the user account if they
-    // are past the unbonding period
+    // are past the freeze period
     function releaseDeposits() public whenNotPaused {
         uint refund = 0;
         uint i = 0;
@@ -152,12 +155,6 @@ contract OracleManager is pausable.Pausable {
         if (refund > 0) {
             msg.sender.transfer(refund);
         }
-    }
-
-    modifier onlyValidPrice(uint _price) {
-        // @TODO (rgeraldes) - define an interval of valid prices
-        require(_price > 0);
-        _;
     }
 
     function addPrice(uint _price) public whenNotPaused  onlyOracle onlyValidPrice(_price) {

@@ -1,9 +1,9 @@
 package consensus
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -17,65 +17,211 @@ import (
 )
 
 const (
-	initialBalance  = 10 // 10 kcoin
-	baseDeposit     = 1  // 1 kcoin
-	maxValidators   = 100
-	unbondingPeriod = 10 // 10 days
+	initialBalance   = 10 // 10 kcoin
+	baseDeposit      = 1  // 1 kcoin
+	maxNumValidators = 100
+	freezePeriod     = 10 // 10 days
+	secondsPerDay    = 86400
 )
 
 var (
 	errAlwaysFailingTransaction = errors.New("failed to estimate gas needed: gas required exceeds allowance or always failing transaction")
 )
 
-type ValidatorManagerSuite struct {
+type ValidatorMgrSuite struct {
 	suite.Suite
-	backend           *backends.SimulatedBackend
-	owner, randomUser *ecdsa.PrivateKey
-	genesisValidator  *ecdsa.PrivateKey
-	initialBalance    *big.Int
-	baseDeposit       *big.Int
-	maxValidators     *big.Int
-	unbondingPeriod   *big.Int
+	backend                   *backends.SimulatedBackend
+	contractOwner, randomUser *ecdsa.PrivateKey
+	genesisValidator          *ecdsa.PrivateKey
+	initialBalance            *big.Int
+	baseDeposit               *big.Int
+	maxNumValidators          *big.Int
+	freezePeriod              *big.Int
 }
 
-func TestElectionContractSuite(t *testing.T) {
-	suite.Run(t, new(ElectionContractSuite))
+func TestValidatorMgrSuite(t *testing.T) {
+	suite.Run(t, new(ValidatorMgrSuite))
 }
 
-func (suite *ValidatorManagerSuite) SetupSuite() {
+func (suite *ValidatorMgrSuite) SetupSuite() {
 	req := suite.Require()
 
-	owner, err := crypto.GenerateKey()
+	contractOwner, err := crypto.GenerateKey()
 	req.NoError(err)
 	randomUser, err := crypto.GenerateKey()
 	req.NoError(err)
 	genesisValidator, err := crypto.GenerateKey()
 	req.NoError(err)
 
-	suite.owner = owner
+	suite.contractOwner = contractOwner
 	suite.randomUser = randomUser
 	suite.genesisValidator = genesisValidator
-	suite.initialBalance = new(big.Int).Mul(new(big.Int).SetUint64(initialBalance), new(big.Int).SetUint64(params.Ether))
-	suite.baseDeposit = new(big.Int).Mul(new(big.Int).SetUint64(baseDeposit), new(big.Int).SetUint64(params.Ether))
-	suite.maxValidators = new(big.Int).SetUint64(maxValidators)
-	suite.unbondingPeriod = new(big.Int).SetUint64(unbondingPeriod)
+
+	suite.initialBalance = musd(new(big.Int).SetUint64(initialBalance))
+	suite.baseDeposit = musd(new(big.Int).SetUint64(baseDeposit))
+	suite.maxNumValidators = new(big.Int).SetUint64(maxNumValidators)
+	suite.freezePeriod = new(big.Int).SetUint64(freezePeriod)
 }
 
-func (suite *ValidatorManagerSuite) NewSimulatedBackend() *backends.SimulatedBackend {
-	ownerAddr := crypto.PubkeyToAddress(suite.owner.PublicKey)
+func (suite *ValidatorMgrSuite) NewSimulatedBackend() *backends.SimulatedBackend {
+	contractOwnerAddr := crypto.PubkeyToAddress(suite.contractOwner.PublicKey)
 	randomUserAddr := crypto.PubkeyToAddress(suite.randomUser.PublicKey)
 	genesisAddr := crypto.PubkeyToAddress(suite.genesisValidator.PublicKey)
 	defaultAccount := core.GenesisAccount{Balance: suite.initialBalance}
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		ownerAddr:      defaultAccount,
-		randomUserAddr: defaultAccount,
-		genesisAddr:    defaultAccount,
+		contractOwnerAddr: defaultAccount,
+		randomUserAddr:    defaultAccount,
+		genesisAddr:       defaultAccount,
 	})
 
 	return backend
 }
 
-func (suite *ValidatorManagerSuite) DeployValidatorManager(baseDeposit, maxValidators, unbondingPeriod *big.Int) error {
+func (suite *ValidatorMgrSuite) SetupTest() {
+	suite.backend = suite.NewSimulatedBackend()
+}
+
+func (suite *ValidatorMgrSuite) TestDeployValidatorMgr() {
+	req := suite.Require()
+
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, suite.maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
+	req.NoError(err)
+	req.NotNil(mgr)
+
+	suite.backend.Commit()
+
+	storedBaseDeposit, err := mgr.BaseDeposit(&bind.CallOpts{})
+	req.NoError(err)
+
+	req.Equal(suite.baseDeposit, storedBaseDeposit)
+
+	storedMaxNumValidators, err := mgr.MaxNumValidators(&bind.CallOpts{})
+	req.NoError(err)
+
+	req.Equal(suite.maxNumValidators, storedMaxNumValidators)
+
+	storedFreezePeriod, err := mgr.FreezePeriod(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(storedFreezePeriod)
+
+	req.Equal(dtos(suite.freezePeriod), storedFreezePeriod)
+
+	req.True(mgr.IsGenesisValidator(&bind.CallOpts{}, getAddress(suite.genesisValidator)))
+}
+
+func (suite *ValidatorMgrSuite) TestIsGenesis() {
+	req := suite.Require()
+
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, suite.maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
+	req.NoError(err)
+	req.NotNil(mgr)
+
+	suite.backend.Commit()
+
+	testCases := []struct {
+		input  common.Address
+		output bool
+	}{
+		{
+			input:  getAddress(suite.genesisValidator),
+			output: true,
+		},
+		{
+			input:  getAddress(suite.randomUser),
+			output: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(fmt.Sprintf("Address %s", tc.input.Hex()), func(t *testing.T) {
+			isGenesis, err := mgr.IsGenesisValidator(&bind.CallOpts{}, tc.input)
+			req.NoError(err)
+			req.Equal(tc.output, isGenesis)
+		})
+	}
+}
+
+func (suite *ValidatorMgrSuite) TestIsValidator() {
+	req := suite.Require()
+
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, suite.maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
+	req.NoError(err)
+	req.NotNil(mgr)
+
+	suite.backend.Commit()
+
+	testCases := []struct {
+		input  common.Address
+		output bool
+	}{
+		{
+			input:  getAddress(suite.genesisValidator),
+			output: true,
+		},
+		{
+			input:  getAddress(suite.randomUser),
+			output: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(fmt.Sprintf("Address %s", tc.input.Hex()), func(t *testing.T) {
+			isValidator, err := mgr.IsValidator(&bind.CallOpts{}, tc.input)
+			req.NoError(err)
+			req.Equal(tc.output, isValidator)
+		})
+	}
+}
+
+func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_NotFull() {
+	req := suite.Require()
+
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	maxNumValidators := suite.maxNumValidators
+	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
+	req.NoError(err)
+	req.NotNil(mgr)
+
+	suite.backend.Commit()
+
+	minDeposit, err := mgr.GetMinimumDeposit(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(minDeposit)
+
+	req.Equal(suite.baseDeposit, minDeposit)
+}
+
+func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
+	req := suite.Require()
+
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	maxNumValidators := common.Big1
+	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, maxNumValidators, suite.freezePeriod, suite.genesisValidator)
+	req.NoError(err)
+	req.NotNil(mgr)
+
+	// @TODO (rgeraldes)
+	//deposit := suite.baseDeposit
+	//registrationOpts := bind.NewKeyedTransactor(suite.randomUser)
+	//registrationOpts.Value = deposit
+	//_, err = mgr.RegisterV(registrationOpts)
+	//req.NoError(err)
+
+	suite.backend.Commit()
+
+	minDeposit, err := mgr.GetMinimumDeposit(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(minDeposit)
+
+	// minimum deposit must be the smallest bid + 1
+	req.Equal(new(big.Int).Add(deposit, common.Big1), minDeposit)
+}
+
+/*
+func (suite *ValidatorMgrSuite) DeployValidatorManager(baseDeposit, maxValidators, unbondingPeriod *big.Int) error {
 	opts := bind.NewKeyedTransactor(suite.owner)
 	_, _, contract, err := DeployValidatorManager(opts, suite.backend, baseDeposit, maxValidators, unbondingPeriod, crypto.PubkeyToAddress(suite.genesisValidator.PublicKey))
 	if err != nil {
@@ -96,35 +242,8 @@ func (suite *ValidatorManagerSuite) DeployValidatorManager(baseDeposit, maxValid
 	return nil
 }
 
-func (suite *ElectionContractSuite) SetupTest() {
-	req := suite.Require()
 
-	suite.backend = suite.NewSimulatedBackend()
-	req.NoError(suite.DeployElectionContract(suite.baseDeposit, suite.maxValidators, suite.unbondingPeriod))
-}
 
-func (suite *ElectionContractSuite) TestDeployElectionContract() {
-	req := suite.Require()
-
-	latestBaseDeposit, err := suite.contract.BaseDeposit(&bind.CallOpts{})
-	req.NoError(err)
-	req.Equal(suite.baseDeposit, latestBaseDeposit)
-
-	latestMaxValidators, err := suite.contract.MaxValidators(&bind.CallOpts{})
-	req.NoError(err)
-	req.Equal(suite.maxValidators, latestMaxValidators)
-
-	/*
-		@TODO (rgeraldes)
-		latestUnbondingPeriod, err := suite.contract.UnbondingPeriod(&bind.CallOpts{})
-		req.NoError(err)
-		req.Equal(new(big.Int).SetUint64(suite.unbondingPeriod.Int64()*time.Hour.*24), latestUnbondingPeriod)
-	*/
-
-	genesisValidator, err := suite.contract.GenesisValidator(&bind.CallOpts{})
-	req.NoError(err)
-	req.Equal(crypto.PubkeyToAddress(suite.genesisValidator.PublicKey), genesisValidator)
-}
 
 func (suite *ElectionContractSuite) TestDeployElectionContract_MaxNumValidatorsEqualZero() {
 	req := suite.Require()
@@ -165,79 +284,11 @@ func (suite *ElectionContractSuite) TestTransferOwnership_Owner() {
 	req.Equal(newOwner, latestOwner)
 }
 
-func (suite *ElectionContractSuite) TestIsGenesis() {
-	req := suite.Require()
 
-	testCases := []struct {
-		input  common.Address
-		output bool
-	}{
-		{
-			input:  getAddress(suite.genesisValidator),
-			output: true,
-		},
-		{
-			input:  getAddress(suite.randomUser),
-			output: false,
-		},
-	}
 
-	for _, tc := range testCases {
-		isGenesis, err := suite.contract.IsGenesisValidator(&bind.CallOpts{}, tc.input)
-		req.NoError(err)
-		req.Equal(tc.output, isGenesis)
-	}
-}
 
-func (suite *ElectionContractSuite) TestIsValidator() {
-	req := suite.Require()
 
-	testCases := []struct {
-		input  common.Address
-		output bool
-	}{
-		{
-			input:  getAddress(suite.genesisValidator),
-			output: true,
-		},
-		{
-			input:  getAddress(suite.randomUser),
-			output: false,
-		},
-	}
 
-	for _, tc := range testCases {
-		isValidator, err := suite.contract.IsValidator(&bind.CallOpts{}, tc.input)
-		req.NoError(err)
-		req.Equal(tc.output, isValidator)
-	}
-}
-
-func (suite *ElectionContractSuite) TestGetMinimumDeposit_Full() {
-	req := suite.Require()
-
-	// leave a position available for the genesis validator - max validators = 1
-	maxValidators := new(big.Int).SetUint64(1)
-	suite.DeployElectionContract(suite.baseDeposit, maxValidators, suite.unbondingPeriod)
-
-	minDeposit, err := suite.contract.GetMinimumDeposit(&bind.CallOpts{})
-	req.NoError(err)
-	// min deposit should be greater (+ 1) than the smallest stake
-	// at play which is equal to the base deposit (genesis validator)
-	req.Equal((new(big.Int).Add(suite.baseDeposit, common.Big1)), minDeposit)
-}
-
-func (suite *ElectionContractSuite) TestGetMinimumDeposit_NotFull() {
-	// by default the contract has one validator (genesis) and 99 (100 - 1)
-	// positions available
-	req := suite.Require()
-
-	minDeposit, err := suite.contract.GetMinimumDeposit(&bind.CallOpts{})
-	req.NoError(err)
-	// min deposit should be equal to the base deposit since
-	// there are positions available
-	req.Equal(suite.baseDeposit, minDeposit)
-}
 
 func (suite *ElectionContractSuite) TestSetBaseDeposit_NotOwner() {
 	req := suite.Require()
@@ -527,6 +578,19 @@ func (suite *ElectionContractSuite) TestRedeemFunds_UnlockedDeposit() {
 	req.Zero(depositCount.Uint64())
 }
 
+*/
+
+// dtos converts days to seconds
+func dtos(days *big.Int) *big.Int {
+	return new(big.Int).Mul(days, new(big.Int).SetUint64(secondsPerDay))
+}
+
+// musd converts the value to mUSD units
+func musd(value *big.Int) *big.Int {
+	return new(big.Int).Mul(value, new(big.Int).SetUint64(params.Ether))
+}
+
+// getAddress return the address of the given private key
 func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
 	return crypto.PubkeyToAddress(privateKey.PublicKey)
 }
