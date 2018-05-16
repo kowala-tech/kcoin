@@ -80,6 +80,7 @@ func (suite *MiningTokenSuite) TestFinishMinting_Success() {
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// terminate the minting process
 	_, err = token.FinishMinting(opts)
@@ -99,6 +100,7 @@ func (suite *MiningTokenSuite) TestFinishMinting_NotOwner() {
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// terminate the minting process
 	opts = bind.NewKeyedTransactor(suite.randomUser)
@@ -113,6 +115,7 @@ func (suite *MiningTokenSuite) TestFinishMinting_MintingOver() {
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// terminate the minting process
 	_, err = token.FinishMinting(opts)
@@ -130,6 +133,7 @@ func (suite *MiningTokenSuite) TestMint_Success() {
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// mint all the tokens to the contract owner
 	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)
@@ -143,6 +147,7 @@ func (suite *MiningTokenSuite) TestMint_NotOwner() {
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// mint all the tokens to the contract owner
 	opts = bind.NewKeyedTransactor(suite.randomUser)
@@ -157,6 +162,7 @@ func (suite *MiningTokenSuite) TestMint_OverCap() {
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// mint all the tokens plus one to the contract owner
 	_, err = token.Mint(opts, getAddress(suite.contractOwner), new(big.Int).Add(suite.cap, common.Big1))
@@ -170,6 +176,7 @@ func (suite *MiningTokenSuite) TestMint_MintingOver() {
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// terminate the minting process
 	_, err = token.FinishMinting(opts)
@@ -187,13 +194,14 @@ func (suite *MiningTokenSuite) TestTransfer_CustomFallback_CompatibleContract_Va
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// mint all the tokens to the contract owner
 	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)
 	req.NoError(err)
 
 	// the validator manager contract implements the custom fallback
-	validatorMgrAddr, _, validatorMgr, err := consensus.DeployValidatorManager(opts, suite.backend, common.Big0, common.Big32, common.Big0, getAddress(suite.genesisValidator))
+	validatorMgrAddr, _, validatorMgr, err := consensus.DeployValidatorMgr(opts, suite.backend, common.Big0, common.Big32, common.Big0, getAddress(suite.genesisValidator))
 	req.NoError(err)
 
 	// transfer mUSD to the validator manager contract
@@ -214,13 +222,14 @@ func (suite *MiningTokenSuite) TestTransfer_CustomFallback_IncompatibleContract_
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, "mUSD", "mUSD", suite.cap, 18)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// mint all the tokens to the contract owner
 	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)
 	req.NoError(err)
 
 	// the oracle manager contract doesn't implement the custom fallback - receiveToken
-	oracleMgrAddr, _, _, err := oracle.DeployOracleManager(opts, suite.backend, common.Big0, common.Big32, common.Big0)
+	oracleMgrAddr, _, _, err := oracle.DeployOracleMgr(opts, suite.backend, common.Big0, common.Big32, common.Big0)
 	req.NoError(err)
 
 	suite.backend.Commit()
@@ -239,6 +248,7 @@ func (suite *MiningTokenSuite) TestBalanceOf() {
 	opts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
 	req.NoError(err)
+	req.NotNil(token)
 
 	// mint all the tokens to the contract owner
 	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)

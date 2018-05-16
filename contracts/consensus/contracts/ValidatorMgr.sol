@@ -1,14 +1,17 @@
 pragma solidity 0.4.21;
 
 import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
-import "github.com/kowala-tech/kcoin/contracts/token/contracts/TokenReceiver.sol" as receiver;
+import "github.com/kowala-tech/kcoin/contracts/token/contracts/ERC223.sol" as token;
+// @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/issues/284
+//import "github.com/kowala-tech/kcoin/contracts/token/contracts/TokenReceiver.sol" as receiver; 
 
 contract ValidatorMgr is pausable.Pausable {
     uint public baseDeposit;       
     uint public maxNumValidators;
-    uint public freezePeriod; // period in days
+    uint public freezePeriod;
     address public genesisValidator;
     bytes32 public validatorsChecksum;
+    address public miningTokenAddr;
 
     struct Deposit {
         uint amount;
@@ -18,6 +21,7 @@ contract ValidatorMgr is pausable.Pausable {
     struct Validator {
         uint index;
         bool isValidator;
+        bool isGenesis;
 
         // @NOTE (rgeraldes) - users can have more than one deposit
         // Example: user leaves and re-enters the election. At this point
@@ -47,19 +51,18 @@ contract ValidatorMgr is pausable.Pausable {
         _;
     }
 
-    function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _genesis) public {
+    function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address miningTokenAddr) public {
         require(_maxNumValidators >= 1);
 
         baseDeposit = _baseDeposit;
         maxNumValidators = _maxNumValidators;
         freezePeriod = _freezePeriod * 1 days;
-        genesisValidator = _genesis;
     
         _insertValidator(_genesis, baseDeposit);
     }
 
     function isGenesisValidator(address code) public view returns (bool isIndeed) {
-        return isValidator(code) && code == genesisValidator;
+        return validatorRegistry[code].isGenesis;
     }
 
     function isValidator(address code) public view returns (bool isIndeed) {
@@ -100,6 +103,8 @@ contract ValidatorMgr is pausable.Pausable {
         Validator sender = validatorRegistry[code];
         sender.index = validatorPool.push(code) - 1;
         sender.isValidator = true;
+        if (block.number == 0) sender.isGenesis = true;
+
         sender.deposits.push(Deposit({amount:deposit, availableAt: 0}));
 
         for (uint index = sender.index; index > 0; index--) {
@@ -206,7 +211,8 @@ contract ValidatorMgr is pausable.Pausable {
         _removeDeposits(msg.sender, i);
 
         if (refund > 0) {
-            msg.sender.transfer(refund);
+            token.ERC223 mUSD = token.ERC223(miningTokenAddr);
+            mUSD.transfer(msg.sender, refund);
         }
     }
 
@@ -221,7 +227,7 @@ contract ValidatorMgr is pausable.Pausable {
 
     function registerValidator(address _from, uint _value, bytes _data) public {
         //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
-        // SSTORE
+        // SSTORE problem - expensive
         tkn = TKN(_from, _value/*, _data, bytes4(u)*/);
         _registerValidator();
     }

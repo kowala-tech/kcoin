@@ -76,6 +76,7 @@ type validValidatorMgrOpts struct {
 	freezePeriod     *big.Int
 	baseDeposit      *big.Int
 	validators       []*validValidator
+	miningTokenAddr  common.Address
 }
 
 type validOracleMgrOpts struct {
@@ -176,7 +177,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	// @TODO (rgeraldes) - calculate the cap based on the decimals provided
 	decimals := new(big.Int).SetUint64(uint64(options.Consensus.MiningToken.Decimals))
 	cap := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.MiningToken.Cap), big.NewInt(params.Ether))
-	
+
 	holders := make([]*validTokenHolder, 0, len(options.Consensus.MiningToken.Holders))
 	for _, holder := range options.Consensus.MiningToken.Holders {
 		addr, err := getAddress(holder.Address)

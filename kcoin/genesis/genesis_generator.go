@@ -64,6 +64,36 @@ type domain struct {
 	addr common.Address
 }
 
+type vmTracer struct {
+	data map[common.Address]map[common.Hash]common.Hash
+}
+
+func newVmTracer() *vmTracer {
+	return &vmTracer{
+		data: make(map[common.Address]map[common.Hash]common.Hash, 1024),
+	}
+}
+
+func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+	if err != nil {
+		return err
+	}
+	if op == vm.SSTORE {
+		s := stack.Data()
+		addrStorage, ok := vmt.data[contract.Address()]
+		if !ok {
+			addrStorage = make(map[common.Hash]common.Hash, 1024)
+			vmt.data[contract.Address()] = addrStorage
+		}
+		addrStorage[common.BigToHash(s[len(s)-1])] = common.BigToHash(s[len(s)-2])
+	}
+	return nil
+}
+
+func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+	return nil
+}
+
 func GenerateGenesis(opts Options) (*core.Genesis, error) {
 	validOptions, err := validateOptions(opts)
 	if err != nil {
@@ -99,27 +129,20 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 	}
 	contractsOwner := multiSigAddr
 
+	// @NOTE (rgeraldes) - must be deployed before the validator mgr contract
+	miningTokenAddr, err := addMiningToken(stateDB, validOptions.miningToken, genesis, contractsOwner)
+	if err != nil {
+		return nil, err
+	}
+
 	oracleMgrAddr, err := addOracleMgr(stateDB, validOptions.oracleMgr, genesis, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
 
+	// @NOTE (rgeraldes) - validator manager must know the mining token addr in order to transfer back the funds
+	validOptions.validatorMgr.miningTokenAddr = *miningTokenAddr
 	validatorMgrAddr, err := addValidatorMgr(stateDB, validOptions.validatorMgr, genesis, contractsOwner)
-	if err != nil {
-		return nil, err
-	}
-
-	// prefund the validator mgr contract with the genesis validators deposits
-	sum := new(big.Int)
-	for _, validator := range validOptions.validatorMgr.validators {
-		sum.Add(sum, validator.deposit)
-	}
-	validOptions.miningToken.holders = append(validOptions.miningToken.holders, &validTokenHolder{
-		address: *validatorMgrAddr,
-		balance: sum,
-	})
-
-	miningTokenAddr, err := addMiningToken(stateDB, validOptions.miningToken, genesis, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +170,8 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 
 func getDefaultRuntimeConfig(sharedState *state.StateDB) *runtime.Config {
 	return &runtime.Config{
-		State: sharedState,
+		State:       sharedState,
+		BlockNumber: common.Big0, // @NOTE (rgeraldes) - identify the genesis validators
 		EVMConfig: vm.Config{
 			Debug:  true,
 			Tracer: newVmTracer(),
@@ -256,6 +280,28 @@ func addValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesi
 	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(consensus.ValidatorMgrBin), managerParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
+	}
+
+	// register genesis validators
+	tokenABI, err := abi.JSON(strings.NewReader(token.MiningTokenABI))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, validator := range opts.validators {
+		registrationParams, err := tokenABI.Pack(
+			"transfer",
+			contractAddr,
+			validator.deposit,
+			// @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/issues/285
+			[]byte("not_zero"),
+			"registerValidator(address,uint256,bytes)",
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		runtime.Call(opts.miningTokenAddr, append(common.FromHex(token.MiningTokenBin), registrationParams...), runtimeCfg)
 	}
 
 	genesis.Alloc[contractAddr] = core.GenesisAccount{
@@ -503,52 +549,4 @@ func prefundedIncludesValidatorWallet(
 	}
 
 	return false
-}
-
-type contractData struct {
-	addr    common.Address
-	code    []byte
-	storage map[common.Hash]common.Hash
-}
-
-func createContract(cfg *runtime.Config, code []byte) (*contractData, error) {
-	out, addr, _, err := runtime.Create(code, cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &contractData{
-		addr:    addr,
-		code:    out,
-		storage: cfg.EVMConfig.Tracer.(*vmTracer).data[addr],
-	}, nil
-}
-
-type vmTracer struct {
-	data map[common.Address]map[common.Hash]common.Hash
-}
-
-func newVmTracer() *vmTracer {
-	return &vmTracer{
-		data: make(map[common.Address]map[common.Hash]common.Hash, 1024),
-	}
-}
-
-func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
-	if err != nil {
-		return err
-	}
-	if op == vm.SSTORE {
-		s := stack.Data()
-		addrStorage, ok := vmt.data[contract.Address()]
-		if !ok {
-			addrStorage = make(map[common.Hash]common.Hash, 1024)
-			vmt.data[contract.Address()] = addrStorage
-		}
-		addrStorage[common.BigToHash(s[len(s)-1])] = common.BigToHash(s[len(s)-2])
-	}
-	return nil
-}
-
-func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
-	return nil
 }

@@ -17,11 +17,18 @@ import (
 )
 
 const (
-	initialBalance   = 10 // 10 kcoin
-	baseDeposit      = 1  // 1 kcoin
+	// ValidatorMgr
+	initialBalance   = 10 // 10 kUSD
+	baseDeposit      = 1  // 1 mUSD
 	maxNumValidators = 100
 	freezePeriod     = 10 // 10 days
 	secondsPerDay    = 86400
+
+	// mUSD
+	miningToken         = "mUSD"
+	cap                 = 1073741824
+	miningTokenDecimals = uint8(18)
+	customFallback      = "registerValidator(address,uint256,bytes)"
 )
 
 var (
@@ -53,10 +60,12 @@ func (suite *ValidatorMgrSuite) SetupSuite() {
 	genesisValidator, err := crypto.GenerateKey()
 	req.NoError(err)
 
+	// users
 	suite.contractOwner = contractOwner
 	suite.randomUser = randomUser
 	suite.genesisValidator = genesisValidator
 
+	// valid params
 	suite.initialBalance = musd(new(big.Int).SetUint64(initialBalance))
 	suite.baseDeposit = musd(new(big.Int).SetUint64(baseDeposit))
 	suite.maxNumValidators = new(big.Int).SetUint64(maxNumValidators)
@@ -93,21 +102,29 @@ func (suite *ValidatorMgrSuite) TestDeployValidatorMgr() {
 
 	storedBaseDeposit, err := mgr.BaseDeposit(&bind.CallOpts{})
 	req.NoError(err)
-
+	req.NotNil(storedBaseDeposit)
 	req.Equal(suite.baseDeposit, storedBaseDeposit)
 
 	storedMaxNumValidators, err := mgr.MaxNumValidators(&bind.CallOpts{})
 	req.NoError(err)
-
+	req.NotNil(storedMaxNumValidators)
 	req.Equal(suite.maxNumValidators, storedMaxNumValidators)
 
 	storedFreezePeriod, err := mgr.FreezePeriod(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedFreezePeriod)
-
 	req.Equal(dtos(suite.freezePeriod), storedFreezePeriod)
 
 	req.True(mgr.IsGenesisValidator(&bind.CallOpts{}, getAddress(suite.genesisValidator)))
+}
+
+func (suite *ValidatorMgrSuite) TestDeployValidatorMgr_MaxNumValidators_Zero() {
+	req := suite.Require()
+
+	maxNumValidators := common.Big0
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, _, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
+	req.Equal(errAlwaysFailingTransaction, err)
 }
 
 func (suite *ValidatorMgrSuite) TestIsGenesis() {
@@ -179,8 +196,8 @@ func (suite *ValidatorMgrSuite) TestIsValidator() {
 func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_NotFull() {
 	req := suite.Require()
 
-	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
 	maxNumValidators := suite.maxNumValidators
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
 	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
 	req.NoError(err)
 	req.NotNil(mgr)
@@ -197,18 +214,12 @@ func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_NotFull() {
 func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
 	req := suite.Require()
 
-	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
 	maxNumValidators := common.Big1
-	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, maxNumValidators, suite.freezePeriod, suite.genesisValidator)
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	// contract includes one validator - genesis validator
+	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
 	req.NoError(err)
 	req.NotNil(mgr)
-
-	// @TODO (rgeraldes)
-	//deposit := suite.baseDeposit
-	//registrationOpts := bind.NewKeyedTransactor(suite.randomUser)
-	//registrationOpts.Value = deposit
-	//_, err = mgr.RegisterV(registrationOpts)
-	//req.NoError(err)
 
 	suite.backend.Commit()
 
@@ -216,41 +227,40 @@ func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
 	req.NoError(err)
 	req.NotNil(minDeposit)
 
+	// genesis validator deposit equals base deposit
 	// minimum deposit must be the smallest bid + 1
-	req.Equal(new(big.Int).Add(deposit, common.Big1), minDeposit)
+	req.Equal(new(big.Int).Add(suite.baseDeposit, common.Big1), minDeposit)
+}
+
+func (suite *ValidatorMgrSuite) TestGetValidatorAtIndex() {
+	req := suite.Require()
+
+	maxNumValidators := common.Big1
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
+	req.NoError(err)
+	req.NotNil(mgr)
+
+	suite.backend.Commit()
+
+	// fetch the genesis validator
+	index := common.Big0
+	genesisValidator, err := mgr.GetValidatorAtIndex(&bind.CallOpts{}, index)
+	req.NoError(err)
+	req.NotNil(genesisValidator)
+	req.Equal(suite.baseDeposit, genesisValidator.Deposit)
+	req.Equal(getAddress(suite.genesisValidator), genesisValidator.Code)
+}
+
+func (suite *ValidatorMgrSuite) TestGetValidatorCount() {
+	
 }
 
 /*
-func (suite *ValidatorMgrSuite) DeployValidatorManager(baseDeposit, maxValidators, unbondingPeriod *big.Int) error {
-	opts := bind.NewKeyedTransactor(suite.owner)
-	_, _, contract, err := DeployValidatorManager(opts, suite.backend, baseDeposit, maxValidators, unbondingPeriod, crypto.PubkeyToAddress(suite.genesisValidator.PublicKey))
-	if err != nil {
-		return err
-	}
-	suite.contract = contract
-
-	// NOTE (rgeraldes) - add balance to cover the base deposit
-	// for the genesis validator. Eventually this could change
-	// as soon as the token contracts are completed.
-	opts.Value = suite.baseDeposit
-	_, err = contract.ElectionContractTransactor.contract.Transfer(opts)
-	if err != nil {
-		return err
-	}
-	suite.backend.Commit()
-
-	return nil
-}
 
 
 
 
-func (suite *ElectionContractSuite) TestDeployElectionContract_MaxNumValidatorsEqualZero() {
-	req := suite.Require()
-
-	maxValidators := common.Big0
-	req.Equal(errTransactionFailed, suite.DeployElectionContract(suite.baseDeposit, maxValidators, suite.unbondingPeriod))
-}
 
 func (suite *ElectionContractSuite) TestGetOwner() {
 	req := suite.Require()
@@ -578,6 +588,9 @@ func (suite *ElectionContractSuite) TestRedeemFunds_UnlockedDeposit() {
 	req.Zero(depositCount.Uint64())
 }
 
+
+
+
 */
 
 // dtos converts days to seconds
@@ -594,3 +607,22 @@ func musd(value *big.Int) *big.Int {
 func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
 	return crypto.PubkeyToAddress(privateKey.PublicKey)
 }
+
+/*
+	_, _, mUSD, err := token.DeployMiningToken(ownerTransactOpts, suite.backend, miningToken, miningToken, musd(new(big.Int).SetUint64(cap)), miningTokenDecimals)
+	req.NoError(err)
+	req.NotNil(mUSD)
+
+	_, err = mUSD.Mint(ownerTransactOpts, getAddress(suite.randomUser), suite.baseDeposit)
+	req.NoError(err)
+
+	suite.backend.Commit()
+
+	balance, err := mUSD.BalanceOf(&bind.CallOpts{}, getAddress(suite.randomUser))
+	req.NoError(err)
+
+
+	deposit := suite.baseDeposit
+	_, err = mUSD.Transfer(userTransactOpts, mgrAddr, deposit, []byte("non-zero"), customFallback)
+	req.NoError(err)
+*/
