@@ -33,8 +33,6 @@ const (
 )
 
 var (
-	//DefaultSmartContractsOwner = network.MapChainIDToAddr[params.TestnetChainConfig.ChainID.Uint64()]
-
 	availableNetworks = map[string]bool{
 		MainNetwork:  true,
 		TestNetwork:  true,
@@ -108,8 +106,8 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 			ChainID:    getNetwork(validOptions.network),
 			Tendermint: getConsensusEngine(validOptions.consensusEngine),
 		},
-		// @TODO (rgeraldes) -
-		ExtraData: getExtraData(opts.ExtraData),
+		// @TODO (rgeraldes)
+		//ExtraData: getExtraData(opts.ExtraData),
 	}
 
 	// @NOTE (rgeraldes) - state needs to be shared between contracts because of the address

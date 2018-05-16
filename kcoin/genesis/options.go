@@ -174,8 +174,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
 
 	// mining tokens
-	// @TODO (rgeraldes) - calculate the cap based on the decimals provided
-	decimals := new(big.Int).SetUint64(uint64(options.Consensus.MiningToken.Decimals))
+	decimals := new(big.Int).Exp(common.Big1, new(big.Int).SetUint64(options.Consensus.MiningToken.Decimals), nil)
 	cap := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.MiningToken.Cap), big.NewInt(params.Ether))
 
 	holders := make([]*validTokenHolder, 0, len(options.Consensus.MiningToken.Holders))

@@ -247,17 +247,15 @@ func tokenHoldersFromCommandLine(input interface{}) []genesis.TokenHolder {
 	values := strings.Split(holdersStr, ",")
 	for _, value := range values {
 		parts := strings.Split(value, ":")
-		
+
 		numTokens, err := strconv.ParseUint(parts[1], 10, 64)
 		if err != nil {
 			panic(fmt.Errorf("Fatal error parsing numTokens: %s \n", err))
 		}
-		holder := genesis.TokenHolder{
+		holders = append(holders, genesis.TokenHolder{
 			Address:   parts[0],
 			NumTokens: numTokens,
-		}
-
-		holders = append(holders, holder)
+		})
 	}
 
 	return holders
@@ -267,16 +265,12 @@ func prefundAccountsFromConfigFile(accounts interface{}) []genesis.PrefundedAcco
 	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
 
 	accountArray := accounts.([]interface{})
-
 	for _, v := range accountArray {
 		val := v.(map[string]interface{})
-
-		prefundedAccount := genesis.PrefundedAccount{
+		prefundedAccounts = append(prefundedAccounts, genesis.PrefundedAccount{
 			AccountAddress: val["accountAddress"].(string),
 			Balance:        val["balance"].(string),
-		}
-
-		prefundedAccounts = append(prefundedAccounts, prefundedAccount)
+		})
 	}
 
 	return prefundedAccounts
@@ -286,16 +280,12 @@ func validatorsFromConfigFile(input interface{}) []genesis.Validator {
 	validators := make([]genesis.Validator, 0)
 
 	validatorArray := input.([]interface{})
-
 	for _, value := range validatorArray {
 		parts := value.(map[string]interface{})
-
-		validator := genesis.Validator{
+		validators = append(validators, genesis.Validator{
 			Address: parts["address"].(string),
 			Deposit: parts["deposit"].(uint64),
-		}
-
-		validators = append(validators, validator)
+		})
 	}
 
 	return validators
@@ -305,16 +295,12 @@ func tokenHoldersFromConfigFile(input interface{}) []genesis.TokenHolder {
 	holders := make([]genesis.TokenHolder, 0)
 
 	holdersArray := input.([]interface{})
-
 	for _, value := range holdersArray {
 		parts := value.(map[string]interface{})
-
-		holder := genesis.TokenHolder{
+		holders = append(holders, genesis.TokenHolder{
 			Address:   parts["address"].(string),
 			NumTokens: parts["numTokens"].(uint64),
-		}
-
-		holders = append(holders, holder)
+		})
 	}
 
 	return holders
