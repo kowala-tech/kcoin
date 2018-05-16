@@ -58,6 +58,7 @@ func FeatureContext(s *godog.Suite) {
 	// Balances
 	s.Step(`^the balance of (\w+) should be (\d+) kcoins?$`, context.TheBalanceIsExactly)
 	s.Step(`^the balance of (\w+) should be around (\d+) kcoins?$`, context.TheBalanceIsAround)
+	s.Step(`^the balance of (\w+) should be greater (\d+) kcoins?$`, context.TheBalanceIsGreater)
 	s.Step(`^the transaction should fail$`, context.LastTransactionFailed)
 
 	// validation

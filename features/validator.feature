@@ -38,7 +38,5 @@ Feature: Joining network as a validator
      # do some transactions
     When I unlock the account A with password 'test'
     And I transfer 10 kcoin from A to B
-    And the balance of A should be around 985 kcoins
-
-    # check if some reward was generated
-    # Then the balance of B should be 20 kcoins
+    And the balance of A should be greater 985 kcoins
+    And the balance of B should be 1010 kcoins
