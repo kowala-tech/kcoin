@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	chainID = big.NewInt(519374298533)
+	chainID = big.NewInt(1000)
 )
 
 func FeatureContext(s *godog.Suite) {
