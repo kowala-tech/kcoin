@@ -150,22 +150,25 @@ func (ctx *Context) runBootnode() error {
 	if err := ctx.nodeRunner.Run(bootnode, ctx.scenarioNumber); err != nil {
 		return err
 	}
-	err = common.WaitFor("fetching bootnode enode", 1*time.Second, 20*time.Second, func() bool {
+	err = common.WaitFor("fetching bootnode enode", 1*time.Second, 20*time.Second, func() error {
 		bootnodeStdout, err := ctx.nodeRunner.Log(bootnode.ID)
 		if err != nil {
-			return false
+			return err
 		}
+
 		found := enodeSecretRegexp.FindStringSubmatch(bootnodeStdout)
 		if len(found) != 2 {
-			return false
+			return fmt.Errorf("can't start a bootnode %q", bootnodeStdout)
 		}
+
 		enodeSecret := found[1]
 		bootnodeIP, err := ctx.nodeRunner.IP(bootnode.ID)
 		if err != nil {
-			return false
+			return err
 		}
 		ctx.bootnode = fmt.Sprintf("enode://%v@%v:33445", enodeSecret, bootnodeIP)
-		return true
+
+		return nil
 	})
 
 	if err != nil {
@@ -235,16 +238,22 @@ func (ctx *Context) triggerGenesisValidation() error {
 		return err
 	}
 
-	return common.WaitFor("validation starts", 2*time.Second, 20*time.Second, func() bool {
+	return common.WaitFor("validation starts", 2*time.Second, 20*time.Second, func() error {
 		res, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand("eth.blockNumber"))
 		if err != nil {
-			return false
+			return err
 		}
+
 		parsed, err := strconv.Atoi(strings.TrimSpace(res.StdOut))
 		if err != nil {
-			return false
+			return err
 		}
-		return parsed > 0
+
+		if parsed <= 0 {
+			return fmt.Errorf("can't start validation %q", res.StdOut)
+		}
+
+		return nil
 	})
 }
 

@@ -17,14 +17,18 @@ type ValidationContext struct {
 	globalCtx       *Context
 	accountPassword string
 	nodeRunning     bool
+	waiter          doer
 }
 
 func NewValidationContext(parentCtx *Context) *ValidationContext {
-	return &ValidationContext{
+	ctx := &ValidationContext{
 		globalCtx:       parentCtx,
 		accountPassword: "test",
 		nodeRunning:     false,
 	}
+
+	ctx.waiter = common.NewWaiter(ctx)
+	return ctx
 }
 
 func (ctx *ValidationContext) nodeID() cluster.NodeID {
@@ -40,36 +44,31 @@ func (ctx *ValidationContext) IWaitForTheUnbondingPeriodToBeOver() error {
 }
 
 func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
-	_, err := ctx.Do(setDeposit(kcoin))
+	err := ctx.waiter.Do(ctx.makeExecFunc(setDeposit(kcoin)))
 	if err != nil {
 		return err
 	}
 
-	_, err = ctx.Do(validatorStartCommand())
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ctx.waiter.Do(
+		ctx.makeExecFunc(validatorStartCommand()),
+		func() error {
+			res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isRunningCommand())
+			if err != nil {
+				log.Debug(res.StdOut)
+				return err
+			}
+			if strings.TrimSpace(res.StdOut) != "true" {
+				log.Debug(res.StdOut)
+				return errors.New("validator is not running")
+			}
+			return nil
+		})
 }
 
 func (ctx *ValidationContext) IWaitForMyNodeToBeSynced() error {
-	return common.WaitFor("timeout waiting for node sync", time.Second, time.Second*5, func() bool {
-		return ctx.MyNodeIsAlreadySynchronised() == nil
+	return common.WaitFor("timeout waiting for node sync", time.Second, time.Second*5, func() error {
+		return ctx.MyNodeIsAlreadySynchronised()
 	})
-}
-
-func (ctx *ValidationContext) IShouldBeAValidator() error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isRunningCommand())
-	if err != nil {
-		log.Debug(res.StdOut)
-		return err
-	}
-	if strings.TrimSpace(res.StdOut) != "true" {
-		log.Debug(res.StdOut)
-		return errors.New("validator is not running")
-	}
-	return nil
 }
 
 func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
@@ -96,12 +95,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 }
 
 func (ctx *ValidationContext) IWithdrawMyNodeFromValidation() error {
-	_, err := ctx.Do(stopValidatingCommand())
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ctx.waiter.Do(ctx.makeExecFunc(stopValidatingCommand()))
 }
 
 func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expectedKcoins, days int) error {
@@ -169,67 +163,28 @@ func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
 	return nil
 }
 
-// Do executes the command on the node and waits 1 block then
-func (ctx *ValidationContext) Do(command []string) (*cluster.ExecResponse, error) {
-	currentBlock, err := ctx.currentBlock()
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), command)
-	if err != nil {
-		log.Debug(res.StdOut)
-		return nil, err
-	}
-
-	err = ctx.waitBlocksFrom(currentBlock, 1)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+func (ctx *ValidationContext) Do(cmd []string, condFunc func() error) error {
+	return ctx.waiter.Do(ctx.makeExecFunc(cmd), condFunc)
 }
 
-func (ctx *ValidationContext) waitBlocksFrom(block, n int) error {
-	t := time.NewTicker(200 * time.Millisecond)
-	timeout := time.NewTimer(20 * time.Second)
-	defer t.Stop()
-
-	var (
-		err      error
-		newBlock int
-	)
-
-waitLoop:
-	for {
-		select {
-		case <-timeout.C:
-			return fmt.Errorf("timeout. started with block %d, finished with %d", block, newBlock)
-		case <-t.C:
-			newBlock, err = ctx.currentBlock()
-			if err != nil {
-				return err
-			}
-
-			blocks := newBlock - block
-
-			if blocks >= n {
-				break waitLoop
-			}
-		}
-	}
-
-	return nil
-}
-
-func (ctx *ValidationContext) currentBlock() (int, error) {
+func (ctx *ValidationContext) CurrentBlock() (uint64, error) {
 	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), blockNumberCommand())
 	if err != nil {
 		log.Debug(res.StdOut)
 		return 0, err
 	}
 
-	return strconv.Atoi(strings.TrimSpace(res.StdOut))
+	return strconv.ParseUint(strings.TrimSpace(res.StdOut), 10, 64)
+}
+
+func (ctx *ValidationContext) makeExecFunc(command []string) func() error {
+	return func() error {
+		res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), command)
+		if err != nil {
+			log.Debug(res.StdOut)
+		}
+		return err
+	}
 }
 
 func blockNumberCommand() []string {
