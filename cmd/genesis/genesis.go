@@ -23,7 +23,7 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			loadFromFileConfigIfAvailable()
 
-			options := genesis.Options{
+			options := &genesis.Options{
 				Network:           viper.GetString("genesis.network"),
 				PrefundedAccounts: parsePrefundedAccounts(viper.Get("prefundedAccounts")),
 				Consensus: &genesis.ConsensusOpts{
@@ -196,10 +196,13 @@ func prefundAccountsFromCommandLine(accounts interface{}) []genesis.PrefundedAcc
 	a := strings.Split(accountsString, ",")
 	for _, v := range a {
 		values := strings.Split(v, ":")
-		balance := values[1]
+		balance, err := strconv.ParseUint(values[1], 10, 64)
+		if err != nil {
+			panic(fmt.Errorf("Fatal error parsing deposit: %s \n", err))
+		}
 
 		prefundedAccount := genesis.PrefundedAccount{
-			AccountAddress: values[0],
+			Address: values[0],
 			Balance:        balance,
 		}
 
@@ -268,8 +271,8 @@ func prefundAccountsFromConfigFile(accounts interface{}) []genesis.PrefundedAcco
 	for _, v := range accountArray {
 		val := v.(map[string]interface{})
 		prefundedAccounts = append(prefundedAccounts, genesis.PrefundedAccount{
-			AccountAddress: val["accountAddress"].(string),
-			Balance:        val["balance"].(string),
+			Address: val["accountAddress"].(string),
+			Balance:        val["balance"].(uint64),
 		})
 	}
 

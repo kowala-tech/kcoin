@@ -92,8 +92,13 @@ func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, 
 	return nil
 }
 
-func GenerateGenesis(opts Options) (*core.Genesis, error) {
+func New(opts *Options) (*core.Genesis, error) {
 	validOptions, err := validateOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	alloc, err := newGenesisAlloc(validOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -101,14 +106,20 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 	genesis := &core.Genesis{
 		Timestamp: uint64(time.Now().Unix()),
 		GasLimit:  4700000,
-		Alloc:     make(core.GenesisAlloc),
+		Alloc:     alloc,
 		Config: &params.ChainConfig{
 			ChainID:    getNetwork(validOptions.network),
 			Tendermint: getConsensusEngine(validOptions.consensusEngine),
 		},
 		// @TODO (rgeraldes)
-		//ExtraData: getExtraData(opts.ExtraData),
+		ExtraData: getExtraData(opts.ExtraData),
 	}
+
+	return genesis, nil
+}
+
+func newGenesisAlloc(options *validGenesisOptions) (core.GenesisAlloc, error) {
+	alloc := make(core.GenesisAlloc)
 
 	// @NOTE (rgeraldes) - state needs to be shared between contracts because of the address
 	// generation for multiple contracts with the same origin.
@@ -121,49 +132,49 @@ func GenerateGenesis(opts Options) (*core.Genesis, error) {
 		return nil, err
 	}
 
-	multiSigAddr, err := addMultiSigWallet(stateDB, validOptions.multiSig, genesis)
+	multiSigAddr, err := deployMultiSigWallet(stateDB, options.multiSig, alloc)
 	if err != nil {
 		return nil, err
 	}
 	contractsOwner := multiSigAddr
 
 	// @NOTE (rgeraldes) - must be deployed before the validator mgr contract
-	miningTokenAddr, err := addMiningToken(stateDB, validOptions.miningToken, genesis, contractsOwner)
+	miningTokenAddr, err := deployMiningToken(stateDB, options.miningToken, alloc, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
 
-	oracleMgrAddr, err := addOracleMgr(stateDB, validOptions.oracleMgr, genesis, contractsOwner)
+	oracleMgrAddr, err := deployOracleMgr(stateDB, options.oracleMgr, alloc, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
 
 	// @NOTE (rgeraldes) - validator manager must know the mining token addr in order to transfer back the funds
-	validOptions.validatorMgr.miningTokenAddr = *miningTokenAddr
-	validatorMgrAddr, err := addValidatorMgr(stateDB, validOptions.validatorMgr, genesis, contractsOwner)
+	options.validatorMgr.miningTokenAddr = *miningTokenAddr
+	validatorMgrAddr, err := deployValidatorMgr(stateDB, options.validatorMgr, alloc, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
 
+	// @NOTE (rgeraldes) - temporary
 	domains := []*domain{
 		&domain{params.ConsensusServiceDomain, *validatorMgrAddr},
 		&domain{params.OracleServiceDomain, *oracleMgrAddr},
 		&domain{params.MiningTokenDomain, *miningTokenAddr},
 	}
-
 	for _, domain := range domains {
 		fmt.Printf("%s:%s\n", domain.name, domain.addr.Hex())
 	}
 
-	_, err = addNameServiceWithDomains(stateDB, genesis, contractsOwner, domains)
+	_, err = deployNameService(stateDB, alloc, contractsOwner, domains)
 	if err != nil {
 		return nil, err
 	}
 
-	addPrefundedAccountsIntoGenesis(validOptions.prefundedAccounts, genesis)
-	addBatchOfPrefundedAccountsIntoGenesis(genesis)
+	addPrefundedAccountsIntoGenesis(options.prefundedAccounts, alloc)
+	addBatchOfPrefundedAccountsIntoGenesis(alloc)
 
-	return genesis, nil
+	return alloc, nil
 }
 
 func getDefaultRuntimeConfig(sharedState *state.StateDB) *runtime.Config {
@@ -177,7 +188,7 @@ func getDefaultRuntimeConfig(sharedState *state.StateDB) *runtime.Config {
 	}
 }
 
-func addNameServiceWithDomains(stateDB *state.StateDB, genesis *core.Genesis, owner *common.Address, domains []*domain) (*common.Address, error) {
+func deployNameService(stateDB *state.StateDB, genesis core.GenesisAlloc, owner *common.Address, domains []*domain) (*common.Address, error) {
 	runtimeCfg := getDefaultRuntimeConfig(stateDB)
 	runtimeCfg.Origin = *owner
 
@@ -211,7 +222,7 @@ func addNameServiceWithDomains(stateDB *state.StateDB, genesis *core.Genesis, ow
 		runtime.Call(contractAddr, append(common.FromHex(nameservice.NameServiceBin), nameServiceRegParams...), runtimeCfg)
 	}
 
-	genesis.Alloc[contractAddr] = core.GenesisAccount{
+	genesis[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
@@ -220,10 +231,10 @@ func addNameServiceWithDomains(stateDB *state.StateDB, genesis *core.Genesis, ow
 	return &contractAddr, nil
 }
 
-// addMultiSigWallet includes kowala's multi sig wallet in the genesis state. The creator - tx originator - has no influence
+// deployMultiSigWallet includes kowala's multi sig wallet in the genesis state. The creator - tx originator - has no influence
 // in this specific contract (MultiSigWallet does not satisfy the Ownable contract) but we should use the same one all the
 // time in order to have the same contract addresses.
-func addMultiSigWallet(stateDB *state.StateDB, opts *validMultiSigOpts, genesis *core.Genesis) (*common.Address, error) {
+func deployMultiSigWallet(stateDB *state.StateDB, opts *validMultiSigOpts, genesis core.GenesisAlloc) (*common.Address, error) {
 	multiSigWalletABI, err := abi.JSON(strings.NewReader(ownership.MultiSigWalletABI))
 	if err != nil {
 		return nil, err
@@ -245,7 +256,7 @@ func addMultiSigWallet(stateDB *state.StateDB, opts *validMultiSigOpts, genesis 
 		return nil, err
 	}
 
-	genesis.Alloc[contractAddr] = core.GenesisAccount{
+	genesis[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
@@ -254,9 +265,9 @@ func addMultiSigWallet(stateDB *state.StateDB, opts *validMultiSigOpts, genesis 
 	return &contractAddr, nil
 }
 
-// addValidatorMgr includes the validator manager in the genesis block. The contract creator
+// deployValidatorMgr includes the validator manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
-func addValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
+func deployValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesis core.GenesisAlloc, owner *common.Address) (*common.Address, error) {
 	managerABI, err := abi.JSON(strings.NewReader(consensus.ValidatorMgrABI))
 	if err != nil {
 		return nil, err
@@ -302,7 +313,7 @@ func addValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesi
 		runtime.Call(opts.miningTokenAddr, append(common.FromHex(token.MiningTokenBin), registrationParams...), runtimeCfg)
 	}
 
-	genesis.Alloc[contractAddr] = core.GenesisAccount{
+	genesis[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
@@ -311,8 +322,8 @@ func addValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesi
 	return &contractAddr, nil
 }
 
-// addMiningToken includes the mUSD token contract in the genesis block
-func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
+// deployMiningToken includes the mUSD token contract in the genesis block
+func deployMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis core.GenesisAlloc, owner *common.Address) (*common.Address, error) {
 	tokenABI, err := abi.JSON(strings.NewReader(token.MiningTokenABI))
 	if err != nil {
 		return nil, err
@@ -350,7 +361,7 @@ func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis 
 		runtime.Call(contractAddr, append(common.FromHex(token.MiningTokenBin), mintParams...), runtimeCfg)
 	}
 
-	genesis.Alloc[contractAddr] = core.GenesisAccount{
+	genesis[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
@@ -359,9 +370,9 @@ func addMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis 
 	return &contractAddr, nil
 }
 
-// addOracleMgr includes the oracle manager in the genesis block. The contract creator
+// deployOracleMgr includes the oracle manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
-func addOracleMgr(stateDB *state.StateDB, opts *validOracleMgrOpts, genesis *core.Genesis, owner *common.Address) (*common.Address, error) {
+func deployOracleMgr(stateDB *state.StateDB, opts *validOracleMgrOpts, genesis core.GenesisAlloc, owner *common.Address) (*common.Address, error) {
 	managerABI, err := abi.JSON(strings.NewReader(oracle.OracleMgrABI))
 	if err != nil {
 		return nil, err
@@ -384,7 +395,7 @@ func addOracleMgr(stateDB *state.StateDB, opts *validOracleMgrOpts, genesis *cor
 		return nil, err
 	}
 
-	genesis.Alloc[contractAddr] = core.GenesisAccount{
+	genesis[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
@@ -431,16 +442,16 @@ func getNetwork(network string) *big.Int {
 	return chainId
 }
 
-func addBatchOfPrefundedAccountsIntoGenesis(genesis *core.Genesis) {
+func addBatchOfPrefundedAccountsIntoGenesis(genesis core.GenesisAlloc) {
 	// Add a batch of precompile balances to avoid them getting deleted
 	for i := int64(0); i < 256; i++ {
-		genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
+		genesis[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
 	}
 }
 
-func addPrefundedAccountsIntoGenesis(validPrefundedAccounts []*validPrefundedAccount, genesis *core.Genesis) {
+func addPrefundedAccountsIntoGenesis(validPrefundedAccounts []*validPrefundedAccount, genesis core.GenesisAlloc) {
 	for _, vAccount := range validPrefundedAccounts {
-		genesis.Alloc[*vAccount.accountAddress] = core.GenesisAccount{
+		genesis[*vAccount.accountAddress] = core.GenesisAccount{
 			Balance: vAccount.balance,
 		}
 	}
@@ -518,12 +529,12 @@ func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount
 	}
 
 	for _, a := range accounts {
-		address, err := mapWalletAddress(a.AccountAddress)
+		address, err := mapWalletAddress(a.Address)
 		if err != nil {
 			return nil, ErrInvalidAddressInPrefundedAccounts
 		}
 
-		balance, _ := new(big.Int).SetString(a.Balance, 0)
+		balance := new(big.Int).SetUint64(a.Balance)
 
 		validAccount := &validPrefundedAccount{
 			accountAddress: address,

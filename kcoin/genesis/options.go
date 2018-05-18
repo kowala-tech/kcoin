@@ -22,6 +22,21 @@ type Options struct {
 	ExtraData         string
 }
 
+func GetDefaultOpts() *Options {
+	return &Options{
+		Network: "main",
+		Governance: &GovernanceOpts{
+			Origin:           "",
+			Governors:        []string{},
+			NumConfirmations: 1,
+		},
+		Consensus:         &ConsensusOpts{},
+		DataFeedSystem:    &DataFeedSystemOpts{},
+		PrefundedAccounts: []PrefundedAccount{},
+		ExtraData:         "",
+	}
+}
+
 type TokenHolder struct {
 	Address   string
 	NumTokens uint64
@@ -57,8 +72,8 @@ type DataFeedSystemOpts struct {
 }
 
 type PrefundedAccount struct {
-	AccountAddress string
-	Balance        string
+	Address string
+	Balance uint64
 }
 
 type Validator struct {
@@ -120,7 +135,7 @@ type validGenesisOptions struct {
 	ExtraData         string
 }
 
-func validateOptions(options Options) (*validGenesisOptions, error) {
+func validateOptions(options *Options) (*validGenesisOptions, error) {
 	network, err := mapNetwork(options.Network)
 	if err != nil {
 		return nil, err

@@ -2,20 +2,177 @@ package consensus
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/contracts/token"
-	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	"github.com/kowala-tech/kcoin/params"
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/require"
 )
 
+const (
+	customFallback = "registerValidator(address,uint256,bytes)"
+	initialBalance = 10 // 10 kUSD
+)
+
+var (
+	user, _ = crypto.GenerateKey()
+)
+
+func TestContractCreation(t *testing.T) {
+	opts := genesis.GetDefaultOpts()
+
+	// create genesis
+	gen, err := genesis.New(opts)
+	require.NoError(t, err)
+	require.NotNil(t, gen)
+
+	// create backend
+	backend := backends.NewSimulatedBackend(gen.Alloc)
+
+	// ValidatorMgr instance
+	mgr, err := NewValidatorMgr(common.Address{}, backend)
+	require.NoError(t, err)
+	require.NotNil(t, err)
+
+	storedBaseDeposit, err := mgr.BaseDeposit(&bind.CallOpts{})
+	require.NoError(t, err)
+	requite.NotNil(storedBaseDeposit)
+	require.Equal(t, musd(opts.Consensus.BaseDeposit), storedBaseDeposit)
+
+	storedBaseDeposit, err := mgr.BaseDeposit(&bind.CallOpts{})
+	require.NoError(t, err)
+	requite.NotNil(storedBaseDeposit)
+	require.Equal(t, musd(opts.Consensus.BaseDeposit), storedBaseDeposit)
+
+	storedFreezePeriod, err := mgr.FreezePeriod(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedFreezePeriod)
+	require.Equal(t, opts.Consensus.FreezePeriod, storedFreezePeriod)
+
+	storedMaxNumValidators, err := mgr.MaxNumValidators(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedMaxNumValidators)
+	require.Equal(t, opts.Consesnsus.MaxNumValidators, storedMaxNumValidators)
+
+	storedMiningTokenAddr, err := mgr.MiningTokenAddr(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedMiningTokenAddr)
+	require.Equal(t, "", storedMiningTokenAddr)
+}
+
+func TestIsValidator(t *testing.T) {
+	opts := genesis.GetDefaultOpts()
+
+	// add a token holder
+	holders := opts.Consensus.MiningToken.Holders
+	holder := genesis.TokenHolder{
+		Address:   getAddress(user).Str(),
+		NumTokens: opts.Consensus.BaseDeposit,
+	}
+
+	holders = append(holders, holder)
+
+	// prefund the token holder with kUSD to join the consensus
+	opts.PrefundedAccounts = append(opts.PrefundedAccounts, genesis.PrefundedAccount{
+		AccountAddress: holder.Address,
+		Balance:        initialBalance,
+	})
+
+	// create genesis
+	genesis, err := genesis.New(opts)
+	require.NoError(t, err)
+	require.NotNil(t, genesis)
+
+	// create backend
+	backend := backends.NewSimulatedBackend(alloc)(genesis.Alloc)
+
+	// mUSD instance
+	mUSD, err := token.NewMiningToken(common.Address{}, backend)
+	require.NoError(t, err)
+	require.NotNil(t, mUSD)
+
+	// validatorMgr instance
+	validatorMgrAddr := common.Address{}
+	validatorMgr, err := NewValidatorMgr(validatorMgrAddr, backend)
+	require.NoError(t, err)
+	require.NotNil(t, validatorMgr)
+
+	// register user as validator
+	transactOpts := bind.NewKeyedTransactor(user)
+	_, err = mUSD.Transfer(transactOpts, validatorMgrAddr, musd(new(big.Int).SetUint64(holder.NumTokens)), []byte("not_zero"), customFallback)
+	require.NoError(t, err)
+
+	backend.Commit()
+
+	testCases := []struct {
+		input  common.Address
+		output bool
+	}{
+		{
+			input:  getAddress(user),
+			output: true,
+		},
+		{
+			input:  getAddress(user2),
+			output: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("Address %s", tc.input.Hex()), func(t *testing.T) {
+			isValidator, err := validatorMgr.IsGenesisValidator(&bind.CallOpts{}, tc.input)
+			require.NoError(t, err)
+			require.Equal(t, tc.output, isValidator)
+		})
+	}
+}
+
+/*
+
+func (suite *ValidatorMgrSuite) TestIsValidator() {
+	req := suite.Require()
+
+	options := genesis.GetDefaultOpts(suite.contractOwner)
+	options.Governance.Origin =
+	options.Consensus.MiningToken.Holders = append(options.Consensus.MiningToken.Holders, genesis.TokenHolder{
+		Address:   getAddress(suite.user).Str(),
+		NumTokens: baseDeposit,
+	})
+	genesis, err := genesis.New(options)
+	req.NoError(err)
+	req.NotNil(genesis)
+
+	backend := backends.NewSimulatedBackend(genesis.Alloc)
+
+	mUSD, err := token.NewMiningToken(common.Address{}, backend)
+	req.NoError(err)
+	req.NotNil(mUSD)
+
+	validatorMgrAddr := common.Address{}
+	validatorMgr, err := NewValidatorMgr(validatorMgrAddr, backend)
+	req.NoError(err)
+	req.NotNil(validatorMgr)
+
+	userTransactOpts := bind.NewKeyedTransactor(suite.user)
+	minDeposit := suite.mgrArgs.baseDeposit
+	_, err = mUSD.Transfer(userTransactOpts, validatorMgrAddr, minDeposit, []byte("not_zero_value"), suite.tokenArgs.customFallback)
+	req.NoError(err)
+
+	backend.Commit()
+
+	randomUser, err := crypto.GenerateKey()
+	req.NoError(err)
+	req.NotNil(randomUser)
+
+
+}
+
+
+/*
 const (
 	// prefund
 	initialBalance = 10 // 10 kUSD
@@ -34,33 +191,17 @@ const (
 	secondsPerDay = 86400
 )
 
+
 var (
 	errAlwaysFailingTransaction = errors.New("failed to estimate gas needed: gas required exceeds allowance or always failing transaction")
 )
 
-type validMgrArgs struct {
-	baseDeposit      *big.Int
-	maxNumValidators *big.Int
-	freezePeriod     *big.Int
-}
-
-type validTokenArgs struct {
-	name           string
-	symbol         string
-	cap            *big.Int
-	decimals       uint8
-	customFallback string
-}
 
 type ValidatorMgrSuite struct {
 	suite.Suite
-	backend          *backends.SimulatedBackend
-	contractOwner    *ecdsa.PrivateKey
-	randomUser       *ecdsa.PrivateKey
-	genesisValidator *ecdsa.PrivateKey
-	initialBalance   *big.Int
-	mgrArgs          *validMgrArgs
-	tokenArgs        *validTokenArgs
+	contractOwner  *ecdsa.PrivateKey
+	user           *ecdsa.PrivateKey
+	initialBalance *big.Int
 }
 
 func TestValidatorMgrSuite(t *testing.T) {
@@ -69,17 +210,15 @@ func TestValidatorMgrSuite(t *testing.T) {
 
 func (suite *ValidatorMgrSuite) SetupSuite() {
 	req := suite.Require()
+	req.Error()
 
 	contractOwner, err := crypto.GenerateKey()
 	req.NoError(err)
-	randomUser, err := crypto.GenerateKey()
-	req.NoError(err)
-	genesisValidator, err := crypto.GenerateKey()
+	user, err := crypto.GenerateKey()
 	req.NoError(err)
 
 	suite.contractOwner = contractOwner
-	suite.randomUser = randomUser
-	suite.genesisValidator = genesisValidator
+	suite.user = user
 	suite.initialBalance = musd(new(big.Int).SetUint64(initialBalance))
 
 	suite.mgrArgs = &validMgrArgs{
@@ -92,112 +231,76 @@ func (suite *ValidatorMgrSuite) SetupSuite() {
 		name:           miningToken,
 		symbol:         miningToken,
 		decimals:       miningTokenDecimals,
-		cap:            new(big.Int).SetUint64(miningTokenCap),
+		cap:            musd(new(big.Int).SetUint64(miningTokenCap)),
 		customFallback: miningTokenCustomFallback,
 	}
 }
 
-func (suite *ValidatorMgrSuite) NewSimulatedBackend() *backends.SimulatedBackend {
-	contractOwnerAddr := crypto.PubkeyToAddress(suite.contractOwner.PublicKey)
-	randomUserAddr := crypto.PubkeyToAddress(suite.randomUser.PublicKey)
-	genesisAddr := crypto.PubkeyToAddress(suite.genesisValidator.PublicKey)
-	defaultAccount := core.GenesisAccount{Balance: suite.initialBalance}
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		contractOwnerAddr: defaultAccount,
-		randomUserAddr:    defaultAccount,
-		genesisAddr:       defaultAccount,
+
+
+
+
+func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
+	req := suite.Require()
+
+	options := genesis.GetDefaultOpts()
+	options.Consensus.Validators = append(options.Consensus.Validators, genesis.Validator{
+		Address: getAddress(suite.user).Str(),
+		Deposit: baseDeposit,
 	})
+	options.Consensus.MiningToken.Holders = append(options.Consensus.MiningToken.Holders, genesis.TokenHolder{
+		Address:   getAddress(suite.user).Str(),
+		NumTokens: baseDeposit,
+	})
+	options.Consensus.MiningToken.Holders = append(options.Consensus.MiningToken.Holders, genesis.TokenHolder{
+		Address:   getAddress(suite.user2).Str(),
+		NumTokens: baseDeposit,
+	})
+	genesis, err := genesis.New(options)
+	req.NoError(err)
+	req.NotNil(genesis)
 
-	return backend
-}
-
-func (suite *ValidatorMgrSuite) SetupTest() {
-	suite.backend = suite.NewSimulatedBackend()
-}
-
-func (suite *ValidatorMgrSuite) TestDeployValidatorMgr() {
-	req := suite.Require()
+	backend := backends.NewSimulatedBackend(genesis.Alloc)
 
 	ownerTransactOpts := bind.NewKeyedTransactor(suite.contractOwner)
 
-	tokenAddr, _, mUSD, err := token.DeployMiningToken(ownerTransactOpts, suite.backend, suite.tokenArgs.name, suite.tokenArgs.symbol, suite.tokenArgs.cap, suite.tokenArgs.decimals)
+	mUSD, err := token.NewMiningToken(common.Address{}, backend)
 	req.NoError(err)
 	req.NotNil(mUSD)
-	req.NotZero(tokenAddr)
 
-	_, _, mgr, err := DeployValidatorMgr(ownerTransactOpts, suite.backend, suite.mgrArgs.baseDeposit, suite.mgrArgs.maxNumValidators, suite.mgrArgs.freezePeriod, tokenAddr)
+	validatorMgrAddr := common.Address{}
+	validatorMgr, err := NewValidatorMgr(validatorMgrAddr, backend)
 	req.NoError(err)
-	req.NotNil(mgr)
+	req.NotNil(validatorMgr)
 
-	suite.backend.Commit()
-
-	storedBaseDeposit, err := mgr.BaseDeposit(&bind.CallOpts{})
+	userTransactOpts := bind.NewKeyedTransactor(suite.user)
+	minDeposit := suite.mgrArgs.baseDeposit
+	_, err = mUSD.Transfer(userTransactOpts, validatorMgrAddr, minDeposit, []byte("not_zero_value"), suite.tokenArgs.customFallback)
 	req.NoError(err)
-	req.NotNil(storedBaseDeposit)
-	req.Equal(suite.mgrArgs.baseDeposit, storedBaseDeposit)
 
-	storedMaxNumValidators, err := mgr.MaxNumValidators(&bind.CallOpts{})
+	backend.Commit()
+
+	randomUser, err := crypto.GenerateKey()
 	req.NoError(err)
-	req.NotNil(storedMaxNumValidators)
-	req.Equal(suite.mgrArgs.maxNumValidators, storedMaxNumValidators)
-
-	storedFreezePeriod, err := mgr.FreezePeriod(&bind.CallOpts{})
-	req.NoError(err)
-	req.NotNil(storedFreezePeriod)
-	req.Equal(dtos(suite.mgrArgs.freezePeriod), storedFreezePeriod)
-
-	storedMiningTokenAddr, err := mgr.MiningTokenAddr(&bind.CallOpts{})
-	req.NoError(err)
-	req.NotZero(storedFreezePeriod)
-	req.Equal(tokenAddr, storedMiningTokenAddr)
-}
-
-func (suite *ValidatorMgrSuite) TestDeployValidatorMgr_MaxNumValidators_Zero() {
-	req := suite.Require()
-
-	ownerTransactOpts := bind.NewKeyedTransactor(suite.contractOwner)
-
-	tokenAddr, _, mUSD, err := token.DeployMiningToken(ownerTransactOpts, suite.backend, suite.tokenArgs.name, suite.tokenArgs.symbol, suite.tokenArgs.cap, suite.tokenArgs.decimals)
-	req.NoError(err)
-	req.NotNil(mUSD)
-	req.NotZero(tokenAddr)
-
-	zeroValidators := common.Big0
-	_, _, _, err = DeployValidatorMgr(ownerTransactOpts, suite.backend, suite.mgrArgs.baseDeposit, zeroValidators, suite.mgrArgs.freezePeriod, tokenAddr)
-	req.Equal(errAlwaysFailingTransaction, err)
-}
-
-/*
-
-
-
-func (suite *ValidatorMgrSuite) TestIsValidator() {
-	req := suite.Require()
-
-	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, suite.maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
-	req.NoError(err)
-	req.NotNil(mgr)
-
-	suite.backend.Commit()
+	req.NotNil(randomUser)
 
 	testCases := []struct {
 		input  common.Address
 		output bool
 	}{
 		{
-			input:  getAddress(suite.genesisValidator),
+			input:  getAddress(suite.user),
 			output: true,
 		},
 		{
-			input:  getAddress(suite.randomUser),
+			input:  getAddress(randomUser),
 			output: false,
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.T().Run(fmt.Sprintf("Address %s", tc.input.Hex()), func(t *testing.T) {
-			isValidator, err := mgr.IsValidator(&bind.CallOpts{}, tc.input)
+			isValidator, err := validatorMgr.IsValidator(&bind.CallOpts{}, tc.input)
 			req.NoError(err)
 			req.Equal(tc.output, isValidator)
 		})
@@ -207,8 +310,27 @@ func (suite *ValidatorMgrSuite) TestIsValidator() {
 func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_NotFull() {
 	req := suite.Require()
 
+	options := genesis.GetDefaultOpts()
+	options.Consensus.Validators = append(options.Consensus.Validators, genesis.Validator{
+		Address: getAddress(suite.user).Str(),
+		Deposit: baseDeposit,
+	})
+	options.Consensus.MiningToken.Holders = append(options.Consensus.MiningToken.Holders, genesis.TokenHolder{
+		Address:   getAddress(suite.user).Str(),
+		NumTokens: baseDeposit,
+	})
+	options.Consensus.MiningToken.Holders = append(options.Consensus.MiningToken.Holders, genesis.TokenHolder{
+		Address:   getAddress(suite.user2).Str(),
+		NumTokens: baseDeposit,
+	})
+	genesis, err := genesis.New(options)
+	req.NoError(err)
+	req.NotNil(genesis)
+
+	backend := backends.NewSimulatedBackend(genesis.Alloc)
+
 	maxNumValidators := suite.maxNumValidators
-	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner)
+	deploymentOpts := bind.NewKeyedTransactor(suite.contractOwner<)
 	_, _, mgr, err := DeployValidatorMgr(deploymentOpts, suite.backend, suite.baseDeposit, maxNumValidators, suite.freezePeriod, getAddress(suite.genesisValidator))
 	req.NoError(err)
 	req.NotNil(mgr)
@@ -221,6 +343,8 @@ func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_NotFull() {
 
 	req.Equal(suite.baseDeposit, minDeposit)
 }
+
+/*
 
 func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
 	req := suite.Require()
@@ -604,13 +728,13 @@ func (suite *ElectionContractSuite) TestRedeemFunds_UnlockedDeposit() {
 
 */
 
-// dtos converts days to seconds
-func dtos(days *big.Int) *big.Int {
-	return new(big.Int).Mul(days, new(big.Int).SetUint64(secondsPerDay))
+// mUSD converts the value to mUSD units
+func musd(value *big.Int) *big.Int {
+	return new(big.Int).Mul(value, new(big.Int).SetUint64(params.Ether))
 }
 
-// musd converts the value to mUSD units
-func musd(value *big.Int) *big.Int {
+// kUSD converts the value to mUSD units
+func kusd(value *big.Int) *big.Int {
 	return new(big.Int).Mul(value, new(big.Int).SetUint64(params.Ether))
 }
 
@@ -624,16 +748,5 @@ func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
 	req.NoError(err)
 	req.NotNil(mUSD)
 
-	_, err = mUSD.Mint(ownerTransactOpts, getAddress(suite.randomUser), suite.baseDeposit)
-	req.NoError(err)
 
-	suite.backend.Commit()
-
-	balance, err := mUSD.BalanceOf(&bind.CallOpts{}, getAddress(suite.randomUser))
-	req.NoError(err)
-
-
-	deposit := suite.baseDeposit
-	_, err = mUSD.Transfer(userTransactOpts, mgrAddr, deposit, []byte("non-zero"), customFallback)
-	req.NoError(err)
 */

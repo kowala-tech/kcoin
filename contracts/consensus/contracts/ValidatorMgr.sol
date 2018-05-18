@@ -103,9 +103,8 @@ contract ValidatorMgr is pausable.Pausable {
         sender.index = validatorPool.push(code) - 1;
         sender.isValidator = true;
         if (block.number == 0) sender.isGenesis = true;
-
+        
         sender.deposits.push(Deposit({amount:deposit, availableAt: 0}));
-
         for (uint index = sender.index; index > 0; index--) {
             Validator target = validatorRegistry[validatorPool[index - 1]];
             Deposit collateral = target.deposits[target.deposits.length - 1];
@@ -230,4 +229,5 @@ contract ValidatorMgr is pausable.Pausable {
         tkn = TKN(_from, _value/*, _data, bytes4(u)*/);
         _registerValidator();
     }
+    
 }
