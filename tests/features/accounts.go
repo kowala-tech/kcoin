@@ -1,12 +1,12 @@
 package features
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 
 	"github.com/DATA-DOG/godog/gherkin"
 	"github.com/kowala-tech/kcoin/accounts"
+	"context"
 )
 
 var (
@@ -104,7 +104,32 @@ func (ctx *Context) IGotErrorUnlocking() error {
 	return nil
 }
 
-func (ctx *Context) TheBalanceIs(accountName string, cmp string, expectedKcoin int64) error {
+func (ctx *Context) createAccount(accountName string, password string) (accounts.Account, error) {
+	if _, ok := ctx.accounts[accountName]; ok {
+		return NoAccount, fmt.Errorf("an account with this name already exists: %s", accountName)
+	}
+	account, err := ctx.AccountsStorage.NewAccount(password)
+	if err != nil {
+		return NoAccount, err
+	}
+
+	ctx.accounts[accountName] = account
+	return account, nil
+}
+
+func (ctx *Context) TheBalanceIsAround(accountName string, expectedKcoin int64) error {
+	return ctx.theBalanceIs(accountName, "around", expectedKcoin)
+}
+
+func (ctx *Context) TheBalanceIsGreater(accountName string, expectedKcoin int64) error {
+	return ctx.theBalanceIs(accountName, "greater", expectedKcoin)
+}
+
+func (ctx *Context) TheBalanceIsExactly(accountName string, expectedKcoin int64) error {
+	return ctx.theBalanceIs(accountName, "equal", expectedKcoin)
+}
+
+func (ctx *Context) theBalanceIs(accountName string, cmp string, expectedKcoin int64) error {
 	expected := toWei(expectedKcoin)
 
 	account := ctx.accounts[accountName]
@@ -122,29 +147,4 @@ func (ctx *Context) TheBalanceIs(accountName string, cmp string, expectedKcoin i
 	}
 
 	return nil
-}
-
-func (ctx *Context) TheBalanceIsAround(accountName string, expectedKcoin int64) error {
-	return ctx.TheBalanceIs(accountName, "around", expectedKcoin)
-}
-
-func (ctx *Context) TheBalanceIsGreater(accountName string, expectedKcoin int64) error {
-	return ctx.TheBalanceIs(accountName, "greater", expectedKcoin)
-}
-
-func (ctx *Context) TheBalanceIsExactly(accountName string, expectedKcoin int64) error {
-	return ctx.TheBalanceIs(accountName, "equal", expectedKcoin)
-}
-
-func (ctx *Context) createAccount(accountName string, password string) (accounts.Account, error) {
-	if _, ok := ctx.accounts[accountName]; ok {
-		return NoAccount, fmt.Errorf("an account with this name already exists: %s", accountName)
-	}
-	account, err := ctx.AccountsStorage.NewAccount(password)
-	if err != nil {
-		return NoAccount, err
-	}
-
-	ctx.accounts[accountName] = account
-	return account, nil
 }
