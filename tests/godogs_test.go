@@ -1,29 +1,33 @@
 package tests
 
 import (
-	"math/big"
-
 	"log"
+	"math/big"
+	"regexp"
+	"strings"
 
 	"github.com/DATA-DOG/godog"
+	"github.com/DATA-DOG/godog/gherkin"
 	"github.com/kowala-tech/kcoin/tests/features"
 )
 
 var (
-	chainID = big.NewInt(519374298533)
+	chainID = big.NewInt(1000)
 )
 
 func FeatureContext(s *godog.Suite) {
 	context := features.NewTestContext(chainID)
 	validationCtx := features.NewValidationContext(context)
 
-	s.BeforeSuite(func() {
+	s.BeforeFeature(func(ft *gherkin.Feature) {
+		context.Name = getFeatureName(ft.Name)
+
 		if err := context.PrepareCluster(); err != nil {
 			log.Fatal(err)
 		}
 	})
 
-	s.AfterSuite(func() {
+	s.AfterFeature(func(ft *gherkin.Feature) {
 		if err := context.DeleteCluster(); err != nil {
 			log.Fatal(err)
 		}
@@ -76,4 +80,13 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^My node should not sync with the network$`, context.MyNodeShouldNotSyncWithTheNetwork)
 	s.Step(`^I start a new node with a different chain ID$`, context.IStartANewNodeWithADifferentChainID)
 	s.Step(`^I start validator with (\d+) deposit and coinbase A$`, context.IStartValidatorWithDepositAndCoinbaseA)
+}
+
+func getFeatureName(feature string) string {
+	feature = strings.ToLower(feature)
+	reg, _ := regexp.Compile("[^a-z0-9 ]+")
+	feature = reg.ReplaceAllString(feature, "")
+	feature = strings.Replace(feature, " ", "_", -1)
+
+	return feature
 }
