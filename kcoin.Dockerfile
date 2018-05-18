@@ -12,8 +12,7 @@ COPY --from=builder /kcoin/build/bin/kcoin .
 EXPOSE 22334
 EXPOSE 22334/udp
 ADD release/kcoin.sh .
-ADD release/console.toml console.toml
-ADD release/genesis.json genesis.json
+ADD release/testnet_genesis.json .
+ADD release/genesis.json .
 ENTRYPOINT ["./kcoin.sh"]
 RUN mkdir -p /root/.kcoin/keystore
-CMD ["--config", "/kcoin/console.toml", "--verbosity", "2", "console"]
