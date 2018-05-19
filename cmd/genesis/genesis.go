@@ -203,7 +203,7 @@ func prefundAccountsFromCommandLine(accounts interface{}) []genesis.PrefundedAcc
 
 		prefundedAccount := genesis.PrefundedAccount{
 			Address: values[0],
-			Balance:        balance,
+			Balance: balance,
 		}
 
 		prefundedAccounts = append(prefundedAccounts, prefundedAccount)
@@ -272,7 +272,7 @@ func prefundAccountsFromConfigFile(accounts interface{}) []genesis.PrefundedAcco
 		val := v.(map[string]interface{})
 		prefundedAccounts = append(prefundedAccounts, genesis.PrefundedAccount{
 			Address: val["accountAddress"].(string),
-			Balance:        val["balance"].(uint64),
+			Balance: uint64(val["balance"].(int64)),
 		})
 	}
 
@@ -287,7 +287,7 @@ func validatorsFromConfigFile(input interface{}) []genesis.Validator {
 		parts := value.(map[string]interface{})
 		validators = append(validators, genesis.Validator{
 			Address: parts["address"].(string),
-			Deposit: parts["deposit"].(uint64),
+			Deposit: uint64(parts["deposit"].(int64)),
 		})
 	}
 
@@ -302,7 +302,7 @@ func tokenHoldersFromConfigFile(input interface{}) []genesis.TokenHolder {
 		parts := value.(map[string]interface{})
 		holders = append(holders, genesis.TokenHolder{
 			Address:   parts["address"].(string),
-			NumTokens: parts["numTokens"].(uint64),
+			NumTokens: uint64(parts["numTokens"].(int64)),
 		})
 	}
 

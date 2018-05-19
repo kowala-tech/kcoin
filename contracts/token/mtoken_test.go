@@ -2,7 +2,6 @@ package token
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"math/big"
 	"testing"
 
@@ -14,268 +13,277 @@ import (
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/params"
-	"github.com/stretchr/testify/suite"
-)
-
-const (
-	initialBalance      = 10         // kUSD (18 decimals)
-	cap                 = 1073741824 // mUSD (18 decimals)
-	customFallback      = "registerValidator(address,uint256,bytes)"
-	miningToken         = "mUSD"
-	miningTokenDecimals = 18
+	"github.com/stretchr/testify/require"
 )
 
 var (
-	errAlwaysFailingTransaction = errors.New("failed to estimate gas needed: gas required exceeds allowance or always failing transaction")
+	owner, _            = crypto.GenerateKey()
+	user, _             = crypto.GenerateKey()
+	initialBalance      = new(big.Int).Mul(new(big.Int).SetUint64(10), new(big.Int).SetUint64(params.Ether))         // 10 kUSD
+	miningTokenCap      = new(big.Int).Mul(new(big.Int).SetUint64(1073741824), new(big.Int).SetUint64(params.Ether)) // 1073741824 mUSD
+	miningToken         = "mUSD"
+	miningTokenDecimals = uint8(18)
 )
 
-type MiningTokenSuite struct {
-	suite.Suite
-	backend                   *backends.SimulatedBackend
-	contractOwner, randomUser *ecdsa.PrivateKey
-	genesisValidator          *ecdsa.PrivateKey
-	initialBalance            *big.Int
-	cap                       *big.Int
-}
-
-func TestMiningTokenSuite(t *testing.T) {
-	suite.Run(t, new(MiningTokenSuite))
-}
-
-func (suite *MiningTokenSuite) SetupSuite() {
-	req := suite.Require()
-
-	contractOwner, err := crypto.GenerateKey()
-	req.NoError(err)
-	genesisValidator, err := crypto.GenerateKey()
-	req.NoError(err)
-	randomUser, err := crypto.GenerateKey()
-	req.NoError(err)
-
-	suite.contractOwner = contractOwner
-	suite.genesisValidator = genesisValidator
-	suite.randomUser = randomUser
-	suite.initialBalance = musd(new(big.Int).SetUint64(initialBalance))
-	suite.cap = musd(new(big.Int).SetUint64(cap))
-}
-
-func (suite *MiningTokenSuite) NewSimulatedBackend() *backends.SimulatedBackend {
-	contractOwnerAddr := crypto.PubkeyToAddress(suite.contractOwner.PublicKey)
-	defaultAccount := core.GenesisAccount{Balance: suite.initialBalance}
+func TestDeploy(t *testing.T) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		contractOwnerAddr: defaultAccount,
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
 	})
 
-	return backend
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
+
+	backend.Commit()
+
+	storedCap, err := token.Cap(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedCap)
+	require.Equal(t, miningTokenCap, storedCap)
+
+	storedDecimals, err := token.Decimals(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedDecimals)
+	require.Equal(t, miningTokenDecimals, storedDecimals)
+
+	storedTotalSupply, err := token.TotalSupply(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedTotalSupply)
+	require.Zero(t, storedTotalSupply.Uint64())
+
+	storedName, err := token.Name(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedName)
+	require.Equal(t, miningToken, storedName)
+
+	storedSymbol, err := token.Symbol(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedSymbol)
+	require.Equal(t, miningToken, storedSymbol)
+
+	storedMintingFinished, err := token.MintingFinished(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedMintingFinished)
+	require.False(t, storedMintingFinished)
+
+	storedOwner, err := token.Owner(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, owner)
+	require.Equal(t, getAddress(owner), storedOwner)
 }
 
-func (suite *MiningTokenSuite) SetupTest() {
-	suite.backend = suite.NewSimulatedBackend()
-}
+func TestFinishMinting(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
+	})
 
-func (suite *MiningTokenSuite) TestFinishMinting_Success() {
-	req := suite.Require()
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	// create a capped mining token
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
-	req.NoError(err)
-	req.NotNil(token)
+	_, err = token.FinishMinting(transactOpts)
+	require.NoError(t, err)
 
-	// terminate the minting process
-	_, err = token.FinishMinting(opts)
-	req.NoError(err)
-
-	suite.backend.Commit()
+	backend.Commit()
 
 	finished, err := token.MintingFinished(&bind.CallOpts{})
-	req.NoError(err)
-	req.True(finished)
+	require.NoError(t, err)
+	require.True(t, finished)
 }
 
-func (suite *MiningTokenSuite) TestFinishMinting_NotOwner() {
-	req := suite.Require()
+func TestFinishMinting_NotOwner(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
+	})
 
-	// create a capped mining token
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
-	req.NoError(err)
-	req.NotNil(token)
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	// terminate the minting process
-	opts = bind.NewKeyedTransactor(suite.randomUser)
-	_, err = token.FinishMinting(opts)
-	req.Equal(errAlwaysFailingTransaction, err)
+	mintingOpts := bind.NewKeyedTransactor(user)
+	_, err = token.FinishMinting(mintingOpts)
+	require.Error(t, err, "Method FinishMinting is just available to the contract owner")
 }
 
-func (suite *MiningTokenSuite) TestFinishMinting_MintingOver() {
-	req := suite.Require()
+func TestFinishMinting_FinishedMinting(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
+	})
 
-	// create a capped mining token
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
-	req.NoError(err)
-	req.NotNil(token)
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	// terminate the minting process
-	_, err = token.FinishMinting(opts)
-	req.NoError(err)
+	_, err = token.FinishMinting(transactOpts)
+	require.NoError(t, err)
 
-	// terminate the minting process
-	_, err = token.FinishMinting(opts)
-	req.Equal(errAlwaysFailingTransaction, err)
+	_, err = token.FinishMinting(transactOpts)
+	require.Error(t, err, "The FinishMinting operation is not available if the operation is finished")
 }
 
-func (suite *MiningTokenSuite) TestMint_Success() {
-	req := suite.Require()
+func TestMint(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
+	})
 
-	// create a capped mining token
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
-	req.NoError(err)
-	req.NotNil(token)
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	// mint all the tokens to the contract owner
-	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)
-	req.NoError(err)
+	// mint all the tokens to an user
+	numTokens := miningTokenCap
+	_, err = token.Mint(transactOpts, getAddress(user), numTokens)
+	require.NoError(t, err)
+
+	backend.Commit()
+
+	storedTotalSupply, err := token.TotalSupply(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, storedTotalSupply)
+	require.Equal(t, numTokens, storedTotalSupply)
+
+	userBalance, err := token.BalanceOf(&bind.CallOpts{}, getAddress(user))
+	require.NoError(t, err)
+	require.NotNil(t, userBalance)
+	require.Equal(t, numTokens, userBalance)
 }
 
-func (suite *MiningTokenSuite) TestMint_NotOwner() {
-	req := suite.Require()
+func TestMint_NotOwner(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
+	})
 
-	// create a capped mining token
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
-	req.NoError(err)
-	req.NotNil(token)
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	// mint all the tokens to the contract owner
-	opts = bind.NewKeyedTransactor(suite.randomUser)
-	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)
-	req.Equal(errAlwaysFailingTransaction, err)
+	numTokens := miningTokenCap
+	mintingOpts := bind.NewKeyedTransactor(user)
+	_, err = token.Mint(mintingOpts, getAddress(user), numTokens)
+	require.Error(t, err, "Method Mint is just available to the contract owner")
 }
 
-func (suite *MiningTokenSuite) TestMint_OverCap() {
-	req := suite.Require()
+func TestMint_OverCap(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
+	})
 
-	// create a capped mining token
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
-	req.NoError(err)
-	req.NotNil(token)
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	// mint all the tokens plus one to the contract owner
-	_, err = token.Mint(opts, getAddress(suite.contractOwner), new(big.Int).Add(suite.cap, common.Big1))
-	req.Equal(errAlwaysFailingTransaction, err)
+	numTokens := new(big.Int).Add(miningTokenCap, common.Big1)
+	_, err = token.Mint(transactOpts, getAddress(user), numTokens)
+	require.Error(t, err, "Cannot mint over the cap")
 }
 
-func (suite *MiningTokenSuite) TestMint_MintingOver() {
-	req := suite.Require()
+func TestTransfer_CustomFallback_ValidatorMgr_RegisterValidator(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
+		getAddress(user):  core.GenesisAccount{Balance: initialBalance},
+	})
 
-	// create a capped mining token
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
-	req.NoError(err)
-	req.NotNil(token)
+	transactOpts := bind.NewKeyedTransactor(owner)
+	tokenAddr, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	// terminate the minting process
-	_, err = token.FinishMinting(opts)
-	req.NoError(err)
+	// mint all the tokens to an user
+	numTokens := miningTokenCap
+	_, err = token.Mint(transactOpts, getAddress(user), numTokens)
+	require.NoError(t, err)
 
-	// mint all the tokens to the contract owner
-	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)
-	req.Equal(errAlwaysFailingTransaction, err)
+	// validatorMgr instance
+	baseDeposit := numTokens
+	maxNumValidators := new(big.Int).SetUint64(10)
+	freezePeriod := new(big.Int).SetUint64(0)
+	mgrAddr, _, mgr, err := consensus.DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr)
+	require.NoError(t, err)
+	require.NotNil(t, mgr)
+	require.NotZero(t, mgrAddr)
+
+	// register validator
+	transferOpts := bind.NewKeyedTransactor(user)
+	_, err = token.Transfer(transferOpts, mgrAddr, numTokens, defaultData, customFallback)
+	require.NoError(t, err)
+
+	backend.Commit()
+
+	// user must be a validator
+	isValidator, err := mgr.IsValidator(&bind.CallOpts{}, getAddress(user))
+	require.NoError(t, err)
+	require.True(t, isValidator)
 }
 
-func (suite *MiningTokenSuite) TestTransfer_CustomFallback_CompatibleContract_ValidatorMgr_RegisterValidator() {
-	req := suite.Require()
+func TestTransfer_CustomFallback_OracleMgr(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
+		getAddress(user):  core.GenesisAccount{Balance: initialBalance},
+	})
 
-	// create a capped mining token
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
-	req.NoError(err)
-	req.NotNil(token)
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	// mint all the tokens to the contract owner
-	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)
-	req.NoError(err)
+	// mint all the tokens to an user
+	numTokens := miningTokenCap
+	_, err = token.Mint(transactOpts, getAddress(user), numTokens)
+	require.NoError(t, err)
 
-	// the validator manager contract implements the custom fallback
-	validatorMgrAddr, _, validatorMgr, err := consensus.DeployValidatorMgr(opts, suite.backend, common.Big0, common.Big32, common.Big0, getAddress(suite.genesisValidator))
-	req.NoError(err)
+	// oracleMgr instance
+	baseDeposit := numTokens
+	maxNumOracles := new(big.Int).SetUint64(10)
+	freezePeriod := new(big.Int).SetUint64(0)
+	mgrAddr, _, mgr, err := oracle.DeployOracleMgr(transactOpts, backend, baseDeposit, maxNumOracles, freezePeriod)
+	require.NoError(t, err)
+	require.NotNil(t, mgr)
+	require.NotZero(t, mgrAddr)
 
-	// transfer mUSD to the validator manager contract
-	_, err = token.Transfer(opts, validatorMgrAddr, common.Big0, []byte("non-zero"), customFallback)
-	req.NoError(err)
-
-	suite.backend.Commit()
-
-	// make sure that the new validator has been registered
-	count, err := validatorMgr.GetValidatorCount(&bind.CallOpts{})
-	req.NoError(err)
-	req.Equal(common.Big2, count)
+	// transfer the funds to a contract that does not support the mining token
+	transferOpts := bind.NewKeyedTransactor(user)
+	_, err = token.Transfer(transferOpts, mgrAddr, numTokens, defaultData, customFallback)
+	require.Error(t, err, "The OracleMgr contract does not support the mining token")
 }
 
-func (suite *MiningTokenSuite) TestTransfer_CustomFallback_IncompatibleContract_OracleMgr() {
-	req := suite.Require()
+func TestBalanceOf(t *testing.T) {
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
+	})
 
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, "mUSD", "mUSD", suite.cap, 18)
-	req.NoError(err)
-	req.NotNil(token)
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, token, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	require.NoError(t, err)
+	require.NotNil(t, token)
 
-	// mint all the tokens to the contract owner
-	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)
-	req.NoError(err)
+	backend.Commit()
 
-	// the oracle manager contract doesn't implement the custom fallback - receiveToken
-	oracleMgrAddr, _, _, err := oracle.DeployOracleMgr(opts, suite.backend, common.Big0, common.Big32, common.Big0)
-	req.NoError(err)
+	userBalance, err := token.BalanceOf(&bind.CallOpts{}, getAddress(user))
+	require.NoError(t, err)
+	require.NotNil(t, userBalance)
+	require.Zero(t, userBalance.Uint64())
 
-	suite.backend.Commit()
+	// mint all the tokens to an user
+	numTokens := miningTokenCap
+	_, err = token.Mint(transactOpts, getAddress(user), numTokens)
+	require.NoError(t, err)
 
-	// transfer mUSD to the oracle manager contract
-	// transaction must fail because the oracle mgr does not implement the custom fallback
-	_, err = token.Transfer(opts, oracleMgrAddr, common.Big0, []byte("non-zero"), customFallback)
-	req.Equal(errAlwaysFailingTransaction, err)
+	backend.Commit()
+
+	userBalance, err = token.BalanceOf(&bind.CallOpts{}, getAddress(user))
+	require.NoError(t, err)
+	require.NotNil(t, userBalance)
+	require.Equal(t, numTokens, userBalance)
 }
-
-/*
-func (suite *MiningTokenSuite) TestBalanceOf() {
-	req := suite.Require()
-
-	// create a capped mining token
-	opts := bind.NewKeyedTransactor(suite.contractOwner)
-	_, _, token, err := DeployMiningToken(opts, suite.backend, miningToken, miningToken, suite.cap, miningTokenDecimals)
-	req.NoError(err)
-	req.NotNil(token)
-
-	// mint all the tokens to the contract owner
-	_, err = token.Mint(opts, getAddress(suite.contractOwner), suite.cap)
-	req.NoError(err)
-
-	// transfer all mUSD from the owner to a random user
-	_, err = token.Transfer(opts, getAddress(suite.randomUser), suite.cap, []byte("non-zero"), customFallback)
-	req.NoError(err)
-
-	suite.backend.Commit()
-
-	randomUserBalance, err := token.BalanceOf(&bind.CallOpts{}, getAddress(suite.randomUser))
-	req.NoError(err)
-	req.Equal(suite.cap, randomUserBalance)
-
-	ownerBalance, err := token.BalanceOf(&bind.CallOpts{}, getAddress(suite.contractOwner))
-	req.NoError(err)
-	req.Equal(common.Big0, ownerBalance)
-}
-*/
 
 // getAddress return the address of the given private key
 func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
 	return crypto.PubkeyToAddress(privateKey.PublicKey)
-}
-
-// musd converts the value to mUSD
-func musd(value *big.Int) *big.Int {
-	return new(big.Int).Mul(value, new(big.Int).SetUint64(params.Ether))
 }

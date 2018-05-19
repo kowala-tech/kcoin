@@ -22,21 +22,6 @@ type Options struct {
 	ExtraData         string
 }
 
-func GetDefaultOpts() *Options {
-	return &Options{
-		Network: "main",
-		Governance: &GovernanceOpts{
-			Origin:           "",
-			Governors:        []string{},
-			NumConfirmations: 1,
-		},
-		Consensus:         &ConsensusOpts{},
-		DataFeedSystem:    &DataFeedSystemOpts{},
-		PrefundedAccounts: []PrefundedAccount{},
-		ExtraData:         "",
-	}
-}
-
 type TokenHolder struct {
 	Address   string
 	NumTokens uint64
@@ -168,7 +153,7 @@ func validateOptions(options *Options) (*validGenesisOptions, error) {
 
 	// consensus
 	maxNumValidators := new(big.Int).SetUint64(options.Consensus.MaxNumValidators)
-	consensusBaseDeposit := new(big.Int).SetUint64(options.Consensus.BaseDeposit)
+	consensusBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.BaseDeposit), big.NewInt(params.Ether))
 	consensusFreezePeriod := new(big.Int).SetUint64(options.Consensus.FreezePeriod)
 
 	validators := make([]*validValidator, 0, len(options.Consensus.Validators))

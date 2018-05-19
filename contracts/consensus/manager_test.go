@@ -2,9 +2,11 @@ package consensus
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"testing"
 
+	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/crypto"
@@ -19,13 +21,60 @@ const (
 )
 
 var (
-	user, _ = crypto.GenerateKey()
+	user, _          = crypto.GenerateKey()
+	origin, _        = crypto.HexToECDSA("bfef37ae9ac5d5e7ebbbefc19f4e1f572a7ca7aa0d28e527b7d62950951cc5eb")
+	validatorMgrAddr = common.HexToAddress("0x161ad311F1D66381C17641b1B73042a4CA731F9f")
+	tokenAddr        = common.HexToAddress("0xB012F49629258C9c35b2bA80cD3dc3C841d9719D")
+	secondsPerDay    = new(big.Int).SetUint64(86400)
 )
 
-func TestContractCreation(t *testing.T) {
-	opts := genesis.GetDefaultOpts()
+func getDefaultOpts() *genesis.Options {
+	tokenHolder := genesis.TokenHolder{
+		Address:   getAddress(user).Hex(),
+		NumTokens: 20,
+	}
+	author := getAddress(origin).Hex()
+	opts := &genesis.Options{
+		Network: "test",
+		Consensus: &genesis.ConsensusOpts{
+			Engine:           "tendermint",
+			MaxNumValidators: 2,
+			FreezePeriod:     1,
+			BaseDeposit:      tokenHolder.NumTokens,
+			Validators: []genesis.Validator{genesis.Validator{
+				Address: tokenHolder.Address,
+				Deposit: tokenHolder.NumTokens,
+			}},
+			MiningToken: &genesis.MiningTokenOpts{
+				Name:     "mUSD",
+				Symbol:   "mUSD",
+				Cap:      1000,
+				Decimals: 18,
+				Holders:  []genesis.TokenHolder{tokenHolder},
+			},
+		},
+		Governance: &genesis.GovernanceOpts{
+			Origin:           author,
+			Governors:        []string{author},
+			NumConfirmations: 1,
+		},
+		DataFeedSystem: &genesis.DataFeedSystemOpts{
+			MaxNumOracles: 10,
+			FreezePeriod:  0,
+			BaseDeposit:   0,
+		},
+		PrefundedAccounts: []genesis.PrefundedAccount{genesis.PrefundedAccount{
+			Address: tokenHolder.Address,
+			Balance: 10,
+		}},
+	}
 
+	return opts
+}
+
+func TestContractCreation(t *testing.T) {
 	// create genesis
+	opts := getDefaultOpts()
 	gen, err := genesis.New(opts)
 	require.NoError(t, err)
 	require.NotNil(t, gen)
@@ -34,79 +83,51 @@ func TestContractCreation(t *testing.T) {
 	backend := backends.NewSimulatedBackend(gen.Alloc)
 
 	// ValidatorMgr instance
-	mgr, err := NewValidatorMgr(common.Address{}, backend)
+	mgr, err := NewValidatorMgr(validatorMgrAddr, backend)
 	require.NoError(t, err)
-	require.NotNil(t, err)
+	require.NotNil(t, mgr)
 
 	storedBaseDeposit, err := mgr.BaseDeposit(&bind.CallOpts{})
 	require.NoError(t, err)
-	requite.NotNil(storedBaseDeposit)
-	require.Equal(t, musd(opts.Consensus.BaseDeposit), storedBaseDeposit)
-
-	storedBaseDeposit, err := mgr.BaseDeposit(&bind.CallOpts{})
-	require.NoError(t, err)
-	requite.NotNil(storedBaseDeposit)
-	require.Equal(t, musd(opts.Consensus.BaseDeposit), storedBaseDeposit)
+	require.NotNil(t, storedBaseDeposit)
+	require.Equal(t, musd(new(big.Int).SetUint64(opts.Consensus.BaseDeposit)), storedBaseDeposit)
 
 	storedFreezePeriod, err := mgr.FreezePeriod(&bind.CallOpts{})
 	require.NoError(t, err)
 	require.NotNil(t, storedFreezePeriod)
-	require.Equal(t, opts.Consensus.FreezePeriod, storedFreezePeriod)
+	require.Equal(t, dtos(new(big.Int).SetUint64(opts.Consensus.FreezePeriod)), storedFreezePeriod)
 
 	storedMaxNumValidators, err := mgr.MaxNumValidators(&bind.CallOpts{})
 	require.NoError(t, err)
 	require.NotNil(t, storedMaxNumValidators)
-	require.Equal(t, opts.Consesnsus.MaxNumValidators, storedMaxNumValidators)
+	require.Equal(t, opts.Consensus.MaxNumValidators, storedMaxNumValidators.Uint64())
 
 	storedMiningTokenAddr, err := mgr.MiningTokenAddr(&bind.CallOpts{})
 	require.NoError(t, err)
 	require.NotNil(t, storedMiningTokenAddr)
-	require.Equal(t, "", storedMiningTokenAddr)
+	require.Equal(t, tokenAddr, storedMiningTokenAddr)
 }
 
 func TestIsValidator(t *testing.T) {
-	opts := genesis.GetDefaultOpts()
-
-	// add a token holder
-	holders := opts.Consensus.MiningToken.Holders
-	holder := genesis.TokenHolder{
-		Address:   getAddress(user).Str(),
-		NumTokens: opts.Consensus.BaseDeposit,
-	}
-
-	holders = append(holders, holder)
-
-	// prefund the token holder with kUSD to join the consensus
-	opts.PrefundedAccounts = append(opts.PrefundedAccounts, genesis.PrefundedAccount{
-		AccountAddress: holder.Address,
-		Balance:        initialBalance,
-	})
-
 	// create genesis
+	// the genesis block includes a validator
+	opts := getDefaultOpts()
 	genesis, err := genesis.New(opts)
 	require.NoError(t, err)
 	require.NotNil(t, genesis)
 
 	// create backend
-	backend := backends.NewSimulatedBackend(alloc)(genesis.Alloc)
+	backend := backends.NewSimulatedBackend(genesis.Alloc)
 
-	// mUSD instance
-	mUSD, err := token.NewMiningToken(common.Address{}, backend)
+	// ValidatorMgr instance
+	mgr, err := NewValidatorMgr(validatorMgrAddr, backend)
 	require.NoError(t, err)
-	require.NotNil(t, mUSD)
+	require.NotNil(t, mgr)
 
-	// validatorMgr instance
-	validatorMgrAddr := common.Address{}
-	validatorMgr, err := NewValidatorMgr(validatorMgrAddr, backend)
+	// create a random user
+	randomUser, err := crypto.GenerateKey()
 	require.NoError(t, err)
-	require.NotNil(t, validatorMgr)
-
-	// register user as validator
-	transactOpts := bind.NewKeyedTransactor(user)
-	_, err = mUSD.Transfer(transactOpts, validatorMgrAddr, musd(new(big.Int).SetUint64(holder.NumTokens)), []byte("not_zero"), customFallback)
-	require.NoError(t, err)
-
-	backend.Commit()
+	require.NotNil(t, randomUser)
 
 	testCases := []struct {
 		input  common.Address
@@ -117,19 +138,22 @@ func TestIsValidator(t *testing.T) {
 			output: true,
 		},
 		{
-			input:  getAddress(user2),
+			input:  getAddress(randomUser),
 			output: false,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Address %s", tc.input.Hex()), func(t *testing.T) {
-			isValidator, err := validatorMgr.IsGenesisValidator(&bind.CallOpts{}, tc.input)
+			isValidator, err := mgr.IsValidator(&bind.CallOpts{}, tc.input)
 			require.NoError(t, err)
 			require.Equal(t, tc.output, isValidator)
 		})
 	}
 }
+
+/*
+
 
 /*
 
@@ -727,6 +751,10 @@ func (suite *ElectionContractSuite) TestRedeemFunds_UnlockedDeposit() {
 
 
 */
+
+func dtos(numOfDays *big.Int) *big.Int {
+	return new(big.Int).Mul(numOfDays, secondsPerDay)
+}
 
 // mUSD converts the value to mUSD units
 func musd(value *big.Int) *big.Int {

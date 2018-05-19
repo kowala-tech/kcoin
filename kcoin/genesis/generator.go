@@ -30,6 +30,8 @@ const (
 	OtherNetwork = "other"
 
 	TendermintConsensus = "tendermint"
+
+	tokenCustomFallback = "registerValidator(address,uint256,bytes)"
 )
 
 var (
@@ -144,14 +146,14 @@ func newGenesisAlloc(options *validGenesisOptions) (core.GenesisAlloc, error) {
 		return nil, err
 	}
 
-	oracleMgrAddr, err := deployOracleMgr(stateDB, options.oracleMgr, alloc, contractsOwner)
+	// @NOTE (rgeraldes) - validator manager must know the mining token addr in order to transfer back the funds
+	options.validatorMgr.miningTokenAddr = *miningTokenAddr
+	validatorMgrAddr, err := deployValidatorMgr(stateDB, options.validatorMgr, alloc, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
 
-	// @NOTE (rgeraldes) - validator manager must know the mining token addr in order to transfer back the funds
-	options.validatorMgr.miningTokenAddr = *miningTokenAddr
-	validatorMgrAddr, err := deployValidatorMgr(stateDB, options.validatorMgr, alloc, contractsOwner)
+	oracleMgrAddr, err := deployOracleMgr(stateDB, options.oracleMgr, alloc, contractsOwner)
 	if err != nil {
 		return nil, err
 	}
@@ -161,9 +163,6 @@ func newGenesisAlloc(options *validGenesisOptions) (core.GenesisAlloc, error) {
 		&domain{params.ConsensusServiceDomain, *validatorMgrAddr},
 		&domain{params.OracleServiceDomain, *oracleMgrAddr},
 		&domain{params.MiningTokenDomain, *miningTokenAddr},
-	}
-	for _, domain := range domains {
-		fmt.Printf("%s:%s\n", domain.name, domain.addr.Hex())
 	}
 
 	_, err = deployNameService(stateDB, alloc, contractsOwner, domains)
@@ -180,7 +179,7 @@ func newGenesisAlloc(options *validGenesisOptions) (core.GenesisAlloc, error) {
 func getDefaultRuntimeConfig(sharedState *state.StateDB) *runtime.Config {
 	return &runtime.Config{
 		State:       sharedState,
-		BlockNumber: common.Big0, // @NOTE (rgeraldes) - identify the genesis validators
+		BlockNumber: common.Big0,
 		EVMConfig: vm.Config{
 			Debug:  true,
 			Tracer: newVmTracer(),
@@ -219,7 +218,10 @@ func deployNameService(stateDB *state.StateDB, genesis core.GenesisAlloc, owner 
 			return nil, err
 		}
 		// register domain
-		runtime.Call(contractAddr, append(common.FromHex(nameservice.NameServiceBin), nameServiceRegParams...), runtimeCfg)
+		_, _, err = runtime.Call(contractAddr, nameServiceRegParams, runtimeCfg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	genesis[contractAddr] = core.GenesisAccount{
@@ -278,7 +280,7 @@ func deployValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, gen
 		opts.baseDeposit,
 		opts.maxNumValidators,
 		opts.freezePeriod,
-		opts.validators[0],
+		opts.miningTokenAddr,
 	)
 	if err != nil {
 		return nil, err
@@ -302,15 +304,20 @@ func deployValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, gen
 			"transfer",
 			contractAddr,
 			validator.deposit,
-			// @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/issues/285
-			[]byte("not_zero"),
-			"registerValidator(address,uint256,bytes)",
+			[]byte("not_zero"), // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/issues/285
+			tokenCustomFallback,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		runtime.Call(opts.miningTokenAddr, append(common.FromHex(token.MiningTokenBin), registrationParams...), runtimeCfg)
+		fmt.Println(contractAddr)
+		fmt.Println(validator.deposit)
+
+		_, _, err = runtime.Call(opts.miningTokenAddr, registrationParams, runtimeCfg)
+		if err != nil {
+			return nil, fmt.Errorf("%s:%s", "Failed to register validator", err)
+		}
 	}
 
 	genesis[contractAddr] = core.GenesisAccount{
@@ -358,7 +365,10 @@ func deployMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genes
 			return nil, err
 		}
 		// mint tokens
-		runtime.Call(contractAddr, append(common.FromHex(token.MiningTokenBin), mintParams...), runtimeCfg)
+		_, _, err = runtime.Call(contractAddr, mintParams, runtimeCfg)
+		if err != nil {
+			return nil, fmt.Errorf("%s:%s", "Failed to mint tokens", err)
+		}
 	}
 
 	genesis[contractAddr] = core.GenesisAccount{
