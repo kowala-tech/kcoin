@@ -11,7 +11,6 @@ import (
 	"github.com/kowala-tech/kcoin/accounts/abi"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/contracts/consensus"
-	"github.com/kowala-tech/kcoin/contracts/nameservice"
 	"github.com/kowala-tech/kcoin/contracts/oracle"
 	"github.com/kowala-tech/kcoin/contracts/ownership"
 	"github.com/kowala-tech/kcoin/contracts/token"
@@ -165,52 +164,6 @@ func (gen *generator) getDefaultRuntimeConfig() *runtime.Config {
 			Tracer: gen.sharedTracer,
 		},
 	}
-}
-
-func (gen *generator) deployNameService(owner *common.Address, domains []*domain) (*common.Address, error) {
-	runtimeCfg := gen.getDefaultRuntimeConfig()
-	runtimeCfg.Origin = *owner
-
-	nameServiceABI, err := abi.JSON(strings.NewReader(nameservice.NameServiceABI))
-	if err != nil {
-		return nil, err
-	}
-
-	// nameServiceParams params for the name service creation
-	nameServiceParams, err := nameServiceABI.Pack("")
-	if err != nil {
-		return nil, err
-	}
-
-	// create contract
-	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(nameservice.NameServiceBin), nameServiceParams...), runtimeCfg)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, domain := range domains {
-		nameServiceRegParams, err := nameServiceABI.Pack(
-			"register",
-			domain.name,
-			domain.addr,
-		)
-		if err != nil {
-			return nil, err
-		}
-		// register domain
-		_, _, err = runtime.Call(contractAddr, nameServiceRegParams, runtimeCfg)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	gen.alloc[contractAddr] = core.GenesisAccount{
-		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
-		Code:    contractCode,
-		Balance: new(big.Int),
-	}
-
-	return &contractAddr, nil
 }
 
 // deployMultiSigWallet includes kowala's multi sig wallet in the genesis state. The creator - tx originator - has no influence
