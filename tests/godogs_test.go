@@ -54,6 +54,7 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^I transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITransferKUSD)
 	s.Step(`^I try to transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITryTransferKUSD)
 	s.Step(`^the transaction should fail$`, context.LastTransactionFailed)
+	s.Step(`^only one transaction should be done$`, context.OnlyOneTransactionIsDone)
 	s.Step(`^the transaction hash the same$`, context.TransactionHashTheSame)
 
 	// Balances

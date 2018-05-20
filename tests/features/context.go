@@ -30,8 +30,9 @@ type Context struct {
 	seederAccount           accounts.Account
 	accounts                map[string]accounts.Account
 
-	lastTx      *types.Transaction
-	lastTxErr   error
+	lastTx              *types.Transaction
+	lastTxErr           error
+	lastTxStartingBlock *big.Int
 
 	lastUnlockErr error
 

@@ -118,7 +118,8 @@ func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expected
 	daysExpected := time.Hour * 24 * time.Duration(days)
 	expectedDate := time.Now().Add(daysExpected)
 	if isSameDay(expectedDate, deposit.AvailableAt.Time()) {
-		return errors.New(fmt.Sprintf("deposit available not within %d days, available at %s", daysExpected, deposit.AvailableAt.Time().String()))
+		return errors.New(fmt.Sprintf("deposit available not within %d days(%f hours), available at %s",
+			days, daysExpected.Hours(), deposit.AvailableAt.Time().String()))
 	}
 
 	return nil

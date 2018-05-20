@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"errors"
 	"math/big"
+	"time"
+	"encoding/json"
 
 	"github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/accounts"
@@ -25,7 +27,12 @@ func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
 	return ctx.waiter.Do(
 		func() error {
 			var err error
+			ctx.lastTxStartingBlock, err = ctx.client.BlockNumber(context.Background())
+			if err != nil {
+				return err
+			}
 			ctx.lastTx, err = ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
+
 			return err
 		},
 		func() error {
@@ -67,24 +74,82 @@ func (ctx *Context) isTransactionInBlockchain(tx *types.Transaction) (bool, erro
 	if err != nil {
 		return false, err
 	}
-	return receipt.Status == types.ReceiptStatusSuccessful, nil
+
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		return false, nil
+	}
+
+	if tx.Hash().String() != receipt.TxHash.String() {
+		return false, fmt.Errorf("sent transaction hash %q, receipt transaction hash %q", tx.Hash().String(), receipt.TxHash.String())
+	}
+
+	return true, nil
 }
 
+func (ctx *Context) OnlyOneTransactionIsDone() error {
+	// wait some for new blocks
+	time.Sleep(3*time.Second)
+
+	currentBlock, err := ctx.client.BlockNumber(context.Background())
+	if err != nil {
+		return err
+	}
+
+	var txs []*types.Transaction
+	var txsLog string
+	for i:=ctx.lastTxStartingBlock.Uint64()+1; i <= currentBlock.Uint64(); i++ {
+		block, err := ctx.client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
+		if err != nil {
+			return err
+		}
+
+		blockTxs := block.Transactions()
+		txs = append(txs, blockTxs...)
+
+		for _, tx := range blockTxs {
+			txsLog += fmt.Sprintf("Block %d(%q), transaction with value %d and full info %s\n\n",
+				block.NumberU64(), block.Hash().String(), tx.Value().Uint64(), tx.String())
+		}
+	}
+
+	if len(txs) > 1 {
+		return fmt.Errorf("expected single transaction with value %d and full info %s\n\n.\n\ngot:\n%s",
+			ctx.lastTx.Value().Uint64(), ctx.lastTx.String(), txsLog)
+	}
+
+	return nil
+}
 func (ctx *Context) TransactionHashTheSame() error {
 	txBlock, err := ctx.transactionBlock(ctx.lastTx)
 	if err != nil {
 		return err
 	}
 
-	command := fmt.Sprintf("web3.eth.getTransactionFromBlock('%x', 0);", txBlock.NumberU64())
+	command := fmt.Sprintf("web3.eth.getTransactionFromBlock('%d', 0);", txBlock.NumberU64())
 	resp, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand(command))
 	if err != nil {
 		return err
 	}
 
-	//ctx.lastTx.Hash() != resp.StdOut
+	type Hash struct {
+		Hash string
+	}
 
-	fmt.Println("!!!!!!", resp.StdOut)
+	txFromConsole := new(Hash)
+	err = json.Unmarshal(fixUnquotedJSON(resp.StdOut), txFromConsole)
+	if err != nil {
+		return err
+	}
+
+	txFromRPC, err := ctx.client.TransactionInBlock(context.Background(), txBlock.Hash(), 0)
+	if err != nil {
+		return err
+	}
+
+	if txFromRPC.Hash().String() != txFromConsole.Hash {
+		return fmt.Errorf("transaction hash via console %q, via RPC %q", txFromConsole.Hash, txFromRPC.Hash().String())
+	}
+
 	return nil
 }
 
@@ -94,8 +159,6 @@ func (ctx *Context) transactionBlock(tx *types.Transaction) (*types.Block, error
 		return nil, err
 	}
 
-	fmt.Println("Searching for", tx.String(), tx.Value().String(), tx.ChainID().String())
-
 	for i:=1; i <= int(currentBlock.Uint64()); i++ {
 		block, err := ctx.client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
 		if err != nil {
@@ -104,9 +167,13 @@ func (ctx *Context) transactionBlock(tx *types.Transaction) (*types.Block, error
 
 		txs := block.Transactions()
 		for _, blockTx := range txs {
-			fmt.Println("Got", block.NumberU64(), blockTx.String())
 			if blockTx.Hash() == tx.Hash() {
 				return block, nil
+			}
+
+			if tx.To() == blockTx.To() && tx.Value().Uint64() ==  blockTx.Value().Uint64() {
+				return nil, fmt.Errorf("got wrong transaction hash. expected %s. got %s",
+					tx.Hash().String(), blockTx.Hash().String())
 			}
 		}
 	}

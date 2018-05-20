@@ -131,9 +131,12 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	var V byte
-	chainID := deriveChainID(dec.V).Uint64()
-	V = byte(dec.V.Uint64() - 35 - 2*chainID)
-
+	if isProtectedV(dec.V) {
+		chainID := deriveChainID(dec.V).Uint64()
+		V = byte(dec.V.Uint64() - 35 - 2*chainID)
+	} else {
+		V = byte(dec.V.Uint64() - 27)
+	}
 	if !crypto.ValidateSignatureValues(V, dec.R, dec.S, false) {
 		return ErrInvalidSig
 	}
@@ -153,10 +156,9 @@ func (tx *Transaction) CheckNonce() bool   { return true }
 func (tx *Transaction) To() *common.Address {
 	if tx.data.Recipient == nil {
 		return nil
-	} else {
-		to := *tx.data.Recipient
-		return &to
 	}
+	to := *tx.data.Recipient
+	return &to
 }
 
 // Hash hashes the RLP encoding of tx.
@@ -257,7 +259,7 @@ func (tx *Transaction) Cost() *big.Int {
 }
 
 func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
-	return tx.data.R, tx.data.S, tx.data.V
+	return tx.data.V, tx.data.R, tx.data.S
 }
 
 func (tx *Transaction) String() string {
@@ -267,9 +269,7 @@ func (tx *Transaction) String() string {
 		// the sender.
 		signer := deriveSigner(tx.data.V)
 		if f, err := TxSender(signer, tx); err != nil { // derive but don't cache
-		    //fixme: handle an error
-			fmt.Println("[invalid sender: invalid sig]", err.Error())
-			from = "[invalid sender: invalid sig]"
+			from = "[invalid sender: invalid sig] " + err.Error()
 		} else {
 			from = fmt.Sprintf("%x", f[:])
 		}
@@ -391,7 +391,6 @@ type TransactionsByPriceAndNonce struct {
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
-	fmt.Println("********** NewTransactionsByPriceAndNonce")
 	// Initialize a price based heap with the head transactions
 	heads := make(TxByPrice, 0, len(txs))
 	for _, accTxs := range txs {
