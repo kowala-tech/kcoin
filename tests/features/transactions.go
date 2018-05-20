@@ -3,10 +3,13 @@ package features
 import (
 	"context"
 	"fmt"
+	"errors"
+	"math/big"
 
 	"github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/cluster"
 )
 
 func (ctx *Context) CurrentBlock() (uint64, error) {
@@ -19,20 +22,19 @@ func (ctx *Context) CurrentBlock() (uint64, error) {
 }
 
 func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
-	var tx *types.Transaction
 	return ctx.waiter.Do(
 		func() error {
 			var err error
-			tx, err = ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
+			ctx.lastTx, err = ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
 			return err
 		},
 		func() error {
-			isInBlockchain, err := ctx.isTransactionInBlockchain(tx)
+			isInBlockchain, err := ctx.isTransactionInBlockchain(ctx.lastTx)
 			if err != nil {
 				return err
 			}
 			if !isInBlockchain {
-				return fmt.Errorf("tx %q is not in the blockchain", tx.String())
+				return fmt.Errorf("tx %q is not in the blockchain", ctx.lastTx.String())
 			}
 			return nil
 		})
@@ -66,6 +68,50 @@ func (ctx *Context) isTransactionInBlockchain(tx *types.Transaction) (bool, erro
 		return false, err
 	}
 	return receipt.Status == types.ReceiptStatusSuccessful, nil
+}
+
+func (ctx *Context) TransactionHashTheSame() error {
+	txBlock, err := ctx.transactionBlock(ctx.lastTx)
+	if err != nil {
+		return err
+	}
+
+	command := fmt.Sprintf("web3.eth.getTransactionFromBlock('%x', 0);", txBlock.NumberU64())
+	resp, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand(command))
+	if err != nil {
+		return err
+	}
+
+	//ctx.lastTx.Hash() != resp.StdOut
+
+	fmt.Println("!!!!!!", resp.StdOut)
+	return nil
+}
+
+func (ctx *Context) transactionBlock(tx *types.Transaction) (*types.Block, error) {
+	currentBlock, err := ctx.client.BlockNumber(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("Searching for", tx.String(), tx.Value().String(), tx.ChainID().String())
+
+	for i:=1; i <= int(currentBlock.Uint64()); i++ {
+		block, err := ctx.client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
+		if err != nil {
+			return nil, err
+		}
+
+		txs := block.Transactions()
+		for _, blockTx := range txs {
+			fmt.Println("Got", block.NumberU64(), blockTx.String())
+			if blockTx.Hash() == tx.Hash() {
+				return block, nil
+			}
+		}
+	}
+
+	return nil, errors.New("the transaction is not in the chain")
 }
 
 func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {

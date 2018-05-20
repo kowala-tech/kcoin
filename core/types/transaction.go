@@ -96,6 +96,10 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 func (tx *Transaction) ChainID() *big.Int {
 	return deriveChainID(tx.data.V)
 }
+func (tx *Transaction) SignatureValues() (R, S, V *big.Int) {
+	R, S, V = tx.data.R, tx.data.S, tx.data.V
+	return
+}
 
 // DecodeRLP implements rlp.Encoder
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
@@ -169,26 +173,23 @@ func (tx *Transaction) Hash() common.Hash {
 // ProtectedHash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (tx *Transaction) ProtectedHash(chainID *big.Int) common.Hash {
-	return rlpHash([]interface{}{
-		tx.data.AccountNonce,
-		tx.data.Price,
-		tx.data.GasLimit,
-		tx.data.Recipient,
-		tx.data.Amount,
-		tx.data.Payload,
-		chainID, uint(0), uint(0),
-	})
+	return tx.HashWithData(chainID, uint(0), uint(0))
 }
 
 func (tx *Transaction) UnprotectedHash() common.Hash {
-	return rlpHash([]interface{}{
+	return tx.HashWithData()
+}
+
+func (tx *Transaction) HashWithData(data ...interface{}) common.Hash {
+	txData := []interface{}{
 		tx.data.AccountNonce,
 		tx.data.Price,
 		tx.data.GasLimit,
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
-	})
+	}
+	return rlpHash(append(txData, data...))
 }
 
 // Protected returns whether the transaction is protected from replay protection.
@@ -266,6 +267,8 @@ func (tx *Transaction) String() string {
 		// the sender.
 		signer := deriveSigner(tx.data.V)
 		if f, err := TxSender(signer, tx); err != nil { // derive but don't cache
+		    //fixme: handle an error
+			fmt.Println("[invalid sender: invalid sig]", err.Error())
 			from = "[invalid sender: invalid sig]"
 		} else {
 			from = fmt.Sprintf("%x", f[:])
@@ -388,6 +391,7 @@ type TransactionsByPriceAndNonce struct {
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
+	fmt.Println("********** NewTransactionsByPriceAndNonce")
 	// Initialize a price based heap with the head transactions
 	heads := make(TxByPrice, 0, len(txs))
 	for _, accTxs := range txs {
