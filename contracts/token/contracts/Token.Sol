@@ -106,7 +106,6 @@ contract Token is ERC223  {
     // Standard function transfer similar to ERC20 transfer with no _data .
     // Added due to backwards compatibility reasons .
     function transfer(address _to, uint _value) public returns (bool success) {
-        
         //standard function transfer similar to ERC20 transfer with no _data
         //added due to backwards compatibility reasons
         bytes memory empty;
@@ -116,6 +115,7 @@ contract Token is ERC223  {
         else {
             return transferToAddress(_to, _value, empty);
         }
+        return true;
     }
 
 

@@ -9,7 +9,6 @@ contract ValidatorMgr is pausable.Pausable {
     uint public baseDeposit;       
     uint public maxNumValidators;
     uint public freezePeriod;
-    address public genesisValidator;
     bytes32 public validatorsChecksum;
     address public miningTokenAddr;
 
@@ -161,7 +160,7 @@ contract ValidatorMgr is pausable.Pausable {
 
     function getDepositAtIndex(uint index) public view returns (uint amount, uint availableAt) {
         Deposit deposit = validatorRegistry[msg.sender].deposits[index];
-        return (deposit.amount / 1 ether, deposit.availableAt);
+        return (deposit.amount, deposit.availableAt);
     }
 
     function _registerValidator() public whenNotPaused onlyNewCandidate onlyWithMinDeposit {
@@ -195,7 +194,6 @@ contract ValidatorMgr is pausable.Pausable {
         uint refund = 0;
         uint i = 0;
         Deposit[] deposits = validatorRegistry[msg.sender].deposits;
-        
         for (; i < deposits.length && deposits[i].availableAt != 0; i++) {
             if (now < deposits[i].availableAt) {
                 // @NOTE (rgeraldes) - no need to iterate further since the 
@@ -205,12 +203,12 @@ contract ValidatorMgr is pausable.Pausable {
             }
             refund += deposits[i].amount;
         }
-        
+
         _removeDeposits(msg.sender, i);
 
         if (refund > 0) {
-            token.ERC223 mUSD = token.ERC223(miningTokenAddr);
-            mUSD.transfer(msg.sender, refund);
+            token.ERC223 mtoken = token.ERC223(miningTokenAddr);
+            mtoken.transfer(msg.sender, refund);
         }
     }
 

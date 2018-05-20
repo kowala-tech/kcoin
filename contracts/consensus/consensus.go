@@ -16,9 +16,7 @@ import (
 //go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/contracts/=/usr/local/include/solidity/ contracts/ValidatorMgr.sol
 //go:generate abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
 
-// RegistrationHandler represesnts the manager handler responsible for the registration
-// of a user in the consensus. For token trasnfers (ERC233 model) we must specify the target method.
-const RegistrationHandler = "RegisterValidator()"
+const registrationHandler = "registerValidator(address,uint256,bytes)"
 
 // MapChainIDToAddr maps the contract address (const) per network
 var MapChainIDToAddr = map[uint64]common.Address{
@@ -71,7 +69,7 @@ func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensu
 }
 
 func (consensus *consensus) Join(walletAccount accounts.WalletAccount, amount uint64) error {
-	_, err := consensus.account.Transfer(consensus.transactOpts(walletAccount), consensus.managerAddr, new(big.Int).SetUint64(amount), []byte(RegistrationHandler), "tokenReceiver")
+	_, err := consensus.account.Transfer(consensus.transactOpts(walletAccount), consensus.managerAddr, new(big.Int).SetUint64(amount), []byte("not_zero"), registrationHandler)
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
 	}

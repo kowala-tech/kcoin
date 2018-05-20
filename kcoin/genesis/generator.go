@@ -64,51 +64,49 @@ type domain struct {
 	addr common.Address
 }
 
-type vmTracer struct {
-	data map[common.Address]map[common.Hash]common.Hash
+type Generator interface {
+	Generate(opts *Options) (*core.Genesis, error)
 }
 
-func newVmTracer() *vmTracer {
-	return &vmTracer{
-		data: make(map[common.Address]map[common.Hash]common.Hash, 1024),
-	}
-}
-
-func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
-	if err != nil {
-		return err
-	}
-	if op == vm.SSTORE {
-		s := stack.Data()
-		addrStorage, ok := vmt.data[contract.Address()]
-		if !ok {
-			addrStorage = make(map[common.Hash]common.Hash, 1024)
-			vmt.data[contract.Address()] = addrStorage
-		}
-		addrStorage[common.BigToHash(s[len(s)-1])] = common.BigToHash(s[len(s)-2])
-	}
-	return nil
-}
-
-func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
-	return nil
+type generator struct {
+	sharedState  *state.StateDB
+	sharedTracer vm.Tracer
+	alloc        core.GenesisAlloc
 }
 
 func New(opts *Options) (*core.Genesis, error) {
+	db, err := kcoindb.NewMemDatabase()
+	if err != nil {
+		return nil, err
+	}
+	stateDB, err := state.New(common.Hash{}, state.NewDatabase(db))
+	if err != nil {
+		return nil, err
+	}
+
+	gen := &generator{
+		sharedState:  stateDB,
+		sharedTracer: newVmTracer(),
+		alloc:        make(core.GenesisAlloc),
+	}
+
+	return gen.Generate(opts)
+}
+
+func (gen *generator) Generate(opts *Options) (*core.Genesis, error) {
 	validOptions, err := validateOptions(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	alloc, err := newGenesisAlloc(validOptions)
-	if err != nil {
+	if err := gen.genesisAllocFromOptions(validOptions); err != nil {
 		return nil, err
 	}
 
 	genesis := &core.Genesis{
 		Timestamp: uint64(time.Now().Unix()),
 		GasLimit:  4700000,
-		Alloc:     alloc,
+		Alloc:     gen.alloc,
 		Config: &params.ChainConfig{
 			ChainID:    getNetwork(validOptions.network),
 			Tendermint: getConsensusEngine(validOptions.consensusEngine),
@@ -120,75 +118,57 @@ func New(opts *Options) (*core.Genesis, error) {
 	return genesis, nil
 }
 
-func newGenesisAlloc(options *validGenesisOptions) (core.GenesisAlloc, error) {
-	alloc := make(core.GenesisAlloc)
-
-	// @NOTE (rgeraldes) - state needs to be shared between contracts because of the address
-	// generation for multiple contracts with the same origin.
-	db, err := kcoindb.NewMemDatabase()
-	if err != nil {
-		return nil, err
-	}
-	stateDB, err := state.New(common.Hash{}, state.NewDatabase(db))
-	if err != nil {
-		return nil, err
+func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
+	if err := gen.deployContracts(opts); err != nil {
+		return err
 	}
 
-	multiSigAddr, err := deployMultiSigWallet(stateDB, options.multiSig, alloc)
-	if err != nil {
-		return nil, err
-	}
-	contractsOwner := multiSigAddr
+	gen.prefundAccounts(opts.prefundedAccounts)
+	gen.addBatchOfPrefundedAccountsIntoGenesis()
 
-	// @NOTE (rgeraldes) - must be deployed before the validator mgr contract
-	miningTokenAddr, err := deployMiningToken(stateDB, options.miningToken, alloc, contractsOwner)
+	return nil
+}
+
+func (gen *generator) deployContracts(opts *validGenesisOptions) error {
+	ownerAddr, err := gen.deployMultiSigWallet(opts.multiSig)
 	if err != nil {
-		return nil, err
+		return err
+	}
+
+	opts.miningToken.owner = *ownerAddr
+	miningTokenAddr, err := gen.deployMiningToken(opts.miningToken)
+	if err != nil {
+		return err
 	}
 
 	// @NOTE (rgeraldes) - validator manager must know the mining token addr in order to transfer back the funds
-	options.validatorMgr.miningTokenAddr = *miningTokenAddr
-	validatorMgrAddr, err := deployValidatorMgr(stateDB, options.validatorMgr, alloc, contractsOwner)
+	opts.validatorMgr.miningTokenAddr = *miningTokenAddr
+	_, err = gen.deployValidatorMgr(opts.validatorMgr, ownerAddr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	oracleMgrAddr, err := deployOracleMgr(stateDB, options.oracleMgr, alloc, contractsOwner)
+	_, err = gen.deployOracleMgr(opts.oracleMgr, ownerAddr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// @NOTE (rgeraldes) - temporary
-	domains := []*domain{
-		&domain{params.ConsensusServiceDomain, *validatorMgrAddr},
-		&domain{params.OracleServiceDomain, *oracleMgrAddr},
-		&domain{params.MiningTokenDomain, *miningTokenAddr},
-	}
-
-	_, err = deployNameService(stateDB, alloc, contractsOwner, domains)
-	if err != nil {
-		return nil, err
-	}
-
-	addPrefundedAccountsIntoGenesis(options.prefundedAccounts, alloc)
-	addBatchOfPrefundedAccountsIntoGenesis(alloc)
-
-	return alloc, nil
+	return nil
 }
 
-func getDefaultRuntimeConfig(sharedState *state.StateDB) *runtime.Config {
+func (gen *generator) getDefaultRuntimeConfig() *runtime.Config {
 	return &runtime.Config{
-		State:       sharedState,
+		State:       gen.sharedState,
 		BlockNumber: common.Big0,
 		EVMConfig: vm.Config{
 			Debug:  true,
-			Tracer: newVmTracer(),
+			Tracer: gen.sharedTracer,
 		},
 	}
 }
 
-func deployNameService(stateDB *state.StateDB, genesis core.GenesisAlloc, owner *common.Address, domains []*domain) (*common.Address, error) {
-	runtimeCfg := getDefaultRuntimeConfig(stateDB)
+func (gen *generator) deployNameService(owner *common.Address, domains []*domain) (*common.Address, error) {
+	runtimeCfg := gen.getDefaultRuntimeConfig()
 	runtimeCfg.Origin = *owner
 
 	nameServiceABI, err := abi.JSON(strings.NewReader(nameservice.NameServiceABI))
@@ -224,7 +204,7 @@ func deployNameService(stateDB *state.StateDB, genesis core.GenesisAlloc, owner 
 		}
 	}
 
-	genesis[contractAddr] = core.GenesisAccount{
+	gen.alloc[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
@@ -236,7 +216,7 @@ func deployNameService(stateDB *state.StateDB, genesis core.GenesisAlloc, owner 
 // deployMultiSigWallet includes kowala's multi sig wallet in the genesis state. The creator - tx originator - has no influence
 // in this specific contract (MultiSigWallet does not satisfy the Ownable contract) but we should use the same one all the
 // time in order to have the same contract addresses.
-func deployMultiSigWallet(stateDB *state.StateDB, opts *validMultiSigOpts, genesis core.GenesisAlloc) (*common.Address, error) {
+func (gen *generator) deployMultiSigWallet(opts *validMultiSigOpts) (*common.Address, error) {
 	multiSigWalletABI, err := abi.JSON(strings.NewReader(ownership.MultiSigWalletABI))
 	if err != nil {
 		return nil, err
@@ -251,14 +231,14 @@ func deployMultiSigWallet(stateDB *state.StateDB, opts *validMultiSigOpts, genes
 		return nil, err
 	}
 
-	runtimeCfg := getDefaultRuntimeConfig(stateDB)
+	runtimeCfg := gen.getDefaultRuntimeConfig()
 	runtimeCfg.Origin = *opts.multiSigCreator
 	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(ownership.MultiSigWalletBin), multiSigParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
 	}
 
-	genesis[contractAddr] = core.GenesisAccount{
+	gen.alloc[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
@@ -269,7 +249,7 @@ func deployMultiSigWallet(stateDB *state.StateDB, opts *validMultiSigOpts, genes
 
 // deployValidatorMgr includes the validator manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
-func deployValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, genesis core.GenesisAlloc, owner *common.Address) (*common.Address, error) {
+func (gen *generator) deployValidatorMgr(opts *validValidatorMgrOpts, owner *common.Address) (*common.Address, error) {
 	managerABI, err := abi.JSON(strings.NewReader(consensus.ValidatorMgrABI))
 	if err != nil {
 		return nil, err
@@ -286,7 +266,7 @@ func deployValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, gen
 		return nil, err
 	}
 
-	runtimeCfg := getDefaultRuntimeConfig(stateDB)
+	runtimeCfg := gen.getDefaultRuntimeConfig()
 	runtimeCfg.Origin = *owner
 	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(consensus.ValidatorMgrBin), managerParams...), runtimeCfg)
 	if err != nil {
@@ -300,6 +280,8 @@ func deployValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, gen
 	}
 
 	for _, validator := range opts.validators {
+		runtimeCfg.Origin = validator.address
+
 		registrationParams, err := tokenABI.Pack(
 			"transfer",
 			contractAddr,
@@ -311,26 +293,31 @@ func deployValidatorMgr(stateDB *state.StateDB, opts *validValidatorMgrOpts, gen
 			return nil, err
 		}
 
-		fmt.Println(contractAddr)
-		fmt.Println(validator.deposit)
-
 		_, _, err = runtime.Call(opts.miningTokenAddr, registrationParams, runtimeCfg)
 		if err != nil {
 			return nil, fmt.Errorf("%s:%s", "Failed to register validator", err)
 		}
 	}
 
-	genesis[contractAddr] = core.GenesisAccount{
+	gen.alloc[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
+	}
+
+	// NOTE(rgeraldes) - mtoken contract has been modified and it's storage needs to be updated
+	// @TODO (rgeraldes) - trace the state just in the end of the main method
+	gen.alloc[opts.miningTokenAddr] = core.GenesisAccount{
+		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[opts.miningTokenAddr],
+		Code:    gen.alloc[opts.miningTokenAddr].Code,
+		Balance: gen.alloc[opts.miningTokenAddr].Balance,
 	}
 
 	return &contractAddr, nil
 }
 
 // deployMiningToken includes the mUSD token contract in the genesis block
-func deployMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genesis core.GenesisAlloc, owner *common.Address) (*common.Address, error) {
+func (gen *generator) deployMiningToken(opts *validMiningTokenOpts) (*common.Address, error) {
 	tokenABI, err := abi.JSON(strings.NewReader(token.MiningTokenABI))
 	if err != nil {
 		return nil, err
@@ -348,8 +335,8 @@ func deployMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genes
 		return nil, err
 	}
 
-	runtimeCfg := getDefaultRuntimeConfig(stateDB)
-	runtimeCfg.Origin = *owner
+	runtimeCfg := gen.getDefaultRuntimeConfig()
+	runtimeCfg.Origin = opts.owner
 	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(token.MiningTokenBin), tokenParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
@@ -371,7 +358,7 @@ func deployMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genes
 		}
 	}
 
-	genesis[contractAddr] = core.GenesisAccount{
+	gen.alloc[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
@@ -382,7 +369,7 @@ func deployMiningToken(stateDB *state.StateDB, opts *validMiningTokenOpts, genes
 
 // deployOracleMgr includes the oracle manager in the genesis block. The contract creator
 // is also the owner - Oracle Manager satisfies the Ownable interface.
-func deployOracleMgr(stateDB *state.StateDB, opts *validOracleMgrOpts, genesis core.GenesisAlloc, owner *common.Address) (*common.Address, error) {
+func (gen *generator) deployOracleMgr(opts *validOracleMgrOpts, owner *common.Address) (*common.Address, error) {
 	managerABI, err := abi.JSON(strings.NewReader(oracle.OracleMgrABI))
 	if err != nil {
 		return nil, err
@@ -398,14 +385,14 @@ func deployOracleMgr(stateDB *state.StateDB, opts *validOracleMgrOpts, genesis c
 		return nil, err
 	}
 
-	runtimeCfg := getDefaultRuntimeConfig(stateDB)
+	runtimeCfg := gen.getDefaultRuntimeConfig()
 	runtimeCfg.Origin = *owner
 	contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(oracle.OracleMgrBin), managerParams...), runtimeCfg)
 	if err != nil {
 		return nil, err
 	}
 
-	genesis[contractAddr] = core.GenesisAccount{
+	gen.alloc[contractAddr] = core.GenesisAccount{
 		Storage: runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contractAddr],
 		Code:    contractCode,
 		Balance: new(big.Int),
@@ -452,16 +439,16 @@ func getNetwork(network string) *big.Int {
 	return chainId
 }
 
-func addBatchOfPrefundedAccountsIntoGenesis(genesis core.GenesisAlloc) {
+func (gen *generator) addBatchOfPrefundedAccountsIntoGenesis() {
 	// Add a batch of precompile balances to avoid them getting deleted
 	for i := int64(0); i < 256; i++ {
-		genesis[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
+		gen.alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
 	}
 }
 
-func addPrefundedAccountsIntoGenesis(validPrefundedAccounts []*validPrefundedAccount, genesis core.GenesisAlloc) {
+func (gen *generator) prefundAccounts(validPrefundedAccounts []*validPrefundedAccount) {
 	for _, vAccount := range validPrefundedAccounts {
-		genesis[*vAccount.accountAddress] = core.GenesisAccount{
+		gen.alloc[*vAccount.accountAddress] = core.GenesisAccount{
 			Balance: vAccount.balance,
 		}
 	}
@@ -544,7 +531,7 @@ func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount
 			return nil, ErrInvalidAddressInPrefundedAccounts
 		}
 
-		balance := new(big.Int).SetUint64(a.Balance)
+		balance := new(big.Int).Mul(new(big.Int).SetUint64(a.Balance), new(big.Int).SetUint64(params.Ether))
 
 		validAccount := &validPrefundedAccount{
 			accountAddress: address,

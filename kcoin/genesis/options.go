@@ -77,12 +77,14 @@ type validValidatorMgrOpts struct {
 	baseDeposit      *big.Int
 	validators       []*validValidator
 	miningTokenAddr  common.Address
+	owner            common.Address
 }
 
 type validOracleMgrOpts struct {
 	maxNumOracles *big.Int
 	freezePeriod  *big.Int
 	baseDeposit   *big.Int
+	owner         common.Address
 }
 
 type validTokenHolder struct {
@@ -96,6 +98,7 @@ type validMiningTokenOpts struct {
 	cap      *big.Int
 	decimals *big.Int
 	holders  []*validTokenHolder
+	owner    common.Address
 }
 
 type validMultiSigOpts struct {

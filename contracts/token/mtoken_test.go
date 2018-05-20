@@ -23,6 +23,7 @@ var (
 	miningTokenCap      = new(big.Int).Mul(new(big.Int).SetUint64(1073741824), new(big.Int).SetUint64(params.Ether)) // 1073741824 mUSD
 	miningToken         = "mUSD"
 	miningTokenDecimals = uint8(18)
+	customFallback      = "test()"
 )
 
 func TestDeploy(t *testing.T) {
@@ -184,7 +185,7 @@ func TestMint_OverCap(t *testing.T) {
 	require.Error(t, err, "Cannot mint over the cap")
 }
 
-func TestTransfer_CustomFallback_ValidatorMgr_RegisterValidator(t *testing.T) {
+func TestTransfer_CustomFallback_Compatible(t *testing.T) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
 		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
 		getAddress(user):  core.GenesisAccount{Balance: initialBalance},
@@ -222,7 +223,7 @@ func TestTransfer_CustomFallback_ValidatorMgr_RegisterValidator(t *testing.T) {
 	require.True(t, isValidator)
 }
 
-func TestTransfer_CustomFallback_OracleMgr(t *testing.T) {
+func TestTransfer_CustomFallback_Incompatible(t *testing.T) {
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
 		getAddress(owner): core.GenesisAccount{Balance: initialBalance},
 		getAddress(user):  core.GenesisAccount{Balance: initialBalance},
