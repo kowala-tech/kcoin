@@ -2,26 +2,49 @@ package features
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
-	kowala "github.com/kowala-tech/kcoin"
+	"github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/core/types"
 )
 
-func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
-
-	tx, err := ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
+func (ctx *Context) CurrentBlock() (uint64, error) {
+	block, err := ctx.client.BlockNumber(context.Background())
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	return common.WaitFor("transaction in the blockhain", 1*time.Second, 5*time.Second, func() bool {
-		isInBlockchain, err := ctx.isTransactionInBlockchain(tx)
-		return err == nil && isInBlockchain
-	})
+	return block.Uint64(), nil
+}
+
+func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
+	return ctx.waiter.Do(
+		func() error {
+			var err error
+			ctx.lastTxStartingBlock, err = ctx.client.BlockNumber(context.Background())
+			if err != nil {
+				return err
+			}
+			ctx.lastTx, err = ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
+
+			return err
+		},
+		func() error {
+			isInBlockchain, err := ctx.isTransactionInBlockchain(ctx.lastTx)
+			if err != nil {
+				return err
+			}
+			if !isInBlockchain {
+				return fmt.Errorf("tx %q is not in the blockchain", ctx.lastTx.String())
+			}
+			return nil
+		})
 }
 
 func (ctx *Context) ITryTransferKUSD(kcoin int64, from, to string) error {
@@ -51,7 +74,111 @@ func (ctx *Context) isTransactionInBlockchain(tx *types.Transaction) (bool, erro
 	if err != nil {
 		return false, err
 	}
-	return receipt.Status == types.ReceiptStatusSuccessful, nil
+
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		return false, nil
+	}
+
+	if tx.Hash().String() != receipt.TxHash.String() {
+		return false, fmt.Errorf("sent transaction hash %q, receipt transaction hash %q", tx.Hash().String(), receipt.TxHash.String())
+	}
+
+	return true, nil
+}
+
+func (ctx *Context) OnlyOneTransactionIsDone() error {
+	// wait some for new blocks
+	time.Sleep(3 * time.Second)
+
+	currentBlock, err := ctx.client.BlockNumber(context.Background())
+	if err != nil {
+		return err
+	}
+
+	var txs []*types.Transaction
+	var txsLog string
+	for i := ctx.lastTxStartingBlock.Uint64() + 1; i <= currentBlock.Uint64(); i++ {
+		block, err := ctx.client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
+		if err != nil {
+			return err
+		}
+
+		blockTxs := block.Transactions()
+		txs = append(txs, blockTxs...)
+
+		for _, tx := range blockTxs {
+			txsLog += fmt.Sprintf("Block %d(%q), transaction with value %d and full info %s\n\n",
+				block.NumberU64(), block.Hash().String(), tx.Value().Uint64(), tx.String())
+		}
+	}
+
+	if len(txs) > 1 {
+		return fmt.Errorf("expected single transaction with value %d and full info %s\n\n.\n\ngot:\n%s",
+			ctx.lastTx.Value().Uint64(), ctx.lastTx.String(), txsLog)
+	}
+
+	return nil
+}
+func (ctx *Context) TransactionHashTheSame() error {
+	txBlock, err := ctx.transactionBlock(ctx.lastTx)
+	if err != nil {
+		return err
+	}
+
+	command := fmt.Sprintf("web3.eth.getTransactionFromBlock('%d', 0);", txBlock.NumberU64())
+	resp, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand(command))
+	if err != nil {
+		return err
+	}
+
+	type Hash struct {
+		Hash string
+	}
+
+	txFromConsole := new(Hash)
+	err = json.Unmarshal(fixUnquotedJSON(resp.StdOut), txFromConsole)
+	if err != nil {
+		return err
+	}
+
+	txFromRPC, err := ctx.client.TransactionInBlock(context.Background(), txBlock.Hash(), 0)
+	if err != nil {
+		return err
+	}
+
+	if txFromRPC.Hash().String() != txFromConsole.Hash {
+		return fmt.Errorf("transaction hash via console %q, via RPC %q", txFromConsole.Hash, txFromRPC.Hash().String())
+	}
+
+	return nil
+}
+
+func (ctx *Context) transactionBlock(tx *types.Transaction) (*types.Block, error) {
+	currentBlock, err := ctx.client.BlockNumber(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i <= int(currentBlock.Uint64()); i++ {
+		block, err := ctx.client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
+		if err != nil {
+			return nil, err
+		}
+
+		txs := block.Transactions()
+		for _, blockTx := range txs {
+			if blockTx.Hash() == tx.Hash() {
+				return block, nil
+			}
+
+			if tx.To() == blockTx.To() && tx.Value().Uint64() == blockTx.Value().Uint64() {
+				return nil, fmt.Errorf("got wrong transaction hash. expected %s. got %s",
+					tx.Hash().String(), blockTx.Hash().String())
+			}
+		}
+	}
+
+	return nil, errors.New("the transaction is not in the chain")
 }
 
 func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
@@ -86,15 +213,21 @@ func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Tr
 }
 
 func (ctx *Context) sendFundsAndWait(from, to accounts.Account, kcoins int64) (*types.Transaction, error) {
-	tx, err := ctx.sendFunds(from, to, kcoins)
-	if err != nil {
-		return nil, err
-	}
-	return tx, common.WaitFor("account receives the balance", 1*time.Second, 10*time.Second, func() bool {
-		balance, err := ctx.client.BalanceAt(context.Background(), to.Address, nil)
-		if err != nil {
-			return false
-		}
-		return balance.Cmp(toWei(kcoins)) == 0
-	})
+	var tx *types.Transaction
+	return tx, ctx.waiter.Do(
+		func() error {
+			var err error
+			tx, err = ctx.sendFunds(from, to, kcoins)
+			return err
+		},
+		func() error {
+			balance, err := ctx.client.BalanceAt(context.Background(), to.Address, nil)
+			if err != nil {
+				return err
+			}
+			if balance.Cmp(toWei(kcoins)) != 0 {
+				return fmt.Errorf("want %d, got %d coins", toWei(kcoins).Uint64(), balance.Uint64())
+			}
+			return nil
+		})
 }
