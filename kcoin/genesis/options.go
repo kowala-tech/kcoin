@@ -3,14 +3,45 @@ package genesis
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/pkg/errors"
 )
 
+const (
+	MainNetwork  = "main"
+	TestNetwork  = "test"
+	OtherNetwork = "other"
+
+	TendermintConsensus = "tendermint"
+)
+
 var (
-	ErrInvalidAddress = errors.New("Invalid address")
+	availableNetworks = map[string]bool{
+		MainNetwork:  true,
+		TestNetwork:  true,
+		OtherNetwork: true,
+	}
+
+	availableConsensusEngines = map[string]bool{
+		TendermintConsensus: true,
+	}
+
+	ErrEmptyMaxNumValidators                        = errors.New("max number of validators is mandatory")
+	ErrInvalidMaxNumValidators                      = errors.New("invalid max num of validators")
+	ErrEmptyFreezePeriod                            = errors.New("freeze period in days is mandatory")
+	ErrInvalidFreezePeriod                          = errors.New("freeze period is invalid")
+	ErrEmptyWalletAddressValidator                  = errors.New("wallet address of genesis validator is mandatory")
+	ErrInvalidWalletAddressValidator                = errors.New("wallet address of genesis validator is invalid")
+	ErrEmptyPrefundedAccounts                       = errors.New("empty prefunded accounts, at least the validator wallet address should be included")
+	ErrWalletAddressValidatorNotInPrefundedAccounts = errors.New("prefunded accounts should include genesis validator account")
+	ErrInvalidAddressInPrefundedAccounts            = errors.New("address in prefunded accounts is invalid")
+	ErrInvalidContractsOwnerAddress                 = errors.New("address used for smart contracts is invalid")
+	ErrInvalidNetwork                               = errors.New("invalid Network, use main, test or other")
+	ErrInvalidConsensusEngine                       = errors.New("invalid consensus engine")
+	ErrInvalidAddress                               = errors.New("Invalid address")
 )
 
 type Options struct {
@@ -240,4 +271,94 @@ func getAddress(s string) (*common.Address, error) {
 	address := common.HexToAddress(s)
 
 	return &address, nil
+}
+
+func mapNetwork(network string) (string, error) {
+	if !availableNetworks[network] {
+		return "", fmt.Errorf("%v:%s", ErrInvalidNetwork, network)
+	}
+
+	return network, nil
+}
+
+func mapConsensusEngine(consensus string) (string, error) {
+	if !availableConsensusEngines[consensus] {
+		return "", ErrInvalidConsensusEngine
+	}
+
+	return consensus, nil
+}
+
+func mapMaxNumValidators(s string) (*big.Int, error) {
+	if s = strings.TrimSpace(s); s == "" {
+		return nil, ErrEmptyMaxNumValidators
+	}
+
+	numValidators, ok := new(big.Int).SetString(s, 0)
+	if !ok {
+		return nil, ErrInvalidMaxNumValidators
+	}
+
+	return numValidators, nil
+}
+
+func mapUnbondingPeriod(uP string) (*big.Int, error) {
+	var text string
+	if text = strings.TrimSpace(uP); text == "" {
+		return nil, ErrEmptyFreezePeriod
+	}
+
+	unbondingPeriod, ok := new(big.Int).SetString(text, 0)
+	if !ok {
+		return nil, ErrInvalidFreezePeriod
+	}
+
+	return unbondingPeriod, nil
+}
+
+func mapWalletAddress(a string) (*common.Address, error) {
+	stringAddr := a
+
+	if text := strings.TrimSpace(a); text == "" {
+		return nil, ErrEmptyWalletAddressValidator
+	}
+
+	if strings.HasPrefix(stringAddr, "0x") {
+		stringAddr = strings.TrimPrefix(stringAddr, "0x")
+	}
+
+	if len(stringAddr) != 40 {
+		return nil, ErrInvalidWalletAddressValidator
+	}
+
+	bigaddr, _ := new(big.Int).SetString(stringAddr, 16)
+	address := common.BigToAddress(bigaddr)
+
+	return &address, nil
+}
+
+func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount, error) {
+	var validAccounts []*validPrefundedAccount
+
+	if len(accounts) == 0 {
+		return nil, ErrEmptyPrefundedAccounts
+	}
+
+	for _, a := range accounts {
+		address, err := mapWalletAddress(a.Address)
+		if err != nil {
+			return nil, ErrInvalidAddressInPrefundedAccounts
+		}
+
+		balance := new(big.Int).Mul(new(big.Int).SetUint64(a.Balance), new(big.Int).SetUint64(params.Ether))
+
+		validAccount := &validPrefundedAccount{
+			accountAddress: address,
+			balance:        balance,
+		}
+
+		validAccounts = append(validAccounts, validAccount)
+	}
+
+	return validAccounts, nil
 }

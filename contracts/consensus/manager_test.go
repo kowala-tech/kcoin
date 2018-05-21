@@ -55,7 +55,7 @@ func getDefaultOpts() *genesis.Options {
 				Symbol:   "mUSD",
 				Cap:      1000,
 				Decimals: 18,
-				Holders:  []genesis.TokenHolder{tokenHolder, genesis.TokenHolder{Address: getAddress(user).Hex(), NumTokens: baseDeposit}},
+				Holders:  []genesis.TokenHolder{tokenHolder, genesis.TokenHolder{Address: getAddress(user).Hex(), NumTokens: baseDeposit * 3}},
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
@@ -117,7 +117,7 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	req.NotNil(opts)
 
 	switch {
-	case testName == "TestGetMinimumDeposit_Full":
+	case strings.Contains(testName, "_Full"):
 		opts.Consensus.MaxNumValidators = 1
 	case strings.Contains(testName, "TestReleaseDeposits") && testName != "TestReleaseDeposits_LockedDeposit":
 		opts.Consensus.FreezePeriod = 0
@@ -349,8 +349,6 @@ func (suite *ValidatorMgrSuite) TestRegisterValidator_Duplicate() {
 	req := suite.Require()
 
 	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether))
-	suite.mintTokens(governor, user, new(big.Int).Mul(deposit, common.Big2))
-
 	req.NoError(suite.registerValidator(user, deposit))
 	req.Error(suite.registerValidator(user, deposit), "cannot register the same validator twice")
 }
@@ -360,6 +358,77 @@ func (suite *ValidatorMgrSuite) TestRegisterValidator_WithoutMinDeposit() {
 
 	deposit := new(big.Int).Sub(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether)), common.Big1)
 	req.Error(suite.registerValidator(user, deposit), "requires the minimum deposit")
+}
+
+func (suite *ValidatorMgrSuite) TestRegister_NotFull_GreaterThan() {
+	req := suite.Require()
+
+	deposit := new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether)), common.Big1)
+	req.NoError(suite.registerValidator(user, deposit))
+
+	suite.backend.Commit()
+
+	req.Equal(new(big.Int).Add(new(big.Int).SetUint64(uint64(len(suite.opts.Consensus.Validators))), common.Big1), suite.getValidatorCount())
+
+	storedValidator := suite.getHighestBidder()
+	req.NotZero(storedValidator)
+	req.Equal(getAddress(user), storedValidator.Code)
+	req.Equal(deposit, storedValidator.Deposit)
+
+	storedDeposit := suite.getCurrentDeposit(user)
+	req.NotZero(storedDeposit)
+	req.Zero(storedDeposit.AvailableAt.Uint64())
+	req.Equal(deposit, storedDeposit.Amount)
+}
+
+func (suite *ValidatorMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
+	req := suite.Require()
+
+	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether))
+	req.NoError(suite.registerValidator(user, deposit))
+
+	suite.backend.Commit()
+
+	req.Equal(new(big.Int).Add(new(big.Int).SetUint64(uint64(len(suite.opts.Consensus.Validators))), common.Big1), suite.getValidatorCount())
+
+	suite.backend.Commit()
+
+	req.Equal(new(big.Int).Add(new(big.Int).SetUint64(uint64(len(suite.opts.Consensus.Validators))), common.Big1), suite.getValidatorCount())
+
+	storedValidator := suite.getHighestBidder()
+	req.NotZero(storedValidator)
+	req.Equal(getAddress(validator), storedValidator.Code)
+	req.Equal(deposit, storedValidator.Deposit)
+
+	storedDeposit := suite.getCurrentDeposit(user)
+	req.NotZero(storedDeposit)
+	req.Zero(storedDeposit.AvailableAt.Uint64())
+	req.Equal(deposit, storedDeposit.Amount)
+}
+
+func (suite *ValidatorMgrSuite) TestRegister_Full_Replacement() {
+	req := suite.Require()
+
+	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether))
+	req.NoError(suite.registerValidator(user, deposit))
+
+	suite.backend.Commit()
+
+	req.Equal(new(big.Int).Add(new(big.Int).SetUint64(uint64(len(suite.opts.Consensus.Validators))), common.Big1), suite.getValidatorCount())
+
+	suite.backend.Commit()
+
+	req.Equal(new(big.Int).Add(new(big.Int).SetUint64(uint64(len(suite.opts.Consensus.Validators))), common.Big1), suite.getValidatorCount())
+
+	storedValidator := suite.getHighestBidder()
+	req.NotZero(storedValidator)
+	req.Equal(getAddress(validator), storedValidator.Code)
+	req.Equal(deposit, storedValidator.Deposit)
+
+	storedDeposit := suite.getCurrentDeposit(user)
+	req.NotZero(storedDeposit)
+	req.Zero(storedDeposit.AvailableAt.Uint64())
+	req.Equal(deposit, storedDeposit.Amount)
 }
 
 /*
@@ -543,7 +612,7 @@ func (suite *ValidatorMgrSuite) balanceOf(user common.Address) *big.Int {
 	return balance
 }
 
-func (suite *ValidatorMgrSuite) depositCount(user *ecdsa.PrivateKey) *big.Int {
+func (suite *ValidatorMgrSuite) getDepositCount(user *ecdsa.PrivateKey) *big.Int {
 	req := suite.Require()
 
 	depositCount, err := suite.validatorMgr.GetDepositCount(&bind.CallOpts{From: getAddress(user)})
@@ -551,6 +620,42 @@ func (suite *ValidatorMgrSuite) depositCount(user *ecdsa.PrivateKey) *big.Int {
 	req.NotNil(depositCount)
 
 	return depositCount
+}
+
+func (suite *ValidatorMgrSuite) getValidatorCount() *big.Int {
+	req := suite.Require()
+
+	validatorCount, err := suite.validatorMgr.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(validatorCount)
+
+	return validatorCount
+}
+
+func (suite *ValidatorMgrSuite) getHighestBidder() struct {
+	Code    common.Address
+	Deposit *big.Int
+} {
+	req := suite.Require()
+
+	registration, err := suite.validatorMgr.GetValidatorAtIndex(&bind.CallOpts{}, common.Big0)
+	req.NoError(err)
+	req.NotZero(registration)
+
+	return registration
+}
+
+func (suite *ValidatorMgrSuite) getCurrentDeposit(user *ecdsa.PrivateKey) struct {
+	Amount      *big.Int
+	AvailableAt *big.Int
+} {
+	req := suite.Require()
+
+	deposit, err := suite.validatorMgr.GetDepositAtIndex(&bind.CallOpts{From: getAddress(user)}, common.Big0)
+	req.NoError(err)
+	req.NotZero(deposit)
+
+	return deposit
 }
 
 // dtos converts days to seconds

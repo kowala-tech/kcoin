@@ -12,7 +12,7 @@ type generateGenesisFileCommandHandler struct {
 }
 
 func (h *generateGenesisFileCommandHandler) handle(options *genesis.Options) error {
-	gns, err := genesis.New(options)
+	gns, err := genesis.Generate(options)
 	if err != nil {
 		return err
 	}

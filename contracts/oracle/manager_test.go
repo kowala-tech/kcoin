@@ -168,6 +168,10 @@ func (suite *OracleMgrSuite) TestRegisterOracle_WithoutMinDeposit() {
 	req.Error(suite.registerOracle(user, deposit), "requires the minimum deposit")
 }
 
+func (suite *OracleMgrSuite) TestRegister_NotFull_GreaterThan() {
+
+}
+
 /*
 
 func (suite *OracleMgrSuite) TestRegisterOracle() {
