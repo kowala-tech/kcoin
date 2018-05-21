@@ -47,7 +47,7 @@ func NewGenerator() *generator {
 }
 
 func (gen *generator) AddContract(contract *contract) {
-	gen.contracts = append(gen.contracts)
+	gen.contracts = append(gen.contracts, contract)
 }
 
 func Generate(opts *Options) (*core.Genesis, error) {
@@ -99,15 +99,20 @@ func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 func (gen *generator) deployContracts(opts *validGenesisOptions) error {
 	for _, contract := range gen.contracts {
 		contract.runtimeCfg = gen.getDefaultRuntimeConfig()
-		contract.deploy(contract, opts)
-		contract.postDeploy(contract, opts)
+		if err := contract.deploy(contract, opts); err != nil {
+			return err
+		}
+		if contract.postDeploy != nil {
+			if err := contract.postDeploy(contract, opts); err != nil {
+				return err
+			}
+		}
 	}
 
 	for _, contract := range gen.contracts {
 		// @NOTE (rgeraldes) - storage needs to be addressed in the end as
 		// contracts can interact with each other modifying each other's state
 		contract.storage = contract.runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contract.address]
-
 		gen.alloc[contract.address] = contract.AsGenesisAccount()
 	}
 

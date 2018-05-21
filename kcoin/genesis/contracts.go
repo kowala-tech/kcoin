@@ -58,9 +58,11 @@ var MultiSigContract = &contract{
 			return err
 		}
 		contract.code = contractCode
-		contractAddr = contractAddr
+		contract.address = contractAddr
 
 		opts.miningToken.owner = contractAddr
+		opts.validatorMgr.owner = contractAddr
+		opts.oracleMgr.owner = contractAddr
 
 		return nil
 	},
@@ -93,7 +95,7 @@ var MiningTokenContract = &contract{
 			return err
 		}
 		contract.code = contractCode
-		contractAddr = contractAddr
+		contract.address = contractAddr
 
 		opts.validatorMgr.miningTokenAddr = contractAddr
 
@@ -157,7 +159,7 @@ var OracleMgrContract = &contract{
 			return err
 		}
 		contract.code = contractCode
-		contractAddr = contractAddr
+		contract.address = contractAddr
 
 		return nil
 	},
@@ -190,7 +192,7 @@ var ValidatorMgrContract = &contract{
 			return err
 		}
 		contract.code = contractCode
-		contractAddr = contractAddr
+		contract.address = contractAddr
 
 		return nil
 	},

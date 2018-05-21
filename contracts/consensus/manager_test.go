@@ -124,7 +124,7 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	}
 	suite.opts = opts
 
-	genesis, err := genesis.New(opts)
+	genesis, err := genesis.Generate(opts)
 	req.NoError(err)
 	req.NotNil(genesis)
 
@@ -149,7 +149,6 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	req.NoError(err)
 	req.NotNil(mToken)
 	suite.miningToken = mToken
-
 }
 
 func (suite *ValidatorMgrSuite) TestDeploy() {
@@ -391,10 +390,6 @@ func (suite *ValidatorMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
 
 	req.Equal(new(big.Int).Add(new(big.Int).SetUint64(uint64(len(suite.opts.Consensus.Validators))), common.Big1), suite.getValidatorCount())
 
-	suite.backend.Commit()
-
-	req.Equal(new(big.Int).Add(new(big.Int).SetUint64(uint64(len(suite.opts.Consensus.Validators))), common.Big1), suite.getValidatorCount())
-
 	storedValidator := suite.getHighestBidder()
 	req.NotZero(storedValidator)
 	req.Equal(getAddress(validator), storedValidator.Code)
@@ -409,20 +404,16 @@ func (suite *ValidatorMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
 func (suite *ValidatorMgrSuite) TestRegister_Full_Replacement() {
 	req := suite.Require()
 
-	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether))
+	deposit := new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether)), common.Big1)
 	req.NoError(suite.registerValidator(user, deposit))
 
 	suite.backend.Commit()
 
-	req.Equal(new(big.Int).Add(new(big.Int).SetUint64(uint64(len(suite.opts.Consensus.Validators))), common.Big1), suite.getValidatorCount())
-
-	suite.backend.Commit()
-
-	req.Equal(new(big.Int).Add(new(big.Int).SetUint64(uint64(len(suite.opts.Consensus.Validators))), common.Big1), suite.getValidatorCount())
+	req.Equal(new(big.Int).SetUint64(suite.opts.Consensus.MaxNumValidators), suite.getValidatorCount())
 
 	storedValidator := suite.getHighestBidder()
 	req.NotZero(storedValidator)
-	req.Equal(getAddress(validator), storedValidator.Code)
+	req.Equal(getAddress(user), storedValidator.Code)
 	req.Equal(deposit, storedValidator.Deposit)
 
 	storedDeposit := suite.getCurrentDeposit(user)
@@ -431,29 +422,30 @@ func (suite *ValidatorMgrSuite) TestRegister_Full_Replacement() {
 	req.Equal(deposit, storedDeposit.Amount)
 }
 
-/*
-
-func (suite *ValidatorMgrSuite) TestRegisterValidator() {
+func (suite *ValidatorMgrSuite) TestDeregisterValidator_WhenPaused() {
 	req := suite.Require()
 
-	numTokens := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether))
-	suite.registerValidator(user, numTokens)
-
-	suite.backend.Commit()
-
-	isValidator, err := suite.validatorMgr.IsValidator(&bind.CallOpts{}, getAddress(user))
+	// pause the service
+	validatorMgrABI, err := abi.JSON(strings.NewReader(ValidatorMgrABI))
 	req.NoError(err)
-	req.True(isValidator)
+	req.NotNil(validatorMgrABI)
 
-	// @TODO (insert order)
-	// @TODO (deposit confirmations)
-	// @TODO (register when is full)
-	balance, err := suite.miningToken.BalanceOf(&bind.CallOpts{}, validatorMgrAddr)
+	pauseParams, err := validatorMgrABI.Pack("pause")
 	req.NoError(err)
-	req.NotNil(balance)
-	req.Equal(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.Validators[0].Deposit), new(big.Int).SetUint64(params.Ether)), balance)
+	req.NotZero(pauseParams)
+
+	transactOpts := bind.NewKeyedTransactor(governor)
+	_, err = suite.multiSig.SubmitTransaction(transactOpts, validatorMgrAddr, common.Big0, pauseParams)
+	req.NoError(err)
+
+	req.Error(suite.deregisterValidator(validator), "cannot deregister the validator because the service is paused")
 }
 
+func (suite *ValidatorMgrSuite) TestDeregisterValidator_NotValidator() {
+	req := suite.Require()
+
+	req.Error(suite.deregisterValidator(user), "cannot deregister a non-validator")
+}
 
 func (suite *ValidatorMgrSuite) TestDeregisterValidator() {
 	req := suite.Require()
@@ -462,61 +454,13 @@ func (suite *ValidatorMgrSuite) TestDeregisterValidator() {
 
 	suite.backend.Commit()
 
-	isValidator, err := suite.validatorMgr.IsValidator(&bind.CallOpts{}, getAddress(validator))
-	req.NoError(err)
-	req.False(isValidator)
+	deposit := suite.getCurrentDeposit(validator)
+	req.NotNil(deposit)
 
-	depositCount, err := suite.validatorMgr.GetDepositCount(&bind.CallOpts{From: getAddress(validator)})
-	req.NoError(err)
-	req.NotNil(depositCount)
-	req.Equal(common.Big1, depositCount)
-
-	deposit, err := suite.validatorMgr.GetDepositAtIndex(&bind.CallOpts{From: getAddress(validator)}, common.Big0)
-	req.NoError(err)
-	req.NotZero(deposit)
-	req.True(deposit.Amount.Cmp(common.Big0) > 0)
+	req.True(deposit.AvailableAt.Cmp(common.Big0) > 0)
 }
 
-func (suite *ValidatorMgrSuite) TestDeregisterValidator_NotValidator() {
-	req := suite.Require()
-
-	req.Error(suite.deregisterValidator(user), "cannot deregister a non validator user")
-}
-
-func (suite *ValidatorMgrSuite) TestReleaseDeposits() {
-	// @TODO (rgeraldes) - locked deposits
-	// @TODO (rgeraldes) - unlocked deposits
-
-	req := suite.Require()
-
-	req.NoError(suite.deregisterValidator(validator))
-	req.NoError(suite.releaseDeposits(validator))
-
-	suite.backend.Commit()
-
-	depositCount, err := suite.validatorMgr.GetDepositCount(&bind.CallOpts{From: getAddress(validator)})
-	req.NoError(err)
-	req.NotNil(depositCount)
-	req.Equal(common.Big0, depositCount)
-
-
-		// contract balance should be less
-
-		deposit, err := mgr.GetDepositAtIndex(&bind.CallOpts{From: getAddress(validator)}, common.Big0)
-		require.NoError(t, err)
-		require.NotNil(t, deposit)
-		require.Equal(t, new(big.Int).Mul(new(big.Int).SetUint64(opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether)), deposit.Amount)
-
-		// release deposit
-		_, err = mgr.ReleaseDeposits(transactOpts)
-		require.NoError(t, err)
-
-		backend.Commit()
-
-		balance, err := mtoken.BalanceOf(&bind.CallOpts{}, getAddress(validator))
-		require.NoError(t, err)
-		require.NotNil(t, balance)
-}
+/*
 
 func (suite *ValidatorMgrSuite) TestReleaseDeposits_NoDeposits() {
 	req := suite.Require()
@@ -586,7 +530,7 @@ func (suite *ValidatorMgrSuite) mintTokens(governor *ecdsa.PrivateKey, to *ecdsa
 
 func (suite *ValidatorMgrSuite) registerValidator(user *ecdsa.PrivateKey, deposit *big.Int) error {
 	transferOpts := bind.NewKeyedTransactor(user)
-	_, err := suite.miningToken.Transfer(transferOpts, validatorMgrAddr, deposit, []byte("not_zero"), registrationHandler)
+	_, err := suite.miningToken.Transfer(transferOpts, validatorMgrAddr, deposit, []byte("not_zero"), RegistrationHandler)
 	return err
 }
 
