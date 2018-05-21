@@ -11,6 +11,8 @@ Feature: Sending and receiving transactions
     And I transfer 1 kcoin from A to B
     Then the balance of A should be around 9 kcoins
     And the balance of B should be 6 kcoins
+    And only one transaction should be done
+    And the transaction hash the same
 
   Scenario: Not enough funds
     Given I have the following accounts:

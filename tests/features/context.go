@@ -30,26 +30,33 @@ type Context struct {
 	seederAccount           accounts.Account
 	accounts                map[string]accounts.Account
 
-	lastTx    *types.Transaction
-	lastTxErr error
+	lastTx              *types.Transaction
+	lastTxErr           error
+	lastTxStartingBlock *big.Int
 
 	lastUnlockErr error
 
 	scenarioNumber int
 	nodeSuffix     string
+
+	waiter doer
 }
 
 func NewTestContext(chainID *big.Int) *Context {
 	tmpdir, _ := ioutil.TempDir("", "eth-keystore-test")
 	accountsStorage := keystore.NewKeyStore(tmpdir, 2, 1)
 
-	return &Context{
+	ctx := &Context{
 		AccountsStorage: accountsStorage,
 		chainID:         chainID,
 
 		accounts:   make(map[string]accounts.Account),
 		nodeSuffix: common.RandomString(4),
 	}
+
+	ctx.waiter = common.NewWaiter(ctx)
+
+	return ctx
 }
 
 func (ctx *Context) Reset() {
@@ -58,4 +65,8 @@ func (ctx *Context) Reset() {
 
 	ctx.scenarioNumber++
 	ctx.runNodes()
+}
+
+type doer interface {
+	Do(execFunc func() error, condFunc ...func() error) error
 }
