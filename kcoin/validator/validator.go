@@ -37,11 +37,12 @@ type Backend interface {
 }
 
 type Validator interface {
-	Start(coinbase common.Address, deposit uint64)
+	Start(walletAccount accounts.WalletAccount, deposit uint64)
 	Stop() error
 	SetExtra(extra []byte) error
 	Validating() bool
-	SetCoinbase(addr common.Address) error
+	Running() bool
+	SetCoinbase(walletAccount accounts.WalletAccount) error
 	SetDeposit(deposit uint64)
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
@@ -85,18 +86,17 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(walletAccount accounts.WalletAccount, backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
-		config:        config,
-		backend:       backend,
-		chain:         backend.BlockChain(),
-		engine:        engine,
-		election:      election,
-		eventMux:      eventMux,
-		signer:        types.NewAndromedaSigner(config.ChainID),
-		vmConfig:      vmConfig,
-		canStart:      0,
-		walletAccount: walletAccount,
+		config:   config,
+		backend:  backend,
+		chain:    backend.BlockChain(),
+		engine:   engine,
+		election: election,
+		eventMux: eventMux,
+		signer:   types.NewAndromedaSigner(config.ChainID),
+		vmConfig: vmConfig,
+		canStart: 0,
 	}
 
 	go validator.sync()
@@ -117,24 +117,23 @@ func (val *validator) finishedSync() {
 	atomic.StoreInt32(&val.canStart, 1)
 	atomic.StoreInt32(&val.shouldStart, 0)
 	if start {
-		val.Start(val.walletAccount.Account().Address, val.deposit)
+		val.Start(val.walletAccount, val.deposit)
 	}
 }
 
-func (val *validator) Start(coinbase common.Address, deposit uint64) {
+func (val *validator) Start(walletAccount accounts.WalletAccount, deposit uint64) {
 	if val.Validating() {
-		log.Warn("Failed to start the validator - the state machine is already running")
+		log.Warn("failed to start the validator - the state machine is already running")
 		return
 	}
 
 	atomic.StoreInt32(&val.shouldStart, 1)
 
-	newWalletAccount, _ := accounts.NewWalletAccount(val.walletAccount, accounts.Account{Address: coinbase})
-	val.walletAccount = newWalletAccount
+	val.walletAccount = walletAccount
 	val.deposit = deposit
 
 	if atomic.LoadInt32(&val.canStart) == 0 {
-		log.Info("Network syncing, will start validator afterwards")
+		log.Info("network syncing, will start validator afterwards")
 		return
 	}
 
@@ -180,15 +179,15 @@ func (val *validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0
 }
 
-func (val *validator) SetCoinbase(address common.Address) error {
+func (val *validator) Running() bool {
+	return atomic.LoadInt32(&val.running) > 0
+}
+
+func (val *validator) SetCoinbase(walletAccount accounts.WalletAccount) error {
 	if val.Validating() {
 		return ErrCantSetCoinbaseOnStartedValidator
 	}
-	newWalletAccount, err := accounts.NewWalletAccount(val.walletAccount, accounts.Account{Address: address})
-	if err != nil {
-		return err
-	}
-	val.walletAccount = newWalletAccount
+	val.walletAccount = walletAccount
 	return nil
 }
 
@@ -234,7 +233,7 @@ func (val *validator) init() error {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
 
-	if val.validatorsChecksum != checksum {
+	if val.votersChecksum != checksum {
 		if err := val.updateValidators(checksum, true); err != nil {
 			log.Crit("Failed to update the validator set", "err", err)
 		}
@@ -253,7 +252,11 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.votingSystem = NewVotingSystem(val.eventMux, val.signer, val.blockNumber, val.validators)
+	val.votingSystem, err = NewVotingSystem(val.eventMux, val.blockNumber, val.voters)
+	if err != nil {
+		log.Error("Failed to create voting system", "err", err)
+		return nil
+	}
 
 	val.blockCh = make(chan *types.Block)
 	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
@@ -264,10 +267,6 @@ func (val *validator) init() error {
 	}
 
 	return nil
-}
-
-func (val *validator) isProposer() bool {
-	return val.validators.Proposer().Address() == val.walletAccount.Account().Address
 }
 
 func (val *validator) AddProposal(proposal *types.Proposal) error {
@@ -288,10 +287,16 @@ func (val *validator) AddVote(vote *types.Vote) error {
 		return ErrCantVoteNotValidating
 	}
 
-	if err := val.votingSystem.Add(vote); err != nil {
+	addressVote, err := types.NewAddressVote(val.signer, vote)
+	if err != nil {
+		return err
+	}
+
+	if err := val.votingSystem.Add(addressVote); err != nil {
 		switch err {
 		}
 	}
+
 	return nil
 }
 
@@ -412,7 +417,7 @@ func (val *validator) createBlock() *types.Block {
 		GasLimit:       core.CalcGasLimit(parent),
 		GasUsed:        new(big.Int),
 		Time:           big.NewInt(tstamp),
-		ValidatorsHash: val.validators.Hash(),
+		ValidatorsHash: val.voters.Hash(),
 	}
 	val.header = header
 
@@ -549,7 +554,12 @@ func (val *validator) vote(vote *types.Vote) {
 		log.Crit("Failed to sign the vote", "err", err)
 	}
 
-	err = val.votingSystem.Add(signedVote)
+	addressVote, err := types.NewAddressVote(val.signer, signedVote)
+	if err != nil {
+		log.Crit("Failed to make address Vote", "err", err)
+	}
+
+	err = val.votingSystem.Add(addressVote)
 	if err != nil {
 		log.Warn("Failed to add own vote to voting table", "err", err)
 	}
@@ -625,8 +635,8 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 		return err
 	}
 
-	val.validators = validators
-	val.validatorsChecksum = checksum
+	val.voters = validators
+	val.votersChecksum = checksum
 
 	return nil
 }

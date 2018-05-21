@@ -1,19 +1,25 @@
 package features
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/DATA-DOG/godog/gherkin"
-	"github.com/kowala-tech/kcoin/cluster"
+	"github.com/kowala-tech/kcoin/accounts"
+)
+
+var (
+	NoAccount = accounts.Account{}
+
+	unnamedAccountName = "no-name"
 )
 
 type AccountEntry struct {
-	AccountName string
-	Funds       int64
+	AccountName     string
+	AccountPassword string
+	Funds           int64
 }
 
 func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEntry, error) {
@@ -31,6 +37,8 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 			switch head[n].Value {
 			case "account":
 				account.AccountName = cell.Value
+			case "password":
+				account.AccountPassword = cell.Value
 			case "funds":
 				parsed, err := strconv.ParseInt(cell.Value, 10, 64)
 				if err != nil {
@@ -46,50 +54,23 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 	return accounts, nil
 }
 
-func (context *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
-	accounts, err := parseAccountsDataTable(accountsDataTable)
+func (ctx *Context) ICreatedAnAccountWithPassword(password string) error {
+	_, err := ctx.createAccount(unnamedAccountName, password)
+	return err
+}
+
+func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
+	accountsData, err := parseAccountsDataTable(accountsDataTable)
 	if err != nil {
 		return err
 	}
 
-	// Create an archive node for each account and send them funds
-	for _, account := range accounts {
-		nodeName, err := context.cluster.RunArchiveNode()
+	for _, accountData := range accountsData {
+		acct, err := ctx.createAccount(accountData.AccountName, accountData.AccountPassword)
 		if err != nil {
 			return err
 		}
-
-		res, err := context.cluster.Exec(nodeName, `eth.coinbase`)
-		if err != nil {
-			return err
-		}
-		coinbaseQuotes := res.StdOut
-
-		context.accountsNodeNames[account.AccountName] = nodeName
-		context.accountsCoinbase[account.AccountName] = strings.TrimSpace(strings.Replace(coinbaseQuotes, `"`, "", 2))
-
-		res, err = context.cluster.Exec(context.genesisValidatorName,
-			fmt.Sprintf(
-				`eth.sendTransaction({
-				from:eth.coinbase,
-				to: %s,
-				value: %v})`, coinbaseQuotes, toWei(account.Funds)))
-		if err != nil {
-			return err
-		}
-	}
-
-	// Wait for funds to be available
-	for _, account := range accounts {
-		err = cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-			balance, err := context.cluster.GetBalance(context.accountsNodeNames[account.AccountName])
-			if err != nil {
-				return false
-			}
-			expected := toWei(account.Funds)
-			return balance.Cmp(expected) == 0
-		})
-		if err != nil {
+		if _, err := ctx.sendFundsAndWait(ctx.seederAccount, acct, accountData.Funds); err != nil {
 			return err
 		}
 	}
@@ -97,29 +78,84 @@ func (context *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.Dat
 	return nil
 }
 
-func (context *Context) TheBalanceIsExactly(account string, kcoin int64) error {
-	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-		balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
-		if err != nil {
-			return false
-		}
-		return balance.Cmp(toWei(kcoin)) == 0
-	})
-
-	return err
+func (ctx *Context) ITryUnlockMyAccountWithPassword(password string) error {
+	return ctx.ITryUnlockAccountWithPassword(unnamedAccountName, password)
 }
 
-func (context *Context) TheBalanceIsAround(account string, kcoin int64) error {
-	err := cluster.WaitFor(1*time.Second, 10*time.Second, func() bool {
-		balance, err := context.cluster.GetBalance(context.accountsNodeNames[account])
-		if err != nil {
-			return false
-		}
-		diff := balance.Sub(balance, toWei(kcoin))
-		diff.Abs(diff)
+func (ctx *Context) ITryUnlockAccountWithPassword(accountName, password string) error {
+	ctx.lastUnlockErr = ctx.IUnlockAccountWithPassword(accountName, password)
+	return nil
+}
 
-		return diff.Cmp(big.NewInt(100000)) < 0
-	})
+func (ctx *Context) IUnlockAccountWithPassword(accountName, password string) error {
+	acct, found := ctx.accounts[accountName]
+	if !found {
+		return fmt.Errorf("account not created")
+	}
+	return ctx.AccountsStorage.Unlock(acct, password)
+}
 
-	return err
+func (ctx *Context) IGotAccountUnlocked() error {
+	return ctx.lastUnlockErr
+}
+func (ctx *Context) IGotErrorUnlocking() error {
+	if ctx.lastUnlockErr == nil {
+		return fmt.Errorf("unlocking expected to fail, but didn't fail.")
+	}
+	return nil
+}
+
+func (ctx *Context) TheBalanceIsExactly(accountName string, kcoin int64) error {
+	expected := toWei(kcoin)
+
+	account := ctx.accounts[accountName]
+	balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
+	if err != nil {
+		return err
+	}
+	if balance.Cmp(expected) != 0 {
+		return fmt.Errorf("Balance expected to be %v but is %v", expected, balance)
+	}
+	return nil
+}
+
+func (ctx *Context) TheBalanceIsAround(accountName string, kcoin int64) error {
+	expected := toWei(kcoin)
+
+	account := ctx.accounts[accountName]
+	balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
+	if err != nil {
+		return err
+	}
+
+	maxDiff := big.NewInt(3) // Allow up to 3% difference
+	if !bigIntWithin(expected, balance, maxDiff) {
+		return fmt.Errorf("Balance expected to be around %v ± %v%% but is %v", expected, maxDiff.Int64(), balance)
+	}
+	return nil
+}
+
+func (ctx *Context) createAccount(accountName string, password string) (accounts.Account, error) {
+	if _, ok := ctx.accounts[accountName]; ok {
+		return NoAccount, fmt.Errorf("an account with this name already exists: %s", accountName)
+	}
+	account, err := ctx.AccountsStorage.NewAccount(password)
+	if err != nil {
+		return NoAccount, err
+	}
+
+	ctx.accounts[accountName] = account
+	return account, nil
+}
+
+func bigIntWithin(x, y, delta *big.Int) bool {
+	// diff = abs(100 - ((x * 100) / y)
+	diff := &big.Int{}
+	diff.Set(x)
+	diff.Mul(diff, big.NewInt(100))
+	diff.Div(diff, y)
+	diff.Sub(big.NewInt(100), diff)
+	diff.Abs(diff)
+
+	return diff.Cmp(delta) <= 0
 }

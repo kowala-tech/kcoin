@@ -16,7 +16,7 @@ import (
 	"github.com/kowala-tech/kcoin/params"
 )
 
-var mapChainIDToAddr = map[uint64]common.Address{
+var MapChainIDToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xfe9bed356e7bc4f7a8fc48cc19c958f4e640ac62"),
 }
 
@@ -28,7 +28,7 @@ type Election interface {
 	Leave(walletAccount accounts.WalletAccount) error
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
 	ValidatorsChecksum() (ValidatorsChecksum, error)
-	Validators() (types.ValidatorList, error)
+	Validators() (types.Voters, error)
 	Deposits(address common.Address) ([]*types.Deposit, error)
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
@@ -41,7 +41,7 @@ type election struct {
 }
 
 func NewElection(contractBackend bind.ContractBackend, chainID *big.Int) (*election, error) {
-	contract, err := contracts.NewElectionContract(mapChainIDToAddr[chainID.Uint64()], contractBackend)
+	contract, err := contracts.NewElectionContract(MapChainIDToAddr[chainID.Uint64()], contractBackend)
 	if err != nil {
 		return nil, err
 	}
@@ -53,16 +53,7 @@ func NewElection(contractBackend bind.ContractBackend, chainID *big.Int) (*elect
 }
 
 func (election *election) Join(walletAccount accounts.WalletAccount, amount uint64) error {
-	minDeposit, err := election.MinimumDeposit()
-	if err != nil {
-		return err
-	}
-
-	if amount < minDeposit {
-		return fmt.Errorf("current deposit - %d - is not enough. The minimum required is %d", amount, minDeposit)
-	}
-
-	_, err = election.ElectionContract.Join(election.transactDepositOpts(walletAccount, amount))
+	_, err := election.ElectionContract.Join(election.transactDepositOpts(walletAccount, amount))
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
 	}
@@ -92,13 +83,13 @@ func (election *election) ValidatorsChecksum() (ValidatorsChecksum, error) {
 	return election.ElectionContract.ValidatorsChecksum(&bind.CallOpts{})
 }
 
-func (election *election) Validators() (types.ValidatorList, error) {
+func (election *election) Validators() (types.Voters, error) {
 	count, err := election.GetValidatorCount(&bind.CallOpts{})
 	if err != nil {
 		return nil, err
 	}
 
-	validators := make([]*types.Validator, count.Uint64())
+	voters := make([]*types.Voter, count.Uint64())
 	for i := int64(0); i < count.Int64(); i++ {
 		validator, err := election.GetValidatorAtIndex(&bind.CallOpts{}, big.NewInt(i))
 		if err != nil {
@@ -106,10 +97,10 @@ func (election *election) Validators() (types.ValidatorList, error) {
 		}
 
 		weight := big.NewInt(0)
-		validators[i] = types.NewValidator(validator.Code, validator.Deposit.Uint64(), weight)
+		voters[i] = types.NewVoter(validator.Code, validator.Deposit.Uint64(), weight)
 	}
 
-	return types.NewValidatorList(validators)
+	return types.NewVoters(voters)
 }
 
 func (election *election) Deposits(addr common.Address) ([]*types.Deposit, error) {

@@ -31,7 +31,7 @@ var errGasEstimationFailed = errors.New("gas required exceeds allowance or alway
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
 	database         kcoindb.Database // In memory database to store our testing data
-	*core.BlockChain                 // Ethereum blockchain to handle the consensus
+	*core.BlockChain                  // Ethereum blockchain to handle the consensus
 
 	mu           sync.Mutex
 	pendingBlock *types.Block   // Currently pending block that will be imported on request
@@ -44,7 +44,7 @@ type SimulatedBackend struct {
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	database, _ := kcoindb.NewMemDatabase()
-	genesis := core.Genesis{Config: params.AllProtocolChanges, Alloc: alloc}
+	genesis := core.Genesis{Config: params.AllTendermintProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
 	blockchain, _ := core.NewBlockChain(database, genesis.Config, tendermint.NewFaker(), vm.Config{})
 	backend := &SimulatedBackend{database: database, BlockChain: blockchain, config: genesis.Config}

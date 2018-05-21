@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -26,6 +27,7 @@ type stateFn func() stateFn
 func (val *validator) notLoggedInState() stateFn {
 	isGenesis, err := val.election.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
+		fmt.Printf("states.go ===> %[2]v: %[1]v\n", err, `err`)
 		log.Warn("Failed to verify the voter information", "err", err)
 		return nil
 	}
@@ -111,7 +113,7 @@ func (val *validator) newElectionState() stateFn {
 func (val *validator) newRoundState() stateFn {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
-	val.validators.UpdateWeights()
+	val.voters.NextProposer()
 
 	if val.round != 0 {
 		val.round++
@@ -124,23 +126,26 @@ func (val *validator) newRoundState() stateFn {
 }
 
 func (val *validator) newProposalState() stateFn {
-	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
-
-	if val.isProposer() {
+	proposer := val.voters.NextProposer()
+	if proposer.Address() == val.walletAccount.Account().Address {
 		log.Info("Proposing a new block")
 		val.propose()
 	} else {
-		log.Info("Waiting for the proposal", "proposer", val.validators.Proposer())
-		select {
-		case block := <-val.blockCh:
-			val.block = block
-			log.Info("Received the block", "hash", val.block.Hash())
-		case <-time.After(timeout):
-			log.Info("Timeout expired", "duration", timeout)
-		}
+		log.Info("Waiting for the proposal", proposer.Address())
+		val.waitForProposal()
 	}
-
 	return val.preVoteState
+}
+
+func (val *validator) waitForProposal() {
+	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
+	select {
+	case block := <-val.blockCh:
+		val.block = block
+		log.Info("Received the block", "hash", val.block.Hash())
+	case <-time.After(timeout):
+		log.Info("Timeout expired", "duration", timeout)
+	}
 }
 
 func (val *validator) preVoteState() stateFn {
@@ -185,7 +190,7 @@ func (val *validator) preCommitWaitState() stateFn {
 		return val.commitState
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
-		return val.commitState
+		return val.newRoundState
 	}
 }
 
@@ -196,7 +201,11 @@ func (val *validator) commitState() stateFn {
 	work := val.work
 	chainDb := val.backend.ChainDb()
 
-	work.state.CommitTo(chainDb, true)
+	_, err := work.state.CommitTo(chainDb, true)
+	if err != nil {
+		log.Error("Failed writing block to chain", "err", err)
+		return nil
+	}
 
 	// update block hash since it is now available and not when
 	// the receipt/log of individual transactions were created
@@ -209,7 +218,7 @@ func (val *validator) commitState() stateFn {
 		log.BlockHash = block.Hash()
 	}
 
-	_, err := val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
+	_, err = val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return nil

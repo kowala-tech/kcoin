@@ -10,16 +10,16 @@ clone:
 pipeline:
 
   test:
-    image: kowalatech/go:1.0.1
+    group: testing
+    image: kowalatech/go:1.0.3
     commands:
       - make test
       - make lint
     when:
-      event: [push]
-      branch: [feature/*, hotfix/*]
+      event: [pull_request]
 
   build:
-    image: kowalatech/go:1.0.1
+    image: kowalatech/go:1.0.3
     commands:
       - make
     when:

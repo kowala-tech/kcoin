@@ -1,6 +1,14 @@
 package cluster
 
-import "encoding/hex"
+import (
+	"encoding/hex"
+	"math/rand"
+	"time"
+)
+
+const rootPath = ".."
+
+var src = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func randStringBytes(n int) string {
 	b := make([]byte, n/2)

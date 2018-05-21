@@ -132,15 +132,25 @@ func (api *PrivateValidatorAPI) GetDeposits() (GetDepositsResult, error) {
 			Amount: deposit.Amount(),
 		}
 		// @NOTE (rgeraldes) - time.IsZero works in a different way
-		if deposit.AvailableAt().Unix() == 0 {
+		if deposit.AvailableAtTimeUnix() == 0 {
 			// @NOTE (rgeraldes) - zero values are not shown for this field
 			deposits[i].AvailableAt = ""
 		} else {
-			deposits[i].AvailableAt = deposit.AvailableAt().String()
+			deposits[i].AvailableAt = time.Unix(deposit.AvailableAtTimeUnix(), 0).String()
 		}
 	}
 
 	return GetDepositsResult{Deposits: deposits}, nil
+}
+
+// IsValidating returns the validator is currently validating
+func (api *PrivateValidatorAPI) IsValidating() bool {
+	return api.kcoin.IsValidating()
+}
+
+// IsValidating returns the validator is currently running
+func (api *PrivateValidatorAPI) IsRunning() bool {
+	return api.kcoin.IsRunning()
 }
 
 // RedeemDeposits requests a transfer of the unlocked deposits back
@@ -283,7 +293,7 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 // the private debugging endpoint.
 type PrivateDebugAPI struct {
 	config *params.ChainConfig
-	kcoin   *Kowala
+	kcoin  *Kowala
 }
 
 // NewPrivateDebugAPI creates a new API definition for the full node-related
@@ -295,9 +305,9 @@ func NewPrivateDebugAPI(config *params.ChainConfig, kcoin *Kowala) *PrivateDebug
 // BlockTraceResult is the returned value when replaying a block to check for
 // consensus results and full VM trace logs for all included transactions.
 type BlockTraceResult struct {
-	Validated  bool                   `json:"validated"`
+	Validated  bool                    `json:"validated"`
 	StructLogs []kcoinapi.StructLogRes `json:"structLogs"`
-	Error      string                 `json:"error"`
+	Error      string                  `json:"error"`
 }
 
 // TraceArgs holds extra parameters to trace functions

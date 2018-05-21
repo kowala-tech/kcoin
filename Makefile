@@ -11,6 +11,14 @@
 GOBIN = $(pwd)/build/bin
 GO ?= latest
 
+NPROCS := 1
+OS := $(shell uname)
+ifeq ($(OS),Linux)
+	NPROCS := $(shell grep -c ^processor /proc/cpuinfo)
+else ifeq ($(OS),Darwin)
+	NPROCS := $(shell system_profiler | awk '/Number of CPUs/ {print $$4}{next;}')
+endif # $(OS)
+
 kcoin:
 	build/env.sh go run build/ci.go install ./cmd/kcoin
 	@echo "Done building."
@@ -160,8 +168,8 @@ kcoin-windows-amd64:
 docker-build-bootnode:
 	docker build -t kowalatech/bootnode -f bootnode.Dockerfile .
 
-docker-build-kcoin:
-	docker build -t kowalatech/kcoin -f kcoin.Dockerfile .
+docker-build-kusd:
+	docker build -t kowalatech/kusd -f kcoin.Dockerfile .
 
 docker-build-faucet:
 	docker build -t kowalatech/faucet -f faucet.Dockerfile .
@@ -170,8 +178,8 @@ docker-build-faucet:
 docker-publish-bootnode:
 	docker push kowalatech/bootnode
 
-docker-publish-kcoin:
-	docker push kowalatech/kcoin
+docker-publish-kusd:
+	docker push kowalatech/kusd
 
 docker-publish-faucet:
 	docker push kowalatech/faucet
@@ -179,9 +187,10 @@ docker-publish-faucet:
 ## E2E tests
 
 GODOG_BIN := $(shell command -v godog 2> /dev/null)
+
 e2e:
 ifndef GODOG_BIN
 	@echo "Installing godog..."
 	@go get github.com/DATA-DOG/godog/cmd/godog
 endif
-	@godog
+	@build/env.sh sh -c "cd tests && godog -c=$(NPROCS) -f=progress ../features"

@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	// @TODO (rgeraldes) - does not have the same hashes since we've changed some things
 	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3") // Mainnet genesis hash to enforce below configs on
 	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d") // Testnet genesis hash to enforce below configs on
 )
@@ -22,22 +21,21 @@ var (
 
 	// TestnetChainConfig contains the chain parameters to run a node on the test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID:    big.NewInt(519374298533),
+		ChainID:    big.NewInt(1000),
 		Tendermint: new(TendermintConfig),
 	}
 
-	// AllProtocolChanges contains every protocol change (EIPs)
-	// introduced and accepted by the Ethereum core developers.
+	// AllTendermintProtocolChanges contains every protocol change (EIPs)
+	// introduced and accepted by the Kowala core developers.
 	//
 	// This configuration is intentionally not using keyed fields.
 	// This configuration must *always* have all forks enabled, which
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	// @TODO(rgeraldes) - review AllProtocolChanges, TestChainConfig
-	AllProtocolChanges = &ChainConfig{big.NewInt(1337), new(TendermintConfig)}
-	TestChainConfig    = &ChainConfig{big.NewInt(1), new(TendermintConfig)}
-	TestRules          = TestChainConfig.Rules(new(big.Int))
+	AllTendermintProtocolChanges = &ChainConfig{big.NewInt(1337), new(TendermintConfig)}
+	TestChainConfig              = &ChainConfig{big.NewInt(1), new(TendermintConfig)}
+	TestRules                    = TestChainConfig.Rules(new(big.Int))
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -81,17 +79,9 @@ func (c *ChainConfig) String() string {
 //
 // The returned GasTable's fields shouldn't, under any circumstances, be changed.
 func (c *ChainConfig) GasTable(num *big.Int) GasTable {
-	if num == nil {
-		return GasTableAndromeda
-	}
-	switch {
-	default:
-		return GasTableAndromeda
-	}
+	return GasTableAndromeda
 }
 
-// @TODO (rgeraldes) - not necessary for now
-/*
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
@@ -109,20 +99,12 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 	}
 	return lasterr
 }
-*/
 
-// isForkIncompatible returns true if a fork scheduled at s1 cannot be rescheduled to
-// block s2 because head is already past the fork.
-func isForkIncompatible(s1, s2, head *big.Int) bool {
-	return (isForked(s1, head) || isForked(s2, head)) && !configNumEqual(s1, s2)
-}
-
-// isForked returns whether a fork scheduled at block s is active at the given head block.
-func isForked(s, head *big.Int) bool {
-	if s == nil || head == nil {
-		return false
+func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
+	if !configNumEqual(c.ChainID, newcfg.ChainID) {
+		return newCompatError("Chain ID", c.ChainID, newcfg.ChainID)
 	}
-	return s.Cmp(head) <= 0
+	return nil
 }
 
 func configNumEqual(x, y *big.Int) bool {
