@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	chainID = big.NewInt(519374298533)
+	chainID = big.NewInt(1000)
 )
 
 func FeatureContext(s *godog.Suite) {
@@ -69,7 +69,7 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^I stop validation$`, validationCtx.IStopValidation)
 	s.Step(`^I wait for the unbonding period to be over$`, validationCtx.IWaitForTheUnbondingPeriodToBeOver)
 	s.Step(`^I withdraw my node from validation$`, validationCtx.IWithdrawMyNodeFromValidation)
-	s.Step(`^There should be (\d+) kcoins available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
+	s.Step(`^there should be (\d+) kcoins available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
 	s.Step(`^My node should be not be a validator$`, validationCtx.MyNodeShouldBeNotBeAValidator)
 	s.Step(`^I wait for my node to be synced$`, validationCtx.IWaitForMyNodeToBeSynced)
 

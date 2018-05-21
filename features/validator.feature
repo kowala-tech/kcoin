@@ -20,7 +20,7 @@ Feature: Joining network as a validator
     And I wait for my node to be synced
     And the balance of A should be around 15 kcoins
     When I withdraw my node from validation
-    Then There should be 5 kcoins available to me after 5 days
+    Then there should be 5 kcoins available to me after 5 days
 
    Scenario: Mining rewards: basic
     Given I have my node running using account A

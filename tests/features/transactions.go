@@ -2,16 +2,16 @@ package features
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
-	"encoding/json"
 
 	"github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/cluster"
+	"github.com/kowala-tech/kcoin/core/types"
 )
 
 func (ctx *Context) CurrentBlock() (uint64, error) {
@@ -88,7 +88,7 @@ func (ctx *Context) isTransactionInBlockchain(tx *types.Transaction) (bool, erro
 
 func (ctx *Context) OnlyOneTransactionIsDone() error {
 	// wait some for new blocks
-	time.Sleep(3*time.Second)
+	time.Sleep(3 * time.Second)
 
 	currentBlock, err := ctx.client.BlockNumber(context.Background())
 	if err != nil {
@@ -97,7 +97,7 @@ func (ctx *Context) OnlyOneTransactionIsDone() error {
 
 	var txs []*types.Transaction
 	var txsLog string
-	for i:=ctx.lastTxStartingBlock.Uint64()+1; i <= currentBlock.Uint64(); i++ {
+	for i := ctx.lastTxStartingBlock.Uint64() + 1; i <= currentBlock.Uint64(); i++ {
 		block, err := ctx.client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
 		if err != nil {
 			return err
@@ -159,7 +159,7 @@ func (ctx *Context) transactionBlock(tx *types.Transaction) (*types.Block, error
 		return nil, err
 	}
 
-	for i:=1; i <= int(currentBlock.Uint64()); i++ {
+	for i := 1; i <= int(currentBlock.Uint64()); i++ {
 		block, err := ctx.client.BlockByNumber(context.Background(), big.NewInt(int64(i)))
 		if err != nil {
 			return nil, err
@@ -171,7 +171,7 @@ func (ctx *Context) transactionBlock(tx *types.Transaction) (*types.Block, error
 				return block, nil
 			}
 
-			if tx.To() == blockTx.To() && tx.Value().Uint64() ==  blockTx.Value().Uint64() {
+			if tx.To() == blockTx.To() && tx.Value().Uint64() == blockTx.Value().Uint64() {
 				return nil, fmt.Errorf("got wrong transaction hash. expected %s. got %s",
 					tx.Hash().String(), blockTx.Hash().String())
 			}

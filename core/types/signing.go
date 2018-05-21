@@ -22,8 +22,8 @@ type Hasher interface {
 
 type Sender interface {
 	Hasher
-	Protected()       bool
-	ChainID()         *big.Int
+	Protected() bool
+	ChainID() *big.Int
 	SignatureValues() (R, S, V *big.Int)
 }
 
