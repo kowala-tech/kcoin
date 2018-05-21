@@ -303,3 +303,59 @@ func TestMapConsensusEngine(t *testing.T) {
 		})
 	}
 }
+
+/*
+func TestNew(t *testing.T) {
+	// create genesis
+	opts := getDefaultOpts()
+	require.NotNil(t, opts)
+	gen, err := genesis.New(opts)
+	require.NoError(t, err)
+	require.NotNil(t, gen)
+
+	// create backend
+	backend := backends.NewSimulatedBackend(gen.Alloc)
+	require.NotNil(t, backend)
+
+	// ValidatorMgr instance
+	mgr, err := NewValidatorMgr(validatorMgrAddr, backend)
+	require.NoError(t, err)
+	require.NotNil(t, mgr)
+
+	// MiningToken instance
+	mtoken, err := token.NewMiningToken(tokenAddr, backend)
+	require.NoError(t, err)
+	require.NotNil(t, mtoken)
+
+	validatorCount, err := mgr.GetValidatorCount(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.NotNil(t, validatorCount)
+	require.Equal(t, int64(len(opts.Consensus.Validators)), validatorCount.Int64())
+
+	var deposits uint64
+	for _, validator := range opts.Consensus.Validators {
+		validatorAddr := common.HexToAddress(validator.Address)
+		isValidator, err := mgr.IsValidator(&bind.CallOpts{}, validatorAddr)
+		require.NoError(t, err)
+		require.True(t, isValidator)
+
+		storedDepositCount, err := mgr.GetDepositCount(&bind.CallOpts{From: validatorAddr})
+		require.NoError(t, err)
+		require.NotNil(t, storedDepositCount)
+		require.Equal(t, common.Big1, storedDepositCount)
+
+		deposit, err := mgr.GetDepositAtIndex(&bind.CallOpts{From: validatorAddr}, common.Big0)
+		require.NoError(t, err)
+		require.NotNil(t, deposit)
+		require.Zero(t, deposit.AvailableAt.Uint64())
+		require.Equal(t, new(big.Int).Mul(new(big.Int).SetUint64(opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether)), deposit.Amount)
+
+		deposits += validator.Deposit
+	}
+
+	mgrBalance, err := mtoken.BalanceOf(&bind.CallOpts{}, validatorMgrAddr)
+	require.NoError(t, err)
+	require.NotNil(t, mgrBalance)
+	require.Equal(t, new(big.Int).Mul(new(big.Int).SetUint64(deposits), new(big.Int).SetUint64(params.Ether)), mgrBalance)
+}
+*/

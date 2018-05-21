@@ -3,6 +3,7 @@ package token
 import (
 	"crypto/ecdsa"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
@@ -18,9 +19,9 @@ import (
 var (
 	owner, _            = crypto.GenerateKey()
 	user, _             = crypto.GenerateKey()
-	initialBalance      = new(big.Int).Mul(new(big.Int).SetUint64(10), new(big.Int).SetUint64(params.Ether))         // 10 kUSD
+	initialBalance      = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Ether))                       // 10 kUSD
 	miningTokenCap      = new(big.Int).Mul(new(big.Int).SetUint64(1073741824), new(big.Int).SetUint64(params.Ether)) // 1073741824 mUSD
-	miningToken         = "mUSD"
+	miningTokenName     = "mUSD"
 	miningTokenDecimals = uint8(18)
 )
 
@@ -35,14 +36,15 @@ func TestMiningTokenSuite(t *testing.T) {
 }
 
 func (suite *MiningTokenSuite) BeforeTest(suiteName, testName string) {
+	if strings.Contains(testName, "TestDeploy") {
+		return
+	}
+
 	req := suite.Require()
 
 	alloc := make(core.GenesisAlloc)
 	alloc[getAddress(owner)] = core.GenesisAccount{Balance: initialBalance}
 	alloc[getAddress(user)] = core.GenesisAccount{Balance: initialBalance}
-
-	switch {
-	}
 
 	backend := backends.NewSimulatedBackend(alloc)
 	req.NotNil(backend)
@@ -50,7 +52,7 @@ func (suite *MiningTokenSuite) BeforeTest(suiteName, testName string) {
 
 	// MiningToken instance
 	transactOpts := bind.NewKeyedTransactor(owner)
-	_, _, mToken, err := DeployMiningToken(transactOpts, backend, miningToken, miningToken, miningTokenCap, miningTokenDecimals)
+	_, _, mToken, err := DeployMiningToken(transactOpts, backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
 	req.NoError(err)
 	req.NotNil(mToken)
 	suite.miningToken = mToken
@@ -61,37 +63,51 @@ func (suite *MiningTokenSuite) BeforeTest(suiteName, testName string) {
 func (suite *MiningTokenSuite) TestDeploy() {
 	req := suite.Require()
 
-	storedCap, err := suite.miningToken.Cap(&bind.CallOpts{})
+	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
+		getAddress(owner): core.GenesisAccount{
+			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Ether)),
+		},
+	})
+
+	// MiningToken instance
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, miningToken, err := DeployMiningToken(transactOpts, backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
+	req.NoError(err)
+	req.NotNil(miningToken)
+
+	backend.Commit()
+
+	storedCap, err := miningToken.Cap(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedCap)
 	req.Equal(miningTokenCap, storedCap)
 
-	storedDecimals, err := suite.miningToken.Decimals(&bind.CallOpts{})
+	storedDecimals, err := miningToken.Decimals(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedDecimals)
 	req.Equal(miningTokenDecimals, storedDecimals)
 
-	storedTotalSupply, err := suite.miningToken.TotalSupply(&bind.CallOpts{})
+	storedTotalSupply, err := miningToken.TotalSupply(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedTotalSupply)
 	req.Zero(storedTotalSupply.Uint64())
 
-	storedName, err := suite.miningToken.Name(&bind.CallOpts{})
+	storedName, err := miningToken.Name(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedName)
-	req.Equal(miningToken, storedName)
+	req.Equal(miningTokenName, storedName)
 
-	storedSymbol, err := suite.miningToken.Symbol(&bind.CallOpts{})
+	storedSymbol, err := miningToken.Symbol(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedSymbol)
-	req.Equal(miningToken, storedSymbol)
+	req.Equal(miningTokenName, storedSymbol)
 
-	storedMintingFinished, err := suite.miningToken.MintingFinished(&bind.CallOpts{})
+	storedMintingFinished, err := miningToken.MintingFinished(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedMintingFinished)
 	req.False(storedMintingFinished)
 
-	storedOwner, err := suite.miningToken.Owner(&bind.CallOpts{})
+	storedOwner, err := miningToken.Owner(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(owner)
 	req.Equal(getAddress(owner), storedOwner)

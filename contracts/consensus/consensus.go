@@ -26,7 +26,7 @@ var MapChainIDToAddr = map[uint64]common.Address{
 // ValidatorsChecksum lets a validator know if there are changes in the validator set
 type ValidatorsChecksum [32]byte
 
-// Consensus is a gateway to validators contracts on the network
+// Consensus is a gateway to the validators contracts on the network
 type Consensus interface {
 	Join(walletAccount accounts.WalletAccount, amount uint64) error
 	Leave(walletAccount accounts.WalletAccount) error
@@ -37,6 +37,7 @@ type Consensus interface {
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
 	MinimumDeposit() (uint64, error)
+	// Balance(walletAccount accounts.WalletAccount) (uint64, error)
 }
 
 type consensus struct {
@@ -69,7 +70,8 @@ func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensu
 }
 
 func (consensus *consensus) Join(walletAccount accounts.WalletAccount, amount uint64) error {
-	_, err := consensus.account.Transfer(consensus.transactOpts(walletAccount), consensus.managerAddr, new(big.Int).SetUint64(amount), []byte("not_zero"), registrationHandler)
+	numTokens := new(big.Int).Mul(new(big.Int).SetUint64(amount), new(big.Int).SetUint64(params.Ether))
+	_, err := consensus.account.Transfer(consensus.transactOpts(walletAccount), consensus.managerAddr, numTokens, []byte("not_zero"), registrationHandler)
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
 	}
@@ -164,6 +166,16 @@ func (consensus *consensus) MinimumDeposit() (uint64, error) {
 	rawMinDeposit, err := consensus.manager.GetMinimumDeposit(&bind.CallOpts{})
 	return rawMinDeposit.Uint64(), err
 }
+
+/*
+func (consensus *consensus) Balance(walletAccount accounts.WalletAccount) (uint64, error) {
+	balance, err := consensus.account.BalanceOf(walletAccount.Account().Address)
+	if err != nil {
+		return 0, err
+	}
+
+}
+*/
 
 func (consensus *consensus) transactDepositOpts(walletAccount accounts.WalletAccount, amount uint64) *bind.TransactOpts {
 	ops := consensus.transactOpts(walletAccount)
