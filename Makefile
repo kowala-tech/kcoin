@@ -24,6 +24,11 @@ kcoin:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kcoin\" to launch kcoin."
 
+control:
+	build/env.sh go run build/ci.go install ./cmd/control
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/control\" to launch control."
+
 bootnode:
 	build/env.sh go run build/ci.go install ./cmd/bootnode
 	@echo "Done building."

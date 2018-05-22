@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title>kcoin Control Panel</title>
+
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+		<link href="https://fonts.googleapis.com/css?family=Montserrat:200,300,400,500,600" rel="stylesheet" />
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-noty/2.4.1/packaged/jquery.noty.packaged.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.0/moment.min.js"></script>
+
+		<style>
+			h1, h2, h3 {
+				font-family: Montserrat;
+				font-weight: 200;
+			}
+			a{
+				color: #1f033d;
+				font-weight: 400;
+			}
+			a:hover{
+				color: #511d81;
+				font-weight: 400;
+			}
+			.vertical-center {
+				min-height: 100%;
+				min-height: 100vh;
+				display: flex;
+				align-items: center;
+				background-color: #1f033d;
+				color: #fff;
+				font-family: Montserrat;
+				font-weight: 200;
+				background: #531c85 !important;
+			  background: -moz-linear-gradient(top, #531c85 0%, #571b84 14%, #641980 30%, #7a157a 46%, #981071 62%, #be0a65 79%, #ed0258 96%, #f90054 100%) !important;
+			  background: -webkit-linear-gradient(top, #531c85 0%, #571b84 14%, #641980 30%, #7a157a 46%, #981071 62%, #be0a65 79%, #ed0258 96%, #f90054 100%) !important;
+			  background: linear-gradient(to bottom, #531c85 0%, #571b84 14%, #641980 30%, #7a157a 46%, #981071 62%, #be0a65 79%, #ed0258 96%, #f90054 100%) !important;
+			  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#531c85', endColorstr='#f90054',GradientType=0 );
+			}
+			.progress {
+				position: relative;
+			}
+			.progress span {
+				position: absolute;
+				display: block;
+				width: 100%;
+				color: white;
+			 }
+			 pre {
+				 padding: 6px;
+				 margin: 0;
+			 }
+		</style>
+	</head>
+
+	<body>
+		<div class="vertical-center">
+			<div class="container">
+				<div class="row" style="margin-bottom: 16px;">
+					<div class="col-lg-12">
+						<h1 style="text-align: center;"></i>kcoin Control Panel</h1>
+					</div>
+				</div>
+				<div class="row" style="margin-top: 32px;">
+					<div class="col-sm-3"><i class="fa fa-database" aria-hidden="true"></i> <span id="block"></span> blocks</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			var server;
+
+			// Define a method to reconnect upon server loss
+			var reconnect = function() {
+				server = new WebSocket(((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + "/api");
+
+				server.onmessage = function(event) {
+					var msg = JSON.parse(event.data);
+					if (msg === null) {
+						return;
+					}
+
+					if (msg.block !== undefined) {
+						$("#block").text(msg.block);
+					}
+					if (msg.error !== undefined) {
+						noty({layout: 'topCenter', text: msg.error, type: 'error', timeout: 5000, progressBar: true});
+					}
+					if (msg.success !== undefined) {
+						noty({layout: 'topCenter', text: msg.success, type: 'success', timeout: 5000, progressBar: true});
+					}
+				}
+				server.onclose = function() { setTimeout(reconnect, 3000); };
+			}
+			// Establish a websocket connection to the API server
+			reconnect();
+		</script>
+	</body>
+</html>
