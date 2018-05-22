@@ -12,7 +12,6 @@ import (
 	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/contracts/ownership"
-	"github.com/kowala-tech/kcoin/contracts/token"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
@@ -97,7 +96,7 @@ type ValidatorMgrSuite struct {
 	opts         *genesis.Options
 	validatorMgr *ValidatorMgr
 	multiSig     *ownership.MultiSigWallet
-	miningToken  *token.MiningToken
+	miningToken  *MiningToken
 }
 
 func TestValidatorMgrSuite(t *testing.T) {
@@ -119,7 +118,7 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	switch {
 	case strings.Contains(testName, "_Full"):
 		opts.Consensus.MaxNumValidators = 1
-	case strings.Contains(testName, "TestReleaseDeposits") && testName != "TestReleaseDeposits_LockedDeposit":
+	case testName == "TestReleaseDeposits_UnlockedDeposit":
 		opts.Consensus.FreezePeriod = 0
 	}
 	suite.opts = opts
@@ -145,7 +144,7 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	suite.multiSig = multiSig
 
 	// MiningToken instance
-	mToken, err := token.NewMiningToken(tokenAddr, backend)
+	mToken, err := NewMiningToken(tokenAddr, backend)
 	req.NoError(err)
 	req.NotNil(mToken)
 	suite.miningToken = mToken
@@ -460,58 +459,72 @@ func (suite *ValidatorMgrSuite) TestDeregisterValidator() {
 	req.True(deposit.AvailableAt.Cmp(common.Big0) > 0)
 }
 
-/*
-
 func (suite *ValidatorMgrSuite) TestReleaseDeposits_NoDeposits() {
 	req := suite.Require()
 
-	initialUserBalance := suite.balanceOf(getAddress(validator))
-	initialContractBalance := suite.balanceOf(validatorMgrAddr)
-	initialDepositCount := suite.depositCount(validator)
+	initialBalance := suite.balanceOf(getAddress(user))
+	req.NotNil(initialBalance)
+
+	req.NoError(suite.releaseDeposits(user))
+
+	suite.backend.Commit()
+
+	depositCount := suite.getDepositCount(user)
+	req.NotNil(depositCount)
+	req.Zero(depositCount.Uint64())
+
+	finalBalance := suite.balanceOf(getAddress(user))
+	req.NotNil(finalBalance)
+	req.Equal(initialBalance, finalBalance)
+}
+
+func (suite *ValidatorMgrSuite) TestReleaseDeposits_LockedDeposit() {
+	req := suite.Require()
+
+	initialBalance := suite.balanceOf(getAddress(validator))
+	req.NotNil(initialBalance)
 
 	req.NoError(suite.deregisterValidator(validator))
 	req.NoError(suite.releaseDeposits(validator))
 
 	suite.backend.Commit()
 
-	req.Equal(initialUserBalance, suite.balanceOf(getAddress(validator)))
-	req.Equal(initialContractBalance, suite.balanceOf(validatorMgrAddr))
-	req.Equal(initialContractBalance, suite.depositCount(validator))
+	depositCount := suite.getDepositCount(validator)
+	req.NotNil(depositCount)
+	req.Equal(common.Big1, depositCount)
+
+	finalBalance := suite.balanceOf(getAddress(validator))
+	req.NotNil(finalBalance)
+	req.Equal(initialBalance, finalBalance)
 }
 
-func (suite *ValidatorMgrSuite) TestReleaseDeposits_LockedDeposit() {
+func (suite *ValidatorMgrSuite) TestReleaseDeposits_UnlockedDeposit() {
 	req := suite.Require()
 
-	initialBalance, err := suite.miningToken.BalanceOf(&bind.CallOpts{}, getAddress(validator))
-	req.NoError(err)
+	initialBalance := suite.balanceOf(getAddress(validator))
 	req.NotNil(initialBalance)
 
-	mgrBalance, err := suite.miningToken.BalanceOf(&bind.CallOpts{}, validatorMgrAddr)
-	req.NoError(err)
-	req.NotNil(mgrBalance)
+	deposit := suite.getCurrentDeposit(validator)
 
-	req.NoError(suite.releaseDeposits(user))
+	req.NoError(suite.deregisterValidator(validator))
+	req.NoError(suite.releaseDeposits(validator))
 
 	suite.backend.Commit()
 
-	depositCount, err := suite.validatorMgr.GetDepositCount(&bind.CallOpts{From: getAddress(validator)})
-	req.NoError(err)
+	depositCount := suite.getDepositCount(validator)
 	req.NotNil(depositCount)
-	req.Equal(common.Big0, depositCount)
+	req.Zero(depositCount.Uint64())
 
-	finalBalance, err := suite.miningToken.BalanceOf(&bind.CallOpts{}, validator)
-	req.NoError(err)
+	finalBalance := suite.balanceOf(getAddress(validator))
 	req.NotNil(finalBalance)
-	req.Equal(finalBalance, initialBalance)
-
+	req.Equal(new(big.Int).Add(initialBalance, deposit.Amount), finalBalance)
 }
-*/
 
 func (suite *ValidatorMgrSuite) mintTokens(governor *ecdsa.PrivateKey, to *ecdsa.PrivateKey, numTokens *big.Int) {
 	req := suite.Require()
 
 	// mint enough tokens to the new user (submit & confirm)
-	tokenABI, err := abi.JSON(strings.NewReader(token.MiningTokenABI))
+	tokenABI, err := abi.JSON(strings.NewReader(MiningTokenABI))
 	req.NoError(err)
 	req.NotNil(tokenABI)
 

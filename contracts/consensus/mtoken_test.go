@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"crypto/ecdsa"
 	"math/big"
 	"strings"
 	"testing"
@@ -9,7 +8,7 @@ import (
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/contracts/token/testfiles"
+	"github.com/kowala-tech/kcoin/contracts/consensus/testfiles"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/params"
@@ -18,7 +17,6 @@ import (
 
 var (
 	owner, _            = crypto.GenerateKey()
-	user, _             = crypto.GenerateKey()
 	initialBalance      = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Ether))                       // 10 kUSD
 	miningTokenCap      = new(big.Int).Mul(new(big.Int).SetUint64(1073741824), new(big.Int).SetUint64(params.Ether)) // 1073741824 mUSD
 	miningTokenName     = "mUSD"
@@ -237,9 +235,4 @@ func (suite *MiningTokenSuite) TestTransfer_CustomFallback_Incompatible() {
 	transferOpts := bind.NewKeyedTransactor(user)
 	_, err = suite.miningToken.Transfer(transferOpts, contractAddr, numTokens, defaultData, testfiles.CustomFallback)
 	req.Error(err, "The OracleMgr contract does not support the mining token")
-}
-
-// getAddress return the address of the given private key
-func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
-	return crypto.PubkeyToAddress(privateKey.PublicKey)
 }
