@@ -326,18 +326,7 @@ func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
 func (suite *ValidatorMgrSuite) TestRegisterValidator_WhenPaused() {
 	req := suite.Require()
 
-	// pause the service
-	validatorMgrABI, err := abi.JSON(strings.NewReader(ValidatorMgrABI))
-	req.NoError(err)
-	req.NotNil(validatorMgrABI)
-
-	pauseParams, err := validatorMgrABI.Pack("pause")
-	req.NoError(err)
-	req.NotZero(pauseParams)
-
-	transactOpts := bind.NewKeyedTransactor(governor)
-	_, err = suite.multiSig.SubmitTransaction(transactOpts, validatorMgrAddr, common.Big0, pauseParams)
-	req.NoError(err)
+	suite.pauseService()
 
 	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether))
 	req.Error(suite.registerValidator(user, deposit), "cannot register the validator because the service is paused")
@@ -361,6 +350,10 @@ func (suite *ValidatorMgrSuite) TestRegisterValidator_WithoutMinDeposit() {
 func (suite *ValidatorMgrSuite) TestRegister_NotFull_GreaterThan() {
 	req := suite.Require()
 
+	initialValidatorCount, err := suite.validatorMgr.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(initialValidatorCount)
+
 	deposit := new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether)), common.Big1)
 	req.NoError(suite.registerValidator(user, deposit))
 
@@ -377,10 +370,19 @@ func (suite *ValidatorMgrSuite) TestRegister_NotFull_GreaterThan() {
 	req.NotZero(storedDeposit)
 	req.Zero(storedDeposit.AvailableAt.Uint64())
 	req.Equal(deposit, storedDeposit.Amount)
+
+	finalValidatorCount, err := suite.validatorMgr.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(finalValidatorCount)
+	req.Equal(new(big.Int).Add(initialValidatorCount, common.Big1), finalValidatorCount)
 }
 
 func (suite *ValidatorMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
 	req := suite.Require()
+
+	initialValidatorCount, err := suite.validatorMgr.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(initialValidatorCount)
 
 	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether))
 	req.NoError(suite.registerValidator(user, deposit))
@@ -398,13 +400,24 @@ func (suite *ValidatorMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
 	req.NotZero(storedDeposit)
 	req.Zero(storedDeposit.AvailableAt.Uint64())
 	req.Equal(deposit, storedDeposit.Amount)
+
+	finalValidatorCount, err := suite.validatorMgr.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(finalValidatorCount)
+	req.Equal(new(big.Int).Add(initialValidatorCount, common.Big1), finalValidatorCount)
 }
 
 func (suite *ValidatorMgrSuite) TestRegister_Full_Replacement() {
 	req := suite.Require()
 
-	deposit := new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Ether)), common.Big1)
-	req.NoError(suite.registerValidator(user, deposit))
+	initialValidatorCount, err := suite.validatorMgr.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(initialValidatorCount)
+
+	minDeposit, err := suite.validatorMgr.GetMinimumDeposit(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(minDeposit)
+	req.NoError(suite.registerValidator(user, minDeposit))
 
 	suite.backend.Commit()
 
@@ -413,29 +426,24 @@ func (suite *ValidatorMgrSuite) TestRegister_Full_Replacement() {
 	storedValidator := suite.getHighestBidder()
 	req.NotZero(storedValidator)
 	req.Equal(getAddress(user), storedValidator.Code)
-	req.Equal(deposit, storedValidator.Deposit)
+	req.Equal(minDeposit, storedValidator.Deposit)
 
 	storedDeposit := suite.getCurrentDeposit(user)
 	req.NotZero(storedDeposit)
 	req.Zero(storedDeposit.AvailableAt.Uint64())
-	req.Equal(deposit, storedDeposit.Amount)
+	req.Equal(minDeposit, storedDeposit.Amount)
+
+	finalValidatorCount, err := suite.validatorMgr.GetValidatorCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(finalValidatorCount)
+	req.Equal(initialValidatorCount, finalValidatorCount)
+
 }
 
 func (suite *ValidatorMgrSuite) TestDeregisterValidator_WhenPaused() {
 	req := suite.Require()
 
-	// pause the service
-	validatorMgrABI, err := abi.JSON(strings.NewReader(ValidatorMgrABI))
-	req.NoError(err)
-	req.NotNil(validatorMgrABI)
-
-	pauseParams, err := validatorMgrABI.Pack("pause")
-	req.NoError(err)
-	req.NotZero(pauseParams)
-
-	transactOpts := bind.NewKeyedTransactor(governor)
-	_, err = suite.multiSig.SubmitTransaction(transactOpts, validatorMgrAddr, common.Big0, pauseParams)
-	req.NoError(err)
+	suite.pauseService()
 
 	req.Error(suite.deregisterValidator(validator), "cannot deregister the validator because the service is paused")
 }
@@ -457,6 +465,14 @@ func (suite *ValidatorMgrSuite) TestDeregisterValidator() {
 	req.NotNil(deposit)
 
 	req.True(deposit.AvailableAt.Cmp(common.Big0) > 0)
+}
+
+func (suite *ValidatorMgrSuite) TestReleaseDeposits_WhenPaused() {
+	req := suite.Require()
+
+	suite.pauseService()
+
+	req.Error(suite.releaseDeposits(user), "cannot release deposits because the service is paused")
 }
 
 func (suite *ValidatorMgrSuite) TestReleaseDeposits_NoDeposits() {
@@ -559,6 +575,23 @@ func (suite *ValidatorMgrSuite) releaseDeposits(user *ecdsa.PrivateKey) error {
 	return err
 }
 
+func (suite *ValidatorMgrSuite) pauseService() {
+	req := suite.Require()
+
+	// pause the service
+	validatorMgrABI, err := abi.JSON(strings.NewReader(ValidatorMgrABI))
+	req.NoError(err)
+	req.NotNil(validatorMgrABI)
+
+	pauseParams, err := validatorMgrABI.Pack("pause")
+	req.NoError(err)
+	req.NotZero(pauseParams)
+
+	transactOpts := bind.NewKeyedTransactor(governor)
+	_, err = suite.multiSig.SubmitTransaction(transactOpts, validatorMgrAddr, common.Big0, pauseParams)
+	req.NoError(err)
+}
+
 func (suite *ValidatorMgrSuite) balanceOf(user common.Address) *big.Int {
 	req := suite.Require()
 
@@ -567,16 +600,6 @@ func (suite *ValidatorMgrSuite) balanceOf(user common.Address) *big.Int {
 	req.NotNil(balance)
 
 	return balance
-}
-
-func (suite *ValidatorMgrSuite) getDepositCount(user *ecdsa.PrivateKey) *big.Int {
-	req := suite.Require()
-
-	depositCount, err := suite.validatorMgr.GetDepositCount(&bind.CallOpts{From: getAddress(user)})
-	req.NoError(err)
-	req.NotNil(depositCount)
-
-	return depositCount
 }
 
 func (suite *ValidatorMgrSuite) getValidatorCount() *big.Int {
@@ -600,6 +623,16 @@ func (suite *ValidatorMgrSuite) getHighestBidder() struct {
 	req.NotZero(registration)
 
 	return registration
+}
+
+func (suite *ValidatorMgrSuite) getDepositCount(user *ecdsa.PrivateKey) *big.Int {
+	req := suite.Require()
+
+	depositCount, err := suite.validatorMgr.GetDepositCount(&bind.CallOpts{From: getAddress(user)})
+	req.NoError(err)
+	req.NotNil(depositCount)
+
+	return depositCount
 }
 
 func (suite *ValidatorMgrSuite) getCurrentDeposit(user *ecdsa.PrivateKey) struct {

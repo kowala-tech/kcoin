@@ -45,7 +45,6 @@ type Consensus interface {
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
 	MinimumDeposit() (uint64, error)
-	// Balance(walletAccount accounts.WalletAccount) (uint64, error)
 }
 
 type consensus struct {
@@ -174,16 +173,6 @@ func (consensus *consensus) MinimumDeposit() (uint64, error) {
 	rawMinDeposit, err := consensus.manager.GetMinimumDeposit(&bind.CallOpts{})
 	return rawMinDeposit.Uint64(), err
 }
-
-/*
-func (consensus *consensus) Balance(walletAccount accounts.WalletAccount) (uint64, error) {
-	balance, err := consensus.account.BalanceOf(walletAccount.Account().Address)
-	if err != nil {
-		return 0, err
-	}
-
-}
-*/
 
 func (consensus *consensus) transactDepositOpts(walletAccount accounts.WalletAccount, amount uint64) *bind.TransactOpts {
 	ops := consensus.transactOpts(walletAccount)
