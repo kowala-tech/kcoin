@@ -97,6 +97,16 @@ contract OracleMgr is pausable.Pausable {
         }
     }
 
+    function getOracleCount() public view returns (uint count) {
+        return oraclePool.length;
+    }
+
+    function getOracleAtIndex(uint index) public view returns (address code, uint deposit) {
+        code = oraclePool[index];
+        Oracle oracle = oracleRegistry[code];
+        deposit = oracle.deposits[oracle.deposits.length - 1].amount;
+    }
+
     // getMinimumDeposit returns the base deposit if there are positions available or
     // the current smallest deposit required if there aren't positions available.
     function getMinimumDeposit() public view returns (uint deposit) {
@@ -107,6 +117,15 @@ contract OracleMgr is pausable.Pausable {
             Oracle smallestBidder = oracleRegistry[oraclePool[oraclePool.length - 1]];               
             return smallestBidder.deposits[smallestBidder.deposits.length - 1].amount + 1;
         }
+    }
+    
+    function getDepositCount() public view returns (uint count) {
+        return oracleRegistry[msg.sender].deposits.length; 
+    }
+
+    function getDepositAtIndex(uint index) public view returns (uint amount, uint availableAt) {
+        Deposit deposit = oracleRegistry[msg.sender].deposits[index];
+        return (deposit.amount, deposit.availableAt);
     }
 
     // registerOracle registers a new candidate as oracle
