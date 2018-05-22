@@ -51,6 +51,7 @@ type Validator interface {
 	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
 	Deposits() ([]*types.Deposit, error)
 	RedeemDeposits() error
+	GetBalance() (uint64, error)
 }
 
 // validator represents a consensus validator
@@ -88,15 +89,15 @@ type validator struct {
 // New returns a new consensus validator
 func New(backend Backend, consensus consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
-		config:   config,
-		backend:  backend,
-		chain:    backend.BlockChain(),
-		engine:   engine,
+		config:    config,
+		backend:   backend,
+		chain:     backend.BlockChain(),
+		engine:    engine,
 		consensus: consensus,
-		eventMux: eventMux,
-		signer:   types.NewAndromedaSigner(config.ChainID),
-		vmConfig: vmConfig,
-		canStart: 0,
+		eventMux:  eventMux,
+		signer:    types.NewAndromedaSigner(config.ChainID),
+		vmConfig:  vmConfig,
+		canStart:  0,
 	}
 
 	go validator.sync()
@@ -174,6 +175,8 @@ func (val *validator) Stop() error {
 }
 
 func (val *validator) SetExtra(extra []byte) error { return nil }
+
+func (val *validator) GetBalance() (uint64, error) { return val.consensus.Balance(val.walletAccount) }
 
 func (val *validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0

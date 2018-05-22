@@ -473,6 +473,10 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'redeemDeposits',
 			call: 'validator_redeemDeposits'
+		}),
+		new web3._extend.Method({
+			name: 'getBalance',
+			call: 'validator_getBalance'
 		})
 	],
 	properties: []

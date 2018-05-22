@@ -105,6 +105,11 @@ func (api *PrivateValidatorAPI) SetDeposit(deposit uint64) bool {
 	return true
 }
 
+// GetBalance returns the mUSD balance
+func (api *PrivateValidatorAPI) GetBalance() (uint64, error) {
+	return api.kcoin.Validator().GetBalance()
+}
+
 // GetMinimumDeposit gets the minimum deposit required to take a slot as a validator
 func (api *PrivateValidatorAPI) GetMinimumDeposit() (uint64, error) {
 	return api.kcoin.GetMinimumDeposit()
