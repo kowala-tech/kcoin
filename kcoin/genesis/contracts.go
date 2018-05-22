@@ -10,7 +10,6 @@ import (
 	"github.com/kowala-tech/kcoin/contracts/consensus"
 	"github.com/kowala-tech/kcoin/contracts/oracle"
 	"github.com/kowala-tech/kcoin/contracts/ownership"
-	"github.com/kowala-tech/kcoin/contracts/token"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/vm/runtime"
 )
@@ -72,7 +71,7 @@ var MiningTokenContract = &contract{
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
 		args := opts.miningToken
 
-		tokenABI, err := abi.JSON(strings.NewReader(token.MiningTokenABI))
+		tokenABI, err := abi.JSON(strings.NewReader(consensus.MiningTokenABI))
 		if err != nil {
 			return err
 		}
@@ -90,7 +89,7 @@ var MiningTokenContract = &contract{
 
 		runtimeCfg := contract.runtimeCfg
 		runtimeCfg.Origin = args.owner
-		contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(token.MiningTokenBin), tokenParams...), runtimeCfg)
+		contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(consensus.MiningTokenBin), tokenParams...), runtimeCfg)
 		if err != nil {
 			return err
 		}
@@ -107,7 +106,7 @@ var MiningTokenContract = &contract{
 func mintTokens(contract *contract, opts *validGenesisOptions) error {
 	args := opts.miningToken
 
-	tokenABI, err := abi.JSON(strings.NewReader(token.MiningTokenABI))
+	tokenABI, err := abi.JSON(strings.NewReader(consensus.MiningTokenABI))
 	if err != nil {
 		return err
 	}
@@ -203,7 +202,7 @@ func registerValidators(contract *contract, opts *validGenesisOptions) error {
 	args := opts.validatorMgr
 
 	// register genesis validators
-	tokenABI, err := abi.JSON(strings.NewReader(token.MiningTokenABI))
+	tokenABI, err := abi.JSON(strings.NewReader(consensus.MiningTokenABI))
 	if err != nil {
 		return err
 	}

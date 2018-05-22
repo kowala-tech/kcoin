@@ -1,4 +1,4 @@
-package token
+package consensus
 
 import (
 	"crypto/ecdsa"

@@ -8,19 +8,27 @@ import (
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/contracts/token"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/params"
 )
 
-//go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/contracts/=/usr/local/include/solidity/ contracts/ValidatorMgr.sol
+//go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/contracts/=/usr/local/include/solidity/ contracts/mgr/ValidatorMgr.sol
 //go:generate abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
+//go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/contracts/=/usr/local/include/solidity/ contracts/token/MiningToken.sol
+//go:generate abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
 
 const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 
-// MapChainIDToAddr maps the contract address (const) per network
-var MapChainIDToAddr = map[uint64]common.Address{
+var (
+	defaultData = []byte("not_zero")
+)
+
+var mapValidatorMgrToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x80eDa603028fe504B57D14d947c8087c1798D800"),
+}
+
+var mapMiningTokenToAddr = map[uint64]common.Address{
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
 }
 
 // ValidatorsChecksum lets a validator know if there are changes in the validator set
@@ -43,20 +51,20 @@ type Consensus interface {
 type consensus struct {
 	manager     *ValidatorMgr
 	managerAddr common.Address
-	account     *token.MUSD
+	account     *MiningToken
 	chainID     *big.Int
 }
 
 // Instance returnsan instance of the current consensus engine
 func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
-	addr := MapChainIDToAddr[chainID.Uint64()]
+	addr := mapValidatorMgrToAddr[chainID.Uint64()]
 
 	manager, err := NewValidatorMgr(addr, contractBackend)
 	if err != nil {
 		return nil, err
 	}
 
-	account, err := token.Instance(contractBackend, chainID)
+	account, err := NewMiningToken(mapMiningTokenToAddr[chainID.Uint64()], contractBackend)
 	if err != nil {
 		return nil, err
 	}
