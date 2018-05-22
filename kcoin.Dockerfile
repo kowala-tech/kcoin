@@ -11,8 +11,8 @@ WORKDIR /kcoin/
 COPY --from=builder /kcoin/build/bin/kcoin .
 EXPOSE 22334
 EXPOSE 22334/udp
-ADD release/kcoin_with_new_account.sh .
-ADD release/testnet_console.toml .
-ADD release/testnet_genesis.json genesis.json
-ENTRYPOINT ["./kcoin_with_new_account.sh"]
-CMD ["--config", "/kcoin/testnet_console.toml", "console"]
+ADD release/kcoin.sh .
+ADD release/testnet_genesis.json .
+ADD release/genesis.json .
+ENTRYPOINT ["./kcoin.sh"]
+RUN mkdir -p /root/.kcoin/keystore

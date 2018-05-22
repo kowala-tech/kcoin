@@ -2,38 +2,32 @@ Feature: Joining network as a validator
   As a user
   I want to be able to join validators set
 
-  Scenario: Start validator
-    Given I have my node running
-    And I have an account in my node with 10 kcoins
-    When I start validator with 5 kcoins deposit
-    Then I should be a validator
-
-  Scenario: Stop validator
+  Background:
     Given I have the following accounts:
-      | account |  funds  |
-      | A       | 1000000 |
-    When I start validator with 1 deposit and coinbase A
-    And I stop validation
-    And I wait for the unbonding period to be over
-    Then I should not be a validator
-    And the balance of A should be around 9 kcoins
+      | account | password | funds |
+      | A       | test     | 20    |
+      | B       | test     | 10    |
 
-  # Scenario: Mining rewards: basic
-  #   Given There is a network
-  #   And I have an existing node connected to the network
-  #   And My node is validating with all the issues tokens
-  #   And There are no other validators
-  #   And The current block reward is 100 # if it's easier this could be market price
-  #   And I have the following accounts:
-	# 	  | account | funds |
-	# 	  | A       | 0     |
-	# 	  | B       | 0     |
-	# 	And My node pays out rewards to the following addresses
-	# 	  | account | share |
-	# 	  | A       | 80    |
-	# 	  | B       | 20     |
-  #   And there are no other transactions
-  #   And there is no stability fee
-  #   When A new block is mined
-  #   Then the balance of A should be 80 kcoins
-  #   And the balance of B should be 20 kcoins
+  Scenario: Start validator
+    Given I have my node running using account A
+    When I start validator with 5 kcoins deposit
+    And I wait for my node to be synced
+    Then the balance of A should be around 15 kcoins
+
+  Scenario: Stop mining
+    Given I have my node running using account A
+    And I start validator with 5 kcoins deposit
+    And I wait for my node to be synced
+    And the balance of A should be around 15 kcoins
+    When I withdraw my node from validation
+    Then there should be 5 kcoins available to me after 5 days
+
+   Scenario: Mining rewards: basic
+    Given I have my node running using account A
+    And I start validator with 5 kcoins deposit
+    And I wait for my node to be synced
+    And the balance of A should be around 15 kcoins
+    When I unlock the account A with password 'test'
+    And I transfer 10 kcoin from A to B
+    Then the balance of A should be greater 5 kcoins
+    And the balance of B should be 20 kcoins

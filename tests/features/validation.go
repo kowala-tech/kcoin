@@ -3,141 +3,215 @@ package features
 import (
 	"errors"
 	"fmt"
-	"github.com/DATA-DOG/godog"
-	"github.com/kowala-tech/kcoin/cluster"
-	"github.com/kowala-tech/kcoin/log"
-	"math/big"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/DATA-DOG/godog"
+	"github.com/kowala-tech/kcoin/cluster"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/log"
 )
 
-var (
-	nodeName = "somevalidator"
-	password = "test"
-	coinbase = ""
-)
+type ValidationContext struct {
+	globalCtx       *Context
+	accountPassword string
+	nodeRunning     bool
+	waiter          doer
+}
 
-func (ctx *Context) IStopValidation() error {
+func NewValidationContext(parentCtx *Context) *ValidationContext {
+	ctx := &ValidationContext{
+		globalCtx:       parentCtx,
+		accountPassword: "test",
+		nodeRunning:     false,
+	}
+
+	ctx.waiter = common.NewWaiter(ctx)
+	return ctx
+}
+
+func (ctx *ValidationContext) nodeID() cluster.NodeID {
+	return cluster.NodeID("validator-under-test-" + ctx.globalCtx.nodeSuffix)
+}
+
+func (ctx *ValidationContext) IStopValidation() error {
 	return godog.ErrPending
 }
 
-func (ctx *Context) IWaitForTheUnbondingPeriodToBeOver() error {
+func (ctx *ValidationContext) IWaitForTheUnbondingPeriodToBeOver() error {
 	return godog.ErrPending
 }
 
-func (ctx *Context) IShouldNotBeAValidator() error {
-	return godog.ErrPending
+func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
+	err := ctx.waiter.Do(ctx.makeExecFunc(setDeposit(kcoin)))
+	if err != nil {
+		return err
+	}
+
+	return ctx.waiter.Do(
+		ctx.makeExecFunc(validatorStartCommand()),
+		func() error {
+			res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isRunningCommand())
+			if err != nil {
+				log.Debug(res.StdOut)
+				return err
+			}
+			if strings.TrimSpace(res.StdOut) != "true" {
+				log.Debug(res.StdOut)
+				return errors.New("validator is not running")
+			}
+			return nil
+		})
 }
 
-func (ctx *Context) IHaveMyNodeRunning() error {
-	return ctx.cluster.RunNode(nodeName)
-}
-
-func (ctx *Context) IHaveAnAccountInMyNode(kcoin int64) error {
-	response, err := ctx.cluster.Exec(nodeName, newAccountCommand(password))
-	if err != nil {
-		log.Debug(response.StdOut)
-		return err
-	}
-	coinbase = parseNewAccountResponse(response.StdOut)
-
-	if err := ctx.fundAccount(coinbase, kcoin); err != nil {
-		return err
-	}
-
-	return err
-}
-
-func (ctx *Context) IStartTheValidator(kcoin int64) error {
-	response, err := ctx.cluster.Exec(nodeName, unlockAccountCommand(coinbase, password))
-	if err != nil {
-		log.Debug(response.StdOut)
-		return err
-	}
-
-	response, err = ctx.cluster.Exec(nodeName, setCoinbaseCommand(coinbase))
-	if err != nil {
-		log.Debug(response.StdOut)
-		return err
-	}
-
-	response, err = ctx.cluster.Exec(nodeName, setDeposit(kcoin))
-	if err != nil {
-		log.Debug(response.StdOut)
-		return err
-	}
-
-	response, err = ctx.cluster.Exec(nodeName, validatorStartCommand())
-	if err != nil {
-		log.Debug(response.StdOut)
-		return err
-	}
-
-	return err
-}
-
-func (ctx *Context) fundAccount(address string, kcoin int64) error {
-	_, err := ctx.cluster.Exec(
-		"genesis-validator",
-		fmt.Sprintf(`eth.sendTransaction({from:eth.coinbase, to: "%s", value: %d})`, address, toWei(kcoin)))
-	if err != nil {
-		return err
-	}
-
-	err = cluster.WaitFor(2*time.Second, 1*time.Minute, func() bool {
-		resp, err := ctx.cluster.Exec("genesis-validator", fmt.Sprintf(`eth.getBalance("%s")`, address))
-		if err != nil {
-			return false
-		}
-		balance := big.NewInt(0)
-		balance.SetString(strings.TrimSpace(resp.StdOut), 10)
-		return balance.Cmp(big.NewInt(0)) > 0
+func (ctx *ValidationContext) IWaitForMyNodeToBeSynced() error {
+	return common.WaitFor("timeout waiting for node sync", time.Second, time.Second*5, func() error {
+		return ctx.MyNodeIsAlreadySynchronised()
 	})
-	return err
 }
 
-func (ctx *Context) IShouldBeAValidator() error {
-	response, err := ctx.cluster.Exec(nodeName, isRunningCommand())
-	message := response.StdOut
-	if err != nil {
-		log.Debug(message)
-		return err
+func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
+	if ctx.nodeRunning {
+		return nil
 	}
+	ctx.nodeRunning = true
 
-	if strings.TrimSpace(message) != "true" {
-		log.Debug(message)
-		return errors.New("validator is not running")
+	spec := cluster.NewKcoinNodeBuilder().
+		WithBootnode(ctx.globalCtx.bootnode).
+		WithLogLevel(3).
+		WithID(ctx.nodeID().String()).
+		WithSyncMode("full").
+		WithNetworkId(ctx.globalCtx.chainID.String()).
+		WithGenesis(ctx.globalCtx.genesis).
+		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.accounts[account]).
+		NodeSpec()
+
+	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.scenarioNumber); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// parseNewAccountResponse remove first and last char, response comes in format
-// "0x7ddba4b656cd3b537f208973bb6f6957e2d3750d"
-func parseNewAccountResponse(response string) string {
-	return response[1 : len(response)-2]
+func (ctx *ValidationContext) IWithdrawMyNodeFromValidation() error {
+	return ctx.waiter.Do(ctx.makeExecFunc(stopValidatingCommand()))
 }
 
-func newAccountCommand(password string) string {
-	return fmt.Sprintf("personal.newAccount(\"%s\")", password)
+func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expectedKcoins, days int) error {
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), getDepositsCommand())
+	if err != nil {
+		log.Debug(res.StdOut)
+		return err
+	}
+
+	deposit, err := parseDepositResponse(res.StdOut)
+	if err != nil {
+		log.Debug(res.StdOut)
+		return err
+	}
+
+	if expectedKcoins != *deposit.Value {
+		return errors.New(fmt.Sprintf("kcoins don't match expected %d kcoins got %d", expectedKcoins, *deposit.Value))
+	}
+
+	daysExpected := time.Hour * 24 * time.Duration(days)
+	expectedDate := time.Now().Add(daysExpected)
+	if isSameDay(expectedDate, deposit.AvailableAt.Time()) {
+		return errors.New(fmt.Sprintf("deposit available not within %d days(%f hours), available at %s",
+			days, daysExpected.Hours(), deposit.AvailableAt.Time().String()))
+	}
+
+	return nil
 }
 
-func unlockAccountCommand(account, password string) string {
-	return fmt.Sprintf("personal.unlockAccount(\"%s\", \"%s\")", account, password)
+func isSameDay(date1, date2 time.Time) bool {
+	expectedYear, expectedMonth, expectedDay := date1.Date()
+	availableYear, availableMonth, availableDay := date2.Date()
+	return expectedYear != availableYear ||
+		expectedMonth != availableMonth ||
+		expectedDay != availableDay
 }
 
-func setCoinbaseCommand(coinbase string) string {
-	return fmt.Sprintf("validator.setCoinbase(\"%s\")", coinbase)
+func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isRunningCommand())
+	if err != nil {
+		log.Debug(res.StdOut)
+		return err
+	}
+	if strings.TrimSpace(res.StdOut) != "false" {
+		log.Debug(res.StdOut)
+		return errors.New("validator running")
+	}
+	return nil
 }
 
-func setDeposit(kcoin int64) string {
-	return fmt.Sprintf("validator.setDeposit(%d)", toWei(kcoin))
+func (ctx *ValidationContext) Reset() {
+	ctx.nodeRunning = false
+	ctx.globalCtx.nodeRunner.Stop(ctx.nodeID())
 }
 
-func validatorStartCommand() string {
-	return "validator.start()"
+func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isSyncedCommand())
+	if err != nil {
+		log.Debug(res.StdOut)
+		return err
+	}
+	if strings.TrimSpace(res.StdOut) != "true" {
+		log.Debug(res.StdOut)
+		return errors.New("node is not synced")
+	}
+	return nil
 }
 
-func isRunningCommand() string {
-	return "validator.isRunning()"
+func (ctx *ValidationContext) Do(cmd []string, condFunc func() error) error {
+	return ctx.waiter.Do(ctx.makeExecFunc(cmd), condFunc)
+}
+
+func (ctx *ValidationContext) CurrentBlock() (uint64, error) {
+	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), blockNumberCommand())
+	if err != nil {
+		log.Debug(res.StdOut)
+		return 0, err
+	}
+
+	return strconv.ParseUint(strings.TrimSpace(res.StdOut), 10, 64)
+}
+
+func (ctx *ValidationContext) makeExecFunc(command []string) func() error {
+	return func() error {
+		res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), command)
+		if err != nil {
+			log.Debug(res.StdOut)
+		}
+		return err
+	}
+}
+
+func blockNumberCommand() []string {
+	return cluster.KcoinExecCommand("eth.blockNumber")
+}
+
+func isSyncedCommand() []string {
+	return cluster.KcoinExecCommand("eth.blockNumber > 0 && eth.syncing == false")
+}
+
+func setDeposit(kcoin int64) []string {
+	return cluster.KcoinExecCommand(fmt.Sprintf("validator.setDeposit(%d)", toWei(kcoin)))
+}
+
+func validatorStartCommand() []string {
+	return cluster.KcoinExecCommand("validator.start()")
+}
+
+func stopValidatingCommand() []string {
+	return cluster.KcoinExecCommand("validator.stop()")
+}
+
+func isRunningCommand() []string {
+	return cluster.KcoinExecCommand("validator.isRunning()")
+}
+
+func getDepositsCommand() []string {
+	return cluster.KcoinExecCommand("validator.getDeposits()")
 }

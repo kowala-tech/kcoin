@@ -8,6 +8,8 @@
 /build/_workspace/
 /build/bin/
 /kcoin*.zip
+/tests/logs
+godog.test
 
 # dashboard
 /dashboard/assets/node_modules

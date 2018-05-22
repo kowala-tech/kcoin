@@ -896,6 +896,8 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kcoin.Config) {
 	}
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
+	} else if ctx.GlobalBool(TestnetFlag.Name) {
+		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	}
 
 	// Ethereum needs to know maxPeers to calculate the light server peer ratio.
@@ -922,11 +924,7 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kcoin.Config) {
 	}
 
 	// Override any default configs for hard coded networks.
-	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.Genesis = core.DefaultTestnetGenesisBlock()
-		cfg.NetworkId = cfg.Genesis.Config.ChainID.Uint64()
-	case ctx.GlobalBool(DevModeFlag.Name):
+	if ctx.GlobalBool(DevModeFlag.Name) {
 		cfg.Genesis = core.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = new(big.Int)
