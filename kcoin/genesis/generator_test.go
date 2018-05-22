@@ -1,21 +1,12 @@
 package genesis
 
 import (
-	"encoding/json"
 	"flag"
-	"io/ioutil"
-	"math/big"
-	"path/filepath"
-	"testing"
-
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/params"
-	"github.com/stretchr/testify/assert"
 )
 
 var update = flag.Bool("update", false, "update .golden files")
 
+/*
 func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
 	opt := Options{
 		Network:                        "test",
