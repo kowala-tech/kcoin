@@ -3,11 +3,13 @@ set -e
 
 cd /kcoin
 
-if [[ $@ = *"--testnet"* ]]; then
-  ./kcoin init /kcoin/testnet_genesis.json
-else
-  ./kcoin init /kcoin/genesis.json
-fi
-
+case "$@" in 
+  *"--testnet"*)
+    ./kcoin init /kcoin/testnet_genesis.json
+    ;;
+  *)
+    ./kcoin init /kcoin/genesis.json
+    ;;
+esac
 
 ./kcoin "$@"
