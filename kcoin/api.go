@@ -12,8 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"
+	"github.com/kowala-tech/kcoin/contracts/token"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
@@ -105,11 +107,6 @@ func (api *PrivateValidatorAPI) SetDeposit(deposit uint64) bool {
 	return true
 }
 
-// GetBalance returns the mUSD balance
-func (api *PrivateValidatorAPI) GetBalance() (uint64, error) {
-	return api.kcoin.Validator().GetBalance()
-}
-
 // GetMinimumDeposit gets the minimum deposit required to take a slot as a validator
 func (api *PrivateValidatorAPI) GetMinimumDeposit() (uint64, error) {
 	return api.kcoin.GetMinimumDeposit()
@@ -162,6 +159,53 @@ func (api *PrivateValidatorAPI) IsRunning() bool {
 // to the validator account
 func (api *PrivateValidatorAPI) RedeemDeposits() error {
 	return api.kcoin.Validator().RedeemDeposits()
+}
+
+// TransferArgs represents the arguments to transfer tokens.
+type TransferArgs struct {
+	From           common.Address  `json:"from"`
+	To             *common.Address `json:"to"`
+	Value          *hexutil.Big    `json:"value"`
+	Data           hexutil.Bytes   `json:"data"`
+	CustomFallback string          `json:"fallback"`
+}
+
+// PublicTokenAPI exposes a collection of methods related to tokens
+type PublicTokenAPI struct {
+	accountMgr *accounts.Manager
+	token      token.Token
+}
+
+func NewPublicTokenAPI(accountMgr *accounts.Manager, token token.Token) *PublicTokenAPI {
+	return &PublicTokenAPI{
+		accountMgr: accountMgr,
+		token:      token,
+	}
+}
+
+func (api *PublicTokenAPI) GetBalance(target common.Address) (*big.Int, error) {
+	return api.token.BalanceOf(target)
+}
+
+func (api *PublicTokenAPI) Transfer(args TransferArgs) (common.Hash, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := api.accountMgr.Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	if args.Value == nil {
+		args.Value = new(hexutil.Big)
+	}
+
+	walletAccount, err := accounts.NewWalletAccount(wallet, account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return api.token.Transfer(walletAccount, *args.To, (*big.Int)(args.Value), args.Data, args.CustomFallback)
 }
 
 // PrivateAdminAPI is the collection of Kowala full node-related APIs

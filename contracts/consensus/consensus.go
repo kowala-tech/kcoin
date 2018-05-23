@@ -8,6 +8,7 @@ import (
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/contracts/token"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/params"
 )
@@ -45,13 +46,42 @@ type Consensus interface {
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
 	MinimumDeposit() (uint64, error)
-	Balance(walletAccount accounts.WalletAccount) (uint64, error)
+	Token() token.Token
+}
+
+type mUSD struct {
+	*MiningToken
+	chainID *big.Int
+}
+
+func NewMUSD(contractBackend bind.ContractBackend, chainID *big.Int) (*mUSD, error) {
+	mtoken, err := NewMiningToken(mapMiningTokenToAddr[chainID.Uint64()], contractBackend)
+	if err != nil {
+		return nil, err
+	}
+	return &mUSD{MiningToken: mtoken, chainID: chainID}, nil
+}
+
+func (tkn *mUSD) Transfer(walletAccount accounts.WalletAccount, to common.Address, value *big.Int, data []byte, customFallback string) (common.Hash, error) {
+	tx, err := tkn.MiningToken.Transfer(transactOpts(walletAccount, tkn.chainID), to, value, data, customFallback)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return tx.Hash(), err
+}
+
+func (tkn *mUSD) BalanceOf(target common.Address) (*big.Int, error) {
+	return tkn.MiningToken.BalanceOf(&bind.CallOpts{}, target)
+}
+
+func (tkn *mUSD) Name() (string, error) {
+	return tkn.MiningToken.Name(&bind.CallOpts{})
 }
 
 type consensus struct {
 	manager     *ValidatorMgr
 	managerAddr common.Address
-	account     *MiningToken
+	mtoken      token.Token
 	chainID     *big.Int
 }
 
@@ -64,7 +94,7 @@ func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensu
 		return nil, err
 	}
 
-	account, err := NewMiningToken(mapMiningTokenToAddr[chainID.Uint64()], contractBackend)
+	mUSD, err := NewMUSD(contractBackend, chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -72,14 +102,14 @@ func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensu
 	return &consensus{
 		manager:     manager,
 		managerAddr: addr,
-		account:     account,
+		mtoken:      mUSD,
 		chainID:     chainID,
 	}, nil
 }
 
 func (consensus *consensus) Join(walletAccount accounts.WalletAccount, amount uint64) error {
 	numTokens := new(big.Int).Mul(new(big.Int).SetUint64(amount), new(big.Int).SetUint64(params.Ether))
-	_, err := consensus.account.Transfer(consensus.transactOpts(walletAccount), consensus.managerAddr, numTokens, []byte("not_zero"), RegistrationHandler)
+	_, err := consensus.mtoken.Transfer(walletAccount, consensus.managerAddr, numTokens, []byte("not_zero"), RegistrationHandler)
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
 	}
@@ -88,7 +118,7 @@ func (consensus *consensus) Join(walletAccount accounts.WalletAccount, amount ui
 }
 
 func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) error {
-	_, err := consensus.manager.DeregisterValidator(consensus.transactOpts(walletAccount))
+	_, err := consensus.manager.DeregisterValidator(transactOpts(walletAccount, consensus.chainID))
 	if err != nil {
 		return err
 	}
@@ -97,7 +127,7 @@ func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) error {
 }
 
 func (consensus *consensus) RedeemDeposits(walletAccount accounts.WalletAccount) error {
-	_, err := consensus.manager.ReleaseDeposits(consensus.transactOpts(walletAccount))
+	_, err := consensus.manager.ReleaseDeposits(transactOpts(walletAccount, consensus.chainID))
 	if err != nil {
 		return err
 	}
@@ -155,7 +185,16 @@ func (consensus *consensus) IsValidator(address common.Address) (bool, error) {
 	return consensus.manager.IsValidator(&bind.CallOpts{}, address)
 }
 
-func (consensus *consensus) transactOpts(walletAccount accounts.WalletAccount) *bind.TransactOpts {
+func (consensus *consensus) MinimumDeposit() (uint64, error) {
+	rawMinDeposit, err := consensus.manager.GetMinimumDeposit(&bind.CallOpts{})
+	return rawMinDeposit.Uint64(), err
+}
+
+func (consensus *consensus) Token() token.Token {
+	return consensus.mtoken
+}
+
+func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.TransactOpts {
 	signerAddress := walletAccount.Account().Address
 	opts := &bind.TransactOpts{
 		From: signerAddress,
@@ -163,25 +202,15 @@ func (consensus *consensus) transactOpts(walletAccount accounts.WalletAccount) *
 			if address != signerAddress {
 				return nil, errors.New("not authorized to sign this account")
 			}
-			return walletAccount.SignTx(walletAccount.Account(), tx, consensus.chainID)
+			return walletAccount.SignTx(walletAccount.Account(), tx, chainID)
 		},
 	}
 
 	return opts
 }
 
-func (consensus *consensus) MinimumDeposit() (uint64, error) {
-	rawMinDeposit, err := consensus.manager.GetMinimumDeposit(&bind.CallOpts{})
-	return rawMinDeposit.Uint64(), err
-}
-
-func (consensus *consensus) Balance(walletAccount accounts.WalletAccount) (uint64, error) {
-	balance, err := consensus.account.BalanceOf(&bind.CallOpts{}, walletAccount.Account().Address)
-	return balance.Uint64(), err
-}
-
-func (consensus *consensus) transactDepositOpts(walletAccount accounts.WalletAccount, amount uint64) *bind.TransactOpts {
-	ops := consensus.transactOpts(walletAccount)
+func transactDepositOpts(walletAccount accounts.WalletAccount, chainID *big.Int, amount uint64) *bind.TransactOpts {
+	ops := transactOpts(walletAccount, chainID)
 	var deposit big.Int
 	ops.Value = deposit.SetUint64(amount)
 	return ops

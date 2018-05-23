@@ -51,7 +51,6 @@ type Validator interface {
 	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
 	Deposits() ([]*types.Deposit, error)
 	RedeemDeposits() error
-	GetBalance() (uint64, error)
 }
 
 // validator represents a consensus validator
@@ -175,8 +174,6 @@ func (val *validator) Stop() error {
 }
 
 func (val *validator) SetExtra(extra []byte) error { return nil }
-
-func (val *validator) GetBalance() (uint64, error) { return val.consensus.Balance(val.walletAccount) }
 
 func (val *validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0
