@@ -37,7 +37,6 @@ func NewGenerator() *generator {
 	}
 
 	gen := &generator{
-		contracts:    make([]*contract, 0),
 		sharedState:  stateDB,
 		sharedTracer: newVmTracer(),
 		alloc:        make(core.GenesisAlloc),
