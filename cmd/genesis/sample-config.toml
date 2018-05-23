@@ -32,5 +32,13 @@ freezePeriod = 1
 baseDeposit = 1
 
 [[prefundedAccounts]]
-accountAddress = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
-balance = 10
+accountAddress = "0xa1e8587ed7f915d5bbbf283b21af4813232069f7"
+balance = 50
+
+[[prefundedAccounts]]
+accountAddress = "0xbfAdCF85554F139F978DE5442aacFBe085c754f7"
+balance = 50
+
+[[prefundedAccounts]]
+accountAddress = "0xF358eb1020375800746ccd5c6638DA36C5a6bec9"
+balance = 50
