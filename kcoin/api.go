@@ -102,13 +102,13 @@ func (api *PrivateValidatorAPI) SetCoinbase(coinbase common.Address) bool {
 }
 
 // SetDeposit sets the deposit of the validator
-func (api *PrivateValidatorAPI) SetDeposit(deposit uint64) bool {
-	api.kcoin.SetDeposit(deposit)
+func (api *PrivateValidatorAPI) SetDeposit(deposit hexutil.Big) bool {
+	api.kcoin.SetDeposit((*big.Int)(&deposit))
 	return true
 }
 
 // GetMinimumDeposit gets the minimum deposit required to take a slot as a validator
-func (api *PrivateValidatorAPI) GetMinimumDeposit() (uint64, error) {
+func (api *PrivateValidatorAPI) GetMinimumDeposit() (*big.Int, error) {
 	return api.kcoin.GetMinimumDeposit()
 }
 
@@ -118,8 +118,8 @@ type GetDepositsResult struct {
 }
 
 type depositEntry struct {
-	Amount      uint64 `json:"value"`
-	AvailableAt string `json:",omitempty"`
+	Amount      *big.Int `json:"value"`
+	AvailableAt string   `json:",omitempty"`
 }
 
 // GetDeposits returns the validator deposits

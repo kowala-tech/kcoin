@@ -718,7 +718,7 @@ func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *kcoin.Config) {
 
 func setDeposit(ctx *cli.Context, cfg *kcoin.Config) {
 	if ctx.GlobalIsSet(ValidatorDepositFlag.Name) {
-		cfg.Deposit = ctx.GlobalUint64(ValidatorDepositFlag.Name)
+		cfg.Deposit = new(big.Int).SetUint64(ctx.GlobalUint64(ValidatorDepositFlag.Name))
 	}
 }
 

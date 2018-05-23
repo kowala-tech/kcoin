@@ -37,13 +37,13 @@ type Backend interface {
 }
 
 type Validator interface {
-	Start(walletAccount accounts.WalletAccount, deposit uint64)
+	Start(walletAccount accounts.WalletAccount, deposit *big.Int)
 	Stop() error
 	SetExtra(extra []byte) error
 	Validating() bool
 	Running() bool
 	SetCoinbase(walletAccount accounts.WalletAccount) error
-	SetDeposit(deposit uint64)
+	SetDeposit(deposit *big.Int)
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
 	AddProposal(proposal *types.Proposal) error
@@ -60,7 +60,7 @@ type validator struct {
 
 	running    int32
 	validating int32
-	deposit    uint64
+	deposit    *big.Int
 
 	signer types.Signer
 
@@ -121,7 +121,7 @@ func (val *validator) finishedSync() {
 	}
 }
 
-func (val *validator) Start(walletAccount accounts.WalletAccount, deposit uint64) {
+func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.Int) {
 	if val.Validating() {
 		log.Warn("failed to start the validator - the state machine is already running")
 		return
@@ -191,7 +191,7 @@ func (val *validator) SetCoinbase(walletAccount accounts.WalletAccount) error {
 	return nil
 }
 
-func (val *validator) SetDeposit(deposit uint64) {
+func (val *validator) SetDeposit(deposit *big.Int) {
 	val.deposit = deposit
 }
 

@@ -63,7 +63,7 @@ type Kowala struct {
 	consensus consensus.Consensus // consensus binding
 	gasPrice  *big.Int
 	coinbase  common.Address
-	deposit   uint64
+	deposit   *big.Int
 
 	networkId     uint64
 	netRPCService *kcoinapi.PublicNetAPI
@@ -278,7 +278,7 @@ func (s *Kowala) Coinbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("coinbase address must be explicitly specified")
 }
 
-func (s *Kowala) Deposit() (uint64, error) {
+func (s *Kowala) Deposit() (*big.Int, error) {
 	s.lock.RLock()
 	deposit := s.deposit
 	s.lock.RUnlock()
@@ -317,12 +317,12 @@ func (s *Kowala) getWalletAccount() (accounts.WalletAccount, error) {
 }
 
 // GetMinimumDeposit return minimum amount required to join the validators
-func (s *Kowala) GetMinimumDeposit() (uint64, error) {
+func (s *Kowala) GetMinimumDeposit() (*big.Int, error) {
 	return s.consensus.MinimumDeposit()
 }
 
 // set in js console via admin interface or wrapper from cli flags
-func (s *Kowala) SetDeposit(deposit uint64) {
+func (s *Kowala) SetDeposit(deposit *big.Int) {
 	s.lock.Lock()
 	s.deposit = deposit
 	s.lock.Unlock()

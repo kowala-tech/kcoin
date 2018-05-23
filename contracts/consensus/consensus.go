@@ -37,7 +37,7 @@ type ValidatorsChecksum [32]byte
 
 // Consensus is a gateway to the validators contracts on the network
 type Consensus interface {
-	Join(walletAccount accounts.WalletAccount, amount uint64) error
+	Join(walletAccount accounts.WalletAccount, amount *big.Int) error
 	Leave(walletAccount accounts.WalletAccount) error
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
 	ValidatorsChecksum() (ValidatorsChecksum, error)
@@ -45,7 +45,7 @@ type Consensus interface {
 	Deposits(address common.Address) ([]*types.Deposit, error)
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
-	MinimumDeposit() (uint64, error)
+	MinimumDeposit() (*big.Int, error)
 	Token() token.Token
 }
 
@@ -107,9 +107,8 @@ func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensu
 	}, nil
 }
 
-func (consensus *consensus) Join(walletAccount accounts.WalletAccount, amount uint64) error {
-	numTokens := new(big.Int).Mul(new(big.Int).SetUint64(amount), new(big.Int).SetUint64(params.Ether))
-	_, err := consensus.mtoken.Transfer(walletAccount, consensus.managerAddr, numTokens, []byte("not_zero"), RegistrationHandler)
+func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) error {
+	_, err := consensus.mtoken.Transfer(walletAccount, consensus.managerAddr, deposit, []byte("not_zero"), RegistrationHandler)
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
 	}
@@ -153,7 +152,7 @@ func (consensus *consensus) Validators() (types.Voters, error) {
 		}
 
 		weight := big.NewInt(0)
-		voters[i] = types.NewVoter(validator.Code, validator.Deposit.Uint64(), weight)
+		voters[i] = types.NewVoter(validator.Code, validator.Deposit, weight)
 	}
 
 	return types.NewVoters(voters)
@@ -171,7 +170,7 @@ func (consensus *consensus) Deposits(addr common.Address) ([]*types.Deposit, err
 		if err != nil {
 			return nil, err
 		}
-		deposits[i] = types.NewDeposit(deposit.Amount.Uint64(), deposit.AvailableAt.Int64())
+		deposits[i] = types.NewDeposit(deposit.Amount, deposit.AvailableAt.Int64())
 	}
 
 	return deposits, nil
@@ -185,9 +184,8 @@ func (consensus *consensus) IsValidator(address common.Address) (bool, error) {
 	return consensus.manager.IsValidator(&bind.CallOpts{}, address)
 }
 
-func (consensus *consensus) MinimumDeposit() (uint64, error) {
-	rawMinDeposit, err := consensus.manager.GetMinimumDeposit(&bind.CallOpts{})
-	return rawMinDeposit.Uint64(), err
+func (consensus *consensus) MinimumDeposit() (*big.Int, error) {
+	return consensus.manager.GetMinimumDeposit(&bind.CallOpts{})
 }
 
 func (consensus *consensus) Token() token.Token {
