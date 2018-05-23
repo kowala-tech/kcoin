@@ -120,7 +120,6 @@ contract ValidatorMgr is pausable.Pausable {
         _updateChecksum();
     }
 
-    /*
     function setBaseDeposit(uint deposit) public onlyOwner {
         baseDeposit = deposit;
     }
@@ -134,7 +133,6 @@ contract ValidatorMgr is pausable.Pausable {
         }
         maxNumValidators = max;   
     }
-    */
 
     function _deleteValidator(address account) private {
         Validator validator = validatorRegistry[account];
