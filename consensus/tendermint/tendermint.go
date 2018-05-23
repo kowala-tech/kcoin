@@ -1,12 +1,18 @@
 package tendermint
 
 import (
+	"math/big"
+
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/consensus"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rpc"
+)
+
+var (
+	AndromedaBlockReward *big.Int = new(big.Int).SetUint64(115740741e+5)
 )
 
 type Tendermint struct {
@@ -48,17 +54,11 @@ func (tendermint *Tendermint) Prepare(chain consensus.ChainReader, header *types
 }
 
 func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
-
-	/*
-		// distribute block reward
-		if tendermint.config.Rewarded {
-			// get signers addresses
-			// @TODO (rgeraldes)
-			if err := AccumulateRewards(state, header, nil); err != nil {
-				return nil, err
-			}
+	if tendermint.config.Rewarded {
+		if err := AccumulateRewards(state, header); err != nil {
+			return nil, err
 		}
-	*/
+	}
 
 	// Accumulate any block and uncle rewards and commit the final state root
 	header.Root = state.IntermediateRoot(true)
@@ -67,7 +67,13 @@ func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *type
 	return types.NewBlock(header, txs, receipts, commit), nil
 }
 
-func AccumulateRewards(state *state.StateDB, header *types.Header, addrs []common.Address) error {
+func AccumulateRewards(state *state.StateDB, header *types.Header) error {
+	blockReward := AndromedaBlockReward
+
+	// accumulate the rewards for the validator
+	reward := new(big.Int).Set(blockReward)
+	state.AddBalance(header.Coinbase, reward)
+
 	/*
 		// @TODO (hrosa): what to do with transactions fees ?
 		contracts, err := network.GetContracts(state)
