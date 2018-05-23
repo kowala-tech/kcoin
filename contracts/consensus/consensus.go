@@ -22,6 +22,8 @@ const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 
 var (
 	defaultData = []byte("not_zero")
+
+	errNoAddress = errors.New("there isn't an address for the provided chain ID")
 )
 
 var mapValidatorMgrToAddr = map[uint64]common.Address{
@@ -87,7 +89,10 @@ type consensus struct {
 
 // Instance returnsan instance of the current consensus engine
 func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
-	addr := mapValidatorMgrToAddr[chainID.Uint64()]
+	addr, ok := mapValidatorMgrToAddr[chainID.Uint64()]
+	if !ok {
+		return nil, errNoAddress
+	}
 
 	manager, err := NewValidatorMgr(addr, contractBackend)
 	if err != nil {
