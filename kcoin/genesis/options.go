@@ -154,7 +154,7 @@ type validGenesisOptions struct {
 	ExtraData         string
 }
 
-func validateOptions(options *Options) (*validGenesisOptions, error) {
+func validateOptions(options Options) (*validGenesisOptions, error) {
 	network, err := mapNetwork(options.Network)
 	if err != nil {
 		return nil, err

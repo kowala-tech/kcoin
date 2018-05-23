@@ -50,7 +50,7 @@ func (gen *generator) AddContract(contract *contract) {
 	gen.contracts = append(gen.contracts, contract)
 }
 
-func Generate(opts *Options) (*core.Genesis, error) {
+func Generate(opts Options) (*core.Genesis, error) {
 	gen := NewGenerator()
 	gen.AddContract(MultiSigContract)
 	gen.AddContract(MiningTokenContract)
@@ -60,7 +60,7 @@ func Generate(opts *Options) (*core.Genesis, error) {
 	return gen.Generate(opts)
 }
 
-func (gen *generator) Generate(opts *Options) (*core.Genesis, error) {
+func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 	validOptions, err := validateOptions(opts)
 	if err != nil {
 		return nil, err
