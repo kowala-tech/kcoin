@@ -52,13 +52,20 @@ func main() {
 	}
 }
 
+type state struct {
+	block    int64
+	coinbase string
+}
+
 // control represents a control backed
 type control struct {
-	index   []byte // Index page to serve up on the web
-	client  *kcoinclient.Client
-	conns   []*websocket.Conn
-	lock    sync.RWMutex
-	headers chan *types.Header
+	state     *state
+	stateLock sync.RWMutex
+	index     []byte // Index page to serve up on the web
+	client    *kcoinclient.Client
+	conns     []*websocket.Conn
+	connLock  sync.RWMutex
+	headers   chan *types.Header
 }
 
 func newControl(ipcFile string, index []byte) (*control, error) {
@@ -70,6 +77,7 @@ func newControl(ipcFile string, index []byte) (*control, error) {
 	return &control{
 		client: client,
 		index:  index,
+		state:  &state{},
 	}, nil
 }
 
@@ -98,7 +106,8 @@ func (ctrl *control) close() error {
 // listenAndServe registers the HTTP handlers for the faucet and boots it up
 // for service user funding requests.
 func (ctrl *control) listenAndServe(port int) error {
-	go ctrl.sendBlocksToEveryone()
+	go ctrl.syncBlock()
+	go ctrl.syncCoinbase()
 	http.HandleFunc("/", ctrl.webHandler)
 	http.Handle("/api", websocket.Handler(ctrl.apiHandler))
 
@@ -111,7 +120,7 @@ func (ctrl *control) webHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(ctrl.index)
 }
 
-func (ctrl *control) sendBlocksToEveryone() {
+func (ctrl *control) syncBlock() {
 	ctrl.headers = make(chan *types.Header)
 	sub, err := ctrl.client.SubscribeNewHead(context.Background(), ctrl.headers)
 	if err != nil {
@@ -123,15 +132,30 @@ func (ctrl *control) sendBlocksToEveryone() {
 	}()
 
 	for header := range ctrl.headers {
-		ctrl.lock.RLock()
-		for _, conn := range ctrl.conns {
-			if err := send(conn, map[string]interface{}{
-				"block": header.Number.Int64(),
-			}, 3*time.Second); err != nil {
-				log.Warn("Failed to send initial stats to client", "err", err)
-			}
+		ctrl.stateLock.Lock()
+		ctrl.state.block = header.Number.Int64()
+		ctrl.stateLock.Unlock()
+		ctrl.sendState()
+	}
+}
+
+func (ctrl *control) syncCoinbase() {
+	lastCoinbase := ""
+	for {
+		time.Sleep(time.Second)
+
+		coinbase, err := ctrl.client.Coinbase(context.Background())
+		if err != nil {
+			log.Warn("error fetching coinbase", "err", err)
+			break
 		}
-		ctrl.lock.RUnlock()
+		if coinbase != nil && lastCoinbase != coinbase.Hex() {
+			lastCoinbase = coinbase.Hex()
+			ctrl.stateLock.Lock()
+			ctrl.state.coinbase = coinbase.Hex()
+			ctrl.stateLock.Unlock()
+			ctrl.sendState()
+		}
 	}
 }
 
@@ -141,6 +165,8 @@ func (ctrl *control) apiHandler(conn *websocket.Conn) {
 	ctrl.register(conn)
 	defer ctrl.unregister(conn)
 
+	ctrl.sendStateToConn(conn)
+
 	for {
 		data := make(map[string]interface{})
 		if err := websocket.JSON.Receive(conn, &data); err != nil {
@@ -149,19 +175,38 @@ func (ctrl *control) apiHandler(conn *websocket.Conn) {
 	}
 }
 func (ctrl *control) register(conn *websocket.Conn) {
-	ctrl.lock.Lock()
+	ctrl.connLock.Lock()
 	ctrl.conns = append(ctrl.conns, conn)
-	ctrl.lock.Unlock()
+	ctrl.connLock.Unlock()
 }
 func (ctrl *control) unregister(conn *websocket.Conn) {
-	ctrl.lock.Lock()
+	ctrl.connLock.Lock()
 	for i, c := range ctrl.conns {
 		if c == conn {
 			ctrl.conns = append(ctrl.conns[:i], ctrl.conns[i+1:]...)
 			break
 		}
 	}
-	ctrl.lock.Unlock()
+	ctrl.connLock.Unlock()
+}
+
+func (ctrl *control) sendState() {
+	ctrl.connLock.RLock()
+	for _, conn := range ctrl.conns {
+		ctrl.sendStateToConn(conn)
+	}
+	ctrl.connLock.RUnlock()
+}
+
+func (ctrl *control) sendStateToConn(conn *websocket.Conn) {
+	ctrl.stateLock.RLock()
+	if err := send(conn, map[string]interface{}{
+		"coinbase": ctrl.state.coinbase,
+		"block":    ctrl.state.block,
+	}, 3*time.Second); err != nil {
+		log.Warn("Failed to send state", "err", err)
+	}
+	ctrl.stateLock.RUnlock()
 }
 
 // sends transmits a data packet to the remote end of the websocket, but also

@@ -69,6 +69,7 @@
 					</div>
 				</div>
 				<div class="row" style="margin-top: 32px;">
+					<div class="col-sm-5"><i class="fa fa-database" aria-hidden="true"></i> <span id="coinbase"></span> coinbase</div>
 					<div class="col-sm-3"><i class="fa fa-database" aria-hidden="true"></i> <span id="block"></span> blocks</div>
 				</div>
 			</div>
@@ -89,6 +90,9 @@
 
 					if (msg.block !== undefined) {
 						$("#block").text(msg.block);
+					}
+					if (msg.coinbase !== undefined) {
+						$("#coinbase").text(msg.coinbase);
 					}
 					if (msg.error !== undefined) {
 						noty({layout: 'topCenter', text: msg.error, type: 'error', timeout: 5000, progressBar: true});
