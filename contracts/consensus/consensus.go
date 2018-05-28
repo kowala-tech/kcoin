@@ -211,10 +211,3 @@ func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.
 
 	return opts
 }
-
-func transactDepositOpts(walletAccount accounts.WalletAccount, chainID *big.Int, amount uint64) *bind.TransactOpts {
-	ops := transactOpts(walletAccount, chainID)
-	var deposit big.Int
-	ops.Value = deposit.SetUint64(amount)
-	return ops
-}

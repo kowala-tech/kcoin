@@ -268,7 +268,7 @@ func (ctx *Context) buildGenesis() error {
 			MaxNumValidators: 10,
 			FreezePeriod:     30,
 			BaseDeposit:      baseDeposit,
-			Validators: []genesis.Validator{genesis.Validator{
+			Validators: []genesis.Validator{{
 				Address: validatorAddr,
 				Deposit: baseDeposit,
 			}},
@@ -277,7 +277,7 @@ func (ctx *Context) buildGenesis() error {
 				Symbol:   "mUSD",
 				Cap:      1000,
 				Decimals: 18,
-				Holders:  []genesis.TokenHolder{genesis.TokenHolder{Address: validatorAddr, NumTokens: baseDeposit}},
+				Holders:  []genesis.TokenHolder{{Address: validatorAddr, NumTokens: baseDeposit}},
 			},
 		},
 		Governance: &genesis.GovernanceOpts{

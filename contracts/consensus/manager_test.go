@@ -46,7 +46,7 @@ func getDefaultOpts() genesis.Options {
 			MaxNumValidators: 10,
 			FreezePeriod:     30,
 			BaseDeposit:      baseDeposit,
-			Validators: []genesis.Validator{genesis.Validator{
+			Validators: []genesis.Validator{{
 				Address: tokenHolder.Address,
 				Deposit: tokenHolder.NumTokens,
 			}},
@@ -55,7 +55,7 @@ func getDefaultOpts() genesis.Options {
 				Symbol:   "mUSD",
 				Cap:      1000,
 				Decimals: 18,
-				Holders:  []genesis.TokenHolder{tokenHolder, genesis.TokenHolder{Address: getAddress(user).Hex(), NumTokens: baseDeposit * 3}},
+				Holders:  []genesis.TokenHolder{tokenHolder, {Address: getAddress(user).Hex(), NumTokens: baseDeposit * 3}},
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
@@ -69,19 +69,19 @@ func getDefaultOpts() genesis.Options {
 			BaseDeposit:   0,
 		},
 		PrefundedAccounts: []genesis.PrefundedAccount{
-			genesis.PrefundedAccount{
+			{
 				Address: tokenHolder.Address,
 				Balance: 10,
 			},
-			genesis.PrefundedAccount{
+			{
 				Address: getAddress(governor).Hex(),
 				Balance: 10,
 			},
-			genesis.PrefundedAccount{
+			{
 				Address: getAddress(user).Hex(),
 				Balance: 10,
 			},
-			genesis.PrefundedAccount{
+			{
 				Address: getAddress(deregistered).Hex(),
 				Balance: 10,
 			},
@@ -93,7 +93,6 @@ func getDefaultOpts() genesis.Options {
 
 type ValidatorMgrSuite struct {
 	suite.Suite
-	genesis      *core.Genesis
 	backend      *backends.SimulatedBackend
 	opts         genesis.Options
 	validatorMgr *consensus.ValidatorMgr

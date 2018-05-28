@@ -18,7 +18,6 @@ type contract struct {
 	runtimeCfg *runtime.Config
 	address    common.Address
 	storage    map[common.Hash]common.Hash
-	balance    *big.Int
 	code       []byte
 	deploy     func(contract *contract, opts *validGenesisOptions) error
 	postDeploy func(contract *contract, opts *validGenesisOptions) error

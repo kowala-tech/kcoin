@@ -1,12 +1,9 @@
 package genesis
 
-import (
-	"flag"
-)
-
+/*
 var update = flag.Bool("update", false, "update .golden files")
 
-/*
+
 func TestItWritesTheGeneratedFileToAWriter(t *testing.T) {
 	opt := Options{
 		Network:                        "test",

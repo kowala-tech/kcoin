@@ -289,33 +289,6 @@ func mapConsensusEngine(consensus string) (string, error) {
 	return consensus, nil
 }
 
-func mapMaxNumValidators(s string) (*big.Int, error) {
-	if s = strings.TrimSpace(s); s == "" {
-		return nil, ErrEmptyMaxNumValidators
-	}
-
-	numValidators, ok := new(big.Int).SetString(s, 0)
-	if !ok {
-		return nil, ErrInvalidMaxNumValidators
-	}
-
-	return numValidators, nil
-}
-
-func mapUnbondingPeriod(uP string) (*big.Int, error) {
-	var text string
-	if text = strings.TrimSpace(uP); text == "" {
-		return nil, ErrEmptyFreezePeriod
-	}
-
-	unbondingPeriod, ok := new(big.Int).SetString(text, 0)
-	if !ok {
-		return nil, ErrInvalidFreezePeriod
-	}
-
-	return unbondingPeriod, nil
-}
-
 func mapWalletAddress(a string) (*common.Address, error) {
 	stringAddr := a
 
