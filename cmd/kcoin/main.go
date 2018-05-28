@@ -14,8 +14,8 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/console"
 	"github.com/kowala-tech/kcoin/internal/debug"
-	"github.com/kowala-tech/kcoin/kcoin"
-	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/knode"
+	"github.com/kowala-tech/kcoin/knodeclient"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/metrics"
 	"github.com/kowala-tech/kcoin/node"
@@ -48,7 +48,6 @@ var (
 		utils.DashboardAddrFlag,
 		utils.DashboardPortFlag,
 		utils.DashboardRefreshFlag,
-		utils.DashboardAssetsFlag,
 		utils.TxPoolNoLocalsFlag,
 		utils.TxPoolJournalFlag,
 		utils.TxPoolRejournalFlag,
@@ -62,10 +61,13 @@ var (
 		utils.FastSyncFlag,
 		utils.LightModeFlag,
 		utils.SyncModeFlag,
+		utils.GCModeFlag,
 		utils.LightServFlag,
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
 		utils.CacheFlag,
+		utils.CacheDatabaseFlag,
+		utils.CacheGCFlag,
 		utils.TrieCacheGenFlag,
 		utils.ListenPortFlag,
 		utils.MaxPeersFlag,
@@ -123,6 +125,8 @@ func init() {
 		initCommand,
 		importCommand,
 		exportCommand,
+		importPreimagesCommand,
+		exportPreimagesCommand,
 		copydbCommand,
 		removedbCommand,
 		dumpCommand,
@@ -153,7 +157,6 @@ func init() {
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
-
 		// Start system runtime metrics collection
 		go metrics.CollectProcessMetrics(
 			3*time.Second,
@@ -244,9 +247,9 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err != nil {
 			utils.Fatalf("Failed to attach to self: %v", err)
 		}
-		stateReader := kcoinclient.NewClient(rpcClient)
+		stateReader := knodeclient.NewClient(rpcClient)
 
-		// Open and self derive any wallets already attached
+		// Open any wallets already attached
 		for _, wallet := range stack.AccountManager().Wallets() {
 			if err := wallet.Open(""); err != nil {
 				log.Warn("Failed to open wallet", "url", wallet.URL(), "err", err)
@@ -278,7 +281,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.ValidationEnabledFlag.Name) {
 		// Validation only makes sense if a full Kowala node is running
-		var kowala *kcoin.Kowala
+		var kowala *knode.Kowala
 		if err := stack.Service(&kowala); err != nil {
 			utils.Fatalf("kowala service not running: %v", err)
 		}

@@ -58,6 +58,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.TestnetFlag,
 			utils.DevModeFlag,
 			utils.SyncModeFlag,
+			utils.GCModeFlag,
 			utils.KowalaStatsURLFlag,
 			utils.IdentityFlag,
 			utils.LightServFlag,
@@ -94,6 +95,8 @@ var AppHelpFlagGroups = []flagGroup{
 		Name: "PERFORMANCE TUNING",
 		Flags: []cli.Flag{
 			utils.CacheFlag,
+			utils.CacheDatabaseFlag,
+			utils.CacheGCFlag,
 			utils.TrieCacheGenFlag,
 		},
 	},

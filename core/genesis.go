@@ -14,7 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/common/math"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rlp"
@@ -128,7 +128,7 @@ func (e *GenesisMismatchError) Error() string {
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db database.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return params.AllTendermintProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
@@ -142,22 +142,21 @@ func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConf
 		} else {
 			log.Info("Writing custom genesis block")
 		}
-		block, err := genesis.Commit(db)
 
-		// @TODO (rgeraldes) - since we removed the difficulty calculation inside
-		// commit, there's the possibility that the method returns a nil block
-		// in case of an error, and that will trigger a segmentation violation
-		// while trying to get the block.Hash(), block is nil at this point.
-		log.Warn("Error information", "err", err)
+		block, err := genesis.Commit(db)
+		if err != nil {
+			log.Warn("Error information", "err", err)
+			return nil, common.Hash{}, err
+		}
+
 		return genesis.Config, block.Hash(), err
 	}
 
 	// Check whether the genesis block is already written.
 	if genesis != nil {
-		block, _ := genesis.ToBlock()
-		hash := block.Hash()
+		hash := genesis.ToBlock(nil).Hash()
 		if hash != stored {
-			return genesis.Config, block.Hash(), &GenesisMismatchError{stored, hash}
+			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
 		}
 	}
 
@@ -185,7 +184,6 @@ func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConf
 	if height == missingNumber {
 		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
 	}
-
 	compatErr := storedcfg.CheckCompatible(newcfg, height)
 	if compatErr != nil && height != 0 && compatErr.RewindTo != 0 {
 		return newcfg, stored, compatErr
@@ -206,9 +204,12 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	}
 }
 
-// ToBlock creates the block and state of a genesis specification.
-func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
-	db, _ := kcoindb.NewMemDatabase()
+// ToBlock creates the genesis block and writes state of a genesis specification
+// to the given database (or discards it if nil).
+func (g *Genesis) ToBlock(db database.Database) *types.Block {
+	if db == nil {
+		db, _ = database.NewMemDatabase()
+	}
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 	for addr, account := range g.Alloc {
 		statedb.AddBalance(addr, account.Balance)
@@ -224,26 +225,33 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 		Time:       new(big.Int).SetUint64(g.Timestamp),
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
-		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
-		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
+		GasLimit:   g.GasLimit,
+		GasUsed:    g.GasUsed,
 		Coinbase:   g.Coinbase,
 		Root:       root,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
 	}
-	return types.NewBlock(head, nil, nil, nil), statedb
+
+	_, err := statedb.CommitTo(db, false)
+	if err != nil {
+		log.Error("can't store Genesis into the stateDB:", "err", err)
+	}
+	err = statedb.Database().TrieDB().Commit(root, true)
+	if err != nil {
+		log.Error("can't store Genesis into the state TrieDB:", "err", err)
+	}
+
+	return types.NewBlock(head, nil, nil, nil)
 }
 
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
-func (g *Genesis) Commit(db kcoindb.Database) (*types.Block, error) {
-	block, statedb := g.ToBlock()
+func (g *Genesis) Commit(db database.Database) (*types.Block, error) {
+	block := g.ToBlock(db)
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
-	}
-	if _, err := statedb.CommitTo(db, false); err != nil {
-		return nil, fmt.Errorf("cannot write state: %v", err)
 	}
 	if err := WriteBlock(db, block); err != nil {
 		return nil, err
@@ -269,7 +277,7 @@ func (g *Genesis) Commit(db kcoindb.Database) (*types.Block, error) {
 
 // MustCommit writes the genesis block and state to db, panicking on error.
 // The block is committed as the canonical head block.
-func (g *Genesis) MustCommit(db kcoindb.Database) *types.Block {
+func (g *Genesis) MustCommit(db database.Database) *types.Block {
 	block, err := g.Commit(db)
 	if err != nil {
 		panic(err)
@@ -278,7 +286,7 @@ func (g *Genesis) MustCommit(db kcoindb.Database) *types.Block {
 }
 
 // GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
-func GenesisBlockForTesting(db kcoindb.Database, addr common.Address, balance *big.Int) *types.Block {
+func GenesisBlockForTesting(db database.Database, addr common.Address, balance *big.Int) *types.Block {
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	return g.MustCommit(db)
 }

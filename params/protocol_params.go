@@ -1,8 +1,14 @@
 package params
 
-import "math/big"
+var (
+	TargetGasLimit uint64 = GenesisGasLimit // The artificial target
+)
 
 const (
+	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
+	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
+
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
@@ -58,11 +64,4 @@ const (
 	PreCommitDuration      uint64 = 200
 	PreCommitDeltaDuration uint64 = 25
 	BlockTime              uint64 = 1000
-)
-
-var (
-	GasLimitBoundDivisor = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          = big.NewInt(5000)                  // Minimum the gas limit may ever be.
-	GenesisGasLimit      = big.NewInt(4712388)               // Gas limit of the Genesis block.
-	TargetGasLimit       = new(big.Int).Set(GenesisGasLimit) // The artificial target
 )

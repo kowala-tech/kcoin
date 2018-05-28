@@ -10,6 +10,8 @@ import (
 
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/log/term"
+	"github.com/kowala-tech/kcoin/metrics"
+	"github.com/kowala-tech/kcoin/metrics/exp"
 	colorable "github.com/mattn/go-colorable"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -111,6 +113,10 @@ func Setup(ctx *cli.Context) error {
 
 	// pprof server
 	if ctx.GlobalBool(pprofFlag.Name) {
+		// Hook go-metrics into expvar on any /debug/metrics request, load all vars
+		// from the registry into expvar, and execute regular expvar handler.
+		exp.Exp(metrics.DefaultRegistry)
+
 		address := fmt.Sprintf("%s:%d", ctx.GlobalString(pprofAddrFlag.Name), ctx.GlobalInt(pprofPortFlag.Name))
 		go func() {
 			log.Info("Starting pprof server", "addr", fmt.Sprintf("http://%s/debug/pprof", address))

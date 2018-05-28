@@ -9,8 +9,8 @@ import (
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/log"
 )
 
@@ -49,8 +49,8 @@ type ChainIndexerChain interface {
 // after an entire section has been finished or in case of rollbacks that might
 // affect already finished sections.
 type ChainIndexer struct {
-	chainDb  kcoindb.Database     // Chain database to index the data from
-	indexDb  kcoindb.Database     // Prefixed table-view of the db to write index metadata into
+	chainDb  database.Database   // Chain database to index the data from
+	indexDb  database.Database   // Prefixed table-view of the db to write index metadata into
 	backend  ChainIndexerBackend // Background processor generating the index data content
 	children []*ChainIndexer     // Child indexers to cascade chain updates to
 
@@ -74,7 +74,7 @@ type ChainIndexer struct {
 // NewChainIndexer creates a new chain indexer to do background processing on
 // chain segments of a given size after certain number of confirmations passed.
 // The throttling parameter might be used to prevent database thrashing.
-func NewChainIndexer(chainDb, indexDb kcoindb.Database, backend ChainIndexerBackend, section, confirm uint64, throttling time.Duration, kind string) *ChainIndexer {
+func NewChainIndexer(chainDb, indexDb database.Database, backend ChainIndexerBackend, section, confirm uint64, throttling time.Duration, kind string) *ChainIndexer {
 	c := &ChainIndexer{
 		chainDb:     chainDb,
 		indexDb:     indexDb,
@@ -187,6 +187,9 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainE
 			if header.ParentHash != prevHash {
 				// Reorg to the common ancestor (might not exist in light sync mode, skip reorg then)
 				// TODO(karalabe, zsfelfoldi): This seems a bit brittle, can we detect this case explicitly?
+
+				// TODO(karalabe): This operation is expensive and might block, causing the event system to
+				// potentially also lock up. We need to do with on a different thread somehow.
 				if h := FindCommonAncestor(c.chainDb, prevHeader, header); h != nil {
 					c.newHead(h.Number.Uint64(), true)
 				}
@@ -214,7 +217,7 @@ func (c *ChainIndexer) newHead(head uint64, reorg bool) {
 		if changed < c.storedSections {
 			c.setValidSections(changed)
 		}
-		// Update the new head number to te finalized section end and notify children
+		// Update the new head number to the finalized section end and notify children
 		head = changed * c.sectionSize
 
 		if head < c.cascadedHead {

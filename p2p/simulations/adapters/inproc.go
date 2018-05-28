@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
 	"github.com/kowala-tech/kcoin/p2p/discover"
@@ -82,7 +83,8 @@ func (s *SimAdapter) NewNode(config *NodeConfig) (Node, error) {
 			Dialer:          s,
 			EnableMsgEvents: true,
 		},
-		NoUSB: true,
+		NoUSB:  true,
+		Logger: log.New("node.id", id.String()),
 	})
 	if err != nil {
 		return nil, err

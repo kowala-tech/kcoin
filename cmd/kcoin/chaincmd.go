@@ -15,9 +15,9 @@ import (
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/knode/downloader"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/trie"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -51,6 +51,9 @@ It expects the genesis file as argument.`,
 			utils.DataDirFlag,
 			utils.CacheFlag,
 			utils.LightModeFlag,
+			utils.GCModeFlag,
+			utils.CacheDatabaseFlag,
+			utils.CacheGCFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -76,6 +79,34 @@ Requires a first argument of the file to write to.
 Optional second and third arguments control the first and
 last block to write. In this mode, the file will be appended
 if already existing.`,
+	}
+	importPreimagesCommand = cli.Command{
+		Action:    utils.MigrateFlags(importPreimages),
+		Name:      "import-preimages",
+		Usage:     "Import the preimage database from an RLP stream",
+		ArgsUsage: "<datafile>",
+		Flags: []cli.Flag{
+			utils.DataDirFlag,
+			utils.CacheFlag,
+			utils.LightModeFlag,
+		},
+		Category: "BLOCKCHAIN COMMANDS",
+		Description: `
+	The import-preimages command imports hash preimages from an RLP encoded stream.`,
+	}
+	exportPreimagesCommand = cli.Command{
+		Action:    utils.MigrateFlags(exportPreimages),
+		Name:      "export-preimages",
+		Usage:     "Export the preimage database into an RLP stream",
+		ArgsUsage: "<dumpfile>",
+		Flags: []cli.Flag{
+			utils.DataDirFlag,
+			utils.CacheFlag,
+			utils.LightModeFlag,
+		},
+		Category: "BLOCKCHAIN COMMANDS",
+		Description: `
+The export-preimages command export hash preimages to an RLP encoded stream`,
 	}
 	copydbCommand = cli.Command{
 		Action:    utils.MigrateFlags(copyDb),
@@ -187,7 +218,7 @@ func importChain(ctx *cli.Context) error {
 
 	if len(ctx.Args()) == 1 {
 		if err := utils.ImportChain(chain, ctx.Args().First()); err != nil {
-			utils.Fatalf("Import error: %v", err)
+			log.Error("Import error", "err", err)
 		}
 	} else {
 		for _, arg := range ctx.Args() {
@@ -196,17 +227,24 @@ func importChain(ctx *cli.Context) error {
 			}
 		}
 	}
-
+	chain.Stop()
 	fmt.Printf("Import done in %v.\n\n", time.Since(start))
 
 	// Output pre-compaction stats mostly to see the import trashing
-	db := chainDb.(*kcoindb.LDBDatabase)
+	db := chainDb.(*database.LDBDatabase)
 
 	stats, err := db.LDB().GetProperty("leveldb.stats")
 	if err != nil {
 		utils.Fatalf("Failed to read database stats: %v", err)
 	}
 	fmt.Println(stats)
+
+	ioStats, err := db.LDB().GetProperty("leveldb.iostats")
+	if err != nil {
+		utils.Fatalf("Failed to read database iostats: %v", err)
+	}
+	fmt.Println(ioStats)
+
 	fmt.Printf("Trie cache misses:  %d\n", trie.CacheMisses())
 	fmt.Printf("Trie cache unloads: %d\n\n", trie.CacheUnloads())
 
@@ -236,6 +274,12 @@ func importChain(ctx *cli.Context) error {
 		utils.Fatalf("Failed to read database stats: %v", err)
 	}
 	fmt.Println(stats)
+
+	ioStats, err = db.LDB().GetProperty("leveldb.iostats")
+	if err != nil {
+		utils.Fatalf("Failed to read database iostats: %v", err)
+	}
+	fmt.Println(ioStats)
 
 	return nil
 }
@@ -268,7 +312,39 @@ func exportChain(ctx *cli.Context) error {
 	if err != nil {
 		utils.Fatalf("Export error: %v\n", err)
 	}
-	fmt.Printf("Export done in %v", time.Since(start))
+	fmt.Printf("Export done in %v\n", time.Since(start))
+	return nil
+}
+
+// importPreimages imports preimage data from the specified file.
+func importPreimages(ctx *cli.Context) error {
+	if len(ctx.Args()) < 1 {
+		utils.Fatalf("This command requires an argument.")
+	}
+	stack := makeFullNode(ctx)
+	diskdb := utils.MakeChainDatabase(ctx, stack).(*database.LDBDatabase)
+
+	start := time.Now()
+	if err := utils.ImportPreimages(diskdb, ctx.Args().First()); err != nil {
+		utils.Fatalf("Export error: %v\n", err)
+	}
+	fmt.Printf("Export done in %v\n", time.Since(start))
+	return nil
+}
+
+// exportPreimages dumps the preimage data to specified json file in streaming way.
+func exportPreimages(ctx *cli.Context) error {
+	if len(ctx.Args()) < 1 {
+		utils.Fatalf("This command requires an argument.")
+	}
+	stack := makeFullNode(ctx)
+	diskdb := utils.MakeChainDatabase(ctx, stack).(*database.LDBDatabase)
+
+	start := time.Now()
+	if err := utils.ExportPreimages(diskdb, ctx.Args().First()); err != nil {
+		utils.Fatalf("Export error: %v\n", err)
+	}
+	fmt.Printf("Export done in %v\n", time.Since(start))
 	return nil
 }
 
@@ -285,7 +361,7 @@ func copyDb(ctx *cli.Context) error {
 	dl := downloader.New(syncmode, chainDb, new(event.TypeMux), chain, nil, nil)
 
 	// Create a source peer to satisfy downloader requests from
-	db, err := kcoindb.NewLDBDatabase(ctx.Args().First(), ctx.GlobalInt(utils.CacheFlag.Name), 256)
+	db, err := database.NewLDBDatabase(ctx.Args().First(), ctx.GlobalInt(utils.CacheFlag.Name), 256)
 	if err != nil {
 		return err
 	}
@@ -312,7 +388,7 @@ func copyDb(ctx *cli.Context) error {
 	// Compact the entire database to remove any sync overhead
 	start = time.Now()
 	fmt.Println("Compacting entire database...")
-	if err = chainDb.(*kcoindb.LDBDatabase).LDB().CompactRange(util.Range{}); err != nil {
+	if err = chainDb.(*database.LDBDatabase).LDB().CompactRange(util.Range{}); err != nil {
 		utils.Fatalf("Compaction failed: %v", err)
 	}
 	fmt.Printf("Compaction done in %v.\n\n", time.Since(start))

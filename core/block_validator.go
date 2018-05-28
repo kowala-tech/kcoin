@@ -1,26 +1,8 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
 	"fmt"
-	"math/big"
 
-	"github.com/kowala-tech/kcoin/common/math"
 	"github.com/kowala-tech/kcoin/consensus"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
@@ -52,11 +34,14 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	// Check whether the block's known, and if not, that it's linkable
-	if v.bc.HasBlockAndState(block.Hash()) {
+	if v.bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
 		return ErrKnownBlock
 	}
-	if !v.bc.HasBlockAndState(block.ParentHash()) {
-		return consensus.ErrUnknownAncestor
+	if !v.bc.HasBlockAndState(block.ParentHash(), block.NumberU64()-1) {
+		if !v.bc.HasBlock(block.ParentHash(), block.NumberU64()-1) {
+			return consensus.ErrUnknownAncestor
+		}
+		return consensus.ErrPrunedAncestor
 	}
 	// Header validity is known at this point, check transactions
 	header := block.Header()
@@ -73,10 +58,10 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 // transition, such as amount of used gas, the receipt roots and the state root
 // itself. ValidateState returns a database batch if the validation was a success
 // otherwise nil and an error is returned.
-func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
+func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas uint64) error {
 	header := block.Header()
-	if block.GasUsed().Cmp(usedGas) != 0 {
-		return fmt.Errorf("invalid gas used (remote: %v local: %v)", block.GasUsed(), usedGas)
+	if block.GasUsed() != usedGas {
+		return fmt.Errorf("invalid gas used (remote: %d local: %d)", block.GasUsed(), usedGas)
 	}
 	// Validate the received block's bloom with the one derived from the generated receipts.
 	// For valid blocks this should always validate to true.
@@ -98,17 +83,13 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 }
 
 // CalcGasLimit computes the gas limit of the next block after parent.
-// The result may be modified by the caller.
 // This is miner strategy, not consensus protocol.
-func CalcGasLimit(parent *types.Block) *big.Int {
+func CalcGasLimit(parent *types.Block) uint64 {
 	// contrib = (parentGasUsed * 3 / 2) / 1024
-	contrib := new(big.Int).Mul(parent.GasUsed(), big.NewInt(3))
-	contrib = contrib.Div(contrib, big.NewInt(2))
-	contrib = contrib.Div(contrib, params.GasLimitBoundDivisor)
+	contrib := (parent.GasUsed() + parent.GasUsed()/2) / params.GasLimitBoundDivisor
 
 	// decay = parentGasLimit / 1024 -1
-	decay := new(big.Int).Div(parent.GasLimit(), params.GasLimitBoundDivisor)
-	decay.Sub(decay, big.NewInt(1))
+	decay := parent.GasLimit()/params.GasLimitBoundDivisor - 1
 
 	/*
 		strategy: gasLimit of block-to-mine is set based on parent's
@@ -117,15 +98,17 @@ func CalcGasLimit(parent *types.Block) *big.Int {
 		at that usage) the amount increased/decreased depends on how far away
 		from parentGasLimit * (2/3) parentGasUsed is.
 	*/
-	gl := new(big.Int).Sub(parent.GasLimit(), decay)
-	gl = gl.Add(gl, contrib)
-	gl.Set(math.BigMax(gl, params.MinGasLimit))
-
+	limit := parent.GasLimit() - decay + contrib
+	if limit < params.MinGasLimit {
+		limit = params.MinGasLimit
+	}
 	// however, if we're now below the target (TargetGasLimit) we increase the
 	// limit as much as we can (parentGasLimit / 1024 -1)
-	if gl.Cmp(params.TargetGasLimit) < 0 {
-		gl.Add(parent.GasLimit(), decay)
-		gl.Set(math.BigMin(gl, params.TargetGasLimit))
+	if limit < params.TargetGasLimit {
+		limit = parent.GasLimit() + decay
+		if limit > params.TargetGasLimit {
+			limit = params.TargetGasLimit
+		}
 	}
-	return gl
+	return limit
 }

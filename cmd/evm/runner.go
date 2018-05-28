@@ -18,7 +18,7 @@ import (
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/core/vm/runtime"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/params"
 	cli "gopkg.in/urfave/cli.v1"
@@ -80,10 +80,12 @@ func runCmd(ctx *cli.Context) error {
 	}
 	if ctx.GlobalString(GenesisFlag.Name) != "" {
 		gen := readGenesis(ctx.GlobalString(GenesisFlag.Name))
-		_, statedb = gen.ToBlock()
+		db, _ := database.NewMemDatabase()
+		genesis := gen.ToBlock(db)
+		statedb, _ = state.New(genesis.Root(), state.NewDatabase(db))
 		chainConfig = gen.Config
 	} else {
-		db, _ := kcoindb.NewMemDatabase()
+		db, _ := database.NewMemDatabase()
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
 	}
 	if ctx.GlobalString(SenderFlag.Name) != "" {
@@ -143,9 +145,8 @@ func runCmd(ctx *cli.Context) error {
 		GasPrice: utils.GlobalBig(ctx, PriceFlag.Name),
 		Value:    utils.GlobalBig(ctx, ValueFlag.Name),
 		EVMConfig: vm.Config{
-			Tracer:             tracer,
-			Debug:              ctx.GlobalBool(DebugFlag.Name) || ctx.GlobalBool(MachineFlag.Name),
-			DisableGasMetering: ctx.GlobalBool(DisableGasMeteringFlag.Name),
+			Tracer: tracer,
+			Debug:  ctx.GlobalBool(DebugFlag.Name) || ctx.GlobalBool(MachineFlag.Name),
 		},
 	}
 

@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/knodeclient"
 
 	"github.com/kowala-tech/kcoin/log"
 	"golang.org/x/net/websocket"
@@ -55,7 +55,7 @@ func main() {
 // control represents a control backed
 type control struct {
 	index   []byte // Index page to serve up on the web
-	client  *kcoinclient.Client
+	client  *knodeclient.Client
 	conns   []*websocket.Conn
 	lock    sync.RWMutex
 	headers chan *types.Header
@@ -74,12 +74,12 @@ func newControl(ipcFile string, index []byte) (*control, error) {
 }
 
 // dial dials to the kcoin process. It retries every second up to ten times.
-func dial(ipcFile string) (*kcoinclient.Client, error) {
+func dial(ipcFile string) (*knodeclient.Client, error) {
 	attempts := 10
 	var err error
-	var client *kcoinclient.Client
+	var client *knodeclient.Client
 	for attempts > 0 {
-		client, err = kcoinclient.Dial(ipcFile)
+		client, err = knodeclient.Dial(ipcFile)
 		if err == nil {
 			return client, nil
 		}
