@@ -54,10 +54,8 @@ func (tendermint *Tendermint) Prepare(chain consensus.ChainReader, header *types
 }
 
 func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
-	if tendermint.config.Rewarded {
-		if err := AccumulateRewards(state, header); err != nil {
-			return nil, err
-		}
+	if err := AccumulateRewards(state, header); err != nil {
+		return nil, err
 	}
 
 	// Accumulate any block and uncle rewards and commit the final state root

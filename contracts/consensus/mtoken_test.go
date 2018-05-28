@@ -1,4 +1,4 @@
-package consensus
+package consensus_test
 
 import (
 	"math/big"
@@ -8,6 +8,7 @@ import (
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/contracts/consensus"
 	"github.com/kowala-tech/kcoin/contracts/consensus/testfiles"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/crypto"
@@ -26,7 +27,7 @@ var (
 type MiningTokenSuite struct {
 	suite.Suite
 	backend     *backends.SimulatedBackend
-	miningToken *MiningToken
+	miningToken *consensus.MiningToken
 }
 
 func TestMiningTokenSuite(t *testing.T) {
@@ -50,7 +51,7 @@ func (suite *MiningTokenSuite) BeforeTest(suiteName, testName string) {
 
 	// MiningToken instance
 	transactOpts := bind.NewKeyedTransactor(owner)
-	_, _, mToken, err := DeployMiningToken(transactOpts, backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
+	_, _, mToken, err := consensus.DeployMiningToken(transactOpts, backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
 	req.NoError(err)
 	req.NotNil(mToken)
 	suite.miningToken = mToken
@@ -69,7 +70,7 @@ func (suite *MiningTokenSuite) TestDeploy() {
 
 	// MiningToken instance
 	transactOpts := bind.NewKeyedTransactor(owner)
-	_, _, miningToken, err := DeployMiningToken(transactOpts, backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
+	_, _, miningToken, err := consensus.DeployMiningToken(transactOpts, backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
 	req.NoError(err)
 	req.NotNil(miningToken)
 
@@ -201,7 +202,7 @@ func (suite *MiningTokenSuite) TestTransfer_CustomFallback_Compatible() {
 	// transfer part of the funds
 	value := new(big.Int).Div(numTokens, common.Big2)
 	transferOpts := bind.NewKeyedTransactor(user)
-	_, err = suite.miningToken.Transfer(transferOpts, contractAddr, value, defaultData, testfiles.CustomFallback)
+	_, err = suite.miningToken.Transfer(transferOpts, contractAddr, value, consensus.DefaultData, testfiles.CustomFallback)
 	req.NoError(err)
 
 	suite.backend.Commit()
@@ -233,6 +234,6 @@ func (suite *MiningTokenSuite) TestTransfer_CustomFallback_Incompatible() {
 
 	// transfer funds
 	transferOpts := bind.NewKeyedTransactor(user)
-	_, err = suite.miningToken.Transfer(transferOpts, contractAddr, numTokens, defaultData, testfiles.CustomFallback)
+	_, err = suite.miningToken.Transfer(transferOpts, contractAddr, numTokens, consensus.DefaultData, testfiles.CustomFallback)
 	req.Error(err, "The OracleMgr contract does not support the mining token")
 }

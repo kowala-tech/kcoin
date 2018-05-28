@@ -258,25 +258,39 @@ func (ctx *Context) triggerGenesisValidation() error {
 }
 
 func (ctx *Context) buildGenesis() error {
-	newGenesis, err := genesis.GenerateGenesis(
-		genesis.Options{
-			Network:                        "test",
-			MaxNumValidators:               "5",
-			UnbondingPeriod:                "5",
-			AccountAddressGenesisValidator: ctx.genesisValidatorAccount.Address.Hex(),
-			SmartContractsOwner:            "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-			PrefundedAccounts: []genesis.PrefundedAccount{
-				{
-					AccountAddress: ctx.genesisValidatorAccount.Address.Hex(),
-					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
-				},
-				{
-					AccountAddress: ctx.seederAccount.Address.Hex(),
-					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
-				},
+	validatorAddr := ctx.genesisValidatorAccount.Address.Hex()
+	baseDeposit := uint64(10000000) // 10000000 mUSD
+
+	newGenesis, err := genesis.Generate(genesis.Options{
+		Network: "test",
+		Consensus: &genesis.ConsensusOpts{
+			Engine:           "tendermint",
+			MaxNumValidators: 10,
+			FreezePeriod:     30,
+			BaseDeposit:      baseDeposit,
+			Validators: []genesis.Validator{genesis.Validator{
+				Address: validatorAddr,
+				Deposit: baseDeposit,
+			}},
+			MiningToken: &genesis.MiningTokenOpts{
+				Name:     "mUSD",
+				Symbol:   "mUSD",
+				Cap:      1000,
+				Decimals: 18,
+				Holders:  []genesis.TokenHolder{genesis.TokenHolder{Address: validatorAddr, NumTokens: baseDeposit}},
 			},
 		},
-	)
+		Governance: &genesis.GovernanceOpts{
+			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+			Governors:        []string{"0x259be75d96876f2ada3d202722523e9cd4dd917d"},
+			NumConfirmations: 1,
+		},
+		DataFeedSystem: &genesis.DataFeedSystemOpts{
+			MaxNumOracles: 10,
+			FreezePeriod:  0,
+			BaseDeposit:   0,
+		},
+	})
 	if err != nil {
 		return err
 	}

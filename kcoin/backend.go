@@ -191,7 +191,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kcoindb.Da
 // CreateConsensusEngine creates the required type of consensus engine instance for an Kowala service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database) engine.Engine {
 	// @TODO (rgeraldes) - complete with tendermint config if necessary, set rewarded to true
-	engine := tendermint.New(&params.TendermintConfig{Rewarded: false})
+	engine := tendermint.New(&params.TendermintConfig{})
 	return engine
 }
 

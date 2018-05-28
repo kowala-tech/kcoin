@@ -21,7 +21,7 @@ import (
 const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 
 var (
-	defaultData = []byte("not_zero")
+	DefaultData = []byte("not_zero")
 
 	errNoAddress = errors.New("there isn't an address for the provided chain ID")
 )

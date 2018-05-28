@@ -146,7 +146,7 @@ func getConsensusEngine(consensusEngine string) *params.TendermintConfig {
 
 	switch consensusEngine {
 	case TendermintConsensus:
-		consensus = &params.TendermintConfig{Rewarded: true}
+		consensus = &params.TendermintConfig{}
 	}
 
 	return consensus

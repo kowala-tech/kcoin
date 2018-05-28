@@ -1019,7 +1019,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	//if !ctx.GlobalBool(FakePoWFlag.Name) {
 	//	engine = ethash.New("", 1, 0, "", 1, 0)
 	//}
-	engine := tendermint.New(&params.TendermintConfig{Rewarded: false})
+	engine := tendermint.New(&params.TendermintConfig{})
 	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)

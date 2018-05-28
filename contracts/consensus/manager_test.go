@@ -1,4 +1,4 @@
-package consensus
+package consensus_test
 
 import (
 	"crypto/ecdsa"
@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/contracts/consensus"
 	"github.com/kowala-tech/kcoin/contracts/ownership"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/crypto"
@@ -31,14 +32,14 @@ var (
 	secondsPerDay    = new(big.Int).SetUint64(86400)
 )
 
-func getDefaultOpts() *genesis.Options {
+func getDefaultOpts() genesis.Options {
 	baseDeposit := uint64(20)
 	tokenHolder := genesis.TokenHolder{
 		Address:   getAddress(validator).Hex(),
 		NumTokens: baseDeposit,
 	}
 
-	opts := &genesis.Options{
+	opts := genesis.Options{
 		Network: "test",
 		Consensus: &genesis.ConsensusOpts{
 			Engine:           "tendermint",
@@ -92,11 +93,12 @@ func getDefaultOpts() *genesis.Options {
 
 type ValidatorMgrSuite struct {
 	suite.Suite
+	genesis      *core.Genesis
 	backend      *backends.SimulatedBackend
-	opts         *genesis.Options
-	validatorMgr *ValidatorMgr
+	opts         genesis.Options
+	validatorMgr *consensus.ValidatorMgr
 	multiSig     *ownership.MultiSigWallet
-	miningToken  *MiningToken
+	miningToken  *consensus.MiningToken
 }
 
 func TestValidatorMgrSuite(t *testing.T) {
@@ -132,7 +134,7 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	suite.backend = backend
 
 	// ValidatorMgr instance
-	mgr, err := NewValidatorMgr(validatorMgrAddr, backend)
+	mgr, err := consensus.NewValidatorMgr(validatorMgrAddr, backend)
 	req.NoError(err)
 	req.NotNil(mgr)
 	suite.validatorMgr = mgr
@@ -144,7 +146,7 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	suite.multiSig = multiSig
 
 	// MiningToken instance
-	mToken, err := NewMiningToken(tokenAddr, backend)
+	mToken, err := consensus.NewMiningToken(tokenAddr, backend)
 	req.NoError(err)
 	req.NotNil(mToken)
 	suite.miningToken = mToken
@@ -164,7 +166,7 @@ func (suite *ValidatorMgrSuite) TestDeploy() {
 	freezePeriod := new(big.Int).SetUint64(100)
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, mgr, err := DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr)
+	_, _, mgr, err := consensus.DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr)
 	req.NoError(err)
 	req.NotNil(mgr)
 
@@ -205,7 +207,7 @@ func (suite *ValidatorMgrSuite) TestDeploy_MaxNumValidatorsEqualZero() {
 	freezePeriod := new(big.Int).SetUint64(100)
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, _, err := DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr)
+	_, _, _, err := consensus.DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr)
 	req.Error(err, "maximum number of validators cannot be zero")
 }
 
@@ -540,7 +542,7 @@ func (suite *ValidatorMgrSuite) mintTokens(governor *ecdsa.PrivateKey, to *ecdsa
 	req := suite.Require()
 
 	// mint enough tokens to the new user (submit & confirm)
-	tokenABI, err := abi.JSON(strings.NewReader(MiningTokenABI))
+	tokenABI, err := abi.JSON(strings.NewReader(consensus.MiningTokenABI))
 	req.NoError(err)
 	req.NotNil(tokenABI)
 
@@ -559,7 +561,7 @@ func (suite *ValidatorMgrSuite) mintTokens(governor *ecdsa.PrivateKey, to *ecdsa
 
 func (suite *ValidatorMgrSuite) registerValidator(user *ecdsa.PrivateKey, deposit *big.Int) error {
 	transferOpts := bind.NewKeyedTransactor(user)
-	_, err := suite.miningToken.Transfer(transferOpts, validatorMgrAddr, deposit, []byte("not_zero"), RegistrationHandler)
+	_, err := suite.miningToken.Transfer(transferOpts, validatorMgrAddr, deposit, []byte("not_zero"), consensus.RegistrationHandler)
 	return err
 }
 
@@ -579,7 +581,7 @@ func (suite *ValidatorMgrSuite) pauseService() {
 	req := suite.Require()
 
 	// pause the service
-	validatorMgrABI, err := abi.JSON(strings.NewReader(ValidatorMgrABI))
+	validatorMgrABI, err := abi.JSON(strings.NewReader(consensus.ValidatorMgrABI))
 	req.NoError(err)
 	req.NotNil(validatorMgrABI)
 
