@@ -21,7 +21,7 @@ var (
 
 	// TestnetChainConfig contains the chain parameters to run a node on the test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID:    big.NewInt(519374298533),
+		ChainID:    big.NewInt(1000),
 		Tendermint: new(TendermintConfig),
 	}
 
@@ -51,9 +51,7 @@ type ChainConfig struct {
 }
 
 // TendermintConfig is the consensus engine configs for proof-of-stake based sealing.
-type TendermintConfig struct {
-	Rewarded bool `json:"rewarded"` // rewarded version of tendermint
-}
+type TendermintConfig struct{}
 
 // String implements the stringer interface, returning the consensus engine details.
 func (c *TendermintConfig) String() string {

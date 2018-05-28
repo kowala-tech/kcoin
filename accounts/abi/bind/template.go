@@ -90,7 +90,7 @@ package {{.Package}}
 	type {{.Type}} struct {
 	  {{.Type}}Caller     // Read-only binding to the contract
 	  {{.Type}}Transactor // Write-only binding to the contract
-		{{.Type}}Filterer   // Log filterer for contract events
+	  {{.Type}}Filterer   // Log filterer for contract events
 	}
 
 	// {{.Type}}Caller is an auto generated read-only Go binding around an Ethereum contract.

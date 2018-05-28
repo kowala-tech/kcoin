@@ -54,6 +54,7 @@ var (
 	oldTxMetaSuffix   = []byte{0x01}
 
 	ErrChainConfigNotFound = errors.New("ChainConfig not found") // general config not found error
+	ErrNilBlock = errors.New("A 'nil' block given to write")
 
 	preimageCounter    = metrics.NewRegisteredCounter("db/preimage/total", nil)
 	preimageHitCounter = metrics.NewRegisteredCounter("db/preimage/hits", nil)
@@ -403,6 +404,10 @@ func WriteBodyRLP(db kcoindb.Putter, hash common.Hash, number uint64, rlp rlp.Ra
 
 // WriteBlock serializes a block into the database, header and body separately.
 func WriteBlock(db kcoindb.Putter, block *types.Block) error {
+	if block == nil {
+		log.Error("given nil block to put in a DB")
+		return ErrNilBlock
+	}
 	// Store the body first to retain database consistency
 	if err := WriteBody(db, block.Hash(), block.NumberU64(), block.Body()); err != nil {
 		return err

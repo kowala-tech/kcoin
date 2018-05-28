@@ -7,6 +7,7 @@ var Modules = map[string]string{
 	"clique":     Clique_JS,
 	"debug":      Debug_JS,
 	"eth":        Eth_JS,
+	"mUSD":       MUSD_JS,
 	"validator":  Validator_JS,
 	"net":        Net_JS,
 	"personal":   Personal_JS,
@@ -433,6 +434,29 @@ web3._extend({
 });
 `
 
+const MUSD_JS = `
+web3._extend({
+	property: 'validator',
+	methods:
+	[
+		new web3._extend.Method({
+			name: 'getBalance',
+			call: 'mUSD_getBalance'
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		var web3._extend.Method({
+			name: 'transfer',
+			call: 'mUSD_transfer',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+	],
+	properties: []
+});
+`
+
 const Validator_JS = `
 web3._extend({
 	property: 'validator',
@@ -484,7 +508,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'redeemDeposits',
 			call: 'validator_redeemDeposits'
-		})
+		}),
 	],
 	properties: []
 });

@@ -1251,8 +1251,8 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	for _, p := range pending {
 		signer := types.NewAndromedaSigner(p.ChainID())
 
-		wantSigHash := matchTx.ProtectedHash(signer.ChainID())
-		hash := p.ProtectedHash(signer.ChainID())
+		wantSigHash := matchTx.ProtectedHash(p.ChainID())
+		hash := p.ProtectedHash(p.ChainID())
 
 		if pFrom, err := types.TxSender(signer, p); err == nil && pFrom == sendArgs.From && hash == wantSigHash {
 			// Match. Re-sign and send the transaction.

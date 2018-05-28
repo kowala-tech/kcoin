@@ -55,8 +55,9 @@ func (table *votingTable) Add(vote types.AddressVote) error {
 }
 
 func (table *votingTable) isDuplicate(vote *types.Vote) bool {
-	for _, vote := range table.votes {
-		if vote.Hash() == vote.Hash() {
+	voteHash := vote.Hash()
+	for _, tableVote := range table.votes {
+		if tableVote.Hash() == voteHash {
 			return true
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -20,10 +21,11 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 type NodeRunner interface {
-	Run(node *NodeSpec) error
+	Run(node *NodeSpec, scenarioNumber int) error
 	Stop(nodeID NodeID) error
 	StopAll() error
 	Log(nodeID NodeID) (string, error)
@@ -41,9 +43,11 @@ type ExecResponse struct {
 type dockerNodeRunner struct {
 	runningNodes map[NodeID]bool
 	client       *client.Client
+	logsDir      string
+	feature      string
 }
 
-func NewDockerNodeRunner() (*dockerNodeRunner, error) {
+func NewDockerNodeRunner(logsDir, feature string) (*dockerNodeRunner, error) {
 	client, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
@@ -51,10 +55,12 @@ func NewDockerNodeRunner() (*dockerNodeRunner, error) {
 	return &dockerNodeRunner{
 		client:       client,
 		runningNodes: make(map[NodeID]bool, 0),
+		logsDir:      logsDir,
+		feature:      feature,
 	}, nil
 }
 
-func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
+func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int) error {
 	portSpec := make([]string, 0)
 
 	for hostPortRaw, containerPortRaw := range node.PortMapping {
@@ -88,8 +94,22 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 		return err
 	}
 
+	logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%03d-%v.log", runner.feature, scenarioNumber, node.ID))
+	logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		log.Error(fmt.Sprintf("error creating container logs file %q: %s", logFilename, err))
+		return err
+	}
+	go func() {
+		defer logFile.Close()
+		err := runner.logStream(node.ID, logFile)
+		if err != nil {
+			log.Error(fmt.Sprintf("error saving container logs to file %q: %s", logFilename, err))
+		}
+	}()
+
 	if node.IsReadyFn != nil {
-		return common.WaitFor("Node starts", 1*time.Second, 20*time.Second, func() bool {
+		return common.WaitFor("Node starts", 1*time.Second, 20*time.Second, func() error {
 			return node.IsReadyFn(runner)
 		})
 	}
@@ -222,4 +242,19 @@ func (runner *dockerNodeRunner) copyFile(nodeID NodeID, filename string, content
 
 func KcoinExecCommand(command string) []string {
 	return []string{"./kcoin", "attach", "--exec", command}
+}
+
+func (runner *dockerNodeRunner) logStream(nodeID NodeID, w io.Writer) error {
+	log, err := runner.client.ContainerLogs(context.Background(), nodeID.String(), types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	})
+	if err != nil {
+		return err
+	}
+	defer log.Close()
+
+	_, err = stdcopy.StdCopy(w, w, log)
+	return err
 }

@@ -25,7 +25,7 @@ type work struct {
 type stateFn func() stateFn
 
 func (val *validator) notLoggedInState() stateFn {
-	isGenesis, err := val.election.IsGenesisValidator(val.walletAccount.Account().Address)
+	isGenesis, err := val.consensus.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
 		fmt.Printf("states.go ===> %[2]v: %[1]v\n", err, `err`)
 		log.Warn("Failed to verify the voter information", "err", err)
@@ -40,9 +40,8 @@ func (val *validator) notLoggedInState() stateFn {
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
 
-		if err := val.election.Join(val.walletAccount, val.deposit); err != nil {
-			fmt.Printf("Error joining validators network. Account %q. Error %q\n", val.walletAccount.Account().Address.String(), err)
-			log.Error("Error joining validators network", "err", err)
+		if err := val.consensus.Join(val.walletAccount, val.deposit); err != nil {
+			log.Error("Error joining validators network. Account %q. Error %q\n", val.walletAccount.Account().Address.String(), err)
 			return nil
 		}
 
@@ -55,7 +54,7 @@ func (val *validator) notLoggedInState() stateFn {
 					return nil
 				}
 
-				confirmed, err := val.election.IsValidator(val.walletAccount.Account().Address)
+				confirmed, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 				if err != nil {
 					log.Crit("Failed to verify the voter registration", "err", err)
 				}
@@ -66,7 +65,7 @@ func (val *validator) notLoggedInState() stateFn {
 			}
 		}
 	} else {
-		isVoter, err := val.election.IsValidator(val.walletAccount.Account().Address)
+		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
 			log.Crit("Failed to verify the voter information", "err", err)
 			return nil
@@ -191,7 +190,7 @@ func (val *validator) preCommitWaitState() stateFn {
 		return val.commitState
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
-		return val.commitState
+		return val.newRoundState
 	}
 }
 
@@ -200,6 +199,7 @@ func (val *validator) commitState() stateFn {
 
 	block := val.block
 	work := val.work
+<<<<<<< HEAD
 	/*
 	root, err := work.state.Commit(true)
 	if err != nil {
@@ -210,6 +210,15 @@ func (val *validator) commitState() stateFn {
 		log.Error("can't store Genesis into the state TrieDB:", "err", err)
 	}
 	*/
+=======
+	chainDb := val.backend.ChainDb()
+
+	_, err := work.state.CommitTo(chainDb, true)
+	if err != nil {
+		log.Error("Failed writing block to chain", "err", err)
+		return nil
+	}
+>>>>>>> dev
 
 	// update block hash since it is now available and not when
 	// the receipt/log of individual transactions were created
@@ -222,7 +231,11 @@ func (val *validator) commitState() stateFn {
 		log.BlockHash = block.Hash()
 	}
 
+<<<<<<< HEAD
 	_, err := val.chain.WriteBlockWithState(block, val.work.receipts, val.work.state)
+=======
+	_, err = val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
+>>>>>>> dev
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return nil
@@ -241,7 +254,7 @@ func (val *validator) commitState() stateFn {
 	// election state updates
 	val.commitRound = int(val.round)
 
-	voter, err := val.election.IsValidator(val.walletAccount.Account().Address)
+	voter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}

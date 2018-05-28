@@ -4,9 +4,10 @@ import (
 	"errors"
 	"math/big"
 
+	"io"
+
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/rlp"
-	"io"
 )
 
 var ErrInvalidParams = errors.New("voters set needs at least one voter")
@@ -14,12 +15,12 @@ var ErrInvalidParams = errors.New("voters set needs at least one voter")
 // Voter represents a consensus Voter
 type Voter struct {
 	address common.Address
-	deposit uint64
+	deposit *big.Int
 	weight  *big.Int
 }
 
 // NewVoter returns a new Voter instance
-func NewVoter(address common.Address, deposit uint64, weight *big.Int) *Voter {
+func NewVoter(address common.Address, deposit *big.Int, weight *big.Int) *Voter {
 	return &Voter{
 		address: address,
 		deposit: deposit,
@@ -28,7 +29,7 @@ func NewVoter(address common.Address, deposit uint64, weight *big.Int) *Voter {
 }
 
 func (val *Voter) Address() common.Address { return val.address }
-func (val *Voter) Deposit() uint64         { return val.deposit }
+func (val *Voter) Deposit() *big.Int       { return val.deposit }
 func (val *Voter) Weight() *big.Int        { return val.weight }
 
 func (val *Voter) EncodeRLP(w io.Writer) error {
@@ -67,7 +68,7 @@ func (voters voters) NextProposer() *Voter {
 	for _, voter := range voters {
 
 		// add more chance for each voter to be the next Proposer by adding their deposit amount as weight
-		voter.weight = voter.weight.Add(voter.weight, big.NewInt(int64(voter.deposit)))
+		voter.weight = voter.weight.Add(voter.weight, voter.deposit)
 
 		if voter.weight.Cmp(proposer.weight) > 0 {
 			proposer = voter
@@ -75,7 +76,7 @@ func (voters voters) NextProposer() *Voter {
 	}
 
 	// decrement this Voter weight since he has been selected as next proposer
-	proposer.weight.Sub(proposer.weight, big.NewInt(int64(proposer.deposit)))
+	proposer.weight.Sub(proposer.weight, proposer.deposit)
 
 	return proposer
 }
@@ -122,7 +123,7 @@ func (voters voters) Contains(addr common.Address) bool {
 	return voter != nil
 }
 
-func NewDeposit(amount uint64, timeUnix int64) *Deposit {
+func NewDeposit(amount *big.Int, timeUnix int64) *Deposit {
 	return &Deposit{
 		amount:              amount,
 		availableAtTimeUnix: timeUnix,
@@ -131,12 +132,12 @@ func NewDeposit(amount uint64, timeUnix int64) *Deposit {
 
 // Deposit represents the voter deposits at stake
 type Deposit struct {
-	amount              uint64
+	amount              *big.Int
 	availableAtTimeUnix int64
 }
 
 // Amount at stake
-func (dep *Deposit) Amount() uint64 {
+func (dep *Deposit) Amount() *big.Int {
 	return dep.amount
 }
 

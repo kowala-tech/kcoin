@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kowala-tech/kcoin/accounts"
@@ -26,42 +28,72 @@ func (ctx *Context) DeleteCluster() error {
 }
 
 func (ctx *Context) PrepareCluster() error {
-	nodeRunner, err := cluster.NewDockerNodeRunner()
-	if err != nil {
+	var err error
+	logsDir := "./logs"
+
+	if err := ctx.initLogs(logsDir); err != nil {
 		return err
 	}
-	ctx.nodeRunner = nodeRunner
 
-	fmt.Println("Generating accounts")
+	if ctx.nodeRunner, err = cluster.NewDockerNodeRunner(logsDir, ctx.Name); err != nil {
+		return err
+	}
+
+	if err = ctx.buildDockerImages(); err != nil {
+		return err
+	}
+
 	if err := ctx.generateAccounts(); err != nil {
 		return err
 	}
-	fmt.Println("Building genesis")
+
 	if err := ctx.buildGenesis(); err != nil {
 		return err
 	}
-	fmt.Println("Building docker images")
-	if err := ctx.buildDockerImages(); err != nil {
+
+	if err := ctx.runNodes(); err != nil {
 		return err
 	}
-	fmt.Println("Running bootnode")
+
+	return nil
+}
+
+var initLogsOnce sync.Once
+
+func (ctx *Context) initLogs(logsDir string) error {
+	var err error
+	initLogsOnce.Do(func() {
+		if err = os.RemoveAll(logsDir); err != nil {
+			return
+		}
+
+		if err = os.Mkdir(logsDir, 0700); err != nil {
+			return
+		}
+	})
+
+	return err
+}
+
+func (ctx *Context) runNodes() error {
 	if err := ctx.runBootnode(); err != nil {
 		return err
 	}
-	fmt.Println("Running genesis validator")
+
 	if err := ctx.runGenesisValidator(); err != nil {
 		fmt.Println(ctx.nodeRunner.Log(ctx.genesisValidatorNodeID))
 		return err
 	}
-	fmt.Println("Triggering genesis validation")
+
 	if err := ctx.triggerGenesisValidation(); err != nil {
 		fmt.Println(ctx.nodeRunner.Log(ctx.genesisValidatorNodeID))
 		return err
 	}
-	fmt.Println("Running RPC node")
+
 	if err := ctx.runRpc(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -88,48 +120,59 @@ func (ctx *Context) newAccount() (*accounts.Account, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if err := ctx.AccountsStorage.Unlock(acc, "test"); err != nil {
 		return nil, err
 	}
 	return &acc, nil
 }
 
+var initImagesOnce sync.Once
+
 func (ctx *Context) buildDockerImages() error {
 	wg := awg.AdvancedWaitGroup{}
-	wg.Add(func() error {
-		return ctx.nodeRunner.BuildDockerImage("kowalatech/bootnode:dev", "bootnode.Dockerfile")
-	})
-	wg.Add(func() error {
-		return ctx.nodeRunner.BuildDockerImage("kowalatech/kusd:dev", "kcoin.Dockerfile")
+
+	initImagesOnce.Do(func() {
+		fmt.Println("Building docker images")
+		wg.Add(func() error {
+			return ctx.nodeRunner.BuildDockerImage("kowalatech/bootnode:dev", "bootnode.Dockerfile")
+		})
+		wg.Add(func() error {
+			return ctx.nodeRunner.BuildDockerImage("kowalatech/kusd:dev", "kcoin.Dockerfile")
+		})
 	})
 
 	return wg.SetStopOnError(true).Start().GetLastError()
 }
 
 func (ctx *Context) runBootnode() error {
-	bootnode, err := cluster.BootnodeSpec()
+	bootnode, err := cluster.BootnodeSpec(ctx.nodeSuffix)
 	if err != nil {
 		return err
 	}
-	if err := ctx.nodeRunner.Run(bootnode); err != nil {
+
+	if err := ctx.nodeRunner.Run(bootnode, ctx.scenarioNumber); err != nil {
 		return err
 	}
-	err = common.WaitFor("fetching bootnode enode", 1*time.Second, 20*time.Second, func() bool {
+	err = common.WaitFor("fetching bootnode enode", 1*time.Second, 20*time.Second, func() error {
 		bootnodeStdout, err := ctx.nodeRunner.Log(bootnode.ID)
 		if err != nil {
-			return false
+			return err
 		}
+
 		found := enodeSecretRegexp.FindStringSubmatch(bootnodeStdout)
 		if len(found) != 2 {
-			return false
+			return fmt.Errorf("can't start a bootnode %q", bootnodeStdout)
 		}
+
 		enodeSecret := found[1]
 		bootnodeIP, err := ctx.nodeRunner.IP(bootnode.ID)
 		if err != nil {
-			return false
+			return err
 		}
 		ctx.bootnode = fmt.Sprintf("enode://%v@%v:33445", enodeSecret, bootnodeIP)
-		return true
+
+		return nil
 	})
 
 	if err != nil {
@@ -142,7 +185,7 @@ func (ctx *Context) runGenesisValidator() error {
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.bootnode).
 		WithLogLevel(3).
-		WithID("genesis-validator").
+		WithID("genesis-validator-"+ctx.nodeSuffix).
 		WithSyncMode("full").
 		WithNetworkId(ctx.chainID.String()).
 		WithGenesis(ctx.genesis).
@@ -151,30 +194,35 @@ func (ctx *Context) runGenesisValidator() error {
 		WithDeposit(big.NewInt(1)).
 		NodeSpec()
 
-	if err := ctx.nodeRunner.Run(spec); err != nil {
+	if err := ctx.nodeRunner.Run(spec, ctx.scenarioNumber); err != nil {
 		return err
 	}
 
 	ctx.genesisValidatorNodeID = spec.ID
+
 	return nil
 }
 
 func (ctx *Context) runRpc() error {
+	if ctx.rpcPort == 0 {
+		ctx.rpcPort = 8080 + portCounter.Get()
+	}
+
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.bootnode).
 		WithLogLevel(3).
-		WithID("rpc").
+		WithID("rpc-" + ctx.nodeSuffix).
 		WithSyncMode("full").
 		WithNetworkId(ctx.chainID.String()).
 		WithGenesis(ctx.genesis).
-		WithRpc(8080).
+		WithRpc(ctx.rpcPort).
 		NodeSpec()
 
-	if err := ctx.nodeRunner.Run(spec); err != nil {
+	if err := ctx.nodeRunner.Run(spec, ctx.scenarioNumber); err != nil {
 		return err
 	}
 
-	rpcAddr := fmt.Sprintf("http://%v:%v", ctx.nodeRunner.HostIP(), 8080)
+	rpcAddr := fmt.Sprintf("http://%v:%v", ctx.nodeRunner.HostIP(), ctx.rpcPort)
 	client, err := kcoinclient.Dial(rpcAddr)
 	if err != nil {
 		return err
@@ -194,39 +242,59 @@ func (ctx *Context) triggerGenesisValidation() error {
 		return err
 	}
 
-	return common.WaitFor("validation starts", 2*time.Second, 20*time.Second, func() bool {
+	return common.WaitFor("validation starts", 2*time.Second, 20*time.Second, func() error {
 		res, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand("eth.blockNumber"))
 		if err != nil {
-			return false
+			return err
 		}
+
 		parsed, err := strconv.Atoi(strings.TrimSpace(res.StdOut))
 		if err != nil {
-			return false
+			return err
 		}
-		return parsed > 0
+
+		if parsed <= 0 {
+			return fmt.Errorf("can't start validation %q", res.StdOut)
+		}
+
+		return nil
 	})
 }
 
 func (ctx *Context) buildGenesis() error {
-	newGenesis, err := genesis.GenerateGenesis(
-		genesis.Options{
-			Network:                        "test",
-			MaxNumValidators:               "5",
-			UnbondingPeriod:                "5",
-			AccountAddressGenesisValidator: ctx.genesisValidatorAccount.Address.Hex(),
-			SmartContractsOwner:            "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-			PrefundedAccounts: []genesis.PrefundedAccount{
-				{
-					AccountAddress: ctx.genesisValidatorAccount.Address.Hex(),
-					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
-				},
-				{
-					AccountAddress: ctx.seederAccount.Address.Hex(),
-					Balance:        "0x200000000000000000000000000000000000000000000000000000000000000",
-				},
+	validatorAddr := ctx.genesisValidatorAccount.Address.Hex()
+	baseDeposit := uint64(10000000) // 10000000 mUSD
+
+	newGenesis, err := genesis.Generate(genesis.Options{
+		Network: "test",
+		Consensus: &genesis.ConsensusOpts{
+			Engine:           "tendermint",
+			MaxNumValidators: 10,
+			FreezePeriod:     30,
+			BaseDeposit:      baseDeposit,
+			Validators: []genesis.Validator{{
+				Address: validatorAddr,
+				Deposit: baseDeposit,
+			}},
+			MiningToken: &genesis.MiningTokenOpts{
+				Name:     "mUSD",
+				Symbol:   "mUSD",
+				Cap:      1000,
+				Decimals: 18,
+				Holders:  []genesis.TokenHolder{{Address: validatorAddr, NumTokens: baseDeposit}},
 			},
 		},
-	)
+		Governance: &genesis.GovernanceOpts{
+			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+			Governors:        []string{"0x259be75d96876f2ada3d202722523e9cd4dd917d"},
+			NumConfirmations: 1,
+		},
+		DataFeedSystem: &genesis.DataFeedSystemOpts{
+			MaxNumOracles: 10,
+			FreezePeriod:  0,
+			BaseDeposit:   0,
+		},
+	})
 	if err != nil {
 		return err
 	}

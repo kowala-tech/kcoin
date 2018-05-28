@@ -1,6 +1,6 @@
 Feature: Managing accounts
-As a user
-I want to be able to manage my account
+  As a user
+  I want to be able to manage my account
 
   Scenario: I can unlock my account
     Given I created an account with password '12345'

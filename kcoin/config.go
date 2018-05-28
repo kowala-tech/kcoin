@@ -55,7 +55,7 @@ type Config struct {
 
 	// consensus validation-related options
 	Coinbase  common.Address `toml:",omitempty"`
-	Deposit   uint64         `toml:",omitempty"`
+	Deposit   *big.Int       `toml:",omitempty"`
 	ExtraData []byte         `toml:",omitempty"`
 	GasPrice  *big.Int
 
