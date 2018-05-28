@@ -270,8 +270,7 @@ func createGenesis(cmd *cobra.Command, args []string) error {
 
 	file, err := os.Create(fileName)
 	if err != nil {
-		fmt.Printf("Error during file creation: %s", err)
-		os.Exit(1)
+		return fmt.Errorf("Error during file creation: %s", err)
 	}
 
 	handler := generateGenesisFileCommandHandler{w: file}
