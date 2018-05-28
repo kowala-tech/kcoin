@@ -5,7 +5,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/p2p"
 	"github.com/kowala-tech/kcoin/rpc"
 )
@@ -23,11 +23,11 @@ type ServiceContext struct {
 // OpenDatabase opens an existing database with the given name (or creates one
 // if no previous can be found) from within the node's data directory. If the
 // node is an ephemeral one, a memory database is returned.
-func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (kcoindb.Database, error) {
+func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (database.Database, error) {
 	if ctx.config.DataDir == "" {
-		return kcoindb.NewMemDatabase()
+		return database.NewMemDatabase()
 	}
-	db, err := kcoindb.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
+	db, err := database.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
 	if err != nil {
 		return nil, err
 	}

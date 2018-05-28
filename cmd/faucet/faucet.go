@@ -31,9 +31,9 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/types"
-	kcoinroot "github.com/kowala-tech/kcoin/kcoin"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
-	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/knode"
+	"github.com/kowala-tech/kcoin/knode/downloader"
+	"github.com/kowala-tech/kcoin/knodeclient"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
@@ -175,7 +175,7 @@ type request struct {
 type faucet struct {
 	config *params.ChainConfig // Chain configurations for signing
 	stack  *node.Node          // Kowala protocol stack
-	client *kcoinclient.Client // Client connection to the Kowala chain
+	client *knodeclient.Client // Client connection to the Kowala chain
 	index  []byte              // Index page to serve up on the web
 
 	keystore *keystore.KeyStore // Keystore containing the single signer
@@ -209,7 +209,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network
 	}
 
 	// Assemble the Kowala protocol
-	cfg := kcoinroot.DefaultConfig
+	cfg := knode.DefaultConfig
 	cfg.SyncMode = downloader.FastSync
 	cfg.NetworkId = network
 	cfg.Genesis = genesis
@@ -234,7 +234,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network
 		stack.Stop()
 		return nil, err
 	}
-	client := kcoinclient.NewClient(api)
+	client := knodeclient.NewClient(api)
 
 	return &faucet{
 		config:   genesis.Config,

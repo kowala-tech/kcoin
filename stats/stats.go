@@ -20,7 +20,7 @@ import (
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoin"
+	"github.com/kowala-tech/kcoin/knode"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
@@ -56,7 +56,7 @@ type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
 	server *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	kcoin  *kcoin.Kowala     // Full Kowala service if monitoring a full node
+	kcoin  *knode.Kowala    // Full Kowala service if monitoring a full node
 	engine consensus.Engine // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
@@ -68,7 +68,7 @@ type Service struct {
 }
 
 // New returns a monitoring service ready for stats reporting.
-func New(url string, kowalaServ *kcoin.Kowala) (*Service, error) {
+func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 	// Parse the netstats connection url
 	re := regexp.MustCompile("([^:@]*)(:([^@]*))?@(.+)")
 	parts := re.FindStringSubmatch(url)
@@ -79,7 +79,7 @@ func New(url string, kowalaServ *kcoin.Kowala) (*Service, error) {
 	engine := kowalaServ.Engine()
 
 	return &Service{
-		kcoin:   kowalaServ,
+		kcoin:  kowalaServ,
 		engine: engine,
 		node:   parts[1],
 		pass:   parts[3],
@@ -349,8 +349,8 @@ func (s *Service) login(conn *websocket.Conn) error {
 	infos := s.server.NodeInfo()
 
 	info := infos.Protocols["kcoin"]
-	network := fmt.Sprintf("%d", info.(*kcoin.KowalaNodeInfo).Network)
-	protocol := fmt.Sprintf("kcoin/%d", kcoin.ProtocolVersions[0])
+	network := fmt.Sprintf("%d", info.(*knode.KowalaNodeInfo).Network)
+	protocol := fmt.Sprintf("kcoin/%d", knode.ProtocolVersions[0])
 
 	auth := &authMsg{
 		Id: s.node,

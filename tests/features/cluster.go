@@ -14,8 +14,8 @@ import (
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/kcoin/genesis"
-	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/knode/genesis"
+	"github.com/kowala-tech/kcoin/knodeclient"
 	"github.com/lazada/awg"
 )
 
@@ -223,7 +223,7 @@ func (ctx *Context) runRpc() error {
 	}
 
 	rpcAddr := fmt.Sprintf("http://%v:%v", ctx.nodeRunner.HostIP(), ctx.rpcPort)
-	client, err := kcoinclient.Dial(rpcAddr)
+	client, err := knodeclient.Dial(rpcAddr)
 	if err != nil {
 		return err
 	}

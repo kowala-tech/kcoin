@@ -9,7 +9,7 @@ import (
 	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/knodeclient"
 )
 
 type Context struct {
@@ -23,7 +23,7 @@ type Context struct {
 	nodeRunner             cluster.NodeRunner
 	genesisValidatorNodeID cluster.NodeID
 	rpcPort                int32
-	client                 *kcoinclient.Client
+	client                 *knodeclient.Client
 	chainID                *big.Int
 
 	genesisValidatorAccount accounts.Account

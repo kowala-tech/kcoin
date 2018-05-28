@@ -26,10 +26,10 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/trie"
-	"github.com/kowala-tech/kcoin/kcoindb"
 )
 
 type revision struct {
@@ -629,7 +629,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 }
 
 // CommitTo writes the state to the given database.
-func (s *StateDB) CommitTo(dbw kcoindb.Putter, deleteEmptyObjects bool) (root common.Hash, err error) {
+func (s *StateDB) CommitTo(dbw database.Putter, deleteEmptyObjects bool) (root common.Hash, err error) {
 	defer s.clearJournalAndRefund()
 
 	// Commit objects to the trie.

@@ -11,9 +11,9 @@ import (
 	"sync"
 
 	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/internal/debug"
-	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/p2p"
 	"github.com/kowala-tech/kcoin/rpc"
@@ -625,11 +625,11 @@ func (n *Node) EventMux() *event.TypeMux {
 // OpenDatabase opens an existing database with the given name (or creates one if no
 // previous can be found) from within the node's instance directory. If the node is
 // ephemeral, a memory database is returned.
-func (n *Node) OpenDatabase(name string, cache, handles int) (kcoindb.Database, error) {
+func (n *Node) OpenDatabase(name string, cache, handles int) (database.Database, error) {
 	if n.config.DataDir == "" {
-		return kcoindb.NewMemDatabase()
+		return database.NewMemDatabase()
 	}
-	return kcoindb.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
+	return database.NewLDBDatabase(n.config.resolvePath(name), cache, handles)
 }
 
 // ResolvePath returns the absolute path of a resource in the instance directory.

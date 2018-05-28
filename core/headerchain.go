@@ -14,7 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/consensus"
 	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/params"
 )
@@ -33,7 +33,7 @@ const (
 type HeaderChain struct {
 	config *params.ChainConfig
 
-	chainDb       kcoindb.Database
+	chainDb       database.Database
 	genesisHeader *types.Header
 
 	currentHeader     atomic.Value // Current head of the header chain (may be above the block chain!)
@@ -53,7 +53,7 @@ type HeaderChain struct {
 //  getValidator should return the parent's validator
 //  procInterrupt points to the parent's interrupt semaphore
 //  wg points to the parent's shutdown wait group
-func NewHeaderChain(chainDb kcoindb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
+func NewHeaderChain(chainDb database.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
 	headerCache, _ := lru.New(headerCacheLimit)
 	tdCache, _ := lru.New(tdCacheLimit)
 	numberCache, _ := lru.New(numberCacheLimit)

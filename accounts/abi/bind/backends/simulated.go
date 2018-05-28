@@ -18,9 +18,9 @@ import (
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
-	"github.com/kowala-tech/kcoin/kcoin/filters"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/knode/filters"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rpc"
 )
@@ -34,8 +34,8 @@ var errGasEstimationFailed = errors.New("gas required exceeds allowance or alway
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
-	database         kcoindb.Database // In memory database to store our testing data
-	*core.BlockChain                  // Ethereum blockchain to handle the consensus
+	database         database.Database // In memory database to store our testing data
+	*core.BlockChain                   // Ethereum blockchain to handle the consensus
 
 	mu           sync.Mutex
 	pendingBlock *types.Block   // Currently pending block that will be imported on request
@@ -49,7 +49,7 @@ type SimulatedBackend struct {
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
-	database, _ := kcoindb.NewMemDatabase()
+	database, _ := database.NewMemDatabase()
 	genesis := core.Genesis{Config: params.AllTendermintProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
 	blockchain, _ := core.NewBlockChain(database, nil, genesis.Config, tendermint.NewFaker(), vm.Config{})
@@ -401,12 +401,12 @@ func (m callmsg) Data() []byte         { return m.CallMsg.Data }
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.
 type filterBackend struct {
-	db kcoindb.Database
+	db database.Database
 	bc *core.BlockChain
 }
 
-func (fb *filterBackend) ChainDb() kcoindb.Database  { return fb.db }
-func (fb *filterBackend) EventMux() *event.TypeMux { panic("not supported") }
+func (fb *filterBackend) ChainDb() database.Database { return fb.db }
+func (fb *filterBackend) EventMux() *event.TypeMux   { panic("not supported") }
 
 func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {
 	if block == rpc.LatestBlockNumber {

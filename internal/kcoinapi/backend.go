@@ -11,9 +11,9 @@ import (
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/knode/downloader"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rpc"
 )
@@ -25,7 +25,7 @@ type Backend interface {
 	Downloader() *downloader.Downloader
 	ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)
-	ChainDb() kcoindb.Database
+	ChainDb() database.Database
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager
 

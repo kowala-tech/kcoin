@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/mclock"
@@ -19,13 +18,14 @@ import (
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/database"
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/metrics"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/trie"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 var (
@@ -72,9 +72,9 @@ type BlockChain struct {
 	chainConfig *params.ChainConfig // Chain & network configuration
 	cacheConfig *CacheConfig        // Cache configuration for pruning
 
-	db     kcoindb.Database // Low level persistent database to store final content in
-	triegc *prque.Prque     // Priority queue mapping block numbers to tries to gc
-	gcproc time.Duration    // Accumulates canonical block processing for trie dumping
+	db     database.Database // Low level persistent database to store final content in
+	triegc *prque.Prque      // Priority queue mapping block numbers to tries to gc
+	gcproc time.Duration     // Accumulates canonical block processing for trie dumping
 
 	hc            *HeaderChain
 	rmLogsFeed    event.Feed
@@ -116,7 +116,7 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(db kcoindb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+func NewBlockChain(db database.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
 			TrieNodeLimit: 256 * 1024 * 1024,
@@ -796,7 +796,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		}
 		stats.processed++
 
-		if batch.ValueSize() >= kcoindb.IdealBatchSize {
+		if batch.ValueSize() >= database.IdealBatchSize {
 			if err := batch.Write(); err != nil {
 				return 0, err
 			}
@@ -866,7 +866,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	if err := WriteBlock(batch, block); err != nil {
 		return NonStatTy, err
 	}
-	root, err := state.CommitTo(batch,true)
+	root, err := state.CommitTo(batch, true)
 	if err != nil {
 		return NonStatTy, err
 	}
