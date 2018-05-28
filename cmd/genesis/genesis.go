@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"strings"
 )
 
 var (
@@ -18,58 +20,8 @@ func init() {
 		Use:   "genesis",
 		Short: "Generator of a genesis file.",
 		Long:  `Generate a genesis.json file based on a config file or parameters.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			loadFromFileConfigIfAvailable()
-
-			options := genesis.Options{
-				Network:                        viper.GetString("genesis.network"),
-				MaxNumValidators:               viper.GetString("genesis.maxNumValidators"),
-				UnbondingPeriod:                viper.GetString("genesis.unbondingPeriod"),
-				AccountAddressGenesisValidator: viper.GetString("genesis.accountAddressGenesisValidator"),
-				PrefundedAccounts:              parsePrefundedAccounts(viper.Get("prefundedAccounts")),
-				ConsensusEngine:                viper.GetString("genesis.consensusEngine"),
-				SmartContractsOwner:            viper.GetString("genesis.smartContractsOwner"),
-				ExtraData:                      viper.GetString("genesis.extraData"),
-			}
-
-			fileName := viper.GetString("genesis.fileName")
-
-			file, err := os.Create(fileName)
-			if err != nil {
-				fmt.Printf("Error generating file: %s", err)
-				os.Exit(1)
-			}
-
-			handler := generateGenesisFileCommandHandler{w: file}
-			err = handler.handle(options)
-			if err != nil {
-				fmt.Printf("Error generating file: %s", err)
-				os.Exit(1)
-			}
-
-			fmt.Println("Genesis file generated.")
-		},
+		RunE:  createGenesis,
 	}
-
-	cmd.Flags().StringP("config", "c", "", "Use to load configuration from config file.")
-	cmd.Flags().StringP("network", "n", "", "The network to use, test or main")
-	viper.BindPFlag("genesis.network", cmd.Flags().Lookup("network"))
-	cmd.Flags().StringP("maxNumValidators", "v", "", "The maximum num of validators.")
-	viper.BindPFlag("genesis.maxNumValidators", cmd.Flags().Lookup("maxNumValidators"))
-	cmd.Flags().StringP("unbondingPeriod", "p", "", "The unbonding period in days.")
-	viper.BindPFlag("genesis.unbondingPeriod", cmd.Flags().Lookup("unbondingPeriod"))
-	cmd.Flags().StringP("accountAddressGenesisValidator", "g", "", "The wallet address of the genesis validator.")
-	viper.BindPFlag("genesis.accountAddressGenesisValidator", cmd.Flags().Lookup("accountAddressGenesisValidator"))
-	cmd.Flags().StringP("consensusEngine", "e", "", "The consensus engine, right now only supports tendermint")
-	viper.BindPFlag("genesis.consensusEngine", cmd.Flags().Lookup("consensusEngine"))
-	cmd.Flags().StringP("smartContractsOwner", "s", "", "The address of the smart contracts owner.")
-	viper.BindPFlag("genesis.smartContractsOwner", cmd.Flags().Lookup("smartContractsOwner"))
-	cmd.Flags().StringP("extraData", "d", "", "Extra data")
-	viper.BindPFlag("genesis.extraData", cmd.Flags().Lookup("extraData"))
-	cmd.Flags().StringP("prefundedAccounts", "a", "", "The prefunded accounts in format 0x212121:12,0x212121:14")
-	viper.BindPFlag("prefundedAccounts", cmd.Flags().Lookup("prefundedAccounts"))
-	cmd.Flags().StringP("fileName", "o", "genesis.json", "The output filename (default:genesis.json).")
-	viper.BindPFlag("genesis.fileName", cmd.Flags().Lookup("fileName"))
 }
 
 func loadFromFileConfigIfAvailable() {
@@ -91,58 +43,243 @@ func main() {
 	}
 }
 
-func parsePrefundedAccounts(accounts interface{}) []genesis.PrefundedAccount {
+func parsePrefundedAccounts(accounts interface{}) ([]genesis.PrefundedAccount, error) {
+	var err error
 	var prefundedAccounts []genesis.PrefundedAccount
 
 	switch accounts.(type) {
 	case []interface{}:
 		prefundedAccounts = prefundAccountsFromConfigFile(accounts)
 	case string:
-		prefundedAccounts = prefundAccountsFromCommandLine(accounts)
+		prefundedAccounts, err = prefundAccountsFromCommandLine(accounts)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return prefundedAccounts
+	return prefundedAccounts, nil
 }
 
-func prefundAccountsFromCommandLine(accounts interface{}) []genesis.PrefundedAccount {
+func parseValidators(input interface{}) ([]genesis.Validator, error) {
+	var err error
+	var validators []genesis.Validator
+
+	switch input.(type) {
+	case []interface{}:
+		validators = validatorsFromConfigFile(input)
+	case string:
+		validators, err = validatorsFromCommandLine(input)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return validators, nil
+}
+
+func parseTokenHolders(input interface{}) ([]genesis.TokenHolder, error) {
+	var err error
+	var holders []genesis.TokenHolder
+
+	switch input.(type) {
+	case []interface{}:
+		holders = tokenHoldersFromConfigFile(input)
+	case string:
+		holders, err = tokenHoldersFromCommandLine(input)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return holders, nil
+}
+
+func prefundAccountsFromCommandLine(accounts interface{}) ([]genesis.PrefundedAccount, error) {
 	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
 
 	accountsString := accounts.(string)
 	if accountsString == "" {
-		return nil
+		return nil, nil
 	}
 
 	a := strings.Split(accountsString, ",")
 	for _, v := range a {
 		values := strings.Split(v, ":")
-		balance := values[1]
+		balance, err := strconv.ParseUint(values[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
 
 		prefundedAccount := genesis.PrefundedAccount{
-			AccountAddress: values[0],
-			Balance:        balance,
+			Address: values[0],
+			Balance: balance,
 		}
 
 		prefundedAccounts = append(prefundedAccounts, prefundedAccount)
 	}
 
-	return prefundedAccounts
+	return prefundedAccounts, nil
+}
+
+func validatorsFromCommandLine(input interface{}) ([]genesis.Validator, error) {
+	validators := make([]genesis.Validator, 0)
+
+	validatorsStr := input.(string)
+	if validatorsStr == "" {
+		return nil, nil
+	}
+
+	values := strings.Split(validatorsStr, ",")
+	for _, value := range values {
+		parts := strings.Split(value, ":")
+
+		deposit, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		validator := genesis.Validator{
+			Address: parts[0],
+			Deposit: deposit,
+		}
+
+		validators = append(validators, validator)
+	}
+
+	return validators, nil
+}
+
+func tokenHoldersFromCommandLine(input interface{}) ([]genesis.TokenHolder, error) {
+	holders := make([]genesis.TokenHolder, 0)
+
+	holdersStr := input.(string)
+	if holdersStr == "" {
+		return nil, nil
+	}
+
+	values := strings.Split(holdersStr, ",")
+	for _, value := range values {
+		parts := strings.Split(value, ":")
+
+		numTokens, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		holders = append(holders, genesis.TokenHolder{
+			Address:   parts[0],
+			NumTokens: numTokens,
+		})
+	}
+
+	return holders, nil
 }
 
 func prefundAccountsFromConfigFile(accounts interface{}) []genesis.PrefundedAccount {
 	prefundedAccounts := make([]genesis.PrefundedAccount, 0)
 
 	accountArray := accounts.([]interface{})
-
 	for _, v := range accountArray {
 		val := v.(map[string]interface{})
-
-		prefundedAccount := genesis.PrefundedAccount{
-			AccountAddress: val["accountAddress"].(string),
-			Balance:        val["balance"].(string),
-		}
-
-		prefundedAccounts = append(prefundedAccounts, prefundedAccount)
+		prefundedAccounts = append(prefundedAccounts, genesis.PrefundedAccount{
+			Address: val["accountAddress"].(string),
+			Balance: uint64(val["balance"].(int64)),
+		})
 	}
 
 	return prefundedAccounts
+}
+
+func validatorsFromConfigFile(input interface{}) []genesis.Validator {
+	validators := make([]genesis.Validator, 0)
+
+	validatorArray := input.([]interface{})
+	for _, value := range validatorArray {
+		parts := value.(map[string]interface{})
+		validators = append(validators, genesis.Validator{
+			Address: parts["address"].(string),
+			Deposit: uint64(parts["deposit"].(int64)),
+		})
+	}
+
+	return validators
+}
+
+func tokenHoldersFromConfigFile(input interface{}) []genesis.TokenHolder {
+	holders := make([]genesis.TokenHolder, 0)
+
+	holdersArray := input.([]interface{})
+	for _, value := range holdersArray {
+		parts := value.(map[string]interface{})
+		holders = append(holders, genesis.TokenHolder{
+			Address:   parts["address"].(string),
+			NumTokens: uint64(parts["numTokens"].(int64)),
+		})
+	}
+
+	return holders
+}
+
+func createGenesis(cmd *cobra.Command, args []string) error {
+	loadFromFileConfigIfAvailable()
+
+	prefundedAccounts, err := parsePrefundedAccounts(viper.Get("prefundedAccounts"))
+	if err != nil {
+		return err
+	}
+
+	validators, err := parseValidators(viper.Get("genesis.consensus.validators"))
+	if err != nil {
+		return err
+	}
+
+	tokenHolders, err := parseTokenHolders(viper.Get("genesis.consensus.token.holders"))
+	if err != nil {
+		return err
+	}
+
+	options := genesis.Options{
+		Network:           viper.GetString("genesis.network"),
+		PrefundedAccounts: prefundedAccounts,
+		Consensus: &genesis.ConsensusOpts{
+			Engine:           viper.GetString("genesis.consensus.engine"),
+			MaxNumValidators: uint64(viper.GetInt64("genesis.consensus.maxNumValidators")),
+			FreezePeriod:     uint64(viper.GetInt64("genesis.consensus.freezePeriod")),
+			BaseDeposit:      uint64(viper.GetInt64("genesis.consensus.baseDeposit")),
+			Validators:       validators,
+			MiningToken: &genesis.MiningTokenOpts{
+				Name:     viper.GetString("genesis.consensus.token.name"),
+				Symbol:   viper.GetString("genesis.consensus.token.symbol"),
+				Cap:      uint64(viper.GetInt64("genesis.consensus.token.cap")),
+				Decimals: uint64(viper.GetInt64("genesis.consensus.token.decimals")),
+				Holders:  tokenHolders,
+			},
+		},
+		DataFeedSystem: &genesis.DataFeedSystemOpts{
+			MaxNumOracles: uint64(viper.GetInt64("genesis.datafeed.maxNumOracles")),
+			FreezePeriod:  uint64(viper.GetInt64("genesis.datafeed.freezePeriod")),
+			BaseDeposit:   uint64(viper.GetInt64("genesis.datafeed.baseDeposit")),
+		},
+		Governance: &genesis.GovernanceOpts{
+			Origin:           viper.GetString("genesis.governance.origin"),
+			Governors:        viper.GetStringSlice("genesis.governance.governors"),
+			NumConfirmations: uint64(viper.GetInt64("genesis.governance.numConfirmations")),
+		},
+		ExtraData: viper.GetString("genesis.extraData"),
+	}
+
+	fileName := viper.GetString("genesis.fileName")
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("Error during file creation: %s", err)
+	}
+
+	handler := generateGenesisFileCommandHandler{w: file}
+	err = handler.handle(options)
+	if err != nil {
+		return fmt.Errorf("Error generating file: %s", err)
+	}
+
+	fmt.Println("Genesis file generated.")
+
+	return nil
 }

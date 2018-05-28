@@ -5,10 +5,11 @@ import (
 	"math/big"
 	"testing"
 
+	"time"
+
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"time"
 )
 
 var voterSet = [4]*Voter{
@@ -20,7 +21,7 @@ var voterSet = [4]*Voter{
 
 func TestVoter_Properties(t *testing.T) {
 	address := common.Address{}
-	deposit := uint64(100)
+	deposit := new(big.Int).SetUint64(100)
 	weight := &big.Int{}
 	voter := NewVoter(address, deposit, weight)
 
@@ -118,8 +119,7 @@ func TestVoters_IsHashable(t *testing.T) {
 }
 
 func TestNewDeposit(t *testing.T) {
-	var amount uint64
-	amount = 100
+	amount := new(big.Int).SetUint64(100)
 	now := time.Now().Unix()
 	deposit := NewDeposit(amount, now)
 
@@ -127,7 +127,7 @@ func TestNewDeposit(t *testing.T) {
 	assert.Equal(t, now, deposit.AvailableAtTimeUnix())
 }
 
-func makeVoter(hexAddress string, deposit int, weight int64) *Voter {
+func makeVoter(hexAddress string, deposit uint64, weight uint64) *Voter {
 	address := common.HexToAddress(hexAddress)
-	return NewVoter(address, uint64(deposit), big.NewInt(weight))
+	return NewVoter(address, new(big.Int).SetUint64(deposit), new(big.Int).SetUint64(weight))
 }

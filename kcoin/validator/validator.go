@@ -9,8 +9,8 @@ import (
 
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/consensus"
-	"github.com/kowala-tech/kcoin/contracts/network"
+	engine "github.com/kowala-tech/kcoin/consensus"
+	"github.com/kowala-tech/kcoin/contracts/consensus"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
@@ -37,13 +37,13 @@ type Backend interface {
 }
 
 type Validator interface {
-	Start(walletAccount accounts.WalletAccount, deposit uint64)
+	Start(walletAccount accounts.WalletAccount, deposit *big.Int)
 	Stop() error
 	SetExtra(extra []byte) error
 	Validating() bool
 	Running() bool
 	SetCoinbase(walletAccount accounts.WalletAccount) error
-	SetDeposit(deposit uint64)
+	SetDeposit(deposit *big.Int)
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
 	AddProposal(proposal *types.Proposal) error
@@ -60,7 +60,7 @@ type validator struct {
 
 	running    int32
 	validating int32
-	deposit    uint64
+	deposit    *big.Int
 
 	signer types.Signer
 
@@ -68,12 +68,12 @@ type validator struct {
 	backend  Backend
 	chain    *core.BlockChain
 	config   *params.ChainConfig
-	engine   consensus.Engine
+	engine   engine.Engine
 	vmConfig vm.Config
 
 	walletAccount accounts.WalletAccount
 
-	election network.Election // consensus election
+	consensus consensus.Consensus // consensus binding
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
@@ -86,17 +86,17 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, election network.Election, config *params.ChainConfig, eventMux *event.TypeMux, engine consensus.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, consensus consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
-		config:   config,
-		backend:  backend,
-		chain:    backend.BlockChain(),
-		engine:   engine,
-		election: election,
-		eventMux: eventMux,
-		signer:   types.NewAndromedaSigner(config.ChainID),
-		vmConfig: vmConfig,
-		canStart: 0,
+		config:    config,
+		backend:   backend,
+		chain:     backend.BlockChain(),
+		engine:    engine,
+		consensus: consensus,
+		eventMux:  eventMux,
+		signer:    types.NewAndromedaSigner(config.ChainID),
+		vmConfig:  vmConfig,
+		canStart:  0,
 	}
 
 	go validator.sync()
@@ -121,7 +121,7 @@ func (val *validator) finishedSync() {
 	}
 }
 
-func (val *validator) Start(walletAccount accounts.WalletAccount, deposit uint64) {
+func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.Int) {
 	if val.Validating() {
 		log.Warn("failed to start the validator - the state machine is already running")
 		return
@@ -191,7 +191,7 @@ func (val *validator) SetCoinbase(walletAccount accounts.WalletAccount) error {
 	return nil
 }
 
-func (val *validator) SetDeposit(deposit uint64) {
+func (val *validator) SetDeposit(deposit *big.Int) {
 	val.deposit = deposit
 }
 
@@ -210,7 +210,7 @@ func (val *validator) PendingBlock() *types.Block {
 }
 
 func (val *validator) restoreLastCommit() {
-	checksum, err := val.election.ValidatorsChecksum()
+	checksum, err := val.consensus.ValidatorsChecksum()
 	if err != nil {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
@@ -228,7 +228,7 @@ func (val *validator) restoreLastCommit() {
 func (val *validator) init() error {
 	parent := val.chain.CurrentBlock()
 
-	checksum, err := val.election.ValidatorsChecksum()
+	checksum, err := val.consensus.ValidatorsChecksum()
 	if err != nil {
 		log.Crit("Failed to access the voters checksum", "err", err)
 	}
@@ -386,7 +386,7 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 }
 
 func (val *validator) leave() {
-	err := val.election.Leave(val.walletAccount)
+	err := val.consensus.Leave(val.walletAccount)
 	if err != nil {
 		log.Error("failed to leave the election", "err", err)
 	}
@@ -630,7 +630,7 @@ func (val *validator) makeCurrent(parent *types.Block) error {
 }
 
 func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
-	validators, err := val.election.Validators()
+	validators, err := val.consensus.Validators()
 	if err != nil {
 		return err
 	}
@@ -642,9 +642,9 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 }
 
 func (val *validator) Deposits() ([]*types.Deposit, error) {
-	return val.election.Deposits(val.walletAccount.Account().Address)
+	return val.consensus.Deposits(val.walletAccount.Account().Address)
 }
 
 func (val *validator) RedeemDeposits() error {
-	return val.election.RedeemDeposits(val.walletAccount)
+	return val.consensus.RedeemDeposits(val.walletAccount)
 }
