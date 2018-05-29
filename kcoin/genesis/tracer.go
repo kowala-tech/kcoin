@@ -52,14 +52,6 @@ func (vmt *vmTracer) setAddrStorage(contractAddress common.Address, addrStorage 
 	return
 }
 
-func (vmt *vmTracer) setAddrStorageData(key, value common.Hash, addrStorage map[common.Hash]common.Hash) {
-	vmt.Lock()
-	defer vmt.Unlock()
-
-	addrStorage[key] = value
-	return
-}
-
 func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
 	return nil
 }
