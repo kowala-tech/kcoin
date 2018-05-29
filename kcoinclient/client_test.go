@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin"
+	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/kcoinclient/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -64,4 +65,45 @@ func TestClient_BlockNumber(t *testing.T) {
 		_, err := client.BlockNumber(ctx)
 		assert.Equal(t, err, ErrInvalidBlockNumber)
 	})
+}
+
+func TestClient_Coinbase(t *testing.T) {
+	client := Client{}
+	ctx := context.Background()
+
+	t.Run("It returns an account", func(t *testing.T) {
+		mRpcClient := &mocks.RpcClient{}
+
+		client.c = mRpcClient
+
+		mRpcClient.On("CallContext", mock.AnythingOfType("*context.emptyCtx"), mock.AnythingOfType("*string"), "eth_coinbase").
+			Return(nil).
+			Run(func(args mock.Arguments) {
+				arg := args.Get(1).(*string)
+				*arg = "0x1234567890123456789012345678901234567890"
+			})
+
+		addr, err := client.Coinbase(ctx)
+		assert.NoError(t, err)
+
+		assert.Equal(t, common.HexToAddress("0x1234567890123456789012345678901234567890"), *addr)
+	})
+
+	t.Run("It returns nil if there's no coinbase", func(t *testing.T) {
+		mRpcClient := &mocks.RpcClient{}
+
+		client.c = mRpcClient
+
+		mRpcClient.On("CallContext", mock.AnythingOfType("*context.emptyCtx"), mock.AnythingOfType("*string"), "eth_coinbase").
+			Return(nil).
+			Run(func(args mock.Arguments) {
+				arg := args.Get(1).(*string)
+				*arg = ""
+			})
+
+		addr, err := client.Coinbase(ctx)
+		assert.NoError(t, err)
+		assert.Nil(t, addr)
+	})
+
 }
