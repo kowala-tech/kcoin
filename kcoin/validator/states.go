@@ -25,7 +25,7 @@ type work struct {
 type stateFn func() stateFn
 
 func (val *validator) notLoggedInState() stateFn {
-	isGenesis, err := val.election.IsGenesisValidator(val.walletAccount.Account().Address)
+	isGenesis, err := val.consensus.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
 		fmt.Printf("states.go ===> %[2]v: %[1]v\n", err, `err`)
 		log.Warn("Failed to verify the voter information", "err", err)
@@ -40,7 +40,7 @@ func (val *validator) notLoggedInState() stateFn {
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
 
-		if err := val.election.Join(val.walletAccount, val.deposit); err != nil {
+		if err := val.consensus.Join(val.walletAccount, val.deposit); err != nil {
 			log.Error("Error joining validators network", "err", err)
 			return nil
 		}
@@ -54,7 +54,7 @@ func (val *validator) notLoggedInState() stateFn {
 					return nil
 				}
 
-				confirmed, err := val.election.IsValidator(val.walletAccount.Account().Address)
+				confirmed, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 				if err != nil {
 					log.Crit("Failed to verify the voter registration", "err", err)
 				}
@@ -65,7 +65,7 @@ func (val *validator) notLoggedInState() stateFn {
 			}
 		}
 	} else {
-		isVoter, err := val.election.IsValidator(val.walletAccount.Account().Address)
+		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
 			log.Crit("Failed to verify the voter information", "err", err)
 			return nil
@@ -237,7 +237,7 @@ func (val *validator) commitState() stateFn {
 	// election state updates
 	val.commitRound = int(val.round)
 
-	voter, err := val.election.IsValidator(val.walletAccount.Account().Address)
+	voter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}

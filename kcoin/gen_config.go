@@ -26,7 +26,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		DatabaseHandles         int  `toml:"-"`
 		DatabaseCache           int
 		Coinbase                common.Address `toml:",omitempty"`
-		Deposit                 uint64         `toml:",omitempty"`
+		Deposit                 *big.Int       `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
 		TxPool                  core.TxPoolConfig
@@ -67,7 +67,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		DatabaseHandles         *int  `toml:"-"`
 		DatabaseCache           *int
 		Coinbase                *common.Address `toml:",omitempty"`
-		Deposit                 *uint64         `toml:",omitempty"`
+		Deposit                 *big.Int        `toml:",omitempty"`
 		ExtraData               hexutil.Bytes   `toml:",omitempty"`
 		GasPrice                *big.Int
 		TxPool                  *core.TxPoolConfig
@@ -110,7 +110,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		c.Coinbase = *dec.Coinbase
 	}
 	if dec.Deposit != nil {
-		c.Deposit = *dec.Deposit
+		c.Deposit = dec.Deposit
 	}
 	if dec.ExtraData != nil {
 		c.ExtraData = dec.ExtraData

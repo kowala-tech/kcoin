@@ -12,9 +12,9 @@ import (
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"
-	"github.com/kowala-tech/kcoin/consensus"
+	engine "github.com/kowala-tech/kcoin/consensus"
 	"github.com/kowala-tech/kcoin/consensus/tendermint"
-	"github.com/kowala-tech/kcoin/contracts/network"
+	"github.com/kowala-tech/kcoin/contracts/consensus"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/bloombits"
 	"github.com/kowala-tech/kcoin/core/types"
@@ -51,7 +51,7 @@ type Kowala struct {
 	chainDb kcoindb.Database // Block chain database
 
 	eventMux       *event.TypeMux
-	engine         consensus.Engine
+	engine         engine.Engine
 	accountManager *accounts.Manager
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
@@ -60,10 +60,10 @@ type Kowala struct {
 	ApiBackend *KowalaApiBackend
 
 	validator validator.Validator // consensus validator
-	election  network.Election    // consensus election
+	consensus consensus.Consensus // consensus binding
 	gasPrice  *big.Int
 	coinbase  common.Address
-	deposit   uint64
+	deposit   *big.Int
 
 	networkId     uint64
 	netRPCService *kcoinapi.PublicNetAPI
@@ -142,14 +142,14 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kcoin.ApiBackend.gpo = gasprice.NewOracle(kcoin.ApiBackend, gpoParams)
 
-	// consensus validator
-	election, err := network.NewElection(NewContractBackend(kcoin.ApiBackend), chainConfig.ChainID)
+	// consensus manager
+	consensus, err := consensus.Instance(NewContractBackend(kcoin.ApiBackend), chainConfig.ChainID)
 	if err != nil {
 		log.Crit("Failed to load the network contract", "err", err)
 	}
-	kcoin.election = election
+	kcoin.consensus = consensus
 
-	kcoin.validator = validator.New(kcoin, kcoin.election, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
+	kcoin.validator = validator.New(kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
 	kcoin.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kcoin.protocolManager, err = NewProtocolManager(kcoin.chainConfig, config.SyncMode, config.NetworkId, kcoin.eventMux, kcoin.txPool, kcoin.engine, kcoin.blockchain, chainDb, kcoin.validator); err != nil {
@@ -189,9 +189,9 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kcoindb.Da
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Kowala service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database) engine.Engine {
 	// @TODO (rgeraldes) - complete with tendermint config if necessary, set rewarded to true
-	engine := tendermint.New(&params.TendermintConfig{Rewarded: false})
+	engine := tendermint.New(&params.TendermintConfig{})
 	return engine
 }
 
@@ -202,6 +202,12 @@ func (s *Kowala) APIs() []rpc.API {
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+
+	token := s.consensus.Token()
+	tokenName, err := token.Name()
+	if err != nil {
+		log.Crit("Failed to load the mining token bindings", "err", err)
+	}
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -219,6 +225,11 @@ func (s *Kowala) APIs() []rpc.API {
 			Namespace: "validator",
 			Version:   "1.0",
 			Service:   NewPrivateValidatorAPI(s),
+			Public:    false,
+		}, {
+			Namespace: tokenName,
+			Version:   "1.0",
+			Service:   NewPublicTokenAPI(s.accountManager, token),
 			Public:    false,
 		}, {
 			Namespace: "eth",
@@ -267,7 +278,7 @@ func (s *Kowala) Coinbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("coinbase address must be explicitly specified")
 }
 
-func (s *Kowala) Deposit() (uint64, error) {
+func (s *Kowala) Deposit() (*big.Int, error) {
 	s.lock.RLock()
 	deposit := s.deposit
 	s.lock.RUnlock()
@@ -306,12 +317,12 @@ func (s *Kowala) getWalletAccount() (accounts.WalletAccount, error) {
 }
 
 // GetMinimumDeposit return minimum amount required to join the validators
-func (s *Kowala) GetMinimumDeposit() (uint64, error) {
-	return s.election.MinimumDeposit()
+func (s *Kowala) GetMinimumDeposit() (*big.Int, error) {
+	return s.consensus.MinimumDeposit()
 }
 
 // set in js console via admin interface or wrapper from cli flags
-func (s *Kowala) SetDeposit(deposit uint64) {
+func (s *Kowala) SetDeposit(deposit *big.Int) {
 	s.lock.Lock()
 	s.deposit = deposit
 	s.lock.Unlock()
@@ -359,7 +370,7 @@ func (s *Kowala) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *Kowala) BlockChain() *core.BlockChain       { return s.blockchain }
 func (s *Kowala) TxPool() *core.TxPool               { return s.txPool }
 func (s *Kowala) EventMux() *event.TypeMux           { return s.eventMux }
-func (s *Kowala) Engine() consensus.Engine           { return s.engine }
+func (s *Kowala) Engine() engine.Engine              { return s.engine }
 func (s *Kowala) ChainDb() kcoindb.Database          { return s.chainDb }
 func (s *Kowala) IsListening() bool                  { return true } // Always listening
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
