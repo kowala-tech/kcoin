@@ -14,7 +14,7 @@ maxNumValidators = 100
 freezePeriod = 1
 baseDeposit = 1000000
 [[genesis.consensus.validators]]
-address = "0xf1d07c7c551c9a441154675a2b87b228a521f9b9"
+address = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
 deposit = 1000000
 
 [genesis.consensus.token]
@@ -23,7 +23,7 @@ symbol = "mUSD"
 cap = 1073741824
 decimals = 18
 [[genesis.consensus.token.holders]]
-address = "0xf1d07c7c551c9a441154675a2b87b228a521f9b9"
+address = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
 numTokens = 1000000
 
 [genesis.datafeed]
