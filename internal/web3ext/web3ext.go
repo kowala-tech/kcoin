@@ -425,7 +425,7 @@ web3._extend({
 
 const MUSD_JS = `
 web3._extend({
-	property: 'validator',
+	property: 'mUSD',
 	methods:
 	[
 		new web3._extend.Method({

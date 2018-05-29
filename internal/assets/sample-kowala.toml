@@ -1,5 +1,5 @@
 [Kowala]
-NetworkId = 3680923
+NetworkId = 2
 SyncMode = "full"
 LightPeers = 20
 DatabaseCache = 128
