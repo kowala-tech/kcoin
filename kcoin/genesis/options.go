@@ -229,10 +229,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		return nil, err
 	}
 
-	if !prefundedIncludesValidatorWallet(validPrefundedAccounts, &validators[0].address) {
-		return nil, ErrWalletAddressValidatorNotInPrefundedAccounts
-	}
-
 	return &validGenesisOptions{
 		network:         network,
 		consensusEngine: consensusEngine,

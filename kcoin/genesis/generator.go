@@ -1,7 +1,6 @@
 package genesis
 
 import (
-	"bytes"
 	"math/big"
 	"math/rand"
 	"time"
@@ -180,17 +179,4 @@ func (gen *generator) prefundAccounts(validPrefundedAccounts []*validPrefundedAc
 			Balance: vAccount.balance,
 		}
 	}
-}
-
-func prefundedIncludesValidatorWallet(
-	accounts []*validPrefundedAccount,
-	addresses *common.Address,
-) bool {
-	for _, account := range accounts {
-		if bytes.Equal(account.accountAddress.Bytes(), addresses.Bytes()) {
-			return true
-		}
-	}
-
-	return false
 }

@@ -22,6 +22,8 @@ func init() {
 		Long:  `Generate a genesis.json file based on a config file or parameters.`,
 		RunE:  createGenesis,
 	}
+
+	cmd.Flags().StringP("config", "c", "", "Use to load configuration from config file.")
 }
 
 func loadFromFileConfigIfAvailable() {
