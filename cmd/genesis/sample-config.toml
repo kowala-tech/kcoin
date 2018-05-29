@@ -1,19 +1,44 @@
 [genesis]
-network = "test" # Only supported test and main
-maxNumValidators = "100"
-unbondingPeriod = "0"
-accountAddressGenesisValidator = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
+fileName = "genesis.json"
+network = "test"
+extraData = "Kowala's first block!"
 
-# Optional values
-consensusEngine = "tendermint" # Only supported tendermint by the moment
-smartContractsOwner = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
-extraData = "extraData"
-fileName = "genesis.json" # The path of the filename.
+[genesis.governance]
+origin = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
+governors = ["0xa1e8587ed7f915d5bbbf283b21af4813232069f7", "0xbfAdCF85554F139F978DE5442aacFBe085c754f7", "0xF358eb1020375800746ccd5c6638DA36C5a6bec9"]
+numConfirmations = 2
+
+[genesis.consensus]
+engine = "tendermint" 
+maxNumValidators = 100
+freezePeriod = 1
+baseDeposit = 1000000
+[[genesis.consensus.validators]]
+address = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
+deposit = 1000000
+
+[genesis.consensus.token]
+name = "mUSD"
+symbol = "mUSD"
+cap = 1073741824
+decimals = 18
+[[genesis.consensus.token.holders]]
+address = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
+numTokens = 1000000
+
+[genesis.datafeed]
+maxNumOracles = 1000
+freezePeriod = 1
+baseDeposit = 10
 
 [[prefundedAccounts]]
-accountAddress = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
-balance = "0x200000000000000000000000000000000000000000000000000000000000000"
+accountAddress = "0xa1e8587ed7f915d5bbbf283b21af4813232069f7"
+balance = 50
 
 [[prefundedAccounts]]
-accountAddress = "0x259be75d96876f2ada3d202722523e9cd4dd917d"
-balance = "1000000000000000000"
+accountAddress = "0xbfAdCF85554F139F978DE5442aacFBe085c754f7"
+balance = 50
+
+[[prefundedAccounts]]
+accountAddress = "0xF358eb1020375800746ccd5c6638DA36C5a6bec9"
+balance = 50

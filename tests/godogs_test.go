@@ -54,30 +54,32 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^I transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITransferKUSD)
 	s.Step(`^I try to transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITryTransferKUSD)
 	s.Step(`^the transaction should fail$`, context.LastTransactionFailed)
+	s.Step(`^only one transaction should be done$`, context.OnlyOneTransactionIsDone)
+	s.Step(`^the transaction hash the same$`, context.TransactionHashTheSame)
 
 	// Balances
 	s.Step(`^the balance of (\w+) should be (\d+) kcoins?$`, context.TheBalanceIsExactly)
 	s.Step(`^the balance of (\w+) should be around (\d+) kcoins?$`, context.TheBalanceIsAround)
+	s.Step(`^the balance of (\w+) should be greater (\d+) kcoins?$`, context.TheBalanceIsGreater)
 	s.Step(`^the transaction should fail$`, context.LastTransactionFailed)
 
 	// validation
 	s.Step(`^I start validator with (\d+) kcoins deposit$`, validationCtx.IStartTheValidator)
-	s.Step(`^I should be a validator$`, validationCtx.IShouldBeAValidator)
 	s.Step(`^I have my node running using account (\w+)$`, validationCtx.IHaveMyNodeRunning)
-	s.Step(`^I should be a validator$`, validationCtx.IShouldBeAValidator)
 	s.Step(`^I stop validation$`, validationCtx.IStopValidation)
 	s.Step(`^I wait for the unbonding period to be over$`, validationCtx.IWaitForTheUnbondingPeriodToBeOver)
 	s.Step(`^I withdraw my node from validation$`, validationCtx.IWithdrawMyNodeFromValidation)
-	s.Step(`^There should be (\d+) kcoins available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
+	s.Step(`^there should be (\d+) kcoins available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
 	s.Step(`^My node should be not be a validator$`, validationCtx.MyNodeShouldBeNotBeAValidator)
+	s.Step(`^I wait for my node to be synced$`, validationCtx.IWaitForMyNodeToBeSynced)
 
 	// Nodes
 	s.Step(`^I start a new node$`, context.IStartANewNode)
-	s.Step(`^My node should sync with the network$`, context.MyNodeShouldSyncWithTheNetwork)
-	s.Step(`^My node is already synchronised$`, context.MyNodeIsAlreadySynchronised)
+	s.Step(`^my node should sync with the network$`, context.MyNodeShouldSyncWithTheNetwork)
+	s.Step(`^my node is already synchronised$`, validationCtx.MyNodeIsAlreadySynchronised)
 	s.Step(`^I disconnect my node for (\d+) blocks and reconnect it$`, context.IDisconnectMyNodeForBlocksAndReconnectIt)
 	s.Step(`^I start a new node with a different network ID$`, context.IStartANewNodeWithADifferentNetworkID)
-	s.Step(`^My node should not sync with the network$`, context.MyNodeShouldNotSyncWithTheNetwork)
+	s.Step(`^my node should not sync with the network$`, context.MyNodeShouldNotSyncWithTheNetwork)
 	s.Step(`^I start a new node with a different chain ID$`, context.IStartANewNodeWithADifferentChainID)
 	s.Step(`^I start validator with (\d+) deposit and coinbase A$`, context.IStartValidatorWithDepositAndCoinbaseA)
 }

@@ -471,9 +471,6 @@ var (
 // the a subdirectory of the specified datadir will be used.
 func MakeDataDir(ctx *cli.Context) string {
 	if path := ctx.GlobalString(DataDirFlag.Name); path != "" {
-		if ctx.GlobalBool(TestnetFlag.Name) {
-			return filepath.Join(path, "testnet")
-		}
 		return path
 	}
 	Fatalf("Cannot determine default data directory, please set manually (--datadir)")
@@ -718,7 +715,7 @@ func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *kcoin.Config) {
 
 func setDeposit(ctx *cli.Context, cfg *kcoin.Config) {
 	if ctx.GlobalIsSet(ValidatorDepositFlag.Name) {
-		cfg.Deposit = ctx.GlobalUint64(ValidatorDepositFlag.Name)
+		cfg.Deposit = new(big.Int).SetUint64(ctx.GlobalUint64(ValidatorDepositFlag.Name))
 	}
 }
 
@@ -799,8 +796,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.DataDir = filepath.Join(os.TempDir(), "kowala_dev_mode")
-	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -896,6 +891,8 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kcoin.Config) {
 	}
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
+	} else if ctx.GlobalBool(TestnetFlag.Name) {
+		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	}
 
 	// Ethereum needs to know maxPeers to calculate the light server peer ratio.
@@ -922,11 +919,7 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *kcoin.Config) {
 	}
 
 	// Override any default configs for hard coded networks.
-	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.Genesis = core.DefaultTestnetGenesisBlock()
-		cfg.NetworkId = cfg.Genesis.Config.ChainID.Uint64()
-	case ctx.GlobalBool(DevModeFlag.Name):
+	if ctx.GlobalBool(DevModeFlag.Name) {
 		cfg.Genesis = core.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = new(big.Int)
@@ -1026,7 +1019,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	//if !ctx.GlobalBool(FakePoWFlag.Name) {
 	//	engine = ethash.New("", 1, 0, "", 1, 0)
 	//}
-	engine := tendermint.New(&params.TendermintConfig{Rewarded: false})
+	engine := tendermint.New(&params.TendermintConfig{})
 	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)

@@ -2,7 +2,7 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: kcoin android ios kcoin-cross swarm evm all test clean
+.PHONY: kcoin android ios kcoin-cross swarm evm genesis all test clean
 .PHONY: kcoin-linux kcoin-linux-386 kcoin-linux-amd64 kcoin-linux-mips64 kcoin-linux-mips64le
 .PHONY: kcoin-linux-arm kcoin-linux-arm-5 kcoin-linux-arm-6 kcoin-linux-arm-7 kcoin-linux-arm64
 .PHONY: kcoin-darwin kcoin-darwin-386 kcoin-darwin-amd64
@@ -16,13 +16,18 @@ OS := $(shell uname)
 ifeq ($(OS),Linux)
 	NPROCS := $(shell grep -c ^processor /proc/cpuinfo)
 else ifeq ($(OS),Darwin)
-	NPROCS := $(shell system_profiler | awk '/Number of CPUs/ {print $$4}{next;}')
+	NPROCS := $(shell sysctl -n hw.ncpu)
 endif # $(OS)
 
 kcoin:
 	build/env.sh go run build/ci.go install ./cmd/kcoin
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kcoin\" to launch kcoin."
+
+control:
+	build/env.sh go run build/ci.go install ./cmd/control
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/control\" to launch control."
 
 bootnode:
 	build/env.sh go run build/ci.go install ./cmd/bootnode
@@ -38,6 +43,11 @@ evm:
 	build/env.sh go run build/ci.go install ./cmd/evm
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/evm\" to start the evm."
+
+genesis:
+	build/env.sh go run build/ci.go install ./cmd/genesis
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/genesis\" to generate genesis files."
 
 all:
 	build/env.sh go run build/ci.go install

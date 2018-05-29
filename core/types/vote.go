@@ -151,13 +151,17 @@ func (vote *Vote) Hash() common.Hash {
 // ProtectedHash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (vote *Vote) ProtectedHash(chainID *big.Int) common.Hash {
-	return rlpHash([]interface{}{
+	return vote.HashWithData(chainID, uint(0), uint(0))
+}
+
+func (vote *Vote) HashWithData(data ...interface{}) common.Hash {
+	voteData := []interface{}{
 		vote.data.BlockHash,
 		vote.data.BlockNumber,
 		vote.data.Round,
 		vote.data.Type,
-		chainID, uint(0), uint(0),
-	})
+	}
+	return rlpHash(append(voteData, data...))
 }
 
 // WithSignature returns a new vote with the given signature.
@@ -172,6 +176,19 @@ func (vote *Vote) WithSignature(signer Signer, sig []byte) (*Vote, error) {
 	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
 
 	return cpy, nil
+}
+
+func (vote *Vote) Protected() bool {
+	return true
+}
+
+func (vote *Vote) ChainID() *big.Int {
+	return deriveChainID(vote.data.V)
+}
+
+func (vote *Vote) SignatureValues() (R, S, V *big.Int) {
+	R, S, V = vote.data.R, vote.data.S, vote.data.V
+	return
 }
 
 func (vote *Vote) String() string {
