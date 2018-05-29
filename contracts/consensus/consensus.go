@@ -31,7 +31,7 @@ var mapValidatorMgrToAddr = map[uint64]common.Address{
 }
 
 var mapMiningTokenToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"),
 }
 
 // ValidatorsChecksum lets a validator know if there are changes in the validator set
