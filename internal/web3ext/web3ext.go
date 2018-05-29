@@ -425,22 +425,22 @@ web3._extend({
 
 const MUSD_JS = `
 web3._extend({
-	property: 'validator',
+	property: 'mUSD',
 	methods:
 	[
 		new web3._extend.Method({
 			name: 'getBalance',
-			call: 'mUSD_getBalance'
-			params: 2,
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
+			call: 'mUSD_getBalance',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter],
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
-		var web3._extend.Method({
+		new web3._extend.Method({
 			name: 'transfer',
 			call: 'mUSD_transfer',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
-		}),
+		})
 	],
 	properties: []
 });

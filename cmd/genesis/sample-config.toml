@@ -24,7 +24,7 @@ cap = 1073741824
 decimals = 18
 [[genesis.consensus.token.holders]]
 address = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
-numTokens = 1000000
+numTokens = 3000000
 
 [genesis.datafeed]
 maxNumOracles = 1000
@@ -41,4 +41,8 @@ balance = 50
 
 [[prefundedAccounts]]
 accountAddress = "0xF358eb1020375800746ccd5c6638DA36C5a6bec9"
+balance = 50
+
+[[prefundedAccounts]]
+accountAddress = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
 balance = 50
