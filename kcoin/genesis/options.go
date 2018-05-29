@@ -29,19 +29,17 @@ var (
 		TendermintConsensus: true,
 	}
 
-	ErrEmptyMaxNumValidators                        = errors.New("max number of validators is mandatory")
-	ErrInvalidMaxNumValidators                      = errors.New("invalid max num of validators")
-	ErrEmptyFreezePeriod                            = errors.New("freeze period in days is mandatory")
-	ErrInvalidFreezePeriod                          = errors.New("freeze period is invalid")
-	ErrEmptyWalletAddressValidator                  = errors.New("wallet address of genesis validator is mandatory")
-	ErrInvalidWalletAddressValidator                = errors.New("wallet address of genesis validator is invalid")
-	ErrEmptyPrefundedAccounts                       = errors.New("empty prefunded accounts, at least the validator wallet address should be included")
-	ErrWalletAddressValidatorNotInPrefundedAccounts = errors.New("prefunded accounts should include genesis validator account")
-	ErrInvalidAddressInPrefundedAccounts            = errors.New("address in prefunded accounts is invalid")
-	ErrInvalidContractsOwnerAddress                 = errors.New("address used for smart contracts is invalid")
-	ErrInvalidNetwork                               = errors.New("invalid Network, use main, test or other")
-	ErrInvalidConsensusEngine                       = errors.New("invalid consensus engine")
-	ErrInvalidAddress                               = errors.New("Invalid address")
+	ErrEmptyMaxNumValidators             = errors.New("max number of validators is mandatory")
+	ErrInvalidMaxNumValidators           = errors.New("invalid max num of validators")
+	ErrEmptyFreezePeriod                 = errors.New("freeze period in days is mandatory")
+	ErrInvalidFreezePeriod               = errors.New("freeze period is invalid")
+	ErrEmptyWalletAddressValidator       = errors.New("wallet address of genesis validator is mandatory")
+	ErrInvalidWalletAddressValidator     = errors.New("wallet address of genesis validator is invalid")
+	ErrInvalidAddressInPrefundedAccounts = errors.New("address in prefunded accounts is invalid")
+	ErrInvalidContractsOwnerAddress      = errors.New("address used for smart contracts is invalid")
+	ErrInvalidNetwork                    = errors.New("invalid Network, use main, test or other")
+	ErrInvalidConsensusEngine            = errors.New("invalid consensus engine")
+	ErrInvalidAddress                    = errors.New("Invalid address")
 )
 
 type Options struct {
@@ -308,10 +306,6 @@ func mapWalletAddress(a string) (*common.Address, error) {
 
 func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount, error) {
 	var validAccounts []*validPrefundedAccount
-
-	if len(accounts) == 0 {
-		return nil, ErrEmptyPrefundedAccounts
-	}
 
 	for _, a := range accounts {
 		address, err := mapWalletAddress(a.Address)
