@@ -1,4 +1,4 @@
-package kcoin
+package knode
 
 import (
 	"github.com/kowala-tech/kcoin/metrics"

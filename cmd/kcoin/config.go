@@ -13,7 +13,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/cmd/utils"
 	"github.com/kowala-tech/kcoin/dashboard"
-	"github.com/kowala-tech/kcoin/kcoin"
+	"github.com/kowala-tech/kcoin/knode"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/stats"
@@ -55,7 +55,7 @@ var tomlSettings = toml.Config{
 }
 
 type kcoinConfig struct {
-	Kowala    kcoin.Config
+	Kowala    knode.Config
 	Node      node.Config
 	Stats     stats.Config
 	Dashboard dashboard.Config
@@ -82,14 +82,14 @@ func defaultNodeConfig() node.Config {
 	cfg.Version = params.VersionWithCommit(gitCommit)
 	cfg.HTTPModules = append(cfg.HTTPModules, "eth", "shh")
 	cfg.WSModules = append(cfg.WSModules, "eth", "shh")
-	cfg.IPCPath = "kcoin.ipc"
+	cfg.IPCPath = "knode.ipc"
 	return cfg
 }
 
 func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	// Load defaults.
 	cfg := kcoinConfig{
-		Kowala:    kcoin.DefaultConfig,
+		Kowala:    knode.DefaultConfig,
 		Node:      defaultNodeConfig(),
 		Dashboard: dashboard.DefaultConfig,
 	}

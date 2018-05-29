@@ -31,9 +31,9 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/types"
-	kcoinroot "github.com/kowala-tech/kcoin/kcoin"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
 	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/knode"
+	"github.com/kowala-tech/kcoin/knode/downloader"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
@@ -209,7 +209,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network
 	}
 
 	// Assemble the Kowala protocol
-	cfg := kcoinroot.DefaultConfig
+	cfg := knode.DefaultConfig
 	cfg.SyncMode = downloader.FastSync
 	cfg.NetworkId = network
 	cfg.Genesis = genesis

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/kcoin/genesis"
+	"github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

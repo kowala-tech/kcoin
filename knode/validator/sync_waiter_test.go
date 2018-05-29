@@ -1,11 +1,12 @@
 package validator
 
 import (
-	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/knode/downloader"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSyncWaiterNoError(t *testing.T) {

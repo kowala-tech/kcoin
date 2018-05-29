@@ -15,7 +15,7 @@ import (
 	"github.com/kowala-tech/kcoin/contracts/ownership"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/kcoin/genesis"
+	"github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/stretchr/testify/suite"
 )

@@ -2,8 +2,9 @@ package validator
 
 import (
 	"errors"
+
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
+	"github.com/kowala-tech/kcoin/knode/downloader"
 )
 
 var (

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/kowala-tech/kcoin/kcoin/genesis"
+	"github.com/kowala-tech/kcoin/knode/genesis"
 )
 
 type generateGenesisFileCommandHandler struct {
