@@ -15,6 +15,7 @@ import (
 )
 
 type contract struct {
+	name       string
 	runtimeCfg *runtime.Config
 	address    common.Address
 	storage    map[common.Hash]common.Hash
@@ -32,6 +33,7 @@ func (contract *contract) AsGenesisAccount() core.GenesisAccount {
 }
 
 var MultiSigContract = &contract{
+	name: "MultiSigWallet",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
 		args := opts.multiSig
 
@@ -67,6 +69,7 @@ var MultiSigContract = &contract{
 }
 
 var MiningTokenContract = &contract{
+	name: "Mining Token",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
 		args := opts.miningToken
 
@@ -132,6 +135,7 @@ func mintTokens(contract *contract, opts *validGenesisOptions) error {
 }
 
 var OracleMgrContract = &contract{
+	name: "Oracle Manager",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
 		args := opts.oracleMgr
 
@@ -164,6 +168,7 @@ var OracleMgrContract = &contract{
 }
 
 var ValidatorMgrContract = &contract{
+	name: "Validator Manager",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
 		args := opts.validatorMgr
 

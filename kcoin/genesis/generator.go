@@ -1,7 +1,7 @@
 package genesis
 
 import (
-	"bytes"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"time"
@@ -79,6 +79,11 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 		},
 		// @TODO (rgeraldes)
 		ExtraData: getExtraData(opts.ExtraData),
+	}
+
+	fmt.Println("Please update the codebase with the following addresses (go bindings):")
+	for _, contract := range gen.contracts {
+		fmt.Printf("Contract: %s, Address: %s\n", contract.name, contract.address.Hex())
 	}
 
 	return genesis, nil
@@ -180,17 +185,4 @@ func (gen *generator) prefundAccounts(validPrefundedAccounts []*validPrefundedAc
 			Balance: vAccount.balance,
 		}
 	}
-}
-
-func prefundedIncludesValidatorWallet(
-	accounts []*validPrefundedAccount,
-	addresses *common.Address,
-) bool {
-	for _, account := range accounts {
-		if bytes.Equal(account.accountAddress.Bytes(), addresses.Bytes()) {
-			return true
-		}
-	}
-
-	return false
 }
