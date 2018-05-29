@@ -1,9 +1,9 @@
 {
   "config": {
-    "chainID": 1000,
+    "chainID": 2,
     "tendermint": {}
   },
-  "timestamp": "0x5b0d45f2",
+  "timestamp": "0x5b0d6038",
   "extraData": "0x4b6f77616c61277320666972737420626c6f636b210000000000000000000000",
   "gasLimit": "0x47b760",
   "coinbase": "0x0000000000000000000000000000000000000000",
