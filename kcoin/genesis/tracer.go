@@ -9,13 +9,15 @@ import (
 )
 
 type vmTracer struct {
-	data map[common.Address]map[common.Hash]common.Hash
 	sync.RWMutex
+	data map[common.Address]map[common.Hash]common.Hash
 }
+
+const defaultSize = 1024
 
 func newVmTracer() *vmTracer {
 	return &vmTracer{
-		data: make(map[common.Address]map[common.Hash]common.Hash, 1024),
+		data: make(map[common.Address]map[common.Hash]common.Hash, defaultSize),
 	}
 }
 
@@ -28,7 +30,7 @@ func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cos
 
 		addrStorage, ok := vmt.getAddrStorage(contract.Address())
 		if !ok {
-			addrStorage = make(map[common.Hash]common.Hash, 1024)
+			addrStorage = make(map[common.Hash]common.Hash, defaultSize)
 			vmt.setAddrStorage(contract.Address(), addrStorage)
 		}
 		addrStorage[common.BigToHash(s[len(s)-1])] = common.BigToHash(s[len(s)-2])
@@ -36,20 +38,17 @@ func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cos
 	return nil
 }
 
-func (vmt *vmTracer) getAddrStorage(contractAddress common.Address) (map[common.Hash]common.Hash, bool) {
+func (vmt *vmTracer) getAddrStorage(contractAddress common.Address) (addrStorage map[common.Hash]common.Hash, ok bool) {
 	vmt.RLock()
-	defer vmt.RUnlock()
-
-	addrStorage, ok := vmt.data[contractAddress]
-	return addrStorage, ok
+	addrStorage, ok = vmt.data[contractAddress]
+	vmt.RUnlock()
+	return
 }
 
 func (vmt *vmTracer) setAddrStorage(contractAddress common.Address, addrStorage map[common.Hash]common.Hash) {
 	vmt.Lock()
-	defer vmt.Unlock()
-
 	vmt.data[contractAddress] = addrStorage
-	return
+	vmt.Unlock()
 }
 
 func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
