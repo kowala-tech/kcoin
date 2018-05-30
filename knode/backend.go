@@ -1,5 +1,5 @@
 // Package kcoin implements the Kowala protocol.
-package kcoin
+package knode
 
 import (
 	"errors"
@@ -21,11 +21,11 @@ import (
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/internal/kcoinapi"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
-	"github.com/kowala-tech/kcoin/kcoin/filters"
-	"github.com/kowala-tech/kcoin/kcoin/gasprice"
-	"github.com/kowala-tech/kcoin/kcoin/validator"
 	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/knode/downloader"
+	"github.com/kowala-tech/kcoin/knode/filters"
+	"github.com/kowala-tech/kcoin/knode/gasprice"
+	"github.com/kowala-tech/kcoin/knode/validator"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
