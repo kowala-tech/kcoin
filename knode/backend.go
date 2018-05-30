@@ -203,12 +203,6 @@ func (s *Kowala) APIs() []rpc.API {
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
-	token := s.consensus.Token()
-	tokenName, err := token.Name()
-	if err != nil {
-		log.Crit("Failed to load the mining token bindings", "err", err)
-	}
-
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
@@ -227,9 +221,9 @@ func (s *Kowala) APIs() []rpc.API {
 			Service:   NewPrivateValidatorAPI(s),
 			Public:    false,
 		}, {
-			Namespace: tokenName,
+			Namespace: "mtoken",
 			Version:   "1.0",
-			Service:   NewPublicTokenAPI(s.accountManager, token),
+			Service:   NewPublicTokenAPI(s.accountManager, s.consensus.Token()),
 			Public:    false,
 		}, {
 			Namespace: "eth",
