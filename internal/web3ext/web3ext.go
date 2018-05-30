@@ -7,7 +7,7 @@ var Modules = map[string]string{
 	"clique":     Clique_JS,
 	"debug":      Debug_JS,
 	"eth":        Eth_JS,
-	"mUSD":       MUSD_JS,
+	"mtoken":     MToken_JS,
 	"validator":  Validator_JS,
 	"net":        Net_JS,
 	"personal":   Personal_JS,
@@ -423,21 +423,21 @@ web3._extend({
 });
 `
 
-const MUSD_JS = `
+const MToken_JS = `
 web3._extend({
-	property: 'mUSD',
+	property: 'mtoken',
 	methods:
 	[
 		new web3._extend.Method({
 			name: 'getBalance',
-			call: 'mUSD_getBalance',
+			call: 'mtoken_getBalance',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter],
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({
 			name: 'transfer',
-			call: 'mUSD_transfer',
+			call: 'mtoken_transfer',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		})
