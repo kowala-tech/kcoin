@@ -14,8 +14,8 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/console"
 	"github.com/kowala-tech/kcoin/internal/debug"
-	"github.com/kowala-tech/kcoin/kcoin"
 	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/knode"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/metrics"
 	"github.com/kowala-tech/kcoin/node"
@@ -278,7 +278,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.ValidationEnabledFlag.Name) {
 		// Validation only makes sense if a full Kowala node is running
-		var kowala *kcoin.Kowala
+		var kowala *knode.Kowala
 		if err := stack.Service(&kowala); err != nil {
 			utils.Fatalf("kowala service not running: %v", err)
 		}

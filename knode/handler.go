@@ -1,4 +1,4 @@
-package kcoin
+package knode
 
 import (
 	"encoding/json"
@@ -15,10 +15,10 @@ import (
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
-	"github.com/kowala-tech/kcoin/kcoin/fetcher"
-	"github.com/kowala-tech/kcoin/kcoin/validator"
 	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/knode/downloader"
+	"github.com/kowala-tech/kcoin/knode/fetcher"
+	"github.com/kowala-tech/kcoin/knode/validator"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/p2p"
 	"github.com/kowala-tech/kcoin/p2p/discover"

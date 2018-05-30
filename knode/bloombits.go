@@ -1,4 +1,4 @@
-package kcoin
+package knode
 
 import (
 	"time"
@@ -77,7 +77,7 @@ const (
 type BloomIndexer struct {
 	size uint64 // section size to generate bloombits for
 
-	db  kcoindb.Database      // database instance to write index data and metadata into
+	db  kcoindb.Database     // database instance to write index data and metadata into
 	gen *bloombits.Generator // generator to rotate the bloom bits crating the bloom index
 
 	section uint64      // Section is the section number being processed currently

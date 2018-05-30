@@ -1,5 +1,5 @@
 // Package kcoin implements the Kowala protocol.
-package kcoin
+package knode
 
 import (
 	"bytes"

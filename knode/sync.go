@@ -1,4 +1,4 @@
-package kcoin
+package knode
 
 import (
 	"math/rand"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
+	"github.com/kowala-tech/kcoin/knode/downloader"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/p2p/discover"
 )
@@ -151,7 +151,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		// @NOTE (rgeraldes) we are using the forced sync to allow the validator to start the validation independently
 		// 10 seconds should be more than enough to sync with a peer before it gets to a forced sync
 		// Mark initial sync done
-		atomic.StoreUint32(&pm.acceptTxs, 1) 
+		atomic.StoreUint32(&pm.acceptTxs, 1)
 		pm.eventMux.Post(downloader.DoneEvent{})
 		return
 	}
