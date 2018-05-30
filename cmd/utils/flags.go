@@ -1001,8 +1001,8 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) kcoindb.Database {
 func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	var genesis *core.Genesis
 	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		genesis = core.DefaultTestnetGenesisBlock()
+	//case ctx.GlobalBool(TestnetFlag.Name):
+	//genesis = core.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(DevModeFlag.Name):
 		genesis = core.DevGenesisBlock()
 	}
