@@ -373,6 +373,8 @@ func (self *StateDB) getStateObject(addr common.Address) (stateObject *stateObje
 }
 
 func (self *StateDB) setStateObject(object *stateObject) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
 	self.stateObjects[object.Address()] = object
 }
 

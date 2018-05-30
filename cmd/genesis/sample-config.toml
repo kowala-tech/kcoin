@@ -12,10 +12,10 @@ numConfirmations = 2
 engine = "tendermint" 
 maxNumValidators = 100
 freezePeriod = 1
-baseDeposit = 100
+baseDeposit = 1000000
 [[genesis.consensus.validators]]
 address = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
-deposit = 123456
+deposit = 1000000
 
 [genesis.consensus.token]
 name = "mUSD"
@@ -24,12 +24,12 @@ cap = 1073741824
 decimals = 18
 [[genesis.consensus.token.holders]]
 address = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
-numTokens = 123456
+numTokens = 3000000
 
 [genesis.datafeed]
 maxNumOracles = 1000
 freezePeriod = 1
-baseDeposit = 1
+baseDeposit = 10
 
 [[prefundedAccounts]]
 accountAddress = "0xa1e8587ed7f915d5bbbf283b21af4813232069f7"
@@ -41,4 +41,8 @@ balance = 50
 
 [[prefundedAccounts]]
 accountAddress = "0xF358eb1020375800746ccd5c6638DA36C5a6bec9"
+balance = 50
+
+[[prefundedAccounts]]
+accountAddress = "0xd6e579085c82329c89fca7a9f012be59028ed53f"
 balance = 50

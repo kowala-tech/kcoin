@@ -311,6 +311,19 @@ func (ec *Client) NetworkID(ctx context.Context) (*big.Int, error) {
 	return version, nil
 }
 
+// Coinbase returns the coinbase address
+func (ec *Client) Coinbase(ctx context.Context) (*common.Address, error) {
+	var coinbaseStr string
+	if err := ec.c.CallContext(ctx, &coinbaseStr, "eth_coinbase"); err != nil {
+		return nil, err
+	}
+	if coinbaseStr == "" {
+		return nil, nil
+	}
+	coinbase := common.HexToAddress(coinbaseStr)
+	return &coinbase, nil
+}
+
 // BalanceAt returns the wei balance of the given account.
 // The block number can be nil, in which case the balance is taken from the latest known block.
 func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {

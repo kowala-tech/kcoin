@@ -21,7 +21,7 @@ var (
 
 	// TestnetChainConfig contains the chain parameters to run a node on the test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID:    big.NewInt(1000),
+		ChainID:    big.NewInt(2),
 		Tendermint: new(TendermintConfig),
 	}
 
