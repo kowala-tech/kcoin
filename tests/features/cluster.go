@@ -14,8 +14,8 @@ import (
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/cluster"
 	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/lazada/awg"
 )
 

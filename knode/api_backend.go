@@ -1,4 +1,4 @@
-package kcoin
+package knode
 
 import (
 	"context"
@@ -13,9 +13,9 @@ import (
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
-	"github.com/kowala-tech/kcoin/kcoin/gasprice"
 	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/knode/downloader"
+	"github.com/kowala-tech/kcoin/knode/gasprice"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rpc"
 )
@@ -23,7 +23,7 @@ import (
 // KowalaApiBackend implements kcoinapi.Backend for full nodes
 type KowalaApiBackend struct {
 	kcoin *Kowala
-	gpo  *gasprice.Oracle
+	gpo   *gasprice.Oracle
 }
 
 func (b *KowalaApiBackend) ChainConfig() *params.ChainConfig {

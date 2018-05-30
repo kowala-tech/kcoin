@@ -1,4 +1,4 @@
-package kcoin
+package knode
 
 import (
 	"math/big"
@@ -6,8 +6,8 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"
 	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
-	"github.com/kowala-tech/kcoin/kcoin/gasprice"
+	"github.com/kowala-tech/kcoin/knode/downloader"
+	"github.com/kowala-tech/kcoin/knode/gasprice"
 	"github.com/kowala-tech/kcoin/params"
 )
 

@@ -1,5 +1,5 @@
 // Package kcoin implements the Kowala protocol.
-package kcoin
+package knode
 
 import (
 	"errors"
@@ -21,11 +21,11 @@ import (
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/internal/kcoinapi"
-	"github.com/kowala-tech/kcoin/kcoin/downloader"
-	"github.com/kowala-tech/kcoin/kcoin/filters"
-	"github.com/kowala-tech/kcoin/kcoin/gasprice"
-	"github.com/kowala-tech/kcoin/kcoin/validator"
 	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/knode/downloader"
+	"github.com/kowala-tech/kcoin/knode/filters"
+	"github.com/kowala-tech/kcoin/knode/gasprice"
+	"github.com/kowala-tech/kcoin/knode/validator"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
@@ -203,12 +203,6 @@ func (s *Kowala) APIs() []rpc.API {
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
-	token := s.consensus.Token()
-	tokenName, err := token.Name()
-	if err != nil {
-		log.Crit("Failed to load the mining token bindings", "err", err)
-	}
-
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
@@ -227,9 +221,9 @@ func (s *Kowala) APIs() []rpc.API {
 			Service:   NewPrivateValidatorAPI(s),
 			Public:    false,
 		}, {
-			Namespace: tokenName,
+			Namespace: "mtoken",
 			Version:   "1.0",
-			Service:   NewPublicTokenAPI(s.accountManager, token),
+			Service:   NewPublicTokenAPI(s.accountManager, s.consensus.Token()),
 			Public:    false,
 		}, {
 			Namespace: "eth",
