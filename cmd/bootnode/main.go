@@ -84,10 +84,14 @@ func main() {
 			utils.Fatalf("%v", err)
 		}
 	} else {
-		if _, err := discover.ListenUDP(nodeKey, *listenAddr, natm, "", restrictList); err != nil {
+		n, err := discover.ListenUDP(nodeKey, *listenAddr, natm, "", restrictList)
+		if err != nil {
 			utils.Fatalf("%v", err)
 		}
+
+		log.Error(fmt.Sprintf("!!!!!!!! %v\n%v", discover.PubkeyID(&nodeKey.PublicKey).String(), n.Self().String()))
 	}
+
 
 	select {}
 }

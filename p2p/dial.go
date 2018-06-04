@@ -11,6 +11,8 @@ import (
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/p2p/discover"
 	"github.com/kowala-tech/kcoin/p2p/netutil"
+	"github.com/davecgh/go-spew/spew"
+	"strings"
 )
 
 const (
@@ -122,6 +124,8 @@ func newDialState(static []*discover.Node, bootnodes []*discover.Node, ntab disc
 		randomNodes: make([]*discover.Node, maxdyn/2),
 		hist:        new(dialHistory),
 	}
+
+	log.Error(fmt.Sprintf("bootnodes %v\n%v", spew.Sdump(bootnodes), spew.Sdump(static)))
 	copy(s.bootnodes, bootnodes)
 	for _, n := range static {
 		s.addStatic(n)
@@ -148,7 +152,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	var newtasks []task
 	addDial := func(flag connFlag, n *discover.Node) bool {
 		if err := s.checkDial(n, peers); err != nil {
-			log.Trace("Skipping dial candidate", "id", n.ID, "addr", &net.TCPAddr{IP: n.IP, Port: int(n.TCP)}, "err", err)
+			log.Error("zzzzzzzzzzzz Skipping dial candidate", "id", n.ID, "addr", &net.TCPAddr{IP: n.IP, Port: int(n.TCP)}, "err", err)
 			return false
 		}
 		s.dialing[n.ID] = flag
@@ -180,13 +184,22 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 			log.Warn("Removing static dial candidate", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)}, "err", err)
 			delete(s.static, t.dest.ID)
 		case nil:
+			log.Error(fmt.Sprintf("========================= STATIC SUCCESS!!!"))
 			s.dialing[id] = t.flags
 			newtasks = append(newtasks, t)
+		default:
+			log.Error(fmt.Sprintf("========================= STATIC ERROR %v", err))
 		}
 	}
 	// If we don't have any peers whatsoever, try to dial a random bootnode. This
 	// scenario is useful for the testnet (and private networks) where the discovery
 	// table might be full of mostly bad peers, making it hard to find good ones.
+	log.Error(fmt.Sprintf("len(peers) = %v\tlen(s.bootnodes)=%v\tneedDynDials=%v\tnow.Sub(s.start)=%v\tfallbackInterval=%v",
+		len(peers), len(s.bootnodes), needDynDials, now.Sub(s.start), fallbackInterval))
+
+	log.Error(fmt.Sprintf("Add bootnodes conditions: len(peers) == 0 - %v\nlen(s.bootnodes) > 0 - %v\nneedDynDials > 0 - %v\nnow.Sub(s.start) > fallbackInterval) - %v",
+		len(peers) == 0, len(s.bootnodes) > 0, needDynDials > 0, now.Sub(s.start) > fallbackInterval))
+
 	if len(peers) == 0 && len(s.bootnodes) > 0 && needDynDials > 0 && now.Sub(s.start) > fallbackInterval {
 		bootnode := s.bootnodes[0]
 		s.bootnodes = append(s.bootnodes[:0], s.bootnodes[1:]...)
@@ -270,16 +283,28 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 }
 
 func (t *dialTask) Do(srv *Server) {
+	log.Error(fmt.Sprintf("CONNECT TO %v", t.String()))
+
+	if strings.HasPrefix(t.String(), "staticdial") {
+		log.Error("STATIC")
+	}
+
 	if t.dest.Incomplete() {
+		log.Error("STATIC Incomplete")
 		if !t.resolve(srv) {
+			log.Error("STATIC !resolve")
 			return
 		}
 	}
 	success := t.dial(srv, t.dest)
+	log.Error(fmt.Sprintf("STATIC dial success %v, status %v", success, t.flags&staticDialedConn != 0))
 	// Try resolving the ID of static nodes if dialing failed.
 	if !success && t.flags&staticDialedConn != 0 {
 		if t.resolve(srv) {
-			t.dial(srv, t.dest)
+			newSuccess := t.dial(srv, t.dest)
+			log.Error(fmt.Sprintf("STATIC resolve dial success %v", newSuccess))
+		} else {
+			log.Error("STATIC resolve FALSE")
 		}
 	}
 }
@@ -292,7 +317,7 @@ func (t *dialTask) Do(srv *Server) {
 // The backoff delay resets when the node is found.
 func (t *dialTask) resolve(srv *Server) bool {
 	if srv.ntab == nil {
-		log.Debug("Can't resolve node", "id", t.dest.ID, "err", "discovery is disabled")
+		log.Error("Can't resolve node", "id", t.dest.ID, "err", "discovery is disabled")
 		return false
 	}
 	if t.resolveDelay == 0 {
@@ -308,13 +333,13 @@ func (t *dialTask) resolve(srv *Server) bool {
 		if t.resolveDelay > maxResolveDelay {
 			t.resolveDelay = maxResolveDelay
 		}
-		log.Debug("Resolving node failed", "id", t.dest.ID, "newdelay", t.resolveDelay)
+		log.Error("Resolving node failed", "id", t.dest.ID, "newdelay", t.resolveDelay)
 		return false
 	}
 	// The node was found.
 	t.resolveDelay = initialResolveDelay
 	t.dest = resolved
-	log.Debug("Resolved node", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)})
+	log.Error("Resolved node", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP, Port: int(t.dest.TCP)})
 	return true
 }
 
@@ -322,7 +347,7 @@ func (t *dialTask) resolve(srv *Server) bool {
 func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 	fd, err := srv.Dialer.Dial(dest)
 	if err != nil {
-		log.Trace("Dial error", "task", t, "err", err)
+		log.Error(fmt.Sprintf("Dial error task %v err %v", t, err))
 		return false
 	}
 	mfd := newMeteredConn(fd, false)

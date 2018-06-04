@@ -17,6 +17,7 @@ import (
 	"github.com/kowala-tech/kcoin/p2p/discv5"
 	"github.com/kowala-tech/kcoin/p2p/nat"
 	"github.com/kowala-tech/kcoin/p2p/netutil"
+	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -485,6 +486,9 @@ func (srv *Server) run(dialstate dialer) {
 		// Query dialer for new tasks and start as many as possible now.
 		if len(runningTasks) < maxActiveDialTasks {
 			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
+
+			log.Error(fmt.Sprintf("NEW TASKS %v", spew.Sdump(nt)))
+
 			queuedTasks = append(queuedTasks, startTasks(nt)...)
 		}
 	}
@@ -501,13 +505,13 @@ running:
 			// This channel is used by AddPeer to add to the
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
-			log.Debug("Adding static node", "node", n)
+			log.Error("*** Adding static node", "node", n)
 			dialstate.addStatic(n)
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
 			// stop keeping the node connected
-			log.Debug("Removing static node", "node", n)
+			log.Error("*** Removing static node", "node", n)
 			dialstate.removeStatic(n)
 			if p, ok := peers[n.ID]; ok {
 				p.Disconnect(DiscRequested)
@@ -520,7 +524,7 @@ running:
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
-			log.Trace("Dial task done", "task", t)
+			log.Error(fmt.Sprintf("*** Dial task done %v %v", "task", t))
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:
@@ -549,7 +553,7 @@ running:
 					p.events = &srv.peerFeed
 				}
 				name := truncateName(c.name)
-				log.Debug("Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
+				log.Error("*** Adding p2p peer", "id", c.id, "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
 				peers[c.id] = p
 				go srv.runPeer(p)
 			}
@@ -564,7 +568,7 @@ running:
 		case pd := <-srv.delpeer:
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
-			pd.log.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
+			pd.log.Error("*** Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err, "name", pd.String())
 			delete(peers, pd.ID())
 		}
 	}
@@ -587,7 +591,7 @@ running:
 	// is closed.
 	for len(peers) > 0 {
 		p := <-srv.delpeer
-		p.log.Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
+		p.log.Error("*** <-delpeer (spindown)", "remainingTasks", len(runningTasks))
 		delete(peers, p.ID())
 	}
 }
@@ -595,6 +599,7 @@ running:
 func (srv *Server) protoHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn) error {
 	// Drop connections with no matching protocols.
 	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
+		log.Error(fmt.Sprintf("Useless peer on handshake: %v %v - %s", spew.Sdump(srv.Protocols), spew.Sdump(c.caps), c.String()))
 		return DiscUselessPeer
 	}
 	// Repeat the encryption handshake checks because the

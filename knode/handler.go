@@ -177,6 +177,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
+		log.Error("Useless peer - Hard disconnect at the networking layer")
 		peer.Peer.Disconnect(p2p.DiscUselessPeer)
 	}
 }

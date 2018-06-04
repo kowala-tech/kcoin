@@ -19,6 +19,7 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/log"
+	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -168,8 +169,10 @@ func (tab *Table) Close() {
 // are used to connect to the network if the table is empty and there
 // are no known nodes in the database.
 func (tab *Table) SetFallbackNodes(nodes []*Node) error {
+	log.Error(fmt.Sprintf("**************** %v", spew.Sdump(nodes)))
 	for _, n := range nodes {
 		if err := n.validateComplete(); err != nil {
+			log.Error(fmt.Sprintf("##################################### %v", err))
 			return fmt.Errorf("bad bootstrap/fallback node %q (%v)", n, err)
 		}
 	}
@@ -367,6 +370,7 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// (hopefully) still alive.
 	seeds := tab.db.querySeeds(seedCount, seedMaxAge)
 	seeds = tab.bondall(append(seeds, tab.nursery...))
+	log.Error(fmt.Sprintf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %v", spew.Sdump(seeds)))
 
 	if len(seeds) == 0 {
 		log.Debug("No discv4 seed nodes found")

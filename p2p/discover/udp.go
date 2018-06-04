@@ -280,7 +280,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node
 			nreceived++
 			n, err := t.nodeFromRPC(toaddr, rn)
 			if err != nil {
-				log.Trace("Invalid neighbor node received", "ip", rn.IP, "addr", toaddr, "err", err)
+				log.Trace(fmt.Sprintf("Invalid neighbor node received ip %v addr %v. Err %v", rn.IP, toaddr, err))
 				continue
 			}
 			nodes = append(nodes, n)
