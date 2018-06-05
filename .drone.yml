@@ -100,21 +100,8 @@ pipeline:
       - rename "s/bin\\/kcoin/bin\\/kcoin-${DRONE_COMMIT_SHA}/" build/bin/*
     when:
       event: [push]
-      branch: [dev, feature/cross-compile]
+      branch: [dev]
 
-  s3-dev:
-    image: plugins/s3
-    bucket: releases.kowala.io
-    region: us-east-1
-    acl: public-read
-    source: build/bin/*
-    strip_prefix: build/bin/
-    target: /
-    secrets: [aws_access_key_id, aws_secret_access_key]
-    when:
-      event: [push]
-      branch: [dev, feature/cross-compile]
-  
   build-artifacts-tag:
     image: kowalatech/go:1.0.3
     environment:
@@ -125,17 +112,18 @@ pipeline:
     when:
       event: [tag]
   
-  s3-tag:
+  s3:
     image: plugins/s3
     bucket: releases.kowala.io
     region: us-east-1
     acl: public-read
-    source: build/bin/*
+    source: build/bin/kcoin-*
     strip_prefix: build/bin/
     target: /
     secrets: [aws_access_key_id, aws_secret_access_key]
     when:
-      event: [tag]
+      event: [push, tag]
+      branch: [dev]
 
 services:
   docker:
