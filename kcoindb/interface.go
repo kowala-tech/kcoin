@@ -25,4 +25,6 @@ type Batch interface {
 	Putter
 	ValueSize() int // amount of data in the batch
 	Write() error
+	// Reset resets the batch for reuse
+	Reset()
 }

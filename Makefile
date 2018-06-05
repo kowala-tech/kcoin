@@ -2,7 +2,7 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: kcoin android ios kcoin-cross swarm evm genesis all test clean
+.PHONY: kcoin android ios kcoin-cross evm genesis all test clean
 .PHONY: kcoin-linux kcoin-linux-386 kcoin-linux-amd64 kcoin-linux-mips64 kcoin-linux-mips64le
 .PHONY: kcoin-linux-arm kcoin-linux-arm-5 kcoin-linux-arm-6 kcoin-linux-arm-7 kcoin-linux-arm64
 .PHONY: kcoin-darwin kcoin-darwin-386 kcoin-darwin-amd64
@@ -76,9 +76,13 @@ clean:
 
 devtools:
 	env GOBIN= go get -u golang.org/x/tools/cmd/stringer
-	env GOBIN= go get -u github.com/jteeuwen/go-bindata/go-bindata
+	env GOBIN= go get -u github.com/kevinburke/go-bindata/go-bindata
 	env GOBIN= go get -u github.com/fjl/gencodec
+	env GOBIN= go get -u github.com/golang/protobuf/protoc-gen-go
 	env GOBIN= go install ./cmd/abigen
+	@type "npm" 2> /dev/null || echo 'Please install node.js and npm'
+	@type "solc" 2> /dev/null || echo 'Please install solc'
+	@type "protoc" 2> /dev/null || echo 'Please install protoc'
 
 # Cross Compilation Targets (xgo)
 

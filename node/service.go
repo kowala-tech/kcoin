@@ -25,7 +25,7 @@ type ServiceContext struct {
 // node is an ephemeral one, a memory database is returned.
 func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int) (kcoindb.Database, error) {
 	if ctx.config.DataDir == "" {
-		return kcoindb.NewMemDatabase()
+		return kcoindb.NewMemDatabase(), nil
 	}
 	db, err := kcoindb.NewLDBDatabase(ctx.config.resolvePath(name), cache, handles)
 	if err != nil {

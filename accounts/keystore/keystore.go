@@ -277,8 +277,12 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	if !found {
 		return nil, ErrLocked
 	}
-
-	return types.SignTx(tx, types.NewAndromedaSigner(chainID), unlockedKey.PrivateKey)
+	
+	if chainID != nil {
+		return types.SignTx(tx, types.NewAndromedaSigner(chainID), unlockedKey.PrivateKey)
+	}
+	
+	return types.SignTx(tx, types.UnprotectedSigner{}, unlockedKey.PrivateKey)
 }
 
 // SignVote signs the given vote with the requested account.
@@ -330,7 +334,11 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 	}
 	defer zeroKey(key.PrivateKey)
 
-	return types.SignTx(tx, types.NewAndromedaSigner(chainID), key.PrivateKey)
+	if chainID != nil {
+		return types.SignTx(tx, types.NewAndromedaSigner(chainID), key.PrivateKey)
+	}
+	
+	return types.SignTx(types.NewUnprotectedSigner{}, key.PrivateKey)
 }
 
 // Unlock unlocks the given account indefinitely.

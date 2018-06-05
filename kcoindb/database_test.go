@@ -37,8 +37,7 @@ func TestLDB_PutGet(t *testing.T) {
 }
 
 func TestMemoryDB_PutGet(t *testing.T) {
-	db, _ := kcoindb.NewMemDatabase()
-	testPutGet(db, t)
+	testPutGet(kcoindb.NewMemDatabase(), t)
 }
 
 func testPutGet(db kcoindb.Database, t *testing.T) {
@@ -115,8 +114,7 @@ func TestLDB_ParallelPutGet(t *testing.T) {
 }
 
 func TestMemoryDB_ParallelPutGet(t *testing.T) {
-	db, _ := kcoindb.NewMemDatabase()
-	testParallelPutGet(db, t)
+	testParallelPutGet(kcoindb.NewMemDatabase(), t)
 }
 
 func testParallelPutGet(db kcoindb.Database, t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/log"
-	"gopkg.in/fatih/set.v0"
+	set "gopkg.in/fatih/set.v0"
 )
 
 // fileCache is a cache of files seen during scan of keystore.

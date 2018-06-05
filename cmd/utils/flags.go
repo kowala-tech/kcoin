@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -43,7 +44,7 @@ var (
 {{if .cmd.Description}}{{.cmd.Description}}
 {{end}}{{if .cmd.Subcommands}}
 SUBCOMMANDS:
-	{{range .cmd.Subcommands}}{{.cmd.Name}}{{with .cmd.ShortName}}, {{.cmd}}{{end}}{{ "\t" }}{{.cmd.Usage}}
+	{{range .cmd.Subcommands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
 	{{end}}{{end}}{{if .categorizedFlags}}
 {{range $idx, $categorized := .categorizedFlags}}{{$categorized.Name}} OPTIONS:
 {{range $categorized.Flags}}{{"\t"}}{{.}}
@@ -76,7 +77,7 @@ func NewApp(gitCommit, usage string) *cli.App {
 	//app.Authors = nil
 	app.Email = ""
 	app.Version = params.Version
-	if gitCommit != "" {
+	if len(gitCommit) >= 8 {
 		app.Version += "-" + gitCommit[:8]
 	}
 	app.Usage = usage
@@ -103,7 +104,7 @@ var (
 	}
 	NoUSBFlag = cli.BoolFlag{
 		Name:  "nousb",
-		Usage: "Disables monitoring for and managine USB hardware wallets",
+		Usage: "Disables monitoring for and managing USB hardware wallets",
 	}
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
@@ -129,11 +130,11 @@ var (
 	}
 	FastSyncFlag = cli.BoolFlag{
 		Name:  "fast",
-		Usage: "Enable fast syncing through state downloads",
+		Usage: "Enable fast syncing through state downloads (replaced by --syncmode)",
 	}
 	LightModeFlag = cli.BoolFlag{
 		Name:  "light",
-		Usage: "Enable light client mode",
+		Usage: "Enable light client mode (replaced by --syncmode)",
 	}
 	defaultSyncMode = knode.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
@@ -141,7 +142,11 @@ var (
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
 		Value: &defaultSyncMode,
 	}
-
+	GCModeFlag = cli.StringFlag{
+		Name:  "gcmode",
+		Usage: `Blockchain garbage collection mode ("full", "archive")`,
+		Value: "full",
+	}
 	LightServFlag = cli.IntFlag{
 		Name:  "lightserv",
 		Usage: "Maximum percentage of time allowed for serving LES requests (0-90)",
@@ -150,7 +155,7 @@ var (
 	LightPeersFlag = cli.IntFlag{
 		Name:  "lightpeers",
 		Usage: "Maximum number of LES client peers",
-		Value: 20,
+		Value: knode.DefaultConfig.LightPeers,
 	}
 	LightKDFFlag = cli.BoolFlag{
 		Name:  "lightkdf",
@@ -235,7 +240,17 @@ var (
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
 		Usage: "Megabytes of memory allocated to internal caching (min 16MB / database forced)",
-		Value: 128,
+		Value: 1024,
+	}
+	CacheDatabaseFlag = cli.IntFlag{
+		Name:  "cache.database",
+		Usage: "Percentage of cache memory allowance to use for database io",
+		Value: 75,
+	}
+	CacheGCFlag = cli.IntFlag{
+		Name:  "cache.gc",
+		Usage: "Percentage of cache memory allowance to use for trie pruning",
+		Value: 25,
 	}
 	TrieCacheGenFlag = cli.IntFlag{
 		Name:  "trie-cache-gens",
@@ -257,7 +272,7 @@ var (
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to be proposed",
-		Value: params.GenesisGasLimit.Uint64(),
+		Value: params.GenesisGasLimit,
 	}
 	CoinbaseFlag = cli.StringFlag{
 		Name:  "coinbase",
@@ -342,6 +357,11 @@ var (
 		Name:  "rpccorsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
 		Value: "",
+	}
+	RPCVirtualHostsFlag = cli.StringFlag{
+		Name:  "rpcvhosts",
+		Usage: "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
+		Value: strings.Join(node.DefaultConfig.HTTPVirtualHosts, ","),
 	}
 	RPCApiFlag = cli.StringFlag{
 		Name:  "rpcapi",
@@ -525,9 +545,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.TestnetBootnodes
 	}
 
-	if cfg.BootstrapNodes == nil {
-		cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
-	}
+	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
 	for _, url := range urls {
 		node, err := discover.ParseNode(url)
 		if err != nil {
@@ -553,9 +571,7 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 		return // already set, don't apply defaults.
 	}
 
-	if cfg.BootstrapNodesV5 == nil {
-		cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
-	}
+	cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
 	for _, url := range urls {
 		node, err := discv5.ParseNode(url)
 		if err != nil {
@@ -571,14 +587,6 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(ListenPortFlag.Name) {
 		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name))
-	}
-}
-
-// setDiscoveryV5Address creates a UDP listening address string from set command
-// line flags for the V5 discovery protocol.
-func setDiscoveryV5Address(ctx *cli.Context, cfg *p2p.Config) {
-	if ctx.GlobalIsSet(ListenPortFlag.Name) {
-		cfg.DiscoveryV5Addr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name)+1)
 	}
 }
 
@@ -622,6 +630,9 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(RPCApiFlag.Name) {
 		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(RPCApiFlag.Name))
 	}
+	if ctx.GlobalIsSet(RPCVirtualHostsFlag.Name) {
+		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(RPCVirtualHostsFlag.Name))
+	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
@@ -660,12 +671,14 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 // makeDatabaseHandles raises out the number of allowed file handles per process
 // for kcoin and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
-	if err := raiseFdLimit(2048); err != nil {
-		Fatalf("Failed to raise file descriptor allowance: %v", err)
-	}
-	limit, err := getFdLimit()
+	limit, err := fdlimit.Current()
 	if err != nil {
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
+	}
+	if limit < 2048 {
+		if err := fdlimit.Raise(2048); err != nil {
+			Fatalf("Failed to raise file descriptor allowance: %v", err)
+		}
 	}
 	if limit > 2048 { // cap database file descriptors even if more is available
 		limit = 2048
@@ -685,6 +698,12 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	if err != nil || index < 0 {
 		return accounts.Account{}, fmt.Errorf("invalid account address or index %q", account)
 	}
+	log.Warn("-------------------------------------------------------------------")
+	log.Warn("Referring to accounts by order in the keystore folder is dangerous!")
+	log.Warn("This functionality is deprecated and will be removed in the future!")
+	log.Warn("Please use explicit addresses! (can search via `geth account list`)")
+	log.Warn("-------------------------------------------------------------------")
+
 	accs := ks.Accounts()
 	if len(accs) <= index {
 		return accounts.Account{}, fmt.Errorf("index %d higher than number of accounts %d", index, len(accs))
@@ -741,24 +760,46 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
 	setListenAddress(ctx, cfg)
-	setDiscoveryV5Address(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
 
+	lightClient := ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalString(SyncModeFlag.Name) == "light"
+	lightServer := ctx.GlobalInt(LightServFlag.Name) != 0
+	lightPeers := ctx.GlobalInt(LightPeersFlag.Name)
+
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
+		if lightServer && !ctx.GlobalIsSet(LightPeersFlag.Name) {
+			cfg.MaxPeers += lightPeers
+		}
+	} else {
+		if lightServer {
+			cfg.MaxPeers += lightPeers
+		}
+		if lightClient && ctx.GlobalIsSet(LightPeersFlag.Name) && cfg.MaxPeers < lightPeers {
+			cfg.MaxPeers = lightPeers
+		}
 	}
+	if !(lightClient || lightServer) {
+		lightPeers = 0
+	}
+	ethPeers := cfg.MaxPeers - lightPeers
+	if lightClient {
+		ethPeers = 0
+	}
+	log.Info("Maximum peer count", "ETH", ethPeers, "LES", lightPeers, "total", cfg.MaxPeers)
+
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
 	}
-	if ctx.GlobalIsSet(NoDiscoverFlag.Name) || ctx.GlobalBool(LightModeFlag.Name) {
+	if ctx.GlobalIsSet(NoDiscoverFlag.Name) || lightClient {
 		cfg.NoDiscovery = true
 	}
 
 	// if we're running a light client or server, force enable the v5 peer discovery
 	// unless it is explicitly disabled with --nodiscover note that explicitly specifying
 	// --v5disc overrides --nodiscover, in which case the later only disables v4 discovery
-	forceV5Discovery := (ctx.GlobalBool(LightModeFlag.Name) || ctx.GlobalInt(LightServFlag.Name) > 0) && !ctx.GlobalBool(NoDiscoverFlag.Name)
+	forceV5Discovery := (lightClient || lightServer) && !ctx.GlobalBool(NoDiscoverFlag.Name)
 	if ctx.GlobalIsSet(DiscoveryV5Flag.Name) {
 		cfg.DiscoveryV5 = ctx.GlobalBool(DiscoveryV5Flag.Name)
 	} else if forceV5Discovery {
@@ -773,11 +814,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NetRestrict = list
 	}
 
-	if ctx.GlobalBool(DevModeFlag.Name) {
+	if ctx.GlobalBool(DeveloperFlag.Name) {
 		// --dev mode can't use p2p networking.
 		cfg.MaxPeers = 0
 		cfg.ListenAddr = ":0"
-		cfg.DiscoveryV5Addr = ":0"
 		cfg.NoDiscovery = true
 		cfg.DiscoveryV5 = false
 	}
@@ -851,15 +891,41 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
-func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
+// checkExclusive verifies that only a single isntance of the provided flags was
+// set by the user. Each flag might optionally be followed by a string type to
+// specialize it further.
+func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	set := make([]string, 0, 1)
-	for _, flag := range flags {
+	for i := 0; i < len(args); i++ {
+		// Make sure the next argument is a flag and skip if not set
+		flag, ok := args[i].(cli.Flag)
+		if !ok {
+			panic(fmt.Sprintf("invalid argument, not cli.Flag type: %T", args[i]))
+		}
+		// Check if next arg extends current and expand its name if so
+		name := flag.GetName()
+
+		if i+1 < len(args) {
+			switch option := args[i+1].(type) {
+			case string:
+				// Extended flag, expand the name and shift the arguments
+				if ctx.GlobalString(flag.GetName()) == option {
+					name += "=" + option
+				}
+				i++
+
+			case cli.Flag:
+			default:
+				panic(fmt.Sprintf("invalid argument, not cli.Flag or string extension: %T", args[i+1]))
+			}
+		}
+		// Mark the flag if it's set
 		if ctx.GlobalIsSet(flag.GetName()) {
-			set = append(set, "--"+flag.GetName())
+			set = append(set, "--"+name)
 		}
 	}
 	if len(set) > 1 {
-		Fatalf("flags %v can't be used at the same time", strings.Join(set, ", "))
+		Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
 	}
 }
 
@@ -895,15 +961,19 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	}
 
-	// Ethereum needs to know maxPeers to calculate the light server peer ratio.
-	// TODO(fjl): ensure Ethereum can get MaxPeers from node.
-	cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
-
-	if ctx.GlobalIsSet(CacheFlag.Name) {
-		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name)
+	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheDatabaseFlag.Name) {
+		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 	}
 	cfg.DatabaseHandles = makeDatabaseHandles()
 
+	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
+		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+	}
+	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
+
+	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
+		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+	}
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
@@ -937,7 +1007,6 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 	cfg.Host = ctx.GlobalString(DashboardAddrFlag.Name)
 	cfg.Port = ctx.GlobalInt(DashboardPortFlag.Name)
 	cfg.Refresh = ctx.GlobalDuration(DashboardRefreshFlag.Name)
-	cfg.Assets = ctx.GlobalString(DashboardAssetsFlag.Name)
 }
 
 // RegisterKowalaService adds a Kowala client to the stack.
@@ -955,9 +1024,9 @@ func RegisterKowalaService(stack *node.Node, cfg *knode.Config) {
 }
 
 // RegisterDashboardService adds a dashboard to the stack.
-func RegisterDashboardService(stack *node.Node, cfg *dashboard.Config) {
+func RegisterDashboardService(stack *node.Node, cfg *dashboard.Config, commit string) {
 	stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		return dashboard.New(cfg)
+		return dashboard.New(cfg, commit)
 	})
 }
 
@@ -978,13 +1047,13 @@ func RegisterKowalaStatsService(stack *node.Node, url string) {
 // SetupNetwork configures the system for either the main net or some test network.
 func SetupNetwork(ctx *cli.Context) {
 	// TODO(fjl): move target gas limit into config
-	params.TargetGasLimit = new(big.Int).SetUint64(ctx.GlobalUint64(TargetGasLimitFlag.Name))
+	params.TargetGasLimit = ctx.GlobalUint64(TargetGasLimitFlag.Name)
 }
 
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
 func MakeChainDatabase(ctx *cli.Context, stack *node.Node) kcoindb.Database {
 	var (
-		cache   = ctx.GlobalInt(CacheFlag.Name)
+		cache   = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 		handles = makeDatabaseHandles()
 	)
 	name := "chaindata"
@@ -1024,8 +1093,19 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	if err != nil {
 		Fatalf("%v", err)
 	}
+	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
+		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+	}
+	cache := &core.CacheConfig{
+		Disabled:      ctx.GlobalString(GCModeFlag.Name) == "archive",
+		TrieNodeLimit: eth.DefaultConfig.TrieCache,
+		TrieTimeLimit: eth.DefaultConfig.TrieTimeout,
+	}
+	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
+		cache.TrieNodeLimit = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+	}
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)
+	chain, err = core.NewBlockChain(chainDb, cache, config, engine, vmcfg)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}

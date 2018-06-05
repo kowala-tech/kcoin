@@ -4,7 +4,7 @@ package accounts
 import (
 	"math/big"
 
-	kcoin "github.com/kowala-tech/kcoin"
+	"github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/event"

@@ -15,10 +15,16 @@ type MemDatabase struct {
 	lock sync.RWMutex
 }
 
-func NewMemDatabase() (*MemDatabase, error) {
+func NewMemDatabase() *MemDatabase {
 	return &MemDatabase{
 		db: make(map[string][]byte),
-	}, nil
+	}
+}
+
+func NewMemDatabaseWithCap(size int) *MemDatabase {
+	return &MemDatabase{
+		db: make(map[string][]byte, size),
+	}
 }
 
 func (db *MemDatabase) Put(key []byte, value []byte) error {
@@ -58,14 +64,6 @@ func (db *MemDatabase) Keys() [][]byte {
 	return keys
 }
 
-/*
-func (db *MemDatabase) GetKeys() []*common.Key {
-	data, _ := db.Get([]byte("KeyRing"))
-
-	return []*common.Key{common.NewKeyFromBytes(data)}
-}
-*/
-
 func (db *MemDatabase) Delete(key []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
@@ -79,6 +77,8 @@ func (db *MemDatabase) Close() {}
 func (db *MemDatabase) NewBatch() Batch {
 	return &memBatch{db: db}
 }
+
+func (db *MemDatabase) Len() int { return len(db.db) }
 
 type kv struct{ k, v []byte }
 
@@ -106,4 +106,9 @@ func (b *memBatch) Write() error {
 
 func (b *memBatch) ValueSize() int {
 	return b.size
+}
+
+func (b *memBatch) Reset() {
+	b.writes = b.writes[:0]
+	b.size = 0
 }
