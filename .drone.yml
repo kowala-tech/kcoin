@@ -8,7 +8,6 @@ clone:
     tags: true
 
 pipeline:
-
   test:
     group: testing
     image: kowalatech/go:1.0.3
@@ -103,6 +102,18 @@ pipeline:
       event: [push]
       branch: [dev]
 
+  s3-dev:
+    image: plugins/s3
+    bucket: releases.kowala.io
+    region: us-east-1
+    acl: public-read
+    source: build/bin/*
+    strip_prefix: build/bin/
+    target: /
+    secrets: [aws_access_key_id, aws_secret_access_key]
+    when:
+      event: [push]
+      branch: [dev]
   
   build-artifacts-tag:
     image: kowalatech/go:1.0.3
@@ -114,6 +125,17 @@ pipeline:
     when:
       event: [tag]
   
+  s3-tag:
+    image: plugins/s3
+    bucket: releases.kowala.io
+    region: us-east-1
+    acl: public-read
+    source: build/bin/*
+    strip_prefix: build/bin/
+    target: /
+    secrets: [aws_access_key_id, aws_secret_access_key]
+    when:
+      event: [tag]
 
 services:
   docker:
