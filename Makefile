@@ -96,15 +96,6 @@ else
 	cd build/bin && for f in kcoin*; do cp $$f $${f/kcoin-/kcoin-unstable-}; mv $$f $${f/kcoin-/kcoin-$(DRONE_COMMIT_SHA)-}; done; cd -
 endif
 
-kcoin-cross-set-stable:
-	cd build/bin; for f in kcoin*; do zip \$f.zip \$f; done; cd -
-
-kcoin-cross-set-stable:
-	cd build/bin; for f in kcoin*; do zip \$f.zip \$f; done; cd -
-
-kcoin-cross-compress:
-	cd build/bin; for f in kcoin*; do zip \$f.zip \$f; done; cd -
-
 ## Docker
 
 docker-build-bootnode:
