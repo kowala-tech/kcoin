@@ -2,6 +2,7 @@ package params
 
 import "math/big"
 
+
 const (
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
@@ -35,6 +36,8 @@ const (
 	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
 	TxDataNonZeroGas uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
 
+	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
+
 	// Precompiled contract gas prices
 
 	EcrecoverGas            uint64 = 3000   // Elliptic curve sender recovery gas price
@@ -61,8 +64,8 @@ const (
 )
 
 var (
-	GasLimitBoundDivisor = big.NewInt(1024)                  // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          = big.NewInt(5000)                  // Minimum the gas limit may ever be.
-	GenesisGasLimit      = big.NewInt(4712388)               // Gas limit of the Genesis block.
-	TargetGasLimit       = new(big.Int).Set(GenesisGasLimit) // The artificial target
+	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
+	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
+	TargetGasLimit uint64 = GenesisGasLimit // The artificial target
 )

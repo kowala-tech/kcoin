@@ -239,7 +239,7 @@ var (
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
-		Usage: "Megabytes of memory allocated to internal caching (min 16MB / database forced)",
+		Usage: "Megabytes of memory allocated to internal caching",
 		Value: 1024,
 	}
 	CacheDatabaseFlag = cli.IntFlag{
@@ -298,7 +298,7 @@ var (
 	}
 	PasswordFileFlag = cli.StringFlag{
 		Name:  "password",
-		Usage: "Password file to use for non-inteactive password input",
+		Usage: "Password file to use for non-interactive password input",
 		Value: "",
 	}
 
@@ -720,15 +720,6 @@ func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *knode.Config) {
 			Fatalf("Option %q: %v", CoinbaseFlag.Name, err)
 		}
 		cfg.Coinbase = account.Address
-		return
-	}
-	accounts := ks.Accounts()
-	if (cfg.Coinbase == common.Address{}) {
-		if len(accounts) > 0 {
-			cfg.Coinbase = accounts[0].Address
-		} else {
-			log.Warn("No coinbase set and no accounts found as default")
-		}
 	}
 }
 
@@ -1083,16 +1074,11 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
-	// @TODO(rgeraldes) - review
-	//engine := ethash.NewFaker()
-	//if !ctx.GlobalBool(FakePoWFlag.Name) {
-	//	engine = ethash.New("", 1, 0, "", 1, 0)
-	//}
-	engine := tendermint.New(&params.TendermintConfig{})
 	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)
 	}
+	engine := tendermint.New(&params.TendermintConfig{})
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}

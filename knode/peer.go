@@ -23,9 +23,24 @@ var (
 const (
 	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-	// @TODO (rgeraldes) - fine tune values?
+
 	maxKnownVotes     = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
 	maxKnownFragments = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
+	
+	// maxQueuedTxs is the maximum number of transaction lists to queue up before
+	// dropping broadcasts. This is a sensitive number as a transaction list might
+	// contain a single transaction, or thousands.
+	maxQueuedTxs = 128
+
+	// maxQueuedProps is the maximum number of block propagations to queue up before
+	// dropping broadcasts. There's not much point in queueing stale blocks, so a few
+	// that might cover uncles should be enough.
+	maxQueuedProps = 4
+
+	// maxQueuedAnns is the maximum number of block announcements to queue up before
+	// dropping broadcasts. Similarly to block propagations, there's no point to queue
+	// above some healthy uncle limit, so use that.
+	maxQueuedAnns = 4
 	handshakeTimeout  = 5 * time.Second
 )
 
@@ -175,7 +190,7 @@ func (p *peer) SendNewProposal(proposal *types.Proposal) error {
 	return p2p.Send(p.rw, ProposalMsg, proposal)
 }
 
-// SendNewBlock propagates a vote to a remote peer.
+// SendVote propagates a vote to a remote peer.
 func (p *peer) SendVote(vote *types.Vote) error {
 	return p2p.Send(p.rw, VoteMsg, vote)
 }
@@ -339,7 +354,8 @@ func newPeerSet() *peerSet {
 }
 
 // Register injects a new peer into the working set, or returns an error if the
-// peer is already known.
+// peer is already known. If a new peer it registered, its broadcast loop is also
+// started.
 func (ps *peerSet) Register(p *peer) error {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
@@ -351,6 +367,8 @@ func (ps *peerSet) Register(p *peer) error {
 		return errAlreadyRegistered
 	}
 	ps.peers[p.id] = p
+	go p.broadcast()
+
 	return nil
 }
 
@@ -360,10 +378,13 @@ func (ps *peerSet) Unregister(id string) error {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
-	if _, ok := ps.peers[id]; !ok {
+	p, ok := ps.peers[id]
+	if !ok {
 		return errNotRegistered
 	}
 	delete(ps.peers, id)
+	p.close()
+
 	return nil
 }
 

@@ -30,7 +30,7 @@ const (
 	softResponseLimit = 2 * 1024 * 1024 // Target maximum size of returned blocks, headers or node data.
 	estHeaderRlpSize  = 500             // Approximate size of an RLP encoded block header
 
-	// txChanSize is the size of channel listening to TxPreEvent.
+	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 )
@@ -51,7 +51,6 @@ type ProtocolManager struct {
 
 	txpool      txPool
 	blockchain  *core.BlockChain
-	chaindb     kcoindb.Database
 	chainconfig *params.ChainConfig
 	maxPeers    int
 
@@ -62,11 +61,11 @@ type ProtocolManager struct {
 
 	SubProtocols []p2p.Protocol
 
-	eventMux             *event.TypeMux
-	txCh                 chan core.TxPreEvent
-	txSub                event.Subscription
-	minedBlockSub        *event.TypeMuxSubscription
-	proposalSub, voteSub *event.TypeMuxSubscription
+	eventMux      *event.TypeMux
+	txsCh         chan core.NewTxsEvent
+	txsSub        event.Subscription
+	minedBlockSub *event.TypeMuxSubscription
+	proposalsSub, votesSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
@@ -88,7 +87,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		eventMux:    mux,
 		txpool:      txpool,
 		blockchain:  blockchain,
-		chaindb:     chaindb,
 		validator:   validator,
 		chainconfig: config,
 		peers:       newPeerSet(),
@@ -185,8 +183,8 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.maxPeers = maxPeers
 
 	// broadcast transactions
-	pm.txCh = make(chan core.TxPreEvent, txChanSize)
-	pm.txSub = pm.txpool.SubscribeTxPreEvent(pm.txCh)
+	pm.txsCh = make(chan core.NewTxsEvent, txChanSize)
+	pm.txsSub = pm.txpool.SubscribeNewTxsEvent(pm.txsCh)
 	go pm.txBroadcastLoop()
 	// broadcast mined blocks
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
@@ -195,11 +193,11 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// @TODO (rgeraldes) - verify if this condition makes sense
 	if pm.validator != nil {
 		// broadcast proposals
-		pm.proposalSub = pm.eventMux.Subscribe(core.NewProposalEvent{}, core.NewBlockFragmentEvent{})
+		pm.proposalsSub = pm.eventMux.Subscribe(core.NewProposalEvent{}, core.NewBlockFragmentEvent{})
 		go pm.proposalBroadcastLoop()
 
 		// broadcast votes
-		pm.voteSub = pm.eventMux.Subscribe(core.NewVoteEvent{})
+		pm.votesSub = pm.eventMux.Subscribe(core.NewVoteEvent{})
 		go pm.voteBroadcastLoop()
 	}
 
@@ -211,12 +209,12 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 func (pm *ProtocolManager) Stop() {
 	log.Info("Stopping Kowala protocol")
 
-	pm.txSub.Unsubscribe()         // quits txBroadcastLoop
+	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 
 	if pm.validator != nil {
-		pm.proposalSub.Unsubscribe() // quits proposalBroadcastLoop
-		pm.voteSub.Unsubscribe()     // quits voteBroadcastLoop
+		pm.proposalsSub.Unsubscribe() // quits proposalBroadcastLoop
+		pm.votesSub.Unsubscribe()     // quits voteBroadcastLoop
 	}
 
 	// Quit the sync loop.
@@ -245,14 +243,20 @@ func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *p
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p *peer) error {
-	if pm.peers.Len() >= pm.maxPeers {
+	// Ignore maxPeers if this is a trusted peer
+	if pm.peers.Len() >= pm.maxPeers && !p.Peer.Info().Network.Trusted {
 		return p2p.DiscTooManyPeers
 	}
 	p.Log().Debug("Kowala peer connected", "name", p.Name())
 
 	// Execute the Kowala handshake
-	blockNumber, head, genesis := pm.blockchain.Status()
-	if err := p.Handshake(pm.networkID, blockNumber, head, genesis); err != nil {
+	var (
+		genesis = pm.blockchain.Genesis()
+		head    = pm.blockchain.CurrentHeader()
+		hash    = head.Hash()
+		number  = head.Number.Uint64()
+	)
+	if err := p.Handshake(pm.networkID, blockNumber, hash, genesis.Hash()); err != nil {
 		p.Log().Debug("Kowala handshake failed", "err", err)
 		return err
 	}
@@ -291,11 +295,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	if err != nil {
 		return err
 	}
-
 	if msg.Size > ProtocolMaxMsgSize {
 		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 	}
-
 	defer msg.Discard()
 
 	// Handle the message depending on its contents
@@ -371,14 +373,14 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			case query.Reverse:
 				// Number based traversal towards the genesis block
 				if query.Origin.Number >= query.Skip+1 {
-					query.Origin.Number -= (query.Skip + 1)
+					query.Origin.Number -= query.Skip + 1
 				} else {
 					unknown = true
 				}
 
 			case !query.Reverse:
 				// Number based traversal towards the leaf block
-				query.Origin.Number += (query.Skip + 1)
+				query.Origin.Number += query.Skip + 1
 			}
 		}
 		return p.SendBlockHeaders(headers)
@@ -476,7 +478,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				return errResp(ErrDecode, "msg %v: %v", msg, err)
 			}
 			// Retrieve the requested state entry, stopping if enough was found
-			if entry, err := pm.chaindb.Get(hash.Bytes()); err == nil {
+			if entry, err := pm.blockchain.TrieNode(hash); err == nil {
 				data = append(data, entry)
 				bytes += len(entry)
 			}
@@ -514,7 +516,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				return errResp(ErrDecode, "msg %v: %v", msg, err)
 			}
 			// Retrieve the requested block's receipts, skipping if unknown to us
-			results := core.GetBlockReceipts(pm.chaindb, hash, core.GetBlockNumber(pm.chaindb, hash))
+			results := pm.blockchain.GetReceiptsByHash(hash)
 			if results == nil {
 				if header := pm.blockchain.GetHeaderByHash(hash); header == nil || header.ReceiptHash != types.EmptyRootHash {
 					continue
@@ -669,7 +671,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 		// Send the block to a subset of our peers
 		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 		for _, peer := range transfer {
-			peer.SendNewBlock(block)
+			peer.AsyncSendNewBlock(block)
 		}
 		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		return
@@ -677,22 +679,29 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 	// Otherwise if the block is indeed in out own chain, announce it
 	if pm.blockchain.HasBlock(hash, block.NumberU64()) {
 		for _, peer := range peers {
-			peer.SendNewBlockHashes([]common.Hash{hash}, []uint64{block.NumberU64()})
+			peer.AsyncSendNewBlockHash(block)
 		}
 		log.Trace("Announced block", "hash", hash, "recipients", len(peers), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 	}
 }
 
-// BroadcastTx will propagate a transaction to all peers which are not known to
+// BroadcastTxs will propagate a batch of transactions to all peers which are not known to
 // already have the given transaction.
-func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) {
-	// Broadcast transaction to a batch of peers not knowing about it
-	peers := pm.peers.PeersWithoutTx(hash)
-	//FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
-	for _, peer := range peers {
-		peer.SendTransactions(types.Transactions{tx})
+func (pm *ProtocolManager) BroadcastTxs(txs *types.Transactions) {
+	var txset = make(map[*peer]types.Transactions)
+
+	// Broadcast transactions to a batch of peers not knowing about it
+	for _, tx := range txs {
+		peers := pm.peers.PeersWithoutTx(tx.Hash())
+		for _, peer := range peers {
+			txset[peer] = append(txset[peer], tx)
+		}
+		log.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
-	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
+	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
+	for peer, txs := range txset {
+		peer.AsyncSendTransactions(txs)
+	}
 }
 
 // Mined broadcast loop
@@ -713,11 +722,11 @@ func (pm *ProtocolManager) proposalBroadcastLoop() {
 		switch ev := obj.Data.(type) {
 		case core.NewProposalEvent:
 			for _, peer := range pm.peers.Peers() {
-				peer.SendNewProposal(ev.Proposal)
+				peer.AsyncSendNewProposal(ev.Proposal)
 			}
 		case core.NewBlockFragmentEvent:
 			for _, peer := range pm.peers.PeersWithoutFragment(ev.Data.Proof) {
-				peer.SendBlockFragment(ev.BlockNumber, ev.Round, ev.Data)
+				peer.AsyncSendBlockFragment(ev.BlockNumber, ev.Round, ev.Data)
 			}
 		}
 	}
@@ -730,20 +739,20 @@ func (pm *ProtocolManager) voteBroadcastLoop() {
 		case core.NewVoteEvent:
 			peers := pm.peers.PeersWithoutVote(ev.Vote.Hash())
 			for _, peer := range peers {
-				peer.SendVote(ev.Vote)
+				peer.AsyncSendVote(ev.Vote)
 			}
 		}
 	}
 }
 
-func (self *ProtocolManager) txBroadcastLoop() {
+func (pm *ProtocolManager) txBroadcastLoop() {
 	for {
 		select {
-		case event := <-self.txCh:
-			self.BroadcastTx(event.Tx.Hash(), event.Tx)
+		case event := <-pm.txsCh:
+			pm.BroadcastTxs(event.Txs)
 
 		// Err() channel will be closed when unsubscribing.
-		case <-self.txSub.Err():
+		case <-pm.txsSub.Err():
 			return
 		}
 	}
@@ -752,8 +761,7 @@ func (self *ProtocolManager) txBroadcastLoop() {
 // KowalaNodeInfo represents a short summary of the Kowala sub-protocol metadata known
 // about the host peer.
 type KowalaNodeInfo struct {
-	// @TODO (rgeraldes) - review comment
-	Network uint64 `json:"network"` // Kowala network ID (1=Mainnet, 2=Testnet)
+	Network uint64 `json:"network"` // Kowala network ID
 	// @TODO (rgeraldes) - remove as soon as we know that does not conflict with the stats app
 	Difficulty *big.Int    `json:"difficulty"` // Total difficulty of the host's blockchain
 	Genesis    common.Hash `json:"genesis"`    // SHA3 hash of the host's genesis block
@@ -761,8 +769,8 @@ type KowalaNodeInfo struct {
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
-func (self *ProtocolManager) NodeInfo() *KowalaNodeInfo {
-	currentBlock := self.blockchain.CurrentBlock()
+func (pm *ProtocolManager) NodeInfo() *KowalaNodeInfo {
+	currentBlock := pm.blockchain.CurrentBlock()
 	return &KowalaNodeInfo{
 		Network: self.networkID,
 		//Difficulty: self.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),

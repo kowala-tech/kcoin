@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-// @TODO (rgeraldes) - review pow related elements
-
 var customGenesisTests = []struct {
 	genesis string
 	query   string
