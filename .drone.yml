@@ -98,6 +98,7 @@ pipeline:
     commands:
       - make kcoin-cross
       - rename "s/bin\\/kcoin/bin\\/kcoin-${DRONE_COMMIT_SHA}/" build/bin/*
+      - cd build/bin; for f in kcoin*; do zip $f.zip $f; done; cd -
     when:
       event: [push]
       branch: [dev]
@@ -109,6 +110,7 @@ pipeline:
     commands:
       - make kcoin-cross
       - rename "s/bin\\/kcoin/bin\\/kcoin-${DRONE_TAG}/" build/bin/*
+      - cd build/bin; for f in kcoin*; do zip $f.zip $f; done; cd -
     when:
       event: [tag]
   
@@ -117,7 +119,7 @@ pipeline:
     bucket: releases.kowala.io
     region: us-east-1
     acl: public-read
-    source: build/bin/kcoin-*
+    source: build/bin/kcoin-*.zip
     strip_prefix: build/bin/
     target: /
     secrets: [aws_access_key_id, aws_secret_access_key]
