@@ -84,6 +84,7 @@ devtools:
 
 kcoin-cross:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
+	mv build/bin/kcoin-darwin-10.6-amd64 build/bin/kcoin-osx-10.6-amd64
 	@echo "Full cross compilation done."
 
 ## Docker
