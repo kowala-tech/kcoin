@@ -5,7 +5,7 @@
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 
-		<title>kcoin Faucet</title>
+		<title>{{.Network}}: Authenticated Faucet</title>
 
 		<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
 		<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
@@ -65,7 +65,7 @@
 			<div class="container">
 				<div class="row" style="margin-bottom: 16px;">
 					<div class="col-lg-12">
-						<h1 style="text-align: center;"></i>kcoin Faucet</h1>
+						<h1 style="text-align: center;"><i class="fa fa-bath" aria-hidden="true"></i> {{.Network}} Authenticated Faucet</h1>
 					</div>
 				</div>
 				<div class="row">
@@ -83,10 +83,21 @@
 					</div>
 				</div>
 				<div class="row" style="margin-top: 32px;">
-					<div class="col-sm-3"><i class="fa fa-rss" aria-hidden="true"></i> <span id="peers"></span> peers</div>
-					<div class="col-sm-3"><i class="fa fa-database" aria-hidden="true"></i> <span id="block"></span> blocks</div>
-					<div class="col-sm-3"><i class="fa fa-heartbeat" aria-hidden="true"></i> <span id="funds"></span> kcoin</div>
-					<div class="col-sm-3"><i class="fa fa-university" aria-hidden="true"></i> <span id="funded"></span> funded</div>
+						<div class="col-lg-6 col-lg-offset-3">
+						<div class="panel panel-small panel-default">
+							<div class="panel-body" style="padding: 0; overflow: auto; max-height: 300px;">
+								<table id="requests" class="table table-condensed" style="margin: 0;"></table>
+							</div>
+							<div class="panel-footer">
+								<table style="width: 100%"><tr>
+									<td style="text-align: center;"><i class="fa fa-rss" aria-hidden="true"></i> <span id="peers"></span> peers</td>
+									<td style="text-align: center;"><i class="fa fa-database" aria-hidden="true"></i> <span id="block"></span> blocks</td>
+									<td style="text-align: center;"><i class="fa fa-heartbeat" aria-hidden="true"></i> <span id="funds"></span> kcoin</td>
+									<td style="text-align: center;"><i class="fa fa-university" aria-hidden="true"></i> <span id="funded"></span> funded</td>
+								</tr></table>
+							</div>
+						</div>
+					</div>
 				</div>
 				<div class="row" style="margin-top: 32px;">
 					<div class="col-lg-12">
@@ -94,13 +105,13 @@
 						<p>This kcoin faucet is running on the {{.Network}} network. To prevent malicious actors from exhausting all available funds or accumulating enough kcoin to mount long running spam attacks, requests are tied to common 3rd party social network accounts. Anyone having a Twitter, Google+ or Facebook account may request funds within the permitted limits.</p>
 						<dl class="dl-horizontal" style="margin-top: 20px;">
 							<dt style="width: auto; margin-left: 40px;"><i class="fa fa-twitter" aria-hidden="true" style="font-size: 36px;"></i></dt>
-							<dd style="margin-left: 88px; margin-bottom: 20px;"></i> To request funds via Twitter, make a <a href="https://twitter.com/intent/tweet?text=Requesting%20faucet%20funds%20into%200x0000000000000000000000000000000000000000%20on%20the%20%23{{.Network}}%20%23Kowala%20test%20network." target="_about:blank">tweet</a> with your Kowala address pasted into the contents (surrounding text doesn't matter).<br/><br/>Copy-paste the <a href="https://support.twitter.com/articles/80586" target="_about:blank">tweets URL</a> into the above input box and fire away!</dd>
+							<dd style="margin-left: 88px; margin-bottom: 10px;"></i> To request funds via Twitter, make a <a href="https://twitter.com/intent/tweet?text=Requesting%20faucet%20funds%20into%200x0000000000000000000000000000000000000000%20on%20the%20%23{{.Network}}%20%23Kowala%20test%20network." target="_about:blank">tweet</a> with your Kowala address pasted into the contents (surrounding text doesn't matter).<br/><br/>Copy-paste the <a href="https://support.twitter.com/articles/80586" target="_about:blank">tweets URL</a> into the above input box and fire away!</dd>
 
 							<dt style="width: auto; margin-left: 40px;"><i class="fa fa-google-plus-official" aria-hidden="true" style="font-size: 36px;"></i></dt>
-							<dd style="margin-left: 88px; margin-bottom: 20px;"></i> To request funds via Google Plus, publish a new <strong>public</strong> post with your Kowala address embedded into the content (surrounding text doesn't matter).<br/><br/>Copy-paste the posts URL into the above input box and fire away!</dd>
+							<dd style="margin-left: 88px; margin-bottom: 10px;"></i> To request funds via Google Plus, publish a new <strong>public</strong> post with your Kowala address embedded into the content (surrounding text doesn't matter).<br/><br/>Copy-paste the posts URL into the above input box and fire away!</dd>
 
 							<dt style="width: auto; margin-left: 40px;"><i class="fa fa-facebook" aria-hidden="true" style="font-size: 36px;"></i></dt>
-							<dd style="margin-left: 88px; margin-bottom: 20px;"></i> To request funds via Facebook, publish a new <strong>public</strong> post with your Kowala address embedded into the content (surrounding text doesn't matter).<br/><br/>Copy-paste the <a href="https://www.facebook.com/help/community/question/?id=282662498552845" target="_about:blank">posts URL</a> into the above input box and fire away!</dd>
+							<dd style="margin-left: 88px; margin-bottom: 10px;"></i> To request funds via Facebook, publish a new <strong>public</strong> post with your Kowala address embedded into the content (surrounding text doesn't matter).<br/><br/>Copy-paste the <a href="https://www.facebook.com/help/community/question/?id=282662498552845" target="_about:blank">posts URL</a> into the above input box and fire away!</dd>
 
 							{{if .NoAuth}}
 								<dt class="text-danger" style="width: auto; margin-left: 40px;"><i class="fa fa-unlock-alt" aria-hidden="true" style="font-size: 36px;"></i></dt>
@@ -148,7 +159,7 @@
 					}
 
 					if (msg.funds !== undefined) {
-						$("#funds").text(parseInt(msg.funds));
+						$("#funds").text(msg.funds);
 					}
 					if (msg.funded !== undefined) {
 						$("#funded").text(msg.funded);

@@ -28,9 +28,7 @@ import (
 )
 
 const (
-	defaultGas      = 90000
 	defaultGasPrice = 50 * params.Shannon
-	emptyHex        = "0x"
 )
 
 // PublicKowalaAPI provides an API to access Kowala related information.

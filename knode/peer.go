@@ -52,6 +52,11 @@ type PeerInfo struct {
 	Head        string   `json:"head"`    // SHA3 hash of the peer's best owned block
 }
 
+// propEvent is a block propagation, waiting for its turn in the broadcast queue.
+type propEvent struct {
+	block *types.Block
+}
+
 type peer struct {
 	id string
 
@@ -68,6 +73,10 @@ type peer struct {
 	knownBlocks    *set.Set // Set of block hashes known to be known by this peer
 	knownVotes     *set.Set // set of vote hashes known to be known by this peer
 	knownFragments *set.Set // set of fragment hashes known to be known by this peer
+	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
+	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
+	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
+	term        chan struct{}             // Termination channel to stop the broadcaster
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -77,12 +86,52 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		Peer:           p,
 		rw:             rw,
 		version:        version,
-		id:             fmt.Sprintf("%x", id[:8]),
+		id:             fmt.Sprintf("%x", p.ID().Bytes()[:8]),
 		knownTxs:       set.New(),
 		knownBlocks:    set.New(),
+		
 		knownVotes:     set.New(),
 		knownFragments: set.New(),
+		queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
+		queuedProps: make(chan *propEvent, maxQueuedProps),
+		queuedAnns:  make(chan *types.Block, maxQueuedAnns),
+		term:        make(chan struct{}),
 	}
+}
+
+// broadcast is a write loop that multiplexes block propagations, announcements
+// and transaction broadcasts into the remote peer. The goal is to have an async
+// writer that does not lock up node internals.
+func (p *peer) broadcast() {
+	for {
+		select {
+		case txs := <-p.queuedTxs:
+			if err := p.SendTransactions(txs); err != nil {
+				return
+			}
+			p.Log().Trace("Broadcast transactions", "count", len(txs))
+
+		case prop := <-p.queuedProps:
+			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
+				return
+			}
+			p.Log().Trace("Propagated block", "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
+
+		case block := <-p.queuedAnns:
+			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
+				return
+			}
+			p.Log().Trace("Announced block", "number", block.Number(), "hash", block.Hash())
+
+		case <-p.term:
+			return
+		}
+	}
+}
+
+// close signals the broadcast goroutine to terminate.
+func (p *peer) close() {
+	close(p.term)
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
@@ -162,6 +211,19 @@ func (p *peer) SendTransactions(txs types.Transactions) error {
 		p.knownTxs.Add(tx.Hash())
 	}
 	return p2p.Send(p.rw, TxMsg, txs)
+}
+
+// AsyncSendTransactions queues list of transactions propagation to a remote
+// peer. If the peer's broadcast queue is full, the event is silently dropped.
+func (p *peer) AsyncSendTransactions(txs []*types.Transaction) {
+	select {
+	case p.queuedTxs <- txs:
+		for _, tx := range txs {
+			p.knownTxs.Add(tx.Hash())
+		}
+	default:
+		p.Log().Debug("Dropping transaction propagation", "count", len(txs))
+	}
 }
 
 // SendNewBlockHashes announces the availability of a number of blocks through

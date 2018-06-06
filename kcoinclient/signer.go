@@ -28,16 +28,16 @@ func (s *senderFromServer) Equal(other types.Signer) bool {
 	return ok && os.blockhash == s.blockhash
 }
 
-func (s *senderFromServer) Sender(_ types.Sender) (common.Address, error) {
+func (s *senderFromServer) Sender(tx *types.Transaction) (common.Address, error) {
 	if s.blockhash == (common.Hash{}) {
 		return common.Address{}, errNotCached
 	}
 	return s.addr, nil
 }
 
-func (s *senderFromServer) Hash(_ types.Hasher) common.Hash {
+func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {
 	panic("can't sign with senderFromServer")
 }
-func (s *senderFromServer) SignatureValues(_ []byte) (R, S, V *big.Int, err error) {
+func (s *senderFromServer) SignatureValues(tx *types.Transaction, sig []byte) (R, S, V *big.Int, err error) {
 	panic("can't sign with senderFromServer")
 }
