@@ -3,10 +3,7 @@
 # don't need to bother with make.
 
 .PHONY: kcoin android ios kcoin-cross swarm evm genesis all test clean
-.PHONY: kcoin-linux kcoin-linux-386 kcoin-linux-amd64 kcoin-linux-mips64 kcoin-linux-mips64le
-.PHONY: kcoin-linux-arm kcoin-linux-arm-5 kcoin-linux-arm-6 kcoin-linux-arm-7 kcoin-linux-arm64
-.PHONY: kcoin-darwin kcoin-darwin-386 kcoin-darwin-amd64
-.PHONY: kcoin-windows kcoin-windows-386 kcoin-windows-amd64
+.PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
 
 GOBIN = $(pwd)/build/bin
 GO ?= latest
@@ -82,10 +79,31 @@ devtools:
 
 # Cross Compilation Targets (xgo)
 
-kcoin-cross:
+kcoin-cross: kcoin-cross-build kcoin-cross-compress kcoin-cross-rename
+	@echo "Full cross compilation done."
+
+kcoin-cross-build:
 	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
 	mv build/bin/kcoin-darwin-10.6-amd64 build/bin/kcoin-osx-10.6-amd64
-	@echo "Full cross compilation done."
+
+kcoin-cross-compress:
+	cd build/bin; for f in kcoin*; do zip $$f.zip $$f; rm $$f; done; cd -
+
+kcoin-cross-rename:
+ifdef DRONE_TAG
+	cd build/bin && for f in kcoin*; do cp $$f $${f/kcoin-/kcoin-stable-}; mv $$f $${f/kcoin-/kcoin-$(DRONE_TAG)-}; done; cd -
+else
+	cd build/bin && for f in kcoin*; do cp $$f $${f/kcoin-/kcoin-unstable-}; mv $$f $${f/kcoin-/kcoin-$(DRONE_COMMIT_SHA)-}; done; cd -
+endif
+
+kcoin-cross-set-stable:
+	cd build/bin; for f in kcoin*; do zip \$f.zip \$f; done; cd -
+
+kcoin-cross-set-stable:
+	cd build/bin; for f in kcoin*; do zip \$f.zip \$f; done; cd -
+
+kcoin-cross-compress:
+	cd build/bin; for f in kcoin*; do zip \$f.zip \$f; done; cd -
 
 ## Docker
 
