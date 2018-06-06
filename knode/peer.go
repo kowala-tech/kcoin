@@ -26,7 +26,7 @@ const (
 
 	maxKnownVotes     = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
 	maxKnownFragments = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
-	
+
 	// maxQueuedTxs is the maximum number of transaction lists to queue up before
 	// dropping broadcasts. This is a sensitive number as a transaction list might
 	// contain a single transaction, or thousands.
@@ -40,8 +40,8 @@ const (
 	// maxQueuedAnns is the maximum number of block announcements to queue up before
 	// dropping broadcasts. Similarly to block propagations, there's no point to queue
 	// above some healthy uncle limit, so use that.
-	maxQueuedAnns = 4
-	handshakeTimeout  = 5 * time.Second
+	maxQueuedAnns    = 4
+	handshakeTimeout = 5 * time.Second
 )
 
 // PeerInfo represents a short summary of the Kowala sub-protocol metadata known
@@ -69,33 +69,31 @@ type peer struct {
 	head        common.Hash
 	lock        sync.RWMutex
 
-	knownTxs       *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks    *set.Set // Set of block hashes known to be known by this peer
-	knownVotes     *set.Set // set of vote hashes known to be known by this peer
-	knownFragments *set.Set // set of fragment hashes known to be known by this peer
-	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
-	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
-	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
-	term        chan struct{}             // Termination channel to stop the broadcaster
+	knownTxs       *set.Set                  // Set of transaction hashes known to be known by this peer
+	knownBlocks    *set.Set                  // Set of block hashes known to be known by this peer
+	knownVotes     *set.Set                  // set of vote hashes known to be known by this peer
+	knownFragments *set.Set                  // set of fragment hashes known to be known by this peer
+	queuedTxs      chan []*types.Transaction // Queue of transactions to broadcast to the peer
+	queuedProps    chan *propEvent           // Queue of blocks to broadcast to the peer
+	queuedAnns     chan *types.Block         // Queue of blocks to announce to the peer
+	term           chan struct{}             // Termination channel to stop the broadcaster
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
-	id := p.ID()
-
 	return &peer{
-		Peer:           p,
-		rw:             rw,
-		version:        version,
-		id:             fmt.Sprintf("%x", p.ID().Bytes()[:8]),
-		knownTxs:       set.New(),
-		knownBlocks:    set.New(),
-		
+		Peer:        p,
+		rw:          rw,
+		version:     version,
+		id:          fmt.Sprintf("%x", p.ID().Bytes()[:8]),
+		knownTxs:    set.New(),
+		knownBlocks: set.New(),
+
 		knownVotes:     set.New(),
 		knownFragments: set.New(),
-		queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
-		queuedProps: make(chan *propEvent, maxQueuedProps),
-		queuedAnns:  make(chan *types.Block, maxQueuedAnns),
-		term:        make(chan struct{}),
+		queuedTxs:      make(chan []*types.Transaction, maxQueuedTxs),
+		queuedProps:    make(chan *propEvent, maxQueuedProps),
+		queuedAnns:     make(chan *types.Block, maxQueuedAnns),
+		term:           make(chan struct{}),
 	}
 }
 
@@ -240,14 +238,36 @@ func (p *peer) SendNewBlockHashes(hashes []common.Hash, numbers []uint64) error 
 	return p2p.Send(p.rw, NewBlockHashesMsg, request)
 }
 
+// AsyncSendNewBlockHash queues the availability of a block for propagation to a
+// remote peer. If the peer's broadcast queue is full, the event is silently
+// dropped.
+func (p *peer) AsyncSendNewBlockHash(block *types.Block) {
+	select {
+	case p.queuedAnns <- block:
+		p.knownBlocks.Add(block.Hash())
+	default:
+		p.Log().Debug("Dropping block announcement", "number", block.NumberU64(), "hash", block.Hash())
+	}
+}
+
 // SendNewBlock propagates an entire block to a remote peer.
 func (p *peer) SendNewBlock(block *types.Block) error {
 	p.knownBlocks.Add(block.Hash())
-	// @TODO (rgeraldes) - td was sent too - review
 	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block})
 }
 
-// SendNewBlock propagates a proposal to a remote peer.
+// AsyncSendNewBlock queues an entire block for propagation to a remote peer. If
+// the peer's broadcast queue is full, the event is silently dropped.
+func (p *peer) AsyncSendNewBlock(block *types.Block) {
+	select {
+	case p.queuedProps <- &propEvent{block: block}:
+		p.knownBlocks.Add(block.Hash())
+	default:
+		p.Log().Debug("Dropping block propagation", "number", block.NumberU64(), "hash", block.Hash())
+	}
+}
+
+// SendNewProposal propagates a proposal to a remote peer.
 func (p *peer) SendNewProposal(proposal *types.Proposal) error {
 	return p2p.Send(p.rw, ProposalMsg, proposal)
 }
