@@ -32,7 +32,6 @@ type NodeRunner interface {
 	HostIP() string
 	IP(nodeID NodeID) (string, error)
 	Exec(nodeID NodeID, command []string) (*ExecResponse, error)
-	BuildDockerImage(tag, dockerFile string) error
 }
 
 type ExecResponse struct {
@@ -195,18 +194,6 @@ func (runner *dockerNodeRunner) Exec(nodeID NodeID, command []string) (*ExecResp
 	}, nil
 }
 
-func (runner *dockerNodeRunner) BuildDockerImage(tag, dockerFile string) error {
-	cmd := exec.Command("docker", "build", "-t", tag, "-f", path.Join(rootPath, dockerFile), rootPath)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-	if !cmd.ProcessState.Success() {
-		return fmt.Errorf("Error building docker image")
-	}
-	return nil
-}
-
 func (runner *dockerNodeRunner) copyFile(nodeID NodeID, filename string, contents []byte) error {
 	dir := filepath.Dir(filename)
 	file := filepath.Base(filename)
@@ -257,4 +244,17 @@ func (runner *dockerNodeRunner) logStream(nodeID NodeID, w io.Writer) error {
 
 	_, err = stdcopy.StdCopy(w, w, log)
 	return err
+}
+
+
+func BuildDockerImage(tag, dockerFile string) error {
+	cmd := exec.Command("docker", "build", "-t", tag, "-f", path.Join(rootPath, dockerFile), rootPath)
+	cmd.Env = os.Environ()
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	if !cmd.ProcessState.Success() {
+		return fmt.Errorf("Error building docker image")
+	}
+	return nil
 }

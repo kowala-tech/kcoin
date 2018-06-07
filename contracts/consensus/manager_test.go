@@ -32,7 +32,7 @@ var (
 	secondsPerDay    = new(big.Int).SetUint64(86400)
 )
 
-func getDefaultOpts() genesis.Options {
+func GetDefaultOpts() genesis.Options {
 	baseDeposit := uint64(20)
 	tokenHolder := genesis.TokenHolder{
 		Address:   getAddress(validator).Hex(),
@@ -113,7 +113,7 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	req := suite.Require()
 
 	// create genesis
-	opts := getDefaultOpts()
+	opts := GetDefaultOpts()
 	req.NotNil(opts)
 
 	switch {

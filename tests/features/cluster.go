@@ -17,11 +17,17 @@ import (
 	"github.com/kowala-tech/kcoin/kcoinclient"
 	"github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/lazada/awg"
+	"sync/atomic"
+	"crypto/ecdsa"
+	"github.com/kowala-tech/kcoin/crypto"
 )
 
 var (
 	enodeSecretRegexp = regexp.MustCompile(`enode://([a-f0-9]*)@`)
 )
+
+var n int64
+const LogsDir = "./logs"
 
 func (ctx *Context) DeleteCluster() error {
 	return ctx.nodeRunner.StopAll()
@@ -29,38 +35,35 @@ func (ctx *Context) DeleteCluster() error {
 
 func (ctx *Context) PrepareCluster() error {
 	var err error
-	logsDir := "./logs"
 
-	if err := ctx.initLogs(logsDir); err != nil {
-		return err
-	}
+	k := atomic.AddInt64(&n, 1)
+	fmt.Println("PrepareCluster", ctx.Name)
 
-	if ctx.nodeRunner, err = cluster.NewDockerNodeRunner(logsDir, ctx.Name); err != nil {
-		return err
-	}
-
-	if err = ctx.buildDockerImages(); err != nil {
+	if ctx.nodeRunner, err = cluster.NewDockerNodeRunner(LogsDir, ctx.Name); err != nil {
 		return err
 	}
 
 	if err := ctx.generateAccounts(); err != nil {
 		return err
 	}
+	fmt.Println(k, "generateAccounts DONE")
 
 	if err := ctx.buildGenesis(); err != nil {
 		return err
 	}
+	fmt.Println(k, "buildGenesis DONE")
 
 	if err := ctx.runNodes(); err != nil {
 		return err
 	}
+	fmt.Println(k, "runNodes DONE")
 
 	return nil
 }
 
 var initLogsOnce sync.Once
 
-func (ctx *Context) initLogs(logsDir string) error {
+func InitLogs(logsDir string) error {
 	var err error
 	initLogsOnce.Do(func() {
 		if err = os.RemoveAll(logsDir); err != nil {
@@ -125,16 +128,16 @@ func (ctx *Context) newAccount() (*accounts.Account, error) {
 
 var initImagesOnce sync.Once
 
-func (ctx *Context) buildDockerImages() error {
+func BuildDockerImages() error {
 	wg := awg.AdvancedWaitGroup{}
 
 	initImagesOnce.Do(func() {
 		fmt.Println("Building docker images")
 		wg.Add(func() error {
-			return ctx.nodeRunner.BuildDockerImage("kowalatech/bootnode:dev", "bootnode.Dockerfile")
+			return cluster.BuildDockerImage("kowalatech/bootnode:dev", "bootnode.Dockerfile")
 		})
 		wg.Add(func() error {
-			return ctx.nodeRunner.BuildDockerImage("kowalatech/kusd:dev", "kcoin.Dockerfile")
+			return cluster.BuildDockerImage("kowalatech/kusd:dev", "kcoin.Dockerfile")
 		})
 	})
 
@@ -257,11 +260,94 @@ func (ctx *Context) triggerGenesisValidation() error {
 	})
 }
 
+
+var (
+	validator, _     = crypto.GenerateKey()
+	deregistered, _  = crypto.GenerateKey()
+	user, _          = crypto.GenerateKey()
+	governor, _      = crypto.GenerateKey()
+	author, _        = crypto.HexToECDSA("bfef37ae9ac5d5e7ebbbefc19f4e1f572a7ca7aa0d28e527b7d62950951cc5eb")
+	validatorMgrAddr = common.HexToAddress("0x161ad311F1D66381C17641b1B73042a4CA731F9f")
+	multiSigAddr     = common.HexToAddress("0xA143ac5ec5D95f16aFD5Fc3B09e0aDaf360ffC9e")
+	tokenAddr        = common.HexToAddress("0xB012F49629258C9c35b2bA80cD3dc3C841d9719D")
+	secondsPerDay    = new(big.Int).SetUint64(86400)
+)
+
+func GetDefaultOpts() genesis.Options {
+	baseDeposit := uint64(20)
+	tokenHolder := genesis.TokenHolder{
+		Address:   getAddress(validator).Hex(),
+		NumTokens: baseDeposit,
+	}
+
+	opts := genesis.Options{
+		Network: "test",
+		Consensus: &genesis.ConsensusOpts{
+			Engine:           "tendermint",
+			MaxNumValidators: 10,
+			FreezePeriod:     30,
+			BaseDeposit:      baseDeposit,
+			Validators: []genesis.Validator{{
+				Address: tokenHolder.Address,
+				Deposit: tokenHolder.NumTokens,
+			}},
+			MiningToken: &genesis.MiningTokenOpts{
+				Name:     "mUSD",
+				Symbol:   "mUSD",
+				Cap:      1000,
+				Decimals: 18,
+				Holders:  []genesis.TokenHolder{tokenHolder, {Address: getAddress(user).Hex(), NumTokens: baseDeposit * 3}},
+			},
+		},
+		Governance: &genesis.GovernanceOpts{
+			Origin:           getAddress(author).Hex(),
+			Governors:        []string{getAddress(governor).Hex()},
+			NumConfirmations: 1,
+		},
+		DataFeedSystem: &genesis.DataFeedSystemOpts{
+			MaxNumOracles: 10,
+			FreezePeriod:  0,
+			BaseDeposit:   0,
+		},
+		PrefundedAccounts: []genesis.PrefundedAccount{
+			{
+				Address: tokenHolder.Address,
+				Balance: 10,
+			},
+			{
+				Address: getAddress(governor).Hex(),
+				Balance: 10,
+			},
+			{
+				Address: getAddress(user).Hex(),
+				Balance: 10,
+			},
+			{
+				Address: getAddress(deregistered).Hex(),
+				Balance: 10,
+			},
+		},
+	}
+
+	return opts
+}
+
+// getAddress return the address of the given private key
+func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
+	return crypto.PubkeyToAddress(privateKey.PublicKey)
+}
+
 func (ctx *Context) buildGenesis() error {
+	fmt.Println("1")
 	validatorAddr := ctx.genesisValidatorAccount.Address.Hex()
 	baseDeposit := uint64(10000000) // 10000000 mUSD
+	fmt.Println("2")
 
-	newGenesis, err := genesis.Generate(genesis.Options{
+	_ = baseDeposit
+	_ = validatorAddr
+
+	/*
+	opts := genesis.Options{
 		Network: "test",
 		Consensus: &genesis.ConsensusOpts{
 			Engine:           "tendermint",
@@ -285,12 +371,28 @@ func (ctx *Context) buildGenesis() error {
 			Governors:        []string{"0x259be75d96876f2ada3d202722523e9cd4dd917d"},
 			NumConfirmations: 1,
 		},
+		PrefundedAccounts: []genesis.PrefundedAccount{
+			{
+				Address: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+				Balance: 1000,
+			},
+			{
+				Address: validatorAddr,
+				Balance: 1000,
+			},
+		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{
 			MaxNumOracles: 10,
 			FreezePeriod:  0,
 			BaseDeposit:   0,
 		},
-	})
+	}
+	 */
+
+	opts := GetDefaultOpts()
+
+	newGenesis, err := genesis.Generate(opts)
+	fmt.Println("3")
 	if err != nil {
 		return err
 	}
@@ -299,7 +401,8 @@ func (ctx *Context) buildGenesis() error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("4")
 	ctx.genesis = rawJson
-
+	fmt.Println("5")
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/common/hexutil"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/pkg/errors"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshalling -out gen_tx_json.go
@@ -122,6 +123,25 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	data := tx.data
 	data.Hash = &hash
 	return data.MarshalJSON()
+}
+
+func (tx *Transaction) From() (*common.Address, error) {
+	var from *common.Address
+
+	if tx.data.V == nil {
+		return nil, errors.New("the transaction is not signed")
+	}
+
+	signer := deriveSigner(tx.data.V)
+	f, err := TxSender(signer, tx)
+	if err != nil {
+		// derive but don't cache
+		return nil, err
+	}
+
+	from = &f
+
+	return from, nil
 }
 
 // UnmarshalJSON decodes the web3 RPC transaction format.

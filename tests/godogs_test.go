@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"fmt"
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/gherkin"
 	"github.com/kowala-tech/kcoin/tests/features"
@@ -15,11 +16,29 @@ var (
 	chainID = big.NewInt(1000)
 )
 
+func init() {
+	if err := features.InitLogs(features.LogsDir); err != nil {
+		panic(err)
+	}
+	fmt.Println("initLogs DONE")
+
+	if err := features.BuildDockerImages(); err != nil {
+		panic(err)
+	}
+	fmt.Println("buildDockerImages DONE")
+}
+
 func FeatureContext(s *godog.Suite) {
-	context := features.NewTestContext(chainID)
-	validationCtx := features.NewValidationContext(context)
+	var (
+		// contexts are different for each feature
+		context       *features.Context
+		validationCtx *features.ValidationContext
+	)
 
 	s.BeforeFeature(func(ft *gherkin.Feature) {
+		context = features.NewTestContext(chainID, ft.Name)
+		validationCtx = features.NewValidationContext(context)
+
 		context.Name = getFeatureName(ft.Name)
 
 		if err := context.PrepareCluster(); err != nil {

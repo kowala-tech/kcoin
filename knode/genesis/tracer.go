@@ -9,7 +9,7 @@ import (
 )
 
 type vmTracer struct {
-	sync.RWMutex
+	sync.Mutex
 	data map[common.Address]map[common.Hash]common.Hash
 }
 
@@ -28,27 +28,25 @@ func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cos
 	if op == vm.SSTORE {
 		s := stack.Data()
 
+		vmt.Lock()
 		addrStorage, ok := vmt.getAddrStorage(contract.Address())
 		if !ok {
 			addrStorage = make(map[common.Hash]common.Hash, defaultSize)
 			vmt.setAddrStorage(contract.Address(), addrStorage)
 		}
 		addrStorage[common.BigToHash(s[len(s)-1])] = common.BigToHash(s[len(s)-2])
+		vmt.Unlock()
 	}
 	return nil
 }
 
 func (vmt *vmTracer) getAddrStorage(contractAddress common.Address) (addrStorage map[common.Hash]common.Hash, ok bool) {
-	vmt.RLock()
 	addrStorage, ok = vmt.data[contractAddress]
-	vmt.RUnlock()
 	return
 }
 
 func (vmt *vmTracer) setAddrStorage(contractAddress common.Address, addrStorage map[common.Hash]common.Hash) {
-	vmt.Lock()
 	vmt.data[contractAddress] = addrStorage
-	vmt.Unlock()
 }
 
 func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {

@@ -42,8 +42,8 @@ type Context struct {
 	waiter doer
 }
 
-func NewTestContext(chainID *big.Int) *Context {
-	tmpdir, _ := ioutil.TempDir("", "eth-keystore-test")
+func NewTestContext(chainID *big.Int, featureName string) *Context {
+	tmpdir, _ := ioutil.TempDir("", "eth-keystore-test"+featureName)
 	accountsStorage := keystore.NewKeyStore(tmpdir, 2, 1)
 
 	ctx := &Context{
