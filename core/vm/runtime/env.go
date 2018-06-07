@@ -1,9 +1,9 @@
 package runtime
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/core/vm"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {

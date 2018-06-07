@@ -2,9 +2,11 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/contracts/token"
 	"github.com/kowala-tech/kcoin/core/types"
@@ -49,7 +51,6 @@ type Consensus interface {
 	Token() token.Token
 }
 
-/*
 type mUSD struct {
 	*MiningToken
 	chainID *big.Int
@@ -210,4 +211,3 @@ func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.
 
 	return opts
 }
-*/

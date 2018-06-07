@@ -38,6 +38,7 @@ import (
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
 	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/p2p/discv5"
 	"github.com/kowala-tech/kcoin/p2p/nat"
 	"github.com/kowala-tech/kcoin/params"
 	"golang.org/x/net/websocket"
@@ -70,7 +71,7 @@ var (
 )
 
 var (
-	kcoin = params.Ether
+	kcoin = new(big.Int).SetUint64(params.Ether)
 )
 
 func main() {
@@ -191,17 +192,19 @@ type faucet struct {
 	lock sync.RWMutex // Lock protecting the faucet's internals
 }
 
-func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
+func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
 	// Assemble the raw devp2p protocol stack
 	stack, err := node.New(&node.Config{
 		Name:    "kcoin",
 		Version: params.Version,
 		DataDir: filepath.Join(os.Getenv("HOME"), ".faucet"),
 		P2P: p2p.Config{
-			NAT:            nat.Any(),
-			ListenAddr:     fmt.Sprintf(":%d", port),
-			MaxPeers:       25,
-			BootstrapNodes: enodes,
+			NAT:              nat.Any(),
+			ListenAddr:       fmt.Sprintf(":%d", port),
+			MaxPeers:         25,
+			NoDiscovery:      true,
+			DiscoveryV5:      true,
+			BootstrapNodesV5: enodes,
 		},
 	})
 	if err != nil {

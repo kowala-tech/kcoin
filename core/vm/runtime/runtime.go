@@ -73,7 +73,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(kcoindb.NewMemDatabase())))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(kcoindb.NewMemDatabase()))
 	}
 	var (
 		address = common.BytesToAddress([]byte("contract"))
