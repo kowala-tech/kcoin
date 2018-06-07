@@ -2,10 +2,6 @@ package knode
 
 import (
 	"math/big"
-	"os"
-	"os/user"
-	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/kowala-tech/kcoin/common"

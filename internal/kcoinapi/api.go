@@ -9,12 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/accounts/keystore"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"
 	"github.com/kowala-tech/kcoin/common/math"
 	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/core/rawdb"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/crypto"
@@ -333,11 +335,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
 
-	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-		chainID = config.ChainId
-	}
-	return wallet.SignTxWithPassphrase(account, passwd, tx, chainID)
+	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
 // SendTransaction will create a transaction from the given arguments and
@@ -1305,11 +1303,15 @@ func (api *PublicDebugAPI) PrintBlock(ctx context.Context, number uint64) (strin
 
 // SeedHash retrieves the seed hash of a block.
 func (api *PublicDebugAPI) SeedHash(ctx context.Context, number uint64) (string, error) {
-	block, _ := api.b.BlockByNumber(ctx, rpc.BlockNumber(number))
-	if block == nil {
-		return "", fmt.Errorf("block #%d not found", number)
-	}
-	return fmt.Sprintf("0x%x", ethash.SeedHash(number)), nil
+	// @TODO (rgeraldes)
+	/*
+		block, _ := api.b.BlockByNumber(ctx, rpc.BlockNumber(number))
+		if block == nil {
+			return "", fmt.Errorf("block #%d not found", number)
+		}
+		return fmt.Sprintf("0x%x", ethash.SeedHash(number)), nil
+	*/
+	return "", nil
 }
 
 // PrivateDebugAPI is the collection of Kowala APIs exposed over the private

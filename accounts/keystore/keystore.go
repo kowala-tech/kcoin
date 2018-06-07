@@ -277,11 +277,11 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	if !found {
 		return nil, ErrLocked
 	}
-	
+
 	if chainID != nil {
 		return types.SignTx(tx, types.NewAndromedaSigner(chainID), unlockedKey.PrivateKey)
 	}
-	
+
 	return types.SignTx(tx, types.UnprotectedSigner{}, unlockedKey.PrivateKey)
 }
 
@@ -337,8 +337,8 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 	if chainID != nil {
 		return types.SignTx(tx, types.NewAndromedaSigner(chainID), key.PrivateKey)
 	}
-	
-	return types.SignTx(types.NewUnprotectedSigner{}, key.PrivateKey)
+
+	return types.SignTx(tx, types.UnprotectedSigner{}, key.PrivateKey)
 }
 
 // Unlock unlocks the given account indefinitely.

@@ -19,7 +19,6 @@ package core
 import (
 	"fmt"
 
-	"github.com/kowala-tech/kcoin/common/math"
 	"github.com/kowala-tech/kcoin/consensus"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"

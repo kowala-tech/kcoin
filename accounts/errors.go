@@ -66,3 +66,15 @@ func NewAuthNeededError(needed string) error {
 func (err *AuthNeededError) Error() string {
 	return fmt.Sprintf("authentication needed: %s", err.Needed)
 }
+
+type ErrInvalidAccountAddress struct {
+	account Account
+}
+
+func (err ErrInvalidAccountAddress) Error() string {
+	return fmt.Sprintf("invalid account address, doesnt exists in wallet: %s" + err.account.Address.String())
+}
+
+func NewErrInvalidAccountAddress(account Account) ErrInvalidAccountAddress {
+	return ErrInvalidAccountAddress{account}
+}

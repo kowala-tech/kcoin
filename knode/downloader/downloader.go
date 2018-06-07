@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kowala-tech/kcoin"
+	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/rawdb"
 	"github.com/kowala-tech/kcoin/core/types"
@@ -220,7 +220,7 @@ func New(mode SyncMode, stateDb kcoindb.Database, mux *event.TypeMux, chain Bloc
 // In addition, during the state download phase of fast synchronisation the number
 // of processed and the total number of known states are also returned. Otherwise
 // these are zero.
-func (d *Downloader) Progress() kcoin.SyncProgress {
+func (d *Downloader) Progress() kowala.SyncProgress {
 	// Lock the current stats and return the progress
 	d.syncStatsLock.RLock()
 	defer d.syncStatsLock.RUnlock()
@@ -234,7 +234,7 @@ func (d *Downloader) Progress() kcoin.SyncProgress {
 	case LightSync:
 		current = d.lightchain.CurrentHeader().Number.Uint64()
 	}
-	return kcoin.SyncProgress{
+	return kowala.SyncProgress{
 		StartingBlock: d.syncStatsChainOrigin,
 		CurrentBlock:  current,
 		HighestBlock:  d.syncStatsChainHeight,
@@ -439,8 +439,8 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, blockNumb
 
 	fetchers := []func() error{
 		func() error { return d.fetchHeaders(p, origin+1, pivot) }, // Headers are always retrieved
-		func() error { return d.fetchBodies(origin + 1) },   // Bodies are retrieved during normal and fast sync
-		func() error { return d.fetchReceipts(origin + 1) }, // Receipts are retrieved during fast sync
+		func() error { return d.fetchBodies(origin + 1) },          // Bodies are retrieved during normal and fast sync
+		func() error { return d.fetchReceipts(origin + 1) },        // Receipts are retrieved during fast sync
 		func() error { return d.processHeaders(origin+1, pivot, blockNumber) },
 	}
 	if d.mode == FastSync {
@@ -1331,7 +1331,7 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 	)
 	blocks := make([]*types.Block, len(results))
 	for i, result := range results {
-		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
+		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Commit)
 	}
 	if index, err := d.blockchain.InsertChain(blocks); err != nil {
 		log.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
@@ -1473,7 +1473,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 	blocks := make([]*types.Block, len(results))
 	receipts := make([]types.Receipts, len(results))
 	for i, result := range results {
-		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
+		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Commit)
 		receipts[i] = result.Receipts
 	}
 	if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {
@@ -1484,7 +1484,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 }
 
 func (d *Downloader) commitPivotBlock(result *fetchResult) error {
-	block := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
+	block := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Commit)
 	log.Debug("Committing fast sync pivot as new head", "number", block.Number(), "hash", block.Hash())
 	if _, err := d.blockchain.InsertReceiptChain([]*types.Block{block}, []types.Receipts{result.Receipts}); err != nil {
 		return err

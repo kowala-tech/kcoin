@@ -130,7 +130,6 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 		if hash == (common.Hash{}) {
 			break
 		}
-		hash := rawdb.ReadCanonicalHash(hc.chainDb, i)
 	}
 	// Overwrite any stale canonical number assignments
 	var (
@@ -148,7 +147,7 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	// Extend the canonical chain with the new header
 	rawdb.WriteCanonicalHash(hc.chainDb, hash, number)
 	rawdb.WriteHeadHeaderHash(hc.chainDb, hash)
-	
+
 	hc.currentHeaderHash = hash
 	hc.currentHeader.Store(types.CopyHeader(header))
 

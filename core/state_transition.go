@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"math"
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/common"

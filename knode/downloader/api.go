@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/kowala-tech/kcoin"
+	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/rpc"
 )
@@ -106,7 +106,7 @@ func (api *PublicDownloaderAPI) Syncing(ctx context.Context) (*rpc.Subscription,
 // SyncingResult provides information about the current synchronisation status for this node.
 type SyncingResult struct {
 	Syncing bool                `json:"syncing"`
-	Status  kcoin.SyncProgress `json:"status"`
+	Status  kowala.SyncProgress `json:"status"`
 }
 
 // uninstallSyncSubscriptionRequest uninstalles a syncing subscription in the API event loop.

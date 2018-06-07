@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/karalabe/hid"
-	"github.com/kowala-tech/kcoin"
+	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
@@ -68,7 +68,7 @@ type wallet struct {
 
 	deriveNextPath accounts.DerivationPath // Next derivation path for account auto-discovery
 	deriveNextAddr common.Address          // Next derived account address for auto-discovery
-	deriveChain    kcoin.ChainStateReader // Blockchain state reader to discover used account with
+	deriveChain    kowala.ChainStateReader // Blockchain state reader to discover used account with
 	deriveReq      chan chan struct{}      // Channel to request a self-derivation on
 	deriveQuit     chan chan error         // Channel to terminate the self-deriver with
 
@@ -468,7 +468,7 @@ func (w *wallet) Derive(path accounts.DerivationPath, pin bool) (accounts.Accoun
 // user used previously (based on the chain state), but ones that he/she did not
 // explicitly pin to the wallet manually. To avoid chain head monitoring, self
 // derivation only runs during account listing (and even then throttled).
-func (w *wallet) SelfDerive(base accounts.DerivationPath, chain kcoin.ChainStateReader) {
+func (w *wallet) SelfDerive(base accounts.DerivationPath, chain kowala.ChainStateReader) {
 	w.stateLock.Lock()
 	defer w.stateLock.Unlock()
 

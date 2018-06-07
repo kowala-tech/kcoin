@@ -5,7 +5,6 @@ package downloader
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"math/big"
 	"sort"

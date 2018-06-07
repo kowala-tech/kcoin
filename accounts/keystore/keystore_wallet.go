@@ -3,7 +3,7 @@ package keystore
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin"
+	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/core/types"
 )
@@ -60,7 +60,7 @@ func (w *keystoreWallet) Derive(path accounts.DerivationPath, pin bool) (account
 
 // SelfDerive implements accounts.Wallet, but is a noop for plain wallets since
 // there is no notion of hierarchical account derivation for plain keystore accounts.
-func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain kcoin.ChainStateReader) {}
+func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain kowala.ChainStateReader) {}
 
 // SignHash implements accounts.Wallet, attempting to sign the given hash with
 // the given account. If the wallet does not wrap this particular account, an

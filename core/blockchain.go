@@ -149,7 +149,7 @@ func NewBlockChain(db kcoindb.Database, cacheConfig *CacheConfig, chainConfig *p
 	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
 
 	var err error
-	bc.hc, err = NewHeaderChain(db, config, engine, bc.getProcInterrupt)
+	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
 	if err != nil {
 		return nil, err
 	}
@@ -230,8 +230,8 @@ func (bc *BlockChain) loadLastState() error {
 	// Issue a status log for the user
 	currentFastBlock := bc.CurrentFastBlock()
 	log.Info("Loaded most recent local header", "number", currentHeader.Number, "hash", currentHeader.Hash())
-	log.Info("Loaded most recent local full block", "number", bc.currentBlock.Number(), "hash", currentBlock.Hash())
-	log.Info("Loaded most recent local fast block", "number", bc.currentFastBlock.Number(), "hash", currentFastBlock.Hash())
+	log.Info("Loaded most recent local full block", "number", currentBlock.Number(), "hash", currentBlock.Hash())
+	log.Info("Loaded most recent local fast block", "number", currentFastBlock.Number(), "hash", currentFastBlock.Hash())
 
 	return nil
 }
@@ -799,7 +799,8 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	bc.mu.Lock()
 	head := blockChain[len(blockChain)-1]
 	if blockNumber := head.Number(); blockNumber != nil { // Rewind may have occurred, skip in that case
-		if bc.currentFastBlock.Number().Cmp(blockNumber) < 0 {
+		currentFastBlock := bc.CurrentFastBlock()
+		if currentFastBlock.Number().Cmp(blockNumber) < 0 {
 			rawdb.WriteHeadFastBlockHash(bc.db, head.Hash())
 			bc.currentFastBlock.Store(head)
 		}
@@ -826,9 +827,11 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
-	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), td); err != nil {
-		return err
-	}
+	/*
+		if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), td); err != nil {
+			return err
+		}
+	*/
 	rawdb.WriteBlock(bc.db, block)
 
 	return nil

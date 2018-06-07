@@ -7,6 +7,7 @@ import (
 	"github.com/kowala-tech/kcoin/common/bitutil"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/bloombits"
+	"github.com/kowala-tech/kcoin/core/rawdb"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/params"

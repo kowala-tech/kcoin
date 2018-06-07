@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin"
+	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/accounts/abi"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/event"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to
@@ -111,7 +112,7 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 		return err
 	}
 	var (
-		msg    = kcoin.CallMsg{From: opts.From, To: &c.address, Data: input}
+		msg    = kowala.CallMsg{From: opts.From, To: &c.address, Data: input}
 		ctx    = ensureContext(opts.Context)
 		code   []byte
 		output []byte
@@ -201,7 +202,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 			}
 		}
 		// If the contract surely has code (or code is not needed), estimate the transaction
-		msg := kcoin.CallMsg{From: opts.From, To: contract, Value: value, Data: input}
+		msg := kowala.CallMsg{From: opts.From, To: contract, Value: value, Data: input}
 		gasLimit, err = c.transactor.EstimateGas(ensureContext(opts.Context), msg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas needed: %v", err)
@@ -217,7 +218,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 	if opts.Signer == nil {
 		return nil, errors.New("no signer to authorize the transaction with")
 	}
-	signedTx, err := opts.Signer(types.HomesteadSigner{}, opts.From, rawTx)
+	signedTx, err := opts.Signer(types.UnprotectedSigner{}, opts.From, rawTx)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +245,7 @@ func (c *BoundContract) FilterLogs(opts *FilterOpts, name string, query ...[]int
 	// Start the background filtering
 	logs := make(chan types.Log, 128)
 
-	config := ethereum.FilterQuery{
+	config := kowala.FilterQuery{
 		Addresses: []common.Address{c.address},
 		Topics:    topics,
 		FromBlock: new(big.Int).SetUint64(opts.Start),
@@ -293,7 +294,7 @@ func (c *BoundContract) WatchLogs(opts *WatchOpts, name string, query ...[]inter
 	// Start the background filtering
 	logs := make(chan types.Log, 128)
 
-	config := ethereum.FilterQuery{
+	config := kowala.FilterQuery{
 		Addresses: []common.Address{c.address},
 		Topics:    topics,
 	}

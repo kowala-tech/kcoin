@@ -61,10 +61,10 @@ type ProtocolManager struct {
 
 	SubProtocols []p2p.Protocol
 
-	eventMux      *event.TypeMux
-	txsCh         chan core.NewTxsEvent
-	txsSub        event.Subscription
-	minedBlockSub *event.TypeMuxSubscription
+	eventMux               *event.TypeMux
+	txsCh                  chan core.NewTxsEvent
+	txsSub                 event.Subscription
+	minedBlockSub          *event.TypeMuxSubscription
 	proposalsSub, votesSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
@@ -254,9 +254,9 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		genesis = pm.blockchain.Genesis()
 		head    = pm.blockchain.CurrentHeader()
 		hash    = head.Hash()
-		number  = head.Number.Uint64()
+		number  = head.Number
 	)
-	if err := p.Handshake(pm.networkID, blockNumber, hash, genesis.Hash()); err != nil {
+	if err := p.Handshake(pm.networkID, number, hash, genesis.Hash()); err != nil {
 		p.Log().Debug("Kowala handshake failed", "err", err)
 		return err
 	}
@@ -687,7 +687,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 
 // BroadcastTxs will propagate a batch of transactions to all peers which are not known to
 // already have the given transaction.
-func (pm *ProtocolManager) BroadcastTxs(txs *types.Transactions) {
+func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	var txset = make(map[*peer]types.Transactions)
 
 	// Broadcast transactions to a batch of peers not knowing about it
@@ -718,15 +718,15 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 
 // Proposal broadcast loop
 func (pm *ProtocolManager) proposalBroadcastLoop() {
-	for obj := range pm.proposalSub.Chan() {
+	for obj := range pm.proposalsSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case core.NewProposalEvent:
 			for _, peer := range pm.peers.Peers() {
-				peer.AsyncSendNewProposal(ev.Proposal)
+				peer.SendNewProposal(ev.Proposal)
 			}
 		case core.NewBlockFragmentEvent:
 			for _, peer := range pm.peers.PeersWithoutFragment(ev.Data.Proof) {
-				peer.AsyncSendBlockFragment(ev.BlockNumber, ev.Round, ev.Data)
+				peer.SendBlockFragment(ev.BlockNumber, ev.Round, ev.Data)
 			}
 		}
 	}
@@ -734,12 +734,12 @@ func (pm *ProtocolManager) proposalBroadcastLoop() {
 
 // Vote broadcast loop
 func (pm *ProtocolManager) voteBroadcastLoop() {
-	for obj := range pm.voteSub.Chan() {
+	for obj := range pm.votesSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case core.NewVoteEvent:
 			peers := pm.peers.PeersWithoutVote(ev.Vote.Hash())
 			for _, peer := range peers {
-				peer.AsyncSendVote(ev.Vote)
+				peer.SendVote(ev.Vote)
 			}
 		}
 	}
@@ -772,9 +772,9 @@ type KowalaNodeInfo struct {
 func (pm *ProtocolManager) NodeInfo() *KowalaNodeInfo {
 	currentBlock := pm.blockchain.CurrentBlock()
 	return &KowalaNodeInfo{
-		Network: self.networkID,
+		Network: pm.networkID,
 		//Difficulty: self.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
-		Genesis: self.blockchain.Genesis().Hash(),
+		Genesis: pm.blockchain.Genesis().Hash(),
 		Head:    currentBlock.Hash(),
 	}
 }

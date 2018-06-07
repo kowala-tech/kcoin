@@ -17,6 +17,7 @@ import (
 	"github.com/kowala-tech/kcoin/contracts/consensus"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/bloombits"
+	"github.com/kowala-tech/kcoin/core/rawdb"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/event"
@@ -119,7 +120,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 		cacheConfig = &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
 	)
-	kcoin.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, kcoin.chainConfig, eth.engine, vmConfig)
+	kcoin.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, kcoin.chainConfig, kcoin.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}

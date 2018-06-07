@@ -6,7 +6,6 @@ import (
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/consensus"
-	"github.com/kowala-tech/kcoin/consensus/tendermint"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
@@ -23,12 +22,12 @@ var (
 // BlockGen creates blocks for testing.
 // See GenerateChain for a detailed explanation.
 type BlockGen struct {
-	i       int
-	parent  *types.Block
-	chain   []*types.Block
+	i           int
+	parent      *types.Block
+	chain       []*types.Block
 	chainReader consensus.ChainReader
-	header  *types.Header
-	statedb *state.StateDB
+	header      *types.Header
+	statedb     *state.StateDB
 
 	gasPool    *GasPool
 	txs        []*types.Transaction
@@ -155,7 +154,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		config = params.TestChainConfig
 	}
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
-	genblock := func(i int, h *types.Header, statedb *state.StateDB) (*types.Block, types.Receipts) {
+	genblock := func(i int, parent *types.Block, statedb *state.StateDB) (*types.Block, types.Receipts) {
 		// TODO(karalabe): This is needed for clique, which depends on multiple blocks.
 		// It's nonetheless ugly to spin up a blockchain here. Get rid of this somehow.
 		blockchain, _ := NewBlockChain(db, nil, config, engine, vm.Config{})
@@ -170,9 +169,9 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		}
 
 		if b.engine != nil {
-			block, _ := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.uncles, b.receipts)
+			block, _ := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, nil, b.receipts)
 			// Write state changes to db
-			root, err := statedb.Commit(config.IsEIP158(b.header.Number))
+			root, err := statedb.Commit(true)
 			if err != nil {
 				panic(fmt.Sprintf("state write error: %v", err))
 			}
@@ -233,7 +232,7 @@ func newCanonical(engine consensus.Engine, n int, full bool) (kcoindb.Database, 
 	)
 
 	// Initialize a fresh chain with only a genesis block
-	blockchain, _ := NewBlockChain(db, nil, params.AllEthashProtocolChanges, engine, vm.Config{})
+	blockchain, _ := NewBlockChain(db, nil, params.AllTendermintProtocolChanges, engine, vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil
