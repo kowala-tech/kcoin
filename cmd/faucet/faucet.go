@@ -49,6 +49,7 @@ var (
 	apiPortFlag   = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
 	kcoinPortFlag = flag.Int("kcoinport", 30303, "Listener port for the devp2p connection")
 	bootFlag      = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
+	v5discFlag    = flag.Bool("v5disc", false, "Enables the experimental RLPx V5 (Topic Discovery) mechanism")
 	netFlag       = flag.Uint64("network", 0, "Network ID to use for the Kowala protocol")
 	statsFlag     = flag.String("kcoinstats", "", "kcoinStats network monitoring auth string")
 
@@ -160,36 +161,30 @@ func main() {
 
 func bootnodes() (enodes []*discover.Node) {
 
+	var rawNodes []string
+
 	if *bootFlag != "" {
-
-		for _, boot := range strings.Split(*bootFlag, ",") {
-			if url, err := discover.ParseNode(boot); err == nil {
-				enodes = append(enodes, url)
-			} else {
-				log.Error("Failed to parse bootnode URL", "url", boot, "err", err)
-			}
-		}
-
+		rawNodes = strings.Split(*bootFlag, ",")
 	} else if *testnetFlag {
-
-		for _, boot := range params.TestnetBootnodes {
-			if url, err := discover.ParseNode(boot); err == nil {
-				enodes = append(enodes, url)
-			} else {
-				log.Error("Failed to parse testnet bootnode URL", "url", boot, "err", err)
-			}
+		if *v5discFlag {
+			rawNodes = params.TestnetDiscoveryV5Bootnodes
+		} else {
+			rawNodes = params.TestnetBootnodes
 		}
-
 	} else {
-
-		for _, boot := range params.MainnetBootnodes {
-			if url, err := discover.ParseNode(boot); err == nil {
-				enodes = append(enodes, url)
-			} else {
-				log.Error("Failed to parse mainnet bootnode URL", "url", boot, "err", err)
-			}
+		if *v5discFlag {
+			rawNodes = params.MainnetDiscoveryV5Bootnodes
+		} else {
+			rawNodes = params.MainnetBootnodes
 		}
+	}
 
+	for _, boot := range rawNodes {
+		if url, err := discover.ParseNode(boot); err == nil {
+			enodes = append(enodes, url)
+		} else {
+			log.Error("Failed to parse mainnet bootnode URL", "url", boot, "err", err)
+		}
 	}
 
 	return
