@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -17,15 +16,16 @@ import (
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/accounts/keystore"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/common/fdlimit"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/dashboard"
-	"github.com/kowala-tech/kcoin/knode/downloader"
-	"github.com/kowala-tech/kcoin/knode/gasprice"
 	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/knode"
+	"github.com/kowala-tech/kcoin/knode/downloader"
+	"github.com/kowala-tech/kcoin/knode/gasprice"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/metrics"
 	"github.com/kowala-tech/kcoin/node"
@@ -180,11 +180,6 @@ var (
 		Name:  "dashboard.refresh",
 		Usage: "Dashboard metrics collection refresh rate",
 		Value: dashboard.DefaultConfig.Refresh,
-	}
-	DashboardAssetsFlag = cli.StringFlag{
-		Name:  "dashboard.assets",
-		Usage: "Developer flag to serve the dashboard from the local file system",
-		Value: dashboard.DefaultConfig.Assets,
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
@@ -805,13 +800,15 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NetRestrict = list
 	}
 
-	if ctx.GlobalBool(DeveloperFlag.Name) {
-		// --dev mode can't use p2p networking.
-		cfg.MaxPeers = 0
-		cfg.ListenAddr = ":0"
-		cfg.NoDiscovery = true
-		cfg.DiscoveryV5 = false
-	}
+	/*
+		if ctx.GlobalBool(DeveloperFlag.Name) {
+			// --dev mode can't use p2p networking.
+			cfg.MaxPeers = 0
+			cfg.ListenAddr = ":0"
+			cfg.NoDiscovery = true
+			cfg.DiscoveryV5 = false
+		}
+	*/
 }
 
 // SetNodeConfig applies node-related command line flags to the config.
@@ -1084,8 +1081,8 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	}
 	cache := &core.CacheConfig{
 		Disabled:      ctx.GlobalString(GCModeFlag.Name) == "archive",
-		TrieNodeLimit: eth.DefaultConfig.TrieCache,
-		TrieTimeLimit: eth.DefaultConfig.TrieTimeout,
+		TrieNodeLimit: knode.DefaultConfig.TrieCache,
+		TrieTimeLimit: knode.DefaultConfig.TrieTimeout,
 	}
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
 		cache.TrieNodeLimit = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100

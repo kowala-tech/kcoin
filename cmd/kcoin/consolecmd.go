@@ -108,8 +108,6 @@ func remoteConsole(ctx *cli.Context) error {
 		if path != "" {
 			if ctx.GlobalBool(utils.TestnetFlag.Name) {
 				path = filepath.Join(path, "testnet")
-			} else if ctx.GlobalBool(utils.RinkebyFlag.Name) {
-				path = filepath.Join(path, "rinkeby")
 			}
 		}
 		endpoint = fmt.Sprintf("%s/kcoin.ipc", path)

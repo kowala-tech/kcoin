@@ -145,11 +145,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	kcoin.ApiBackend.gpo = gasprice.NewOracle(kcoin.ApiBackend, gpoParams)
 
 	// consensus manager
-	consensus, err := consensus.Instance(NewContractBackend(kcoin.ApiBackend), chainConfig.ChainID)
-	if err != nil {
-		log.Crit("Failed to load the network contract", "err", err)
-	}
-	kcoin.consensus = consensus
+	//consensus, err := consensus.Instance(NewContractBackend(kcoin.ApiBackend), chainConfig.ChainID)
+	//if err != nil {
+	//	log.Crit("Failed to load the network contract", "err", err)
+	//}
+	//kcoin.consensus = consensus
 
 	kcoin.validator = validator.New(kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
 	kcoin.validator.SetExtra(makeExtraData(config.ExtraData))

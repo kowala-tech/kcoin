@@ -25,8 +25,6 @@ import (
 	"github.com/kowala-tech/kcoin/trie"
 )
 
-const defaultTraceTimeout = 5 * time.Second
-
 // PublicKowalaAPI provides an API to access Kowala full node-related
 // information.
 type PublicKowalaAPI struct {
