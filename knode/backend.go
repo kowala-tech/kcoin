@@ -30,6 +30,7 @@ import (
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/p2p/discv5"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/rpc"
@@ -42,7 +43,7 @@ type Kowala struct {
 	config      *Config
 	chainConfig *params.ChainConfig
 	// Channel for shutting down the service
-	shutdownChan chan bool // Channel for shutting down the service
+	shutdownChan chan struct{} // Channel for shutting down the service
 
 	// Handlers
 	txPool          *core.TxPool
@@ -69,7 +70,8 @@ type Kowala struct {
 	networkId     uint64
 	netRPCService *kcoinapi.PublicNetAPI
 
-	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
+	lock       sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
+	serverPool *serverPool
 }
 
 // New creates a new Kowala object (including the
@@ -98,7 +100,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
 		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
-		shutdownChan:   make(chan bool),
+		shutdownChan:   make(chan struct{}),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Coinbase,
@@ -157,6 +159,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if kcoin.protocolManager, err = NewProtocolManager(kcoin.chainConfig, config.SyncMode, config.NetworkId, kcoin.eventMux, kcoin.txPool, kcoin.engine, kcoin.blockchain, chainDb, kcoin.validator); err != nil {
 		return nil, err
 	}
+
+	kcoin.serverPool = newServerPool(chainDb, kcoin.shutdownChan, new(sync.WaitGroup))
 
 	return kcoin, nil
 }
@@ -396,8 +400,21 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 		}
 		maxPeers -= s.config.LightPeers
 	}
+
+	//fixme: should be removed after develop light client
+	if srvr.DiscoveryV5 {
+		protocolTopic := discv5.DiscoveryTopic(s.blockchain.Genesis().Hash(), ProtocolName, kcoin1)
+
+		go func() {
+			srvr.DiscV5.RegisterTopic(protocolTopic, s.shutdownChan)
+		}()
+
+		s.serverPool.start(srvr, protocolTopic)
+	}
+
 	// Start the networking layer and the light server if requested
 	s.protocolManager.Start(maxPeers)
+
 	return nil
 }
 

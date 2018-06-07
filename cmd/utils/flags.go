@@ -554,7 +554,11 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 // setBootstrapNodesV5 creates a list of bootstrap nodes from the command line
 // flags, reverting to pre-configured ones if none have been specified.
 func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
-	urls := params.DiscoveryV5Bootnodes
+	urls := params.MainnetDiscoveryV5Bootnodes
+	if ctx.GlobalBool(TestnetFlag.Name) {
+		urls = params.TestnetDiscoveryV5Bootnodes
+	}
+
 	switch {
 	case ctx.GlobalIsSet(BootnodesFlag.Name) || ctx.GlobalIsSet(BootnodesV5Flag.Name):
 		if ctx.GlobalIsSet(BootnodesV5Flag.Name) {

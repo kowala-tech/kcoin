@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"time"
 
+	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/mclock"
 	"github.com/kowala-tech/kcoin/log"
 )
@@ -388,4 +390,9 @@ func (tq *topicRequestQueue) Pop() interface{} {
 func (tq *topicRequestQueue) update(item *topicRequestQueueItem, priority uint64) {
 	item.priority = priority
 	heap.Fix(tq, item.index)
+}
+
+func DiscoveryTopic(genesisHash common.Hash, protocolName string, protocolVersion uint) Topic {
+	protocolName = fmt.Sprintf("%s%d", strings.ToUpper(protocolName), protocolVersion)
+	return Topic(protocolName + "@" + common.Bytes2Hex(genesisHash.Bytes()[0:8]))
 }

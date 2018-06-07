@@ -218,7 +218,10 @@ func ListenUDP(c conn, cfg Config) (*Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info("UDP listener up", "self", tab.self)
+
+	enode := tab.self.String()
+	log.Warn("UDP listener up. Enode: " + enode)
+
 	return tab, nil
 }
 
