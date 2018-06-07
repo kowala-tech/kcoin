@@ -12,7 +12,7 @@ import (
 	"github.com/kowala-tech/kcoin/rlp"
 )
 
-//go:generate gencodec -type txdata -field-override txdataMarshalling -out gen_tx_json.go
+//go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {

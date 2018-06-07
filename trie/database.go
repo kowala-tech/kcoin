@@ -44,7 +44,7 @@ type DatabaseReader interface {
 // the disk database. The aim is to accumulate trie writes in-memory and only
 // periodically flush a couple tries to disk, garbage collecting the remainder.
 type Database struct {
-	diskdb ethdb.Database // Persistent storage for matured trie nodes
+	diskdb kcoindb.Database // Persistent storage for matured trie nodes
 
 	nodes     map[common.Hash]*cachedNode // Data and references relationships of a node
 	preimages map[common.Hash][]byte      // Preimages of nodes from the secure trie

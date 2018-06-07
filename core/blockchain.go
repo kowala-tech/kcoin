@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/mclock"
@@ -781,7 +780,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 
 		stats.processed++
 
-		if batch.ValueSize() >= ethdb.IdealBatchSize {
+		if batch.ValueSize() >= kcoindb.IdealBatchSize {
 			if err := batch.Write(); err != nil {
 				return 0, err
 			}

@@ -905,4 +905,5 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
+	}
 }

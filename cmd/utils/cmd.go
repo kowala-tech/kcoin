@@ -32,8 +32,8 @@ import (
 	"github.com/kowala-tech/kcoin/core/rawdb"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/ethdb"
 	"github.com/kowala-tech/kcoin/internal/debug"
+	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/rlp"
@@ -238,7 +238,7 @@ func ExportAppendChain(blockchain *core.BlockChain, fn string, first uint64, las
 }
 
 // ImportPreimages imports a batch of exported hash preimages into the database.
-func ImportPreimages(db *ethdb.LDBDatabase, fn string) error {
+func ImportPreimages(db *kcoindb.LDBDatabase, fn string) error {
 	log.Info("Importing preimages", "file", fn)
 
 	// Open the file handle and potentially unwrap the gzip stream
@@ -285,7 +285,7 @@ func ImportPreimages(db *ethdb.LDBDatabase, fn string) error {
 
 // ExportPreimages exports all known hash preimages into the specified file,
 // truncating any data already present in the file.
-func ExportPreimages(db *ethdb.LDBDatabase, fn string) error {
+func ExportPreimages(db *kcoindb.LDBDatabase, fn string) error {
 	log.Info("Exporting preimages", "file", fn)
 
 	// Open the file handle and potentially wrap with a gzip stream

@@ -4,7 +4,7 @@ package accounts
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin"
+	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/event"
@@ -69,7 +69,7 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
-	SelfDerive(base DerivationPath, chain kcoin.ChainStateReader)
+	SelfDerive(base DerivationPath, chain kowala.ChainStateReader)
 
 	// SignHash requests the wallet to sign the given hash.
 	//
