@@ -3,5 +3,4 @@ set -e
 
 ./faucet \
   --genesis /faucet/genesis.json \
-  --v5disc \
   $@

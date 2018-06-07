@@ -38,6 +38,7 @@ import (
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
 	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/p2p/discv5"
 	"github.com/kowala-tech/kcoin/p2p/nat"
 	"github.com/kowala-tech/kcoin/params"
 	"golang.org/x/net/websocket"
@@ -49,7 +50,6 @@ var (
 	apiPortFlag   = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
 	kcoinPortFlag = flag.Int("kcoinport", 30303, "Listener port for the devp2p connection")
 	bootFlag      = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
-	v5discFlag    = flag.Bool("v5disc", false, "Enables the experimental RLPx V5 (Topic Discovery) mechanism")
 	netFlag       = flag.Uint64("network", 0, "Network ID to use for the Kowala protocol")
 	statsFlag     = flag.String("kcoinstats", "", "kcoinStats network monitoring auth string")
 
@@ -159,28 +159,20 @@ func main() {
 	}
 }
 
-func bootnodes() (enodes []*discover.Node) {
+func bootnodes() (enodes []*discv5.Node) {
 
 	var rawNodes []string
 
 	if *bootFlag != "" {
 		rawNodes = strings.Split(*bootFlag, ",")
 	} else if *testnetFlag {
-		if *v5discFlag {
-			rawNodes = params.TestnetDiscoveryV5Bootnodes
-		} else {
-			rawNodes = params.TestnetBootnodes
-		}
+		rawNodes = params.TestnetDiscoveryV5Bootnodes
 	} else {
-		if *v5discFlag {
-			rawNodes = params.MainnetDiscoveryV5Bootnodes
-		} else {
-			rawNodes = params.MainnetBootnodes
-		}
+		rawNodes = params.MainnetDiscoveryV5Bootnodes
 	}
 
 	for _, boot := range rawNodes {
-		if url, err := discover.ParseNode(boot); err == nil {
+		if url, err := discv5.ParseNode(boot); err == nil {
 			enodes = append(enodes, url)
 		} else {
 			log.Error("Failed to parse mainnet bootnode URL", "url", boot, "err", err)
@@ -231,17 +223,19 @@ type faucet struct {
 	lock sync.RWMutex // Lock protecting the faucet's internals
 }
 
-func newFaucet(genesis *core.Genesis, port int, enodes []*discover.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
+func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
 	// Assemble the raw devp2p protocol stack
 	stack, err := node.New(&node.Config{
 		Name:    "kcoin",
 		Version: params.Version,
 		DataDir: filepath.Join(os.Getenv("HOME"), ".faucet"),
 		P2P: p2p.Config{
-			NAT:            nat.Any(),
-			ListenAddr:     fmt.Sprintf(":%d", port),
-			MaxPeers:       25,
-			BootstrapNodes: enodes,
+			NAT:              nat.Any(),
+			ListenAddr:       fmt.Sprintf(":%d", port),
+			MaxPeers:         25,
+			NoDiscovery:      true,
+			DiscoveryV5:      true,
+			BootstrapNodesV5: enodes,
 		},
 	})
 	if err != nil {
