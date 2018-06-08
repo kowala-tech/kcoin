@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -13,9 +12,8 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 
 	"github.com/kowala-tech/kcoin/cmd/utils"
-	"github.com/kowala-tech/kcoin/contracts/release"
 	"github.com/kowala-tech/kcoin/dashboard"
-	"github.com/kowala-tech/kcoin/kcoin"
+	"github.com/kowala-tech/kcoin/knode"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/stats"
@@ -57,7 +55,7 @@ var tomlSettings = toml.Config{
 }
 
 type kcoinConfig struct {
-	Kowala    kcoin.Config
+	Kowala    knode.Config
 	Node      node.Config
 	Stats     stats.Config
 	Dashboard dashboard.Config
@@ -84,14 +82,14 @@ func defaultNodeConfig() node.Config {
 	cfg.Version = params.VersionWithCommit(gitCommit)
 	cfg.HTTPModules = append(cfg.HTTPModules, "eth", "shh")
 	cfg.WSModules = append(cfg.WSModules, "eth", "shh")
-	cfg.IPCPath = "kcoin.ipc"
+	cfg.IPCPath = fmt.Sprintf("%s.ipc", clientIdentifier)
 	return cfg
 }
 
 func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	// Load defaults.
 	cfg := kcoinConfig{
-		Kowala:    kcoin.DefaultConfig,
+		Kowala:    knode.DefaultConfig,
 		Node:      defaultNodeConfig(),
 		Dashboard: dashboard.DefaultConfig,
 	}
@@ -129,20 +127,6 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 		utils.RegisterKowalaStatsService(stack, statsUrl)
 	}
 
-	// Add the release oracle service so it boots along with node.
-	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		config := release.Config{
-			Oracle: relOracle,
-			Major:  uint32(params.VersionMajor),
-			Minor:  uint32(params.VersionMinor),
-			Patch:  uint32(params.VersionPatch),
-		}
-		commit, _ := hex.DecodeString(gitCommit)
-		copy(config.Commit[:], commit)
-		return release.NewReleaseService(ctx, config)
-	}); err != nil {
-		utils.Fatalf("Failed to register the kcoin release oracle service: %v", err)
-	}
 	return stack
 }
 

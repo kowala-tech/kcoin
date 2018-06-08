@@ -2,8 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/kowala-tech/kcoin/kcoin/genesis"
 	"io"
+
+	"github.com/kowala-tech/kcoin/knode/genesis"
 )
 
 type generateGenesisFileCommandHandler struct {
@@ -11,7 +12,7 @@ type generateGenesisFileCommandHandler struct {
 }
 
 func (h *generateGenesisFileCommandHandler) handle(options genesis.Options) error {
-	gns, err := genesis.GenerateGenesis(options)
+	gns, err := genesis.Generate(options)
 	if err != nil {
 		return err
 	}

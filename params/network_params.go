@@ -7,4 +7,5 @@ const (
 	MaximumExtraDataSize uint64 = 32   // Maximum size extra data may be after Genesis.
 	MaxCodeSize                 = 24576
 	EpochDuration        uint64 = 30000
+	HDCoinType                  = 91927009 // Hierarchical deterministic wallet coin_type (SLIP-44)
 )

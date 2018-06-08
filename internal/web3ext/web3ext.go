@@ -7,6 +7,7 @@ var Modules = map[string]string{
 	"clique":     Clique_JS,
 	"debug":      Debug_JS,
 	"eth":        Eth_JS,
+	"mtoken":     MToken_JS,
 	"validator":  Validator_JS,
 	"net":        Net_JS,
 	"personal":   Personal_JS,
@@ -422,6 +423,29 @@ web3._extend({
 });
 `
 
+const MToken_JS = `
+web3._extend({
+	property: 'mtoken',
+	methods:
+	[
+		new web3._extend.Method({
+			name: 'getBalance',
+			call: 'mtoken_getBalance',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter],
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'transfer',
+			call: 'mtoken_transfer',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		})
+	],
+	properties: []
+});
+`
+
 const Validator_JS = `
 web3._extend({
 	property: 'validator',
@@ -460,7 +484,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getMinimumDeposit',
 			call: 'validator_getMinimumDeposit',
-			params: 0
+			params: 0,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({
 			name: 'getDeposits',
@@ -473,7 +498,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'redeemDeposits',
 			call: 'validator_redeemDeposits'
-		})
+		}),
 	],
 	properties: []
 });

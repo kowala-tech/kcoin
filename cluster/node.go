@@ -3,6 +3,9 @@ package cluster
 import (
 	"fmt"
 	"strings"
+
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 type NodeID string
@@ -17,7 +20,7 @@ type NodeSpec struct {
 	Files       map[string][]byte
 	PortMapping map[int32]int32
 	Cmd         []string
-	IsReadyFn   func(runner NodeRunner) bool
+	IsReadyFn   func(runner NodeRunner) error
 }
 
 func BootnodeSpec(nodeSuffix string) (*NodeSpec, error) {
@@ -33,10 +36,19 @@ func BootnodeSpec(nodeSuffix string) (*NodeSpec, error) {
 	return spec, nil
 }
 
-func kcoinIsReadyFn(nodeID NodeID) func(NodeRunner) bool {
-	return func(runner NodeRunner) bool {
+func kcoinIsReadyFn(nodeID NodeID) func(NodeRunner) error {
+	return func(runner NodeRunner) error {
 		randomStr := randStringBytes(64)
 		res, err := runner.Exec(nodeID, KcoinExecCommand(fmt.Sprintf(`console.log("%v");`, randomStr)))
-		return err == nil && strings.Contains(res.StdOut, randomStr)
+		if err != nil {
+			log.Warn("node is not ready yet", "err", err)
+			return common.ErrConditionNotMet
+		}
+
+		if !strings.Contains(res.StdOut, randomStr) {
+			return fmt.Errorf("node returns a wrong result. expect %s, got %s", randomStr, res.StdOut)
+		}
+
+		return nil
 	}
 }
