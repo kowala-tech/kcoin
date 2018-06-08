@@ -158,16 +158,16 @@ func (tx *Transaction) From() (*common.Address, error) {
 		return &f, nil
 	}
 
-	if tx.data.V != nil {
-		signer := deriveSigner(tx.data.V)
-		if f, err := TxSender(signer, tx); err != nil {
-			tx.from.Store(f)
-			return nil, err
-		} else {
-			return &f, nil
-		}
-	} else {
+	if tx.data.V == nil {
 		return nil, errors.New("[invalid sender: nil V field]")
+	}
+
+	signer := deriveSigner(tx.data.V)
+	if f, err := TxSender(signer, tx); err != nil {
+		tx.from.Store(f)
+		return nil, err
+	} else {
+		return &f, nil
 	}
 }
 
