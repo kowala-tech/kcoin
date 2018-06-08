@@ -35,8 +35,11 @@ The output of this command is supposed to be machine-readable.
 func version(ctx *cli.Context) error {
 	fmt.Println(strings.Title(clientIdentifier))
 	fmt.Println("Version:", params.Version)
-	if gitCommit != "" {
-		fmt.Println("Git Commit:", gitCommit)
+	if params.Commit != "" {
+		fmt.Println("Git Commit:", params.Commit)
+	}
+	if params.BuildTime != "" {
+		fmt.Println("BuildTime:", params.BuildTime)
 	}
 	fmt.Println("Architecture:", runtime.GOARCH)
 	fmt.Println("Protocol Versions:", knode.ProtocolVersions)

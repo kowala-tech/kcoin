@@ -36,6 +36,17 @@ func (env Environment) String() string {
 // if not running on CI.
 func Env() Environment {
 	switch {
+	case os.Getenv("CI") == "drone" && os.Getenv("DRONE") == "true":
+		return Environment{
+			Name:          "travis",
+			Repo:          os.Getenv("DRONE_REPO"),
+			Commit:        os.Getenv("DRONE_COMMIT_SHA"),
+			Branch:        os.Getenv("DRONE_COMMIT_BRANCH"),
+			Tag:           os.Getenv("DRONE_TAG"),
+			Buildnum:      os.Getenv("DRONE_BUILD_NUMBER"),
+			IsPullRequest: os.Getenv("DRONE_BUILD_EVENT") == "pull_request",
+			IsCronJob:     false,
+		}
 	case os.Getenv("CI") == "true" && os.Getenv("TRAVIS") == "true":
 		return Environment{
 			Name:          "travis",
