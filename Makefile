@@ -91,9 +91,19 @@ kcoin-cross-compress:
 
 kcoin-cross-rename:
 ifdef DRONE_TAG
-	cd build/bin && for f in kcoin*; do cp $$f $${f/kcoin-/kcoin-stable-}; mv $$f $${f/kcoin-/kcoin-$(DRONE_TAG)-}; done; cd -
+	cd build/bin && for f in kcoin-*; do \
+		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_TAG)"); print }');\
+		cp $$f $$release;\
+		mv $$f $$version;\
+	done;
 else
-	cd build/bin && for f in kcoin*; do cp $$f $${f/kcoin-/kcoin-unstable-}; mv $$f $${f/kcoin-/kcoin-$(DRONE_COMMIT_SHA)-}; done; cd -
+	cd build/bin && for f in kcoin-*; do \
+		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-unstable"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_COMMIT_SHA)"); print }');\
+		cp $$f $$release;\
+		mv $$f $$version;\
+	done;
 endif
 
 ## Docker
