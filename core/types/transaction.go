@@ -153,11 +153,6 @@ func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
 
 func (tx *Transaction) From() (*common.Address, error) {
-	if cFrom := tx.from.Load(); cFrom != nil {
-		f := cFrom.(sigCache)
-		return &f.from, nil
-	}
-
 	if tx.data.V == nil {
 		return nil, errors.New("[invalid sender: nil V field]")
 	}
