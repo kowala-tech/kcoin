@@ -154,8 +154,8 @@ func (tx *Transaction) CheckNonce() bool   { return true }
 
 func (tx *Transaction) From() (*common.Address, error) {
 	if cFrom := tx.from.Load(); cFrom != nil {
-		f := cFrom.(common.Address)
-		return &f, nil
+		f := cFrom.(sigCache)
+		return &f.from, nil
 	}
 
 	if tx.data.V == nil {
@@ -167,8 +167,6 @@ func (tx *Transaction) From() (*common.Address, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	tx.from.Store(f)
 
 	return &f, nil
 }
