@@ -3,7 +3,7 @@
     "chainID": 2,
     "tendermint": {}
   },
-  "timestamp": "0x5b0d91ef",
+  "timestamp": "0x5b1a45fd",
   "extraData": "0x4b6f77616c61277320666972737420626c6f636b210000000000000000000000",
   "gasLimit": "0x47b760",
   "coinbase": "0x0000000000000000000000000000000000000000",
@@ -829,7 +829,7 @@
       "balance": "0x2b5e3af16b1880000"
     },
     "d6e579085c82329c89fca7a9f012be59028ed53f": {
-      "balance": "0x2b5e3af16b1880000"
+      "balance": "0xd3c21bcecceda1000000"
     },
     "f358eb1020375800746ccd5c6638da36c5a6bec9": {
       "balance": "0x2b5e3af16b1880000"
