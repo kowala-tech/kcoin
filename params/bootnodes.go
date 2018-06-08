@@ -10,11 +10,13 @@ var MainnetBootnodes = []string{
 
 // TestnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // test network.
-var TestnetBootnodes = []string{
-	"enode://a46e5885d3da52bf452fcea7269b91059d93819e7e906cb5d29575508a18a4009e5d688bf29abf8cdd55aad65a9ca4beab98de8c0a226d694c8140acdedf3a55@18.219.208.190:33448",
-	"enode://9791d40d97585d7241edeedd2491187e82e3273414cf1bed2aca049e8b21d96930437efe3e591d6996ee303d3e2fe4338e53551bb6e50f05dfeeaccd660eac01@18.220.38.32:33448",
+var TestnetBootnodes = []string{}
+
+// TestnetDiscoveryV5Bootnodes are the enode URLs of the P2P bootstrap nodes for the
+// experimental RLPx v5 topic-discovery network.
+var TestnetDiscoveryV5Bootnodes = []string{
+	"enode://1ed36c00c77e7a2d824699baadaab9142818b8f1904d397c65f3d75793b47e99a251704c2ad66d874292516e8c6aac134184e8cc3897899ea776c5ed3ba75ed8@52.23.43.192:32233",
+	"enode://ae54a310873b252daaa9203c1995dc9e89f8afb2c70b255c44d005cbb79714a553b101b913eff128b197b6e0e24ea4991ea9528fca94621f4438bf4aa211a08e@54.175.98.140:32233",
 }
 
-// DiscoveryV5Bootnodes are the enode URLs of the P2P bootstrap nodes for the
-// experimental RLPx v5 topic-discovery network.
-var DiscoveryV5Bootnodes = []string{}
+var MainnetDiscoveryV5Bootnodes = []string{}

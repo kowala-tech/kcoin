@@ -484,7 +484,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getMinimumDeposit',
 			call: 'validator_getMinimumDeposit',
-			params: 0
+			params: 0,
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({
 			name: 'getDeposits',
