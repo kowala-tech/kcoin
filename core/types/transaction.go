@@ -163,12 +163,14 @@ func (tx *Transaction) From() (*common.Address, error) {
 	}
 
 	signer := deriveSigner(tx.data.V)
-	if f, err := TxSender(signer, tx); err != nil {
-		tx.from.Store(f)
+	f, err := TxSender(signer, tx)
+	if err != nil {
 		return nil, err
-	} else {
-		return &f, nil
 	}
+
+	tx.from.Store(f)
+
+	return &f, nil
 }
 
 // To returns the recipient address of the transaction.
