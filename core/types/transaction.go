@@ -160,7 +160,8 @@ func (tx *Transaction) From() (*common.Address, error) {
 
 	if tx.data.V != nil {
 		signer := deriveSigner(tx.data.V)
-		if f, err := TxSender(signer, tx); err != nil { // derive but don't cache
+		if f, err := TxSender(signer, tx); err != nil {
+			tx.from.Store(f)
 			return nil, err
 		} else {
 			return &f, nil
