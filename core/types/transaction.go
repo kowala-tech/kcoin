@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/common/hexutil"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/pkg/errors"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshalling -out gen_tx_json.go
@@ -151,19 +152,22 @@ func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amo
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
 
-func (tx *Transaction) From() *common.Address {
-	var from *common.Address
+func (tx *Transaction) From() (*common.Address, error) {
+	if cFrom := tx.from.Load(); cFrom != nil {
+		f := cFrom.(common.Address)
+		return &f, nil
+	}
 
 	if tx.data.V != nil {
 		signer := deriveSigner(tx.data.V)
 		if f, err := TxSender(signer, tx); err != nil { // derive but don't cache
-			from = nil
+			return nil, err
 		} else {
-			from = &f
+			return &f, nil
 		}
+	} else {
+		return nil, errors.New("[invalid sender: nil V field]")
 	}
-
-	return from
 }
 
 // To returns the recipient address of the transaction.
