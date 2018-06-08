@@ -99,7 +99,7 @@ pipeline:
       - make kcoin-cross
     when:
       event: [push, tag]
-      branch: [dev, feature/cross-compile]
+      branch: [dev]
 
   s3:
     image: plugins/s3
@@ -112,7 +112,7 @@ pipeline:
     secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       event: [push, tag]
-      branch: [dev, feature/cross-compile]
+      branch: [dev]
 
 services:
   docker:
