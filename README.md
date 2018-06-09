@@ -2,7 +2,7 @@
 
 ## kCoin
 
-Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kcoin`** client is the main client for the Kowala network and it's capable of running a full node - the client offers a gateway to the Kowala network to other processes. To learn more about Kowala please visit the [official documentation(http://docs.kowala.tech/).
+Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kcoin`** client is the main client for the Kowala network and it's capable of running a full node - the client offers a gateway to the Kowala network to other processes. To learn more about Kowala please visit the [official documentation](http://docs.kowala.tech/).
 
 ## Getting Started
 
