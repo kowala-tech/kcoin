@@ -5,10 +5,12 @@ import (
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/consensus"
+	"github.com/kowala-tech/kcoin/contracts/oracle"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/stability"
 )
 
 var (
@@ -16,12 +18,15 @@ var (
 )
 
 type Tendermint struct {
-	config   *params.TendermintConfig // Consensus engine configuration parameters
-	fakeMode bool
+	config    *params.TendermintConfig // consensus engine configuration parameters
+	priceFeed oracle.PriceFeed
+	fakeMode  bool
 }
 
 func New(config *params.TendermintConfig) *Tendermint {
-	return &Tendermint{config: config}
+	priceFeed := oracle.LoadPriceFeed()
+
+	return &Tendermint{config: config, priceFeed: priceFeed}
 }
 
 func NewFaker() *Tendermint {
@@ -71,6 +76,7 @@ func AccumulateRewards(state *state.StateDB, header *types.Header) error {
 	// accumulate the rewards for the validator
 	reward := new(big.Int).Set(blockReward)
 	state.AddBalance(header.Coinbase, reward)
+	stabilityFee := stability.CalcFee()
 
 	/*
 		// @TODO (hrosa): what to do with transactions fees ?

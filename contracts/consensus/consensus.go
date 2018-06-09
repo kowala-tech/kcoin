@@ -8,6 +8,7 @@ import (
 	"github.com/kowala-tech/kcoin/accounts"
 	"github.com/kowala-tech/kcoin/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/contracts"
 	"github.com/kowala-tech/kcoin/contracts/token"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/params"
@@ -22,8 +23,6 @@ const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 
 var (
 	DefaultData = []byte("not_zero")
-
-	errNoAddress = errors.New("there isn't an address for the provided chain ID")
 )
 
 var mapValidatorMgrToAddr = map[uint64]common.Address{
@@ -87,11 +86,11 @@ type consensus struct {
 	chainID     *big.Int
 }
 
-// Instance returnsan instance of the current consensus engine
-func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
+// LoadConsensus returns the consensus bindings
+func LoadConsensus(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
 	addr, ok := mapValidatorMgrToAddr[chainID.Uint64()]
 	if !ok {
-		return nil, errNoAddress
+		return nil, contracts.ErrNoAddress
 	}
 
 	manager, err := NewValidatorMgr(addr, contractBackend)
