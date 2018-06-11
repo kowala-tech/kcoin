@@ -10,10 +10,14 @@ import (
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/gherkin"
 	"github.com/kowala-tech/kcoin/tests/features"
+	"sync"
 )
 
 var (
 	chainID = big.NewInt(1000)
+
+	// contexts are different for each feature
+	contextMapper = newContextMapper()
 )
 
 func init() {
@@ -28,79 +32,108 @@ func init() {
 	fmt.Println("buildDockerImages DONE")
 }
 
+type contexts struct{
+	ctx *features.Context
+	validationCtx *features.ValidationContext
+}
+
+type ctxMapper struct {
+	m map[string]contexts
+	l sync.RWMutex
+}
+
+func newContextMapper() *ctxMapper {
+	return &ctxMapper{make(map[string]contexts), sync.RWMutex{}}
+}
+
+func (mapper *ctxMapper) getContext(name string) (contexts, bool) {
+	mapper.l.RLock()
+	ctxs, ok := mapper.m[name]
+	mapper.l.RUnlock()
+
+	return ctxs, ok
+}
+
+func (mapper *ctxMapper) setContext(name string, ctxs contexts) {
+	mapper.l.RLock()
+	mapper.m[name] = ctxs
+	mapper.l.RUnlock()
+}
+
 func FeatureContext(s *godog.Suite) {
-	var (
-		// contexts are different for each feature
-		context       *features.Context
-		validationCtx *features.ValidationContext
-	)
-
+	var ctxs contexts
 	s.BeforeFeature(func(ft *gherkin.Feature) {
-		context = features.NewTestContext(chainID, ft.Name)
-		validationCtx = features.NewValidationContext(context)
+		ctxs.ctx = features.NewTestContext(chainID, ft.Name)
+		ctxs.ctx.Name = getFeatureName(ft.Name)
 
-		context.Name = getFeatureName(ft.Name)
+		ctxs.validationCtx = features.NewValidationContext(ctxs.ctx)
 
-		if err := context.PrepareCluster(); err != nil {
+		if err := ctxs.ctx.PrepareCluster(); err != nil {
 			log.Fatal(err)
 		}
+
+		setFeatureSteps(s.Step, ctxs)
+		contextMapper.setContext(ft.Name, ctxs)
 	})
 
 	s.AfterFeature(func(ft *gherkin.Feature) {
-		if err := context.DeleteCluster(); err != nil {
+		context, _ := contextMapper.getContext(ft.Name)
+		if err := context.ctx.DeleteCluster(); err != nil {
 			log.Fatal(err)
 		}
 	})
 
 	s.BeforeScenario(func(interface{}) {
-		context.Reset()
-		validationCtx.Reset()
+		ctxs.ctx.Reset()
+		ctxs.validationCtx.Reset()
 	})
+}
 
+func setFeatureSteps(setStep func(expr interface{}, stepFunc interface{}), ctxs contexts) {
 	// Creating accounts
-	s.Step(`^I have the following accounts:$`, context.IHaveTheFollowingAccounts)
-	s.Step(`^I created an account with password '(\w+)'$`, context.ICreatedAnAccountWithPassword)
+	setStep(`^I have the following accounts:$`, ctxs.ctx.IHaveTheFollowingAccounts)
+	setStep(`^I created an account with password '(\w+)'$`, ctxs.ctx.ICreatedAnAccountWithPassword)
 
 	// Unlocking accounts
-	s.Step(`^I unlock the account (\w+) with password '(\w+)'$`, context.IUnlockAccountWithPassword)
-	s.Step(`^I try to unlock the account (\w+) with password '(\w+)'$`, context.ITryUnlockAccountWithPassword)
-	s.Step(`^I try to unlock my account with password '(\w+)'$`, context.ITryUnlockMyAccountWithPassword)
+	setStep(`^I unlock the account (\w+) with password '(\w+)'$`, ctxs.ctx.IUnlockAccountWithPassword)
+	setStep(`^I try to unlock the account (\w+) with password '(\w+)'$`, ctxs.ctx.ITryUnlockAccountWithPassword)
+	setStep(`^I try to unlock my account with password '(\w+)'$`, ctxs.ctx.ITryUnlockMyAccountWithPassword)
 
-	s.Step(`^I should get my account unlocked$`, context.IGotAccountUnlocked)
-	s.Step(`^I should get an error unlocking the account$`, context.IGotErrorUnlocking)
+	setStep(`^I should get my account unlocked$`, ctxs.ctx.IGotAccountUnlocked)
+	setStep(`^I should get an error unlocking the account$`, ctxs.ctx.IGotErrorUnlocking)
 
 	// Transactions
-	s.Step(`^I transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITransferKUSD)
-	s.Step(`^I try to transfer (\d+) kcoins? from (\w+) to (\w+)$`, context.ITryTransferKUSD)
-	s.Step(`^the transaction should fail$`, context.LastTransactionFailed)
-	s.Step(`^only one transaction should be done$`, context.OnlyOneTransactionIsDone)
-	s.Step(`^the transaction hash the same$`, context.TransactionHashTheSame)
+	setStep(`^I transfer (\d+) kcoins? from (\w+) to (\w+)$`, ctxs.ctx.ITransferKUSD)
+	setStep(`^I try to transfer (\d+) kcoins? from (\w+) to (\w+)$`, ctxs.ctx.ITryTransferKUSD)
+	setStep(`^the transaction should fail$`, ctxs.ctx.LastTransactionFailed)
+	setStep(`^only one transaction should be done$`, ctxs.ctx.OnlyOneTransactionIsDone)
+	setStep(`^the transaction hash the same$`, ctxs.ctx.TransactionHashTheSame)
 
 	// Balances
-	s.Step(`^the balance of (\w+) should be (\d+) kcoins?$`, context.TheBalanceIsExactly)
-	s.Step(`^the balance of (\w+) should be around (\d+) kcoins?$`, context.TheBalanceIsAround)
-	s.Step(`^the balance of (\w+) should be greater (\d+) kcoins?$`, context.TheBalanceIsGreater)
-	s.Step(`^the transaction should fail$`, context.LastTransactionFailed)
+	setStep(`^the balance of (\w+) should be (\d+) kcoins?$`, ctxs.ctx.TheBalanceIsExactly)
+	setStep(`^the balance of (\w+) should be around (\d+) kcoins?$`, ctxs.ctx.TheBalanceIsAround)
+	setStep(`^the balance of (\w+) should be greater (\d+) kcoins?$`, ctxs.ctx.TheBalanceIsGreater)
+	setStep(`^the transaction should fail$`, ctxs.ctx.LastTransactionFailed)
 
 	// validation
-	s.Step(`^I start validator with (\d+) kcoins deposit$`, validationCtx.IStartTheValidator)
-	s.Step(`^I have my node running using account (\w+)$`, validationCtx.IHaveMyNodeRunning)
-	s.Step(`^I stop validation$`, validationCtx.IStopValidation)
-	s.Step(`^I wait for the unbonding period to be over$`, validationCtx.IWaitForTheUnbondingPeriodToBeOver)
-	s.Step(`^I withdraw my node from validation$`, validationCtx.IWithdrawMyNodeFromValidation)
-	s.Step(`^there should be (\d+) kcoins available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
-	s.Step(`^My node should be not be a validator$`, validationCtx.MyNodeShouldBeNotBeAValidator)
-	s.Step(`^I wait for my node to be synced$`, validationCtx.IWaitForMyNodeToBeSynced)
+	setStep(`^I start validator with (\d+) kcoins deposit$`, ctxs.validationCtx.IStartTheValidator)
+	setStep(`^I have my node running using account (\w+)$`, ctxs.validationCtx.IHaveMyNodeRunning)
+	setStep(`^I stop validation$`, ctxs.validationCtx.IStopValidation)
+	setStep(`^I wait for the unbonding period to be over$`, ctxs.validationCtx.IWaitForTheUnbondingPeriodToBeOver)
+	setStep(`^I withdraw my node from validation$`, ctxs.validationCtx.IWithdrawMyNodeFromValidation)
+	setStep(`^there should be (\d+) kcoins available to me after (\d+) days$`, ctxs.validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
+	setStep(`^My node should be not be a validator$`, ctxs.validationCtx.MyNodeShouldBeNotBeAValidator)
+	setStep(`^I wait for my node to be synced$`, ctxs.validationCtx.IWaitForMyNodeToBeSynced)
 
 	// Nodes
-	s.Step(`^I start a new node$`, context.IStartANewNode)
-	s.Step(`^my node should sync with the network$`, context.MyNodeShouldSyncWithTheNetwork)
-	s.Step(`^my node is already synchronised$`, validationCtx.MyNodeIsAlreadySynchronised)
-	s.Step(`^I disconnect my node for (\d+) blocks and reconnect it$`, context.IDisconnectMyNodeForBlocksAndReconnectIt)
-	s.Step(`^I start a new node with a different network ID$`, context.IStartANewNodeWithADifferentNetworkID)
-	s.Step(`^my node should not sync with the network$`, context.MyNodeShouldNotSyncWithTheNetwork)
-	s.Step(`^I start a new node with a different chain ID$`, context.IStartANewNodeWithADifferentChainID)
-	s.Step(`^I start validator with (\d+) deposit and coinbase A$`, context.IStartValidatorWithDepositAndCoinbaseA)
+	setStep(`^I start a new node$`, ctxs.ctx.IStartANewNode)
+	setStep(`^my node should sync with the network$`, ctxs.ctx.MyNodeShouldSyncWithTheNetwork)
+	setStep(`^my node is already synchronised$`, ctxs.validationCtx.MyNodeIsAlreadySynchronised)
+	setStep(`^I disconnect my node for (\d+) blocks and reconnect it$`, ctxs.ctx.IDisconnectMyNodeForBlocksAndReconnectIt)
+	setStep(`^I start a new node with a different network ID$`, ctxs.ctx.IStartANewNodeWithADifferentNetworkID)
+	setStep(`^my node should not sync with the network$`, ctxs.ctx.MyNodeShouldNotSyncWithTheNetwork)
+	setStep(`^I start a new node with a different chain ID$`, ctxs.ctx.IStartANewNodeWithADifferentChainID)
+	setStep(`^I start validator with (\d+) deposit and coinbase A$`, ctxs.ctx.IStartValidatorWithDepositAndCoinbaseA)
 }
 
 func getFeatureName(feature string) string {

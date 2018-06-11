@@ -75,7 +75,6 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 	if ctx.nodeRunning {
 		return nil
 	}
-	ctx.nodeRunning = true
 
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.globalCtx.bootnode).
@@ -90,6 +89,8 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.scenarioNumber); err != nil {
 		return err
 	}
+
+	ctx.nodeRunning = true
 
 	return nil
 }

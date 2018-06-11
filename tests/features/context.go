@@ -10,7 +10,6 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/kcoinclient"
-	"sync"
 )
 
 type Context struct {
@@ -42,8 +41,6 @@ type Context struct {
 
 	waiter doer
 }
-
-var genesisLock = new(sync.Mutex)
 
 func NewTestContext(chainID *big.Int, featureName string) *Context {
 	tmpdir, _ := ioutil.TempDir("", "eth-keystore-test"+featureName)

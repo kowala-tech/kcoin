@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to
@@ -109,6 +110,7 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 			if code, err = pb.PendingCodeAt(ctx, c.address); err != nil {
 				return err
 			} else if len(code) == 0 {
+				log.Error(fmt.Sprint("BoundContract Pending Call nil code ", c.address.String()))
 				return ErrNoCode
 			}
 		}
@@ -119,6 +121,7 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 			if code, err = c.caller.CodeAt(ctx, c.address, nil); err != nil {
 				return err
 			} else if len(code) == 0 {
+				log.Error(fmt.Sprint("BoundContract Deployed Call nil code ", c.address.String()))
 				return ErrNoCode
 			}
 		}
@@ -179,6 +182,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 			if code, err := c.transactor.PendingCodeAt(ensureContext(opts.Context), c.address); err != nil {
 				return nil, err
 			} else if len(code) == 0 {
+				log.Error(fmt.Sprint("BoundContract transact nil code ", c.address.String()))
 				return nil, ErrNoCode
 			}
 		}
