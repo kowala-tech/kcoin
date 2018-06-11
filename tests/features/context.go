@@ -19,7 +19,6 @@ type Context struct {
 
 	// cluster config
 	genesis  []byte
-	genesisLock sync.Mutex
 	bootnode string
 
 	nodeRunner             cluster.NodeRunner
@@ -43,6 +42,8 @@ type Context struct {
 
 	waiter doer
 }
+
+var genesisLock = new(sync.Mutex)
 
 func NewTestContext(chainID *big.Int, featureName string) *Context {
 	tmpdir, _ := ioutil.TempDir("", "eth-keystore-test"+featureName)

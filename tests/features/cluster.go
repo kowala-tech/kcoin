@@ -18,8 +18,8 @@ import (
 	"github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/lazada/awg"
 	"sync/atomic"
-	"crypto/ecdsa"
 	"github.com/kowala-tech/kcoin/crypto"
+	"crypto/ecdsa"
 )
 
 var (
@@ -273,10 +273,9 @@ var (
 	secondsPerDay    = new(big.Int).SetUint64(86400)
 )
 
-func GetDefaultOpts() genesis.Options {
-	baseDeposit := uint64(20)
+func GetDefaultOpts(baseDeposit uint64, validatorAddress string) genesis.Options {
 	tokenHolder := genesis.TokenHolder{
-		Address:   getAddress(validator).Hex(),
+		Address:   validatorAddress,
 		NumTokens: baseDeposit,
 	}
 
@@ -338,18 +337,18 @@ func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
 }
 
 func (ctx *Context) buildGenesis() error {
-	ctx.genesisLock.Lock()
-	defer ctx.genesisLock.Unlock()
-
+	genesisLock.Lock()
 	fmt.Println("1")
+	fmt.Println("LOCK")
+	defer func() {
+		fmt.Println("UNLOCK")
+		genesisLock.Unlock()
+	}()
+
 	validatorAddr := ctx.genesisValidatorAccount.Address.Hex()
-	baseDeposit := uint64(10000000) // 10000000 mUSD
+	baseDeposit := uint64(100)
 	fmt.Println("2")
 
-	_ = baseDeposit
-	_ = validatorAddr
-
-	/*
 	opts := genesis.Options{
 		Network: "test",
 		Consensus: &genesis.ConsensusOpts{
@@ -370,32 +369,29 @@ func (ctx *Context) buildGenesis() error {
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
-			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-			Governors:        []string{"0x259be75d96876f2ada3d202722523e9cd4dd917d"},
+			Origin:           validatorAddr,
+			Governors:        []string{validatorAddr},
 			NumConfirmations: 1,
-		},
-		PrefundedAccounts: []genesis.PrefundedAccount{
-			{
-				Address: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-				Balance: 1000,
-			},
-			{
-				Address: validatorAddr,
-				Balance: 1000,
-			},
 		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{
 			MaxNumOracles: 10,
 			FreezePeriod:  0,
 			BaseDeposit:   0,
 		},
+		PrefundedAccounts: []genesis.PrefundedAccount{
+			{
+				Address: validatorAddr,
+				Balance: 1000,
+			},
+		},
 	}
-	 */
+	fmt.Println("3")
 
-	opts := GetDefaultOpts()
+	opts = GetDefaultOpts(baseDeposit, validatorAddr)
+	fmt.Println("4")
 
 	newGenesis, err := genesis.Generate(opts)
-	fmt.Println("3")
+	fmt.Println("5")
 	if err != nil {
 		return err
 	}
@@ -404,8 +400,9 @@ func (ctx *Context) buildGenesis() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("4")
+	fmt.Println("6")
 	ctx.genesis = rawJson
-	fmt.Println("5")
+	fmt.Println("7")
+	time.Sleep(5*time.Second)
 	return nil
 }
