@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/common/hexutil"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/pkg/errors"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshalling -out gen_tx_json.go
@@ -150,6 +151,20 @@ func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Pri
 func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amount) }
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
+
+func (tx *Transaction) From() (*common.Address, error) {
+	if tx.data.V == nil {
+		return nil, errors.New("[invalid sender: nil V field]")
+	}
+
+	signer := deriveSigner(tx.data.V)
+	f, err := TxSender(signer, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &f, nil
+}
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
