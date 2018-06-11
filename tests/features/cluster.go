@@ -338,6 +338,9 @@ func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
 }
 
 func (ctx *Context) buildGenesis() error {
+	ctx.genesisLock.Lock()
+	defer ctx.genesisLock.Unlock()
+
 	fmt.Println("1")
 	validatorAddr := ctx.genesisValidatorAccount.Address.Hex()
 	baseDeposit := uint64(10000000) // 10000000 mUSD

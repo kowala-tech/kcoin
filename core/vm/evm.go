@@ -7,6 +7,8 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/log"
+	"fmt"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -150,6 +152,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil {
+		log.Error(fmt.Sprintf("evm Call error: %s", err.Error()))
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
 			contract.UseGas(contract.Gas)

@@ -10,6 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/kcoinclient"
+	"sync"
 )
 
 type Context struct {
@@ -18,6 +19,7 @@ type Context struct {
 
 	// cluster config
 	genesis  []byte
+	genesisLock sync.Mutex
 	bootnode string
 
 	nodeRunner             cluster.NodeRunner
