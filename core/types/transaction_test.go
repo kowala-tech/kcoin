@@ -9,7 +9,7 @@ import (
 	"github.com/kowala-tech/kcoin/accounts/keystore"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFrom(t *testing.T) {
@@ -17,14 +17,10 @@ func TestFrom(t *testing.T) {
 	accountsStorage := keystore.NewKeyStore(tmpdir, 2, 1)
 
 	account, err := accountsStorage.NewAccount("test")
-	if err != nil {
-		t.Errorf("Error creating account. %s", err)
-	}
+	require.NoError(t, err, "Error creating account. %s", err)
 
 	err = accountsStorage.Unlock(account, "test")
-	if err != nil {
-		t.Fatalf("Error unlocking account. %s", err)
-	}
+	require.NoError(t, err, "Error unlocking account. %s", err)
 
 	tx := types.NewTransaction(
 		0,
@@ -36,15 +32,10 @@ func TestFrom(t *testing.T) {
 	)
 
 	signedTx, err := accountsStorage.SignTx(account, tx, big.NewInt(1))
-	if err != nil {
-		t.Errorf("Error signing transaction. %s", err)
-	}
+	require.NoError(t, err, "Error signing transaction. %s", err)
 
 	fromAddr, err := signedTx.From()
-	if err != nil {
-		t.Errorf("Error getting from address from signed tx. %s", err)
+	require.NoError(t, err, "Error getting from address from signed tx. %s", err)
 
-	}
-
-	assert.Equal(t, &account.Address, fromAddr)
+	require.Equal(t, &account.Address, fromAddr)
 }
