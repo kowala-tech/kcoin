@@ -329,11 +329,7 @@ func (s *Kowala) SetDeposit(deposit *big.Int) error {
 	s.deposit = deposit
 	s.lock.Unlock()
 
-	if err := s.validator.SetDeposit(deposit); err != nil {
-		return err
-	}
-
-	return nil
+	return s.validator.SetDeposit(deposit)
 }
 
 func (s *Kowala) StartValidating() error {
