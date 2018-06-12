@@ -1,4 +1,4 @@
-[![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kcoin/status.svg)](http://ci.kowala.io/kowala-tech/kcoin) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://testnet.kowala.io)
+[![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kcoin/status.svg)](http://ci.kowala.io/kowala-tech/kcoin) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://zygote.kowala.io)
 
 ## kCoin
 
