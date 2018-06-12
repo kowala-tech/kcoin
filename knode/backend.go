@@ -343,8 +343,8 @@ func (s *Kowala) StartValidating() error {
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
-	deposit, err = s.Deposit()
-	if err != nil && err != validator.ErrIsNotRunning{
+	deposit, err := s.Deposit()
+	if err != nil && err != validator.ErrIsNotRunning {
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
 		return fmt.Errorf("insufficient funds: %v", err)
 	}

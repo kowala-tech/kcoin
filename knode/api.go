@@ -21,11 +21,11 @@ import (
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/internal/kcoinapi"
+	"github.com/kowala-tech/kcoin/knode/validator"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/rpc"
 	"github.com/kowala-tech/kcoin/trie"
-	"github.com/kowala-tech/kcoin/knode/validator"
 )
 
 const defaultTraceTimeout = 5 * time.Second
