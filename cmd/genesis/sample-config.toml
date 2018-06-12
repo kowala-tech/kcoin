@@ -30,6 +30,11 @@ numTokens = 3000000
 maxNumOracles = 1000
 freezePeriod = 1
 baseDeposit = 10
+[genesis.datafeed.price]
+initialPrice = 1        # one dollar
+syncFrequency = 900     # every 900 blocks
+updatePeriod = 30       # 30 blocks
+
 
 [[prefundedAccounts]]
 accountAddress = "0xa1e8587ed7f915d5bbbf283b21af4813232069f7"

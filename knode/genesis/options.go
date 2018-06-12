@@ -79,10 +79,17 @@ type GovernanceOpts struct {
 	NumConfirmations uint64
 }
 
+type PriceOpts struct {
+	InitialPrice  float64
+	SyncFrequency uint64
+	UpdatePeriod  uint64
+}
+
 type DataFeedSystemOpts struct {
 	MaxNumOracles uint64
 	FreezePeriod  uint64 // in days
 	BaseDeposit   uint64 // in kUSD
+	Price         PriceOpts
 }
 
 type PrefundedAccount struct {
@@ -109,10 +116,17 @@ type validValidatorMgrOpts struct {
 	owner            common.Address
 }
 
+type validPriceOpts struct {
+	initialPrice  *big.Int
+	syncFrequency *big.Int
+	updatePeriod  *big.Int
+}
+
 type validOracleMgrOpts struct {
 	maxNumOracles *big.Int
 	freezePeriod  *big.Int
 	baseDeposit   *big.Int
+	price         validPriceOpts
 	owner         common.Address
 }
 
@@ -245,6 +259,11 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			maxNumOracles: maxNumOracles,
 			freezePeriod:  oracleFreezePeriod,
 			baseDeposit:   oracleBaseDeposit,
+			price: validPriceOpts{
+				initialPrice:  big.NewInt(0),
+				syncFrequency: big.NewInt(0),
+				updatePeriod:  big.NewInt(0),
+			},
 		},
 		miningToken: &validMiningTokenOpts{
 			name:     options.Consensus.MiningToken.Name,

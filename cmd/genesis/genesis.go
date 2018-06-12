@@ -259,6 +259,11 @@ func createGenesis(cmd *cobra.Command, args []string) error {
 			MaxNumOracles: uint64(viper.GetInt64("genesis.datafeed.maxNumOracles")),
 			FreezePeriod:  uint64(viper.GetInt64("genesis.datafeed.freezePeriod")),
 			BaseDeposit:   uint64(viper.GetInt64("genesis.datafeed.baseDeposit")),
+			Price: genesis.PriceOpts{
+				InitialPrice:  viper.GetFloat64("genesis.datafeed.price.initialPrice"),
+				SyncFrequency: uint64(viper.GetInt64("genesis.datafeed.price.syncFrequency")),
+				UpdatePeriod:  uint64(viper.GetInt64("genesis.datafeed.price.updatePeriod")),
+			},
 		},
 		Governance: &genesis.GovernanceOpts{
 			Origin:           viper.GetString("genesis.governance.origin"),
