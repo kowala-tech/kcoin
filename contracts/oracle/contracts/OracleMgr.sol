@@ -3,9 +3,10 @@ pragma solidity 0.4.21;
 import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 
 contract OracleMgr is pausable.Pausable {
-    // syncFrequency should remain as the first variable being declared 
+    // syncFrequency/update should remain as the first variables being declared 
     // getStorageAt dependencies
     uint public syncFrequency; // unit: blocks
+    uint public updatePeriod; // unit: blocks
 
     uint public baseDeposit;       
     uint public maxNumOracles;
@@ -67,6 +68,7 @@ contract OracleMgr is pausable.Pausable {
         maxNumOracles = _maxNumOracles;
         freezePeriod = _freezePeriod * 1 days;
         syncFrequency = _syncFrequency;
+        updatePeriod = _updatePeriod;
     }
 
     function _isOracle(address identity) public view returns (bool isIndeed) {
