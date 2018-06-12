@@ -219,6 +219,11 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	oracleBaseDeposit := new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit)
 	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
 
+	initialPrice := new(big.Int)
+	new(big.Float).Mul(new(big.Float).SetFloat64(options.DataFeedSystem.Price.InitialPrice), big.NewFloat(params.KUSD)).Int(initialPrice)
+	syncFrequency := new(big.Int).SetUint64(options.DataFeedSystem.Price.SyncFrequency)
+	updatePeriod := new(big.Int).SetUint64(options.DataFeedSystem.Price.UpdatePeriod)
+
 	// mining tokens
 	decimals := new(big.Int).Exp(common.Big1, new(big.Int).SetUint64(options.Consensus.MiningToken.Decimals), nil)
 	cap := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.MiningToken.Cap), big.NewInt(params.KUSD))
@@ -260,9 +265,9 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			freezePeriod:  oracleFreezePeriod,
 			baseDeposit:   oracleBaseDeposit,
 			price: validPriceOpts{
-				initialPrice:  big.NewInt(0),
-				syncFrequency: big.NewInt(0),
-				updatePeriod:  big.NewInt(0),
+				initialPrice:  initialPrice,
+				syncFrequency: syncFrequency,
+				updatePeriod:  updatePeriod,
 			},
 		},
 		miningToken: &validMiningTokenOpts{
