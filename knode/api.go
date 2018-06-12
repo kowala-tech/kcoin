@@ -25,6 +25,7 @@ import (
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/rpc"
 	"github.com/kowala-tech/kcoin/trie"
+	"github.com/kowala-tech/kcoin/knode/validator"
 )
 
 const defaultTraceTimeout = 5 * time.Second
@@ -57,13 +58,20 @@ func NewPrivateValidatorAPI(kcoin *Kowala) *PrivateValidatorAPI {
 }
 
 // Start the validator.
-func (api *PrivateValidatorAPI) Start() error {
+func (api *PrivateValidatorAPI) Start(deposit *big.Int) error {
 	// Start the validator and return
 	if !api.kcoin.IsValidating() {
 		// Propagate the initial price point to the transaction pool
 		api.kcoin.lock.RLock()
 		price := api.kcoin.gasPrice
 		api.kcoin.lock.RUnlock()
+
+		if deposit != nil {
+			err := api.kcoin.SetDeposit(deposit)
+			if err != validator.ErrIsNotRunning {
+				return err
+			}
+		}
 
 		api.kcoin.txPool.SetGasPrice(price)
 		return api.kcoin.StartValidating()

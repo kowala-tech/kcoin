@@ -277,13 +277,13 @@ func (s *Kowala) Coinbase() (eb common.Address, err error) {
 }
 
 func (s *Kowala) Deposit() (*big.Int, error) {
-	if _, err := s.validator.Deposits(); err != nil {
-		return nil, err
-	}
-
 	s.lock.RLock()
 	deposit := s.deposit
 	s.lock.RUnlock()
+
+	if _, err := s.validator.Deposits(); err != nil {
+		return deposit, err
+	}
 
 	// @TODO(rgeraldes) - as soon as we have the dynamic validator set contract
 	// if there are spots available for validators & value > min value
@@ -325,13 +325,13 @@ func (s *Kowala) GetMinimumDeposit() (*big.Int, error) {
 
 // set in js console via admin interface or wrapper from cli flags
 func (s *Kowala) SetDeposit(deposit *big.Int) error {
-	if err := s.validator.SetDeposit(deposit); err != nil {
-		return err
-	}
-
 	s.lock.Lock()
 	s.deposit = deposit
 	s.lock.Unlock()
+
+	if err := s.validator.SetDeposit(deposit); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -343,8 +343,8 @@ func (s *Kowala) StartValidating() error {
 		return fmt.Errorf("coinbase missing: %v", err)
 	}
 
-	deposit, err := s.Deposit()
-	if err != nil {
+	deposit, err = s.Deposit()
+	if err != nil && err != validator.ErrIsNotRunning{
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
 		return fmt.Errorf("insufficient funds: %v", err)
 	}

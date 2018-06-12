@@ -27,6 +27,7 @@ var (
 	ErrCantSetCoinbaseOnStartedValidator = errors.New("can't set coinbase, already started validating")
 	ErrCantAddProposalNotValidating      = errors.New("can't add proposal, not validating")
 	ErrCantAddBlockFragmentNotValidating = errors.New("can't add block fragment, not validating")
+	ErrIsNotRunning                      = errors.New("validator is not running")
 )
 
 // Backend wraps all methods required for mining.
@@ -193,7 +194,7 @@ func (val *validator) SetCoinbase(walletAccount accounts.WalletAccount) error {
 
 func (val *validator) SetDeposit(deposit *big.Int) error {
 	if !val.Validating() {
-		return errors.New("can't get deposits: the validator is not running")
+		return ErrIsNotRunning
 	}
 
 	val.deposit = deposit
@@ -649,14 +650,14 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 
 func (val *validator) Deposits() ([]*types.Deposit, error) {
 	if !val.Validating() {
-
+		return nil, ErrIsNotRunning
 	}
 	return val.consensus.Deposits(val.walletAccount.Account().Address)
 }
 
 func (val *validator) RedeemDeposits() error {
 	if !val.Validating() {
-		return errors.New("can't redeem deposits: the validator is not running")
+		return ErrIsNotRunning
 	}
 	return val.consensus.RedeemDeposits(val.walletAccount)
 }
