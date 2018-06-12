@@ -9,6 +9,7 @@ import (
 	"github.com/kowala-tech/kcoin/common/math"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/kowala-tech/kcoin/core/bloombits"
+	"github.com/kowala-tech/kcoin/core/rawdb"
 	"github.com/kowala-tech/kcoin/core/state"
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
@@ -73,7 +74,6 @@ func (b *KowalaApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr r
 		block, state := b.kcoin.validator.Pending()
 		return state, block.Header(), nil
 	}
-
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
 	if header == nil || err != nil {
@@ -87,8 +87,27 @@ func (b *KowalaApiBackend) GetBlock(ctx context.Context, blockHash common.Hash) 
 	return b.kcoin.blockchain.GetBlockByHash(blockHash), nil
 }
 
-func (b *KowalaApiBackend) GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error) {
-	return core.GetBlockReceipts(b.kcoin.chainDb, blockHash, core.GetBlockNumber(b.kcoin.chainDb, blockHash)), nil
+func (b *KowalaApiBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
+	if number := rawdb.ReadHeaderNumber(b.kcoin.chainDb, hash); number != nil {
+		return rawdb.ReadReceipts(b.kcoin.chainDb, hash, *number), nil
+	}
+	return nil, nil
+}
+
+func (b *KowalaApiBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
+	number := rawdb.ReadHeaderNumber(b.kcoin.chainDb, hash)
+	if number == nil {
+		return nil, nil
+	}
+	receipts := rawdb.ReadReceipts(b.kcoin.chainDb, hash, *number)
+	if receipts == nil {
+		return nil, nil
+	}
+	logs := make([][]*types.Log, len(receipts))
+	for i, receipt := range receipts {
+		logs[i] = receipt.Logs
+	}
+	return logs, nil
 }
 
 func (b *KowalaApiBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
@@ -151,8 +170,8 @@ func (b *KowalaApiBackend) TxPoolContent() (map[common.Address]types.Transaction
 	return b.kcoin.TxPool().Content()
 }
 
-func (b *KowalaApiBackend) SubscribeTxPreEvent(ch chan<- core.TxPreEvent) event.Subscription {
-	return b.kcoin.TxPool().SubscribeTxPreEvent(ch)
+func (b *KowalaApiBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+	return b.kcoin.TxPool().SubscribeNewTxsEvent(ch)
 }
 
 func (b *KowalaApiBackend) Downloader() *downloader.Downloader {

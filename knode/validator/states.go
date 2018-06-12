@@ -100,8 +100,8 @@ func (val *validator) newElectionState() stateFn {
 		numTxs, _ := val.backend.TxPool().Stats() //
 		if val.round == 0 && numTxs == 0 {
 			log.Info("Waiting for a TX")
-			txCh := make(chan core.TxPreEvent)
-			txSub := val.backend.TxPool().SubscribeTxPreEvent(txCh)
+			txCh := make(chan core.NewTxsEvent)
+			txSub := val.backend.TxPool().SubscribeNewTxsEvent(txCh)
 			defer txSub.Unsubscribe()
 			<-txCh
 		}
@@ -199,9 +199,8 @@ func (val *validator) commitState() stateFn {
 
 	block := val.block
 	work := val.work
-	chainDb := val.backend.ChainDb()
 
-	_, err := work.state.CommitTo(chainDb, true)
+	_, err := work.state.Commit(true)
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return nil
@@ -218,7 +217,7 @@ func (val *validator) commitState() stateFn {
 		log.BlockHash = block.Hash()
 	}
 
-	_, err = val.chain.WriteBlockAndState(block, val.work.receipts, val.work.state)
+	_, err = val.chain.WriteBlockWithState(block, val.work.receipts, val.work.state)
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return nil

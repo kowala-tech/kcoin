@@ -51,6 +51,12 @@
 			"revisionTime": "2018-05-01T17:05:46Z"
 		},
 		{
+			"checksumSHA1": "st4vb0GmDeoKbsfxdpNZ2MPl76M=",
+			"path": "github.com/StackExchange/wmi",
+			"revision": "cdffdb33acae0e14efff2628f9bae377b597840e",
+			"revisionTime": "2018-04-12T20:51:11Z"
+		},
+		{
 			"checksumSHA1": "USkefO0g1U9mr+8hagv3fpSkrxg=",
 			"path": "github.com/aristanetworks/goarista/monotime",
 			"revision": "ea17b1a17847fb6e4c0a91de0b674704693469b0",
@@ -259,10 +265,34 @@
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "jElNoLEe7m/iaoF1vYIHyNaS2SE=",
+			"path": "github.com/elastic/gosigar",
+			"revision": "37f05ff46ffa7a825d1b24cf2b62d4a4c1a9d2e8",
+			"revisionTime": "2018-03-30T10:04:40Z"
+		},
+		{
+			"checksumSHA1": "qDsgp2kAeI9nhj565HUScaUyjU4=",
+			"path": "github.com/elastic/gosigar/sys/windows",
+			"revision": "37f05ff46ffa7a825d1b24cf2b62d4a4c1a9d2e8",
+			"revisionTime": "2018-03-30T10:04:40Z"
+		},
+		{
 			"checksumSHA1": "7oFpbmDfGobwKsFLIf6wMUvVoKw=",
 			"path": "github.com/fatih/color",
 			"revision": "5ec5d9d3c2cf82e9688b34e9bc27a94d616a7193",
 			"revisionTime": "2017-02-09T08:00:14Z"
+		},
+		{
+			"checksumSHA1": "Jq1rrHSGPfh689nA2hL1QVb62zE=",
+			"path": "github.com/fjl/memsize",
+			"revision": "ca190fb6ffbc076ff49197b7168a760f30182d2e",
+			"revisionTime": "2018-04-18T12:24:29Z"
+		},
+		{
+			"checksumSHA1": "Z13QAYTqeW4cTiglkc2F05gWLu4=",
+			"path": "github.com/fjl/memsize/memsizeui",
+			"revision": "ca190fb6ffbc076ff49197b7168a760f30182d2e",
+			"revisionTime": "2018-04-18T12:24:29Z"
 		},
 		{
 			"checksumSHA1": "7NP1qUMF8Kx1y0zANxx0e+oq9Oo=",
@@ -281,6 +311,18 @@
 			"path": "github.com/gizak/termui",
 			"revision": "991cd3d3809135dc24daf6188dc6edcaf3d7d2d9",
 			"revisionTime": "2017-01-17T22:23:42Z"
+		},
+		{
+			"checksumSHA1": "D1Y23ibX0mIo+8++Boq7TFb40no=",
+			"path": "github.com/go-ole/go-ole",
+			"revision": "a1ec82a652ebc7e784d7df887cfb31061aeabbcc",
+			"revisionTime": "2018-02-13T00:28:36Z"
+		},
+		{
+			"checksumSHA1": "PArleDBtadu2qO4hJwHR8a3IOTA=",
+			"path": "github.com/go-ole/go-ole/oleutil",
+			"revision": "a1ec82a652ebc7e784d7df887cfb31061aeabbcc",
+			"revisionTime": "2018-02-13T00:28:36Z"
 		},
 		{
 			"checksumSHA1": "KZ3QD2QgUS4RcoKiA3mn5pSlJxQ=",
@@ -533,6 +575,24 @@
 			"path": "github.com/inconshreveable/mousetrap",
 			"revision": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
 			"revisionTime": "2014-10-17T20:07:13Z"
+		},
+		{
+			"checksumSHA1": "Op+vCwiOTLgCMDFrTO98Hwum6hg=",
+			"path": "github.com/influxdata/influxdb/client",
+			"revision": "a55dd0f50edd14c9c798d3564189eb4f53914309",
+			"revisionTime": "2017-10-09T17:24:46Z"
+		},
+		{
+			"checksumSHA1": "CY8B/OcEr0wPuocuJ6lek0XmMys=",
+			"path": "github.com/influxdata/influxdb/models",
+			"revision": "3eb5349c70e2acd3a93155a811ecd55d5eb331bd",
+			"revisionTime": "2018-06-06T20:50:43Z"
+		},
+		{
+			"checksumSHA1": "Z0Bb5PWa5WL/j5Dm2KJCLGn1l7U=",
+			"path": "github.com/influxdata/influxdb/pkg/escape",
+			"revision": "3eb5349c70e2acd3a93155a811ecd55d5eb331bd",
+			"revisionTime": "2018-06-06T20:50:43Z"
 		},
 		{
 			"checksumSHA1": "vTGKMIfiMwz43y5bsgx9PrL+AVw=",
@@ -1362,6 +1422,12 @@
 			"path": "gopkg.in/natefinch/npipe.v2",
 			"revision": "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
 			"revisionTime": "2016-06-21T03:49:01Z"
+		},
+		{
+			"checksumSHA1": "vndxs5Tv09/8S+Dr2PBAiM557lI=",
+			"path": "gopkg.in/olebedev/go-duktape.v3",
+			"revision": "abf0ba0be5d5d36b1f9266463cc320b9a5ab224e",
+			"revisionTime": "2018-03-02T12:15:09Z"
 		},
 		{
 			"checksumSHA1": "4BwmmgQUhWtizsR2soXND0nqZ1I=",

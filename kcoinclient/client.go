@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin"
+	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"
 	"github.com/kowala-tech/kcoin/core/types"
@@ -38,7 +38,11 @@ type RpcClient interface {
 
 // Dial connects a client to the given URL.
 func Dial(rawurl string) (*Client, error) {
-	c, err := rpc.Dial(rawurl)
+	return DialContext(context.Background(), rawurl)
+}
+
+func DialContext(ctx context.Context, rawurl string) (*Client, error) {
+	c, err := rpc.DialContext(ctx, rawurl)
 	if err != nil {
 		return nil, err
 	}
@@ -48,6 +52,10 @@ func Dial(rawurl string) (*Client, error) {
 // NewClient creates a client that uses the given RPC client.
 func NewClient(c *rpc.Client) *Client {
 	return &Client{c}
+}
+
+func (ec *Client) Close() {
+	ec.c.Close()
 }
 
 // Blockchain Access
@@ -293,7 +301,7 @@ func (ec *Client) SyncProgress(ctx context.Context) (*kowala.SyncProgress, error
 // SubscribeNewHead subscribes to notifications about the current blockchain head
 // on the given channel.
 func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kowala.Subscription, error) {
-	return ec.c.KowalaSubscribe(ctx, ch, "newHeads", map[string]struct{}{})
+	return ec.c.KowalaSubscribe(ctx, ch, "newHeads")
 }
 
 // State Access
@@ -465,13 +473,13 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 // the current pending state of the backend blockchain. There is no guarantee that this is
 // the true gas limit requirement as other transactions may be added or removed by miners,
 // but it should provide a basis for setting a reasonable default.
-func (ec *Client) EstimateGas(ctx context.Context, msg kowala.CallMsg) (*big.Int, error) {
-	var hex hexutil.Big
+func (ec *Client) EstimateGas(ctx context.Context, msg kowala.CallMsg) (uint64, error) {
+	var hex hexutil.Uint64
 	err := ec.c.CallContext(ctx, &hex, "eth_estimateGas", toCallArg(msg))
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return (*big.Int)(&hex), nil
+	return uint64(hex), nil
 }
 
 // SendTransaction injects a signed transaction into the pending pool for execution.
@@ -505,8 +513,8 @@ func toCallArg(msg kowala.CallMsg) interface{} {
 	if msg.Value != nil {
 		arg["value"] = (*hexutil.Big)(msg.Value)
 	}
-	if msg.Gas != nil {
-		arg["gas"] = (*hexutil.Big)(msg.Gas)
+	if msg.Gas != 0 {
+		arg["gas"] = hexutil.Uint64(msg.Gas)
 	}
 	if msg.GasPrice != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)

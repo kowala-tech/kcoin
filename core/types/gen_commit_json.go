@@ -20,8 +20,8 @@ func (c Commit) MarshalJSON() ([]byte, error) {
 
 func (c *Commit) UnmarshalJSON(input []byte) error {
 	type Commit struct {
-		PreCommits     *Votes `json:"votes"    gencodec:"required"`
-		FirstPreCommit *Vote  `json:"vote"     gencodec:"required"`
+		PreCommits     Votes `json:"votes"    gencodec:"required"`
+		FirstPreCommit *Vote `json:"vote"     gencodec:"required"`
 	}
 	var dec Commit
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -30,7 +30,7 @@ func (c *Commit) UnmarshalJSON(input []byte) error {
 	if dec.PreCommits == nil {
 		return errors.New("missing required field 'votes' for Commit")
 	}
-	c.PreCommits = *dec.PreCommits
+	c.PreCommits = dec.PreCommits
 	if dec.FirstPreCommit == nil {
 		return errors.New("missing required field 'vote' for Commit")
 	}

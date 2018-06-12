@@ -1,6 +1,7 @@
 package genesis
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
@@ -38,6 +39,18 @@ func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cos
 	return nil
 }
 
+func (vmt *vmTracer) CaptureStart(common.Address, common.Address, bool, []byte, uint64, *big.Int) error {
+	return nil
+}
+
+func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+	return nil
+}
+
+func (vmt *vmTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+	return nil
+}
+
 func (vmt *vmTracer) getAddrStorage(contractAddress common.Address) (addrStorage map[common.Hash]common.Hash, ok bool) {
 	vmt.RLock()
 	addrStorage, ok = vmt.data[contractAddress]
@@ -49,8 +62,4 @@ func (vmt *vmTracer) setAddrStorage(contractAddress common.Address, addrStorage 
 	vmt.Lock()
 	vmt.data[contractAddress] = addrStorage
 	vmt.Unlock()
-}
-
-func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
-	return nil
 }

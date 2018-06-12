@@ -7,8 +7,8 @@ import (
 	"github.com/kowala-tech/kcoin/core/types"
 )
 
-// TxPreEvent is posted when a transaction enters the transaction pool.
-type TxPreEvent struct{ Tx *types.Transaction }
+// NewTxsEvent is posted when a batch of transactions enter the transaction pool.
+type NewTxsEvent struct{ Txs []*types.Transaction }
 
 // NewVoteEvent is posted when a consensus validator votes.
 type NewVoteEvent struct{ Vote *types.Vote }
@@ -38,9 +38,6 @@ type PendingStateEvent struct{}
 
 // NewMinedBlockEvent is posted when a block has been imported.
 type NewMinedBlockEvent struct{ Block *types.Block }
-
-// RemovedTransactionEvent is posted when a reorg happens
-type RemovedTransactionEvent struct{ Txs types.Transactions }
 
 // RemovedLogsEvent is posted when a reorg happens
 type RemovedLogsEvent struct{ Logs []*types.Log }

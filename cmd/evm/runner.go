@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
+	goruntime "runtime"
 	"runtime/pprof"
 	"time"
-
-	goruntime "runtime"
 
 	"github.com/kowala-tech/kcoin/cmd/evm/internal/compiler"
 	"github.com/kowala-tech/kcoin/cmd/utils"
@@ -60,6 +60,7 @@ func runCmd(ctx *cli.Context) error {
 	logconfig := &vm.LogConfig{
 		DisableMemory: ctx.GlobalBool(DisableMemoryFlag.Name),
 		DisableStack:  ctx.GlobalBool(DisableStackFlag.Name),
+		Debug:         ctx.GlobalBool(DebugFlag.Name),
 	}
 
 	var (
@@ -67,8 +68,9 @@ func runCmd(ctx *cli.Context) error {
 		debugLogger *vm.StructLogger
 		statedb     *state.StateDB
 		chainConfig *params.ChainConfig
-		sender      = common.StringToAddress("sender")
-		receiver    = common.StringToAddress("receiver")
+		sender      = common.BytesToAddress([]byte("sender"))
+		receiver    = common.BytesToAddress([]byte("receiver"))
+		blockNumber uint64
 	)
 	if ctx.GlobalBool(MachineFlag.Name) {
 		tracer = NewJSONLogger(logconfig, os.Stdout)
@@ -80,11 +82,13 @@ func runCmd(ctx *cli.Context) error {
 	}
 	if ctx.GlobalString(GenesisFlag.Name) != "" {
 		gen := readGenesis(ctx.GlobalString(GenesisFlag.Name))
-		_, statedb = gen.ToBlock()
+		db := kcoindb.NewMemDatabase()
+		genesis := gen.ToBlock(db)
+		statedb, _ = state.New(genesis.Root(), state.NewDatabase(db))
 		chainConfig = gen.Config
+		blockNumber = gen.Number
 	} else {
-		db, _ := kcoindb.NewMemDatabase()
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		statedb, _ = state.New(common.Hash{}, state.NewDatabase(kcoindb.NewMemDatabase()))
 	}
 	if ctx.GlobalString(SenderFlag.Name) != "" {
 		sender = common.HexToAddress(ctx.GlobalString(SenderFlag.Name))
@@ -137,15 +141,15 @@ func runCmd(ctx *cli.Context) error {
 
 	initialGas := ctx.GlobalUint64(GasFlag.Name)
 	runtimeConfig := runtime.Config{
-		Origin:   sender,
-		State:    statedb,
-		GasLimit: initialGas,
-		GasPrice: utils.GlobalBig(ctx, PriceFlag.Name),
-		Value:    utils.GlobalBig(ctx, ValueFlag.Name),
+		Origin:      sender,
+		State:       statedb,
+		GasLimit:    initialGas,
+		GasPrice:    utils.GlobalBig(ctx, PriceFlag.Name),
+		Value:       utils.GlobalBig(ctx, ValueFlag.Name),
+		BlockNumber: new(big.Int).SetUint64(blockNumber),
 		EVMConfig: vm.Config{
-			Tracer:             tracer,
-			Debug:              ctx.GlobalBool(DebugFlag.Name) || ctx.GlobalBool(MachineFlag.Name),
-			DisableGasMetering: ctx.GlobalBool(DisableGasMeteringFlag.Name),
+			Tracer: tracer,
+			Debug:  ctx.GlobalBool(DebugFlag.Name) || ctx.GlobalBool(MachineFlag.Name),
 		},
 	}
 
@@ -217,9 +221,7 @@ Gas used:           %d
 
 `, execTime, mem.HeapObjects, mem.Alloc, mem.TotalAlloc, mem.NumGC, initialGas-leftOverGas)
 	}
-	if tracer != nil {
-		tracer.CaptureEnd(ret, initialGas-leftOverGas, execTime, err)
-	} else {
+	if tracer == nil {
 		fmt.Printf("0x%x\n", ret)
 		if err != nil {
 			fmt.Printf(" error: %v\n", err)

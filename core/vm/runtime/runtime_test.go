@@ -78,8 +78,7 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	db, _ := kcoindb.NewMemDatabase()
-	state, _ := state.New(common.Hash{}, state.NewDatabase(db))
+	state, _ := state.New(common.Hash{}, state.NewDatabase(kcoindb.NewMemDatabase()))
 	address := common.HexToAddress("0x0a")
 	state.SetCode(address, []byte{
 		byte(vm.PUSH1), 10,

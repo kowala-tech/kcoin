@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	kowala "github.com/kowala-tech/kcoin"
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/hexutil"
 	"github.com/kowala-tech/kcoin/core/types"
@@ -81,14 +82,14 @@ func (api *PublicFilterAPI) timeoutLoop() {
 // NewPendingTransactionFilter creates a filter that fetches pending transaction hashes
 // as transactions enter the pending state.
 //
-// It is part of the filter package because this filter can be used throug the
+// It is part of the filter package because this filter can be used through the
 // `eth_getFilterChanges` polling method that is also used for log filters.
 //
 // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_newpendingtransactionfilter
 func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 	var (
-		pendingTxs   = make(chan common.Hash)
-		pendingTxSub = api.events.SubscribePendingTxEvents(pendingTxs)
+		pendingTxs   = make(chan []common.Hash)
+		pendingTxSub = api.events.SubscribePendingTxs(pendingTxs)
 	)
 
 	api.filtersMu.Lock()
@@ -101,7 +102,7 @@ func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 			case ph := <-pendingTxs:
 				api.filtersMu.Lock()
 				if f, found := api.filters[pendingTxSub.ID]; found {
-					f.hashes = append(f.hashes, ph)
+					f.hashes = append(f.hashes, ph...)
 				}
 				api.filtersMu.Unlock()
 			case <-pendingTxSub.Err():
@@ -127,13 +128,17 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Su
 	rpcSub := notifier.CreateSubscription()
 
 	go func() {
-		txHashes := make(chan common.Hash)
-		pendingTxSub := api.events.SubscribePendingTxEvents(txHashes)
+		txHashes := make(chan []common.Hash, 128)
+		pendingTxSub := api.events.SubscribePendingTxs(txHashes)
 
 		for {
 			select {
-			case h := <-txHashes:
-				notifier.Notify(rpcSub.ID, h)
+			case hashes := <-txHashes:
+				// To keep the original behaviour, send a single tx hash in one notification.
+				// TODO(rjl493456442) Send a batch of tx hashes in one notification
+				for _, h := range hashes {
+					notifier.Notify(rpcSub.ID, h)
+				}
 			case <-rpcSub.Err():
 				pendingTxSub.Unsubscribe()
 				return
@@ -224,7 +229,7 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc
 		matchedLogs = make(chan []*types.Log)
 	)
 
-	logsSub, err := api.events.SubscribeLogs(crit, matchedLogs)
+	logsSub, err := api.events.SubscribeLogs(kowala.FilterQuery(crit), matchedLogs)
 	if err != nil {
 		return nil, err
 	}
@@ -251,12 +256,8 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc
 }
 
 // FilterCriteria represents a request to create a new filter.
-type FilterCriteria struct {
-	FromBlock *big.Int
-	ToBlock   *big.Int
-	Addresses []common.Address
-	Topics    [][]common.Hash
-}
+// Same as ethereum.FilterQuery but with UnmarshalJSON() method.
+type FilterCriteria kowala.FilterQuery
 
 // NewFilter creates a new filter and returns the filter id. It can be
 // used to retrieve logs when the state changes. This method cannot be
@@ -273,7 +274,7 @@ type FilterCriteria struct {
 // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_newfilter
 func (api *PublicFilterAPI) NewFilter(crit FilterCriteria) (rpc.ID, error) {
 	logs := make(chan []*types.Log)
-	logsSub, err := api.events.SubscribeLogs(crit, logs)
+	logsSub, err := api.events.SubscribeLogs(kowala.FilterQuery(crit), logs)
 	if err != nil {
 		return rpc.ID(""), err
 	}

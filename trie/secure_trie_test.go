@@ -12,16 +12,16 @@ import (
 )
 
 func newEmptySecure() *SecureTrie {
-	db, _ := kcoindb.NewMemDatabase()
-	trie, _ := NewSecure(common.Hash{}, db, 0)
+	trie, _ := NewSecure(common.Hash{}, NewDatabase(kcoindb.NewMemDatabase()), 0)
 	return trie
 }
 
 // makeTestSecureTrie creates a large enough secure trie for testing.
-func makeTestSecureTrie() (kcoindb.Database, *SecureTrie, map[string][]byte) {
+func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 	// Create an empty trie
-	db, _ := kcoindb.NewMemDatabase()
-	trie, _ := NewSecure(common.Hash{}, db, 0)
+	triedb := NewDatabase(kcoindb.NewMemDatabase())
+
+	trie, _ := NewSecure(common.Hash{}, triedb, 0)
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)
@@ -42,10 +42,10 @@ func makeTestSecureTrie() (kcoindb.Database, *SecureTrie, map[string][]byte) {
 			trie.Update(key, val)
 		}
 	}
-	trie.Commit()
+	trie.Commit(nil)
 
 	// Return the generated trie
-	return db, trie, content
+	return triedb, trie, content
 }
 
 func TestSecureDelete(t *testing.T) {
@@ -121,7 +121,7 @@ func TestSecureTrieConcurrency(t *testing.T) {
 					tries[index].Update(key, val)
 				}
 			}
-			tries[index].Commit()
+			tries[index].Commit(nil)
 		}(i)
 	}
 	// Wait for all threads to finish

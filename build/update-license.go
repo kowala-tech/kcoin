@@ -55,10 +55,12 @@ var (
 		"crypto/sha3/",
 		"internal/jsre/deps",
 		"log/",
+		"common/bitutil/bitutil",
 		// don't license generated files
-		"contracts/chequebook/contract/",
-		"contracts/ens/contract/",
-		"contracts/release/contract.go",
+		"contracts/consensus/gen_manager.go",
+		"contracts/consensus/gen_mtoken.go",
+		"contracts/oracle/gen_manager.go",
+		"contracts/oracle/gen_multisig.go",
 	}
 
 	// paths with this prefix are licensed as GPL. all other files are LGPL.

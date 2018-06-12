@@ -28,7 +28,7 @@ func (c Chunk) MarshalJSON() ([]byte, error) {
 func (c *Chunk) UnmarshalJSON(input []byte) error {
 	type Chunk struct {
 		Index *hexutil.Uint64 `json:"index"  gencodec:"required"`
-		Data  *hexutil.Bytes  `json:"bytes"  gencodec:"required"`
+		Data  hexutil.Bytes   `json:"bytes"  gencodec:"required"`
 		Proof *common.Hash    `json:"proof"  gencodec:"required"`
 	}
 	var dec Chunk
@@ -42,7 +42,7 @@ func (c *Chunk) UnmarshalJSON(input []byte) error {
 	if dec.Data == nil {
 		return errors.New("missing required field 'bytes' for Chunk")
 	}
-	c.Data = *dec.Data
+	c.Data = dec.Data
 	if dec.Proof == nil {
 		return errors.New("missing required field 'proof' for Chunk")
 	}
