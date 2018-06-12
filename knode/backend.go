@@ -277,6 +277,10 @@ func (s *Kowala) Coinbase() (eb common.Address, err error) {
 }
 
 func (s *Kowala) Deposit() (*big.Int, error) {
+	if _, err := s.validator.Deposits(); err != nil {
+		return nil, err
+	}
+
 	s.lock.RLock()
 	deposit := s.deposit
 	s.lock.RUnlock()
@@ -320,12 +324,16 @@ func (s *Kowala) GetMinimumDeposit() (*big.Int, error) {
 }
 
 // set in js console via admin interface or wrapper from cli flags
-func (s *Kowala) SetDeposit(deposit *big.Int) {
+func (s *Kowala) SetDeposit(deposit *big.Int) error {
+	if err := s.validator.SetDeposit(deposit); err != nil {
+		return err
+	}
+
 	s.lock.Lock()
 	s.deposit = deposit
 	s.lock.Unlock()
 
-	s.validator.SetDeposit(deposit)
+	return nil
 }
 
 func (s *Kowala) StartValidating() error {

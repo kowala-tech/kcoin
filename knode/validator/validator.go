@@ -43,7 +43,7 @@ type Validator interface {
 	Validating() bool
 	Running() bool
 	SetCoinbase(walletAccount accounts.WalletAccount) error
-	SetDeposit(deposit *big.Int)
+	SetDeposit(deposit *big.Int) error
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
 	AddProposal(proposal *types.Proposal) error
@@ -191,8 +191,14 @@ func (val *validator) SetCoinbase(walletAccount accounts.WalletAccount) error {
 	return nil
 }
 
-func (val *validator) SetDeposit(deposit *big.Int) {
+func (val *validator) SetDeposit(deposit *big.Int) error {
+	if !val.Validating() {
+		return errors.New("can't get deposits: the validator is not running")
+	}
+
 	val.deposit = deposit
+
+	return nil
 }
 
 // Pending returns the currently pending block and associated state.
@@ -642,9 +648,15 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 }
 
 func (val *validator) Deposits() ([]*types.Deposit, error) {
+	if !val.Validating() {
+
+	}
 	return val.consensus.Deposits(val.walletAccount.Account().Address)
 }
 
 func (val *validator) RedeemDeposits() error {
+	if !val.Validating() {
+		return errors.New("can't redeem deposits: the validator is not running")
+	}
 	return val.consensus.RedeemDeposits(val.walletAccount)
 }

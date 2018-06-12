@@ -102,9 +102,8 @@ func (api *PrivateValidatorAPI) SetCoinbase(coinbase common.Address) bool {
 }
 
 // SetDeposit sets the deposit of the validator
-func (api *PrivateValidatorAPI) SetDeposit(deposit hexutil.Big) bool {
-	api.kcoin.SetDeposit((*big.Int)(&deposit))
-	return true
+func (api *PrivateValidatorAPI) SetDeposit(deposit *big.Int) error {
+	return api.kcoin.SetDeposit(deposit)
 }
 
 // GetMinimumDeposit gets the minimum deposit required to take a slot as a validator
