@@ -9,5 +9,4 @@ build/_bin
 tests/**
 features/*
 cluster/*
-godog.test
 

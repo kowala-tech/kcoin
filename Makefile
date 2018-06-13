@@ -11,14 +11,6 @@
 GOBIN = $(pwd)/build/bin
 GO ?= latest
 
-NPROCS := 1
-OS := $(shell uname)
-ifeq ($(OS),Linux)
-	NPROCS := $(shell grep -c ^processor /proc/cpuinfo)
-else ifeq ($(OS),Darwin)
-	NPROCS := $(shell sysctl -n hw.ncpu)
-endif # $(OS)
-
 kcoin:
 	build/env.sh go run build/ci.go install ./cmd/kcoin
 	@echo "Done building."
@@ -193,14 +185,3 @@ docker-publish-kusd:
 
 docker-publish-faucet:
 	docker push kowalatech/faucet
-
-## E2E tests
-
-GODOG_BIN := $(shell command -v godog 2> /dev/null)
-
-e2e:
-ifndef GODOG_BIN
-	@echo "Installing godog..."
-	@go get github.com/DATA-DOG/godog/cmd/godog
-endif
-	@build/env.sh sh -c "cd tests && godog -c=$(NPROCS) -f=progress ../features"
