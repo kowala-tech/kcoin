@@ -185,7 +185,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// consensus
 	maxNumValidators := new(big.Int).SetUint64(options.Consensus.MaxNumValidators)
-	consensusBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.BaseDeposit), big.NewInt(params.Ether))
+	consensusBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.BaseDeposit), big.NewInt(params.KUSD))
 	consensusFreezePeriod := new(big.Int).SetUint64(options.Consensus.FreezePeriod)
 
 	validators := make([]*validValidator, 0, len(options.Consensus.Validators))
@@ -196,7 +196,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		}
 		validators = append(validators, &validValidator{
 			address: *addr,
-			deposit: new(big.Int).Mul(new(big.Int).SetUint64(validator.Deposit), big.NewInt(params.Ether)),
+			deposit: new(big.Int).Mul(new(big.Int).SetUint64(validator.Deposit), big.NewInt(params.KUSD)),
 		})
 	}
 
@@ -207,7 +207,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// mining tokens
 	decimals := new(big.Int).Exp(common.Big1, new(big.Int).SetUint64(options.Consensus.MiningToken.Decimals), nil)
-	cap := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.MiningToken.Cap), big.NewInt(params.Ether))
+	cap := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.MiningToken.Cap), big.NewInt(params.KUSD))
 
 	holders := make([]*validTokenHolder, 0, len(options.Consensus.MiningToken.Holders))
 	for _, holder := range options.Consensus.MiningToken.Holders {
@@ -217,7 +217,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		}
 		holders = append(holders, &validTokenHolder{
 			address: *addr,
-			balance: new(big.Int).Mul(new(big.Int).SetUint64(holder.NumTokens), big.NewInt(params.Ether)),
+			balance: new(big.Int).Mul(new(big.Int).SetUint64(holder.NumTokens), big.NewInt(params.KUSD)),
 		})
 	}
 
@@ -313,7 +313,7 @@ func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount
 			return nil, ErrInvalidAddressInPrefundedAccounts
 		}
 
-		balance := new(big.Int).Mul(new(big.Int).SetUint64(a.Balance), new(big.Int).SetUint64(params.Ether))
+		balance := new(big.Int).Mul(new(big.Int).SetUint64(a.Balance), new(big.Int).SetUint64(params.KUSD))
 
 		validAccount := &validPrefundedAccount{
 			accountAddress: address,
