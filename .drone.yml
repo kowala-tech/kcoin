@@ -29,6 +29,7 @@ pipeline:
 
   e2e:
     image: kowalatech/e2e:latest
+    pull: true
     environment:
     - DOCKER_HOST=tcp://docker:2375
     - DOCKER_PUBLIC_IP=docker
