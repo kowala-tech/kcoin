@@ -26,7 +26,7 @@ func loadFromFile(filePath string) (*core.Genesis, error) {
 	}
 	defer file.Close()
 
-	var genesis *core.Genesis
+	genesis := new(core.Genesis)
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
 		return nil, errors.Wrap(err, "invalid genesis file")
 	}
