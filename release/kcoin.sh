@@ -32,8 +32,8 @@ done
 cd /kcoin
 
 case $TESTNET in
-	(true)  ./kcoin init /kcoin/testnet_genesis.json;;
-	(false) ./kcoin init /kcoin/genesis.json;;
+	(true)  ./kcoin init --testnet;;
+	(false) ./kcoin init;;
 esac
 
 case $NEW_ACC in
