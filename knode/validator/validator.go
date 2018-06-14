@@ -28,6 +28,7 @@ var (
 	ErrCantAddProposalNotValidating      = errors.New("can't add proposal, not validating")
 	ErrCantAddBlockFragmentNotValidating = errors.New("can't add block fragment, not validating")
 	ErrIsNotRunning                      = errors.New("validator is not running")
+	ErrIsRunning                         = errors.New("validator is running, cannot change its parameters")
 )
 
 // Backend wraps all methods required for mining.
@@ -193,8 +194,8 @@ func (val *validator) SetCoinbase(walletAccount accounts.WalletAccount) error {
 }
 
 func (val *validator) SetDeposit(deposit *big.Int) error {
-	if !val.Validating() {
-		return ErrIsNotRunning
+	if val.Validating() {
+		return ErrIsRunning
 	}
 
 	val.deposit = deposit

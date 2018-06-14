@@ -281,10 +281,6 @@ func (s *Kowala) Deposit() (*big.Int, error) {
 	deposit := s.deposit
 	s.lock.RUnlock()
 
-	if _, err := s.validator.Deposits(); err != nil {
-		return deposit, err
-	}
-
 	// @TODO(rgeraldes) - as soon as we have the dynamic validator set contract
 	// if there are spots available for validators & value > min value
 	// else if there are no spots available check if deposit is bigger than the the
@@ -340,7 +336,7 @@ func (s *Kowala) StartValidating() error {
 	}
 
 	deposit, err := s.Deposit()
-	if err != nil && err != validator.ErrIsNotRunning {
+	if err != nil {
 		log.Error("Cannot start consensus validation with insufficient funds", "err", err)
 		return fmt.Errorf("insufficient funds: %v", err)
 	}
