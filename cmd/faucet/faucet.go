@@ -34,6 +34,7 @@ import (
 	"github.com/kowala-tech/kcoin/kcoinclient"
 	"github.com/kowala-tech/kcoin/knode"
 	"github.com/kowala-tech/kcoin/knode/downloader"
+	genesis2 "github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/node"
 	"github.com/kowala-tech/kcoin/p2p"
@@ -119,19 +120,20 @@ func main() {
 	if err != nil {
 		log.Crit("Failed to render the faucet template", "err", err)
 	}
-	// Load and parse the genesis block requested by the user
-	blob, err := ioutil.ReadFile(*genesisFlag)
+
+	networkType := extractNetwork()
+	kcoin := extractKCoin()
+
+	genesis, err := genesis2.NetworkGenesisBlock(*genesisFlag, kcoin, networkType)
 	if err != nil {
-		log.Crit("Failed to read genesis block contents", "genesis", *genesisFlag, "err", err)
+		log.Crit("failed to create genesis block %v", err)
 	}
-	genesis := new(core.Genesis)
-	if err = json.Unmarshal(blob, genesis); err != nil {
-		log.Crit("Failed to parse genesis block json", "err", err)
-	}
+
 	// Convert the bootnodes to internal enode representations
 	enodes := bootnodes()
 
 	// Load up the account key and decrypt its password
+	var blob []byte
 	if blob, err = ioutil.ReadFile(*accPassFlag); err != nil {
 		log.Crit("Failed to read account password contents", "file", *accPassFlag, "err", err)
 	}
@@ -156,6 +158,18 @@ func main() {
 
 	if err := faucet.listenAndServe(*apiPortFlag); err != nil {
 		log.Crit("Failed to launch faucet API", "err", err)
+	}
+}
+
+func extractKCoin() string {
+	return "kusd"
+}
+
+func extractNetwork() string {
+	if *testnetFlag {
+		return genesis2.TestNetwork
+	} else {
+		return genesis2.MainNetwork
 	}
 }
 
