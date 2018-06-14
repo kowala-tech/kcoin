@@ -3,13 +3,13 @@ package genesis
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-	"path/filepath"
-	"io/ioutil"
-	"github.com/kowala-tech/kcoin/core"
-	"bytes"
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/stretchr/testify/require"
+	"io/ioutil"
+	"path/filepath"
 )
 
 func TestLoaderFromConfig(t *testing.T) {

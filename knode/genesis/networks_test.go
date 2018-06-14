@@ -1,15 +1,15 @@
 package genesis
 
 import (
-	"testing"
-	"flag"
-	"path/filepath"
-	"io/ioutil"
-	"bytes"
 	"bufio"
-	"github.com/stretchr/testify/assert"
+	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"path/filepath"
+	"testing"
 )
 
 var update = flag.Bool("update", false, "update .golden files")
