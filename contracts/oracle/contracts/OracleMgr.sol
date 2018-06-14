@@ -6,6 +6,7 @@ contract OracleMgr is pausable.Pausable {
     // syncFrequency/update should remain as the first variables being declared 
     // getStorageAt dependencies
     uint public syncFrequency; // unit: blocks
+    // updatePeriod is ignored if syncFrequency is set to 0 (sync disabled)
     uint public updatePeriod; // unit: blocks
 
     uint public baseDeposit;       
@@ -61,8 +62,12 @@ contract OracleMgr is pausable.Pausable {
         require(_initialPrice > 0);
         require(_maxNumOracles > 0);
         require(_syncFrequency >= 0);
-        require(_updatePeriod >= 0);
 
+        // sync enabled
+        if (_syncFrequency > 0) {
+            require(_updatePeriod > 0 && _updatePeriod <= _syncFrequency);
+        }
+        
         price = _initialPrice;
         baseDeposit = _baseDeposit;
         maxNumOracles = _maxNumOracles;
@@ -194,7 +199,8 @@ contract OracleMgr is pausable.Pausable {
         }
     }
 
-    function addPrice(uint _price) public whenNotPaused  onlyOracle onlyValidPrice(_price) {
+    // @NOTE (rgeraldes) - we are assuming, for the moment, that oracles will not misbehave
+    function addPrice(uint _price) public whenNotPaused onlyOracle onlyValidPrice(_price) {
         price = _price;
     }
 }
