@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"os"
 
-	"fmt"
-
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/pkg/errors"
 )
@@ -24,24 +22,15 @@ func NetworkGenesisBlock(filePath, kcoin, networkType string) (*core.Genesis, er
 func loadFromFile(filePath string) (*core.Genesis, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, errors.New(
-			fmt.Sprintf(
-				"Failed to read genesis file: %v",
-				err,
-			),
-		)
+		return nil, errors.Wrap(err, "Failed to read genesis file")
 	}
 	defer file.Close()
 
 	var genesis *core.Genesis
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
-		return nil, errors.New(
-			fmt.Sprintf(
-				"invalid genesis file: %v",
-				err,
-			),
-		)
+		return nil, errors.Wrap(err, "invalid genesis file")
 	}
+
 	return genesis, nil
 }
 
