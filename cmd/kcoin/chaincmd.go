@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
@@ -18,6 +17,7 @@ import (
 	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/knode/downloader"
+	genesisgen "github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/trie"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -33,6 +33,7 @@ var (
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
 			utils.LightModeFlag,
+			utils.TestnetFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -127,19 +128,14 @@ Use "ethereum dump 0" to dump the genesis block.`,
 func initGenesis(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
 	genesisPath := ctx.Args().First()
-	if len(genesisPath) == 0 {
-		utils.Fatalf("Must supply path to genesis JSON file")
-	}
-	file, err := os.Open(genesisPath)
-	if err != nil {
-		utils.Fatalf("Failed to read genesis file: %v", err)
-	}
-	defer file.Close()
+	networkKey := extractNetworkKey(ctx)
+	keyKoin := extractKeyCoin(ctx)
 
-	genesis := new(core.Genesis)
-	if err := json.NewDecoder(file).Decode(genesis); err != nil {
-		utils.Fatalf("invalid genesis file: %v", err)
+	genesis, err := genesisgen.NetworkGenesisBlock(genesisPath, keyKoin, networkKey)
+	if err != nil {
+		return err
 	}
+
 	// Open an initialise both full and light databases
 	stack := makeFullNode(ctx)
 
@@ -156,7 +152,29 @@ func initGenesis(ctx *cli.Context) error {
 		}
 		log.Info("Successfully wrote genesis state", "database", name, "hash", hash)
 	}
+
 	return nil
+}
+
+//extractKeyCoin returns the keycoin used for launching the client. For now it always return kusd.
+func extractKeyCoin(context *cli.Context) string {
+	return "kusd"
+}
+
+//extractNetworkKey returns the network key based on the params of the command.
+//if --testnet is set, network key would be testnet, main otherwise.
+func extractNetworkKey(ctx *cli.Context) string {
+	isTestNet := ctx.GlobalBool(utils.TestnetFlag.Name)
+
+	var networkKey string
+
+	if isTestNet {
+		networkKey = genesisgen.TestNetwork
+	} else {
+		networkKey = genesisgen.MainNetwork
+	}
+
+	return networkKey
 }
 
 func importChain(ctx *cli.Context) error {
