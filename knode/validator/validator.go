@@ -51,7 +51,7 @@ type Validator interface {
 	AddProposal(proposal *types.Proposal) error
 	AddVote(vote *types.Vote) error
 	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
-	Deposits() ([]*types.Deposit, error)
+	Deposits(address *common.Address) ([]*types.Deposit, error)
 	RedeemDeposits() error
 }
 
@@ -649,10 +649,15 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 	return nil
 }
 
-func (val *validator) Deposits() ([]*types.Deposit, error) {
-	if !val.Validating() {
-		return nil, ErrIsNotRunning
+func (val *validator) Deposits(address *common.Address) ([]*types.Deposit, error) {
+	if address != nil {
+		return val.consensus.Deposits(*address)
 	}
+
+	if val.walletAccount == nil {
+		return nil, errors.New("either address or validator.Start() required")
+	}
+
 	return val.consensus.Deposits(val.walletAccount.Account().Address)
 }
 

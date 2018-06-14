@@ -486,7 +486,9 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'getDeposits',
-			call: 'validator_getDeposits'
+			call: 'validator_getDeposits',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'isRunning',

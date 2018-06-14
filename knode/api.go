@@ -125,8 +125,8 @@ type depositEntry struct {
 }
 
 // GetDeposits returns the validator deposits
-func (api *PrivateValidatorAPI) GetDeposits() (GetDepositsResult, error) {
-	rawDeposits, err := api.kcoin.Validator().Deposits()
+func (api *PrivateValidatorAPI) GetDeposits(address *common.Address) (GetDepositsResult, error) {
+	rawDeposits, err := api.kcoin.Validator().Deposits(address)
 	if err != nil {
 		return GetDepositsResult{}, err
 	}
