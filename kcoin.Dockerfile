@@ -14,7 +14,5 @@ EXPOSE 22334
 EXPOSE 22334/udp
 EXPOSE 8080
 ADD release/kcoin.sh .
-ADD release/testnet_genesis.json .
-ADD release/genesis.json .
 ENTRYPOINT ["./kcoin.sh"]
 RUN mkdir -p /root/.kcoin/keystore
