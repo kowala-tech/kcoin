@@ -199,7 +199,6 @@ contract OracleMgr is pausable.Pausable {
         }
     }
 
-    // @NOTE (rgeraldes) - we are assuming, for the moment, that oracles will not misbehave
     function addPrice(uint _price) public whenNotPaused onlyOracle onlyValidPrice(_price) {
         price = _price;
     }
