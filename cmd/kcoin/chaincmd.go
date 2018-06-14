@@ -137,7 +137,7 @@ func initGenesis(ctx *cli.Context) error {
 		networkKey := extractNetworkKey(ctx)
 		keyKoin := extractKeyCoin(ctx)
 
-		kcoinOptions, ok := genesisOptions[keyKoin]
+		kcoinOptions, ok := genesisgen.Networks[keyKoin]
 		if !ok {
 			return errors.New("invalid kcoin")
 		}

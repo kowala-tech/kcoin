@@ -1,13 +1,11 @@
-package main
+package genesis
 
-import genesisgen "github.com/kowala-tech/kcoin/knode/genesis"
-
-var genesisOptions = map[string]map[string]genesisgen.Options{
+var Networks = map[string]map[string]Options{
 	"kusd": {
-		"main": genesisgen.Options{
-			Network:   genesisgen.MainNetwork,
+		"main": Options{
+			Network:   MainNetwork,
 			ExtraData: "Kowala's first block",
-			Governance: &genesisgen.GovernanceOpts{
+			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
 					"0xa1e8587ed7f915d5bbbf283b21af4813232069f7",
@@ -16,23 +14,23 @@ var genesisOptions = map[string]map[string]genesisgen.Options{
 				},
 				NumConfirmations: 2,
 			},
-			Consensus: &genesisgen.ConsensusOpts{
-				Engine:           genesisgen.TendermintConsensus,
+			Consensus: &ConsensusOpts{
+				Engine:           TendermintConsensus,
 				MaxNumValidators: 100,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
-				Validators: []genesisgen.Validator{
+				Validators: []Validator{
 					{
 						Address: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
 						Deposit: 1000000,
 					},
 				},
-				MiningToken: &genesisgen.MiningTokenOpts{
+				MiningToken: &MiningTokenOpts{
 					Name:     "mUSD",
 					Symbol:   "mUSD",
 					Cap:      1073741824,
 					Decimals: 18,
-					Holders: []genesisgen.TokenHolder{
+					Holders: []TokenHolder{
 						{
 							Address:   "0xd6e579085c82329c89fca7a9f012be59028ed53f",
 							NumTokens: 3000000,
@@ -40,12 +38,12 @@ var genesisOptions = map[string]map[string]genesisgen.Options{
 					},
 				},
 			},
-			DataFeedSystem: &genesisgen.DataFeedSystemOpts{
+			DataFeedSystem: &DataFeedSystemOpts{
 				MaxNumOracles: 1000,
 				FreezePeriod:  1,
 				BaseDeposit:   10,
 			},
-			PrefundedAccounts: []genesisgen.PrefundedAccount{
+			PrefundedAccounts: []PrefundedAccount{
 				{
 					Address: "0xa1e8587ed7f915d5bbbf283b21af4813232069f7",
 					Balance: 50,
@@ -64,10 +62,10 @@ var genesisOptions = map[string]map[string]genesisgen.Options{
 				},
 			},
 		},
-		"testnet": genesisgen.Options{
-			Network:   genesisgen.TestNetwork,
+		"testnet": Options{
+			Network:   TestNetwork,
 			ExtraData: "Kowala's first block",
-			Governance: &genesisgen.GovernanceOpts{
+			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
 					"0xa1e8587ed7f915d5bbbf283b21af4813232069f7",
@@ -76,23 +74,23 @@ var genesisOptions = map[string]map[string]genesisgen.Options{
 				},
 				NumConfirmations: 2,
 			},
-			Consensus: &genesisgen.ConsensusOpts{
-				Engine:           genesisgen.TendermintConsensus,
+			Consensus: &ConsensusOpts{
+				Engine:           TendermintConsensus,
 				MaxNumValidators: 100,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
-				Validators: []genesisgen.Validator{
+				Validators: []Validator{
 					{
 						Address: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
 						Deposit: 1000000,
 					},
 				},
-				MiningToken: &genesisgen.MiningTokenOpts{
+				MiningToken: &MiningTokenOpts{
 					Name:     "mUSD",
 					Symbol:   "mUSD",
 					Cap:      1073741824,
 					Decimals: 18,
-					Holders: []genesisgen.TokenHolder{
+					Holders: []TokenHolder{
 						{
 							Address:   "0xd6e579085c82329c89fca7a9f012be59028ed53f",
 							NumTokens: 3000000,
@@ -100,12 +98,12 @@ var genesisOptions = map[string]map[string]genesisgen.Options{
 					},
 				},
 			},
-			DataFeedSystem: &genesisgen.DataFeedSystemOpts{
+			DataFeedSystem: &DataFeedSystemOpts{
 				MaxNumOracles: 1000,
 				FreezePeriod:  1,
 				BaseDeposit:   10,
 			},
-			PrefundedAccounts: []genesisgen.PrefundedAccount{
+			PrefundedAccounts: []PrefundedAccount{
 				{
 					Address: "0xa1e8587ed7f915d5bbbf283b21af4813232069f7",
 					Balance: 50,
