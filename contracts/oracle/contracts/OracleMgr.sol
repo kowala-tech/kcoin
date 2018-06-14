@@ -3,8 +3,8 @@ pragma solidity 0.4.21;
 import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 
 contract OracleMgr is pausable.Pausable {
-    // syncFrequency/update should remain as the first variables being declared 
-    // getStorageAt dependencies
+    // syncFrequency/updatePeriod should remain as the first variables being declared 
+    // because of the getStorageAt dependencies (other clients)
     uint public syncFrequency; // unit: blocks
     // updatePeriod is ignored if syncFrequency is set to 0 (sync disabled)
     uint public updatePeriod; // unit: blocks
