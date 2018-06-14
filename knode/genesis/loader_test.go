@@ -6,10 +6,12 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"path/filepath"
+
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoaderFromConfig(t *testing.T) {
@@ -41,7 +43,14 @@ func TestLoaderFromFile(t *testing.T) {
 
 		require.Equal(t, deterministicBlock.Config.ChainID, loadedBlock.Config.ChainID)
 		require.Equal(t, deterministicBlock.Coinbase.Bytes(), loadedBlock.Coinbase.Bytes())
+
+		require.Equal(t, getHashFromGenesisBlock(deterministicBlock), getHashFromGenesisBlock(loadedBlock))
 	})
+}
+
+func getHashFromGenesisBlock(genesis *core.Genesis) common.Hash {
+	b, _ := genesis.ToBlock()
+	return b.Hash()
 }
 
 func updateGenesisGolden(t *testing.T, filename string, jsonConfig bytes.Buffer) {
