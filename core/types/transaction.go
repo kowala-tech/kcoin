@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/common/hexutil"
 	"github.com/kowala-tech/kcoin/crypto"
 	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/pkg/errors"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshalling -out gen_tx_json.go
@@ -96,6 +97,10 @@ func newTransaction(nonce uint64, to *common.Address, amount, gasLimit, gasPrice
 func (tx *Transaction) ChainID() *big.Int {
 	return deriveChainID(tx.data.V)
 }
+func (tx *Transaction) SignatureValues() (R, S, V *big.Int) {
+	R, S, V = tx.data.R, tx.data.S, tx.data.V
+	return
+}
 
 // DecodeRLP implements rlp.Encoder
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
@@ -127,9 +132,12 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	var V byte
-	chainID := deriveChainID(dec.V).Uint64()
-	V = byte(dec.V.Uint64() - 35 - 2*chainID)
-
+	if isProtectedV(dec.V) {
+		chainID := deriveChainID(dec.V).Uint64()
+		V = byte(dec.V.Uint64() - 35 - 2*chainID)
+	} else {
+		V = byte(dec.V.Uint64() - 27)
+	}
 	if !crypto.ValidateSignatureValues(V, dec.R, dec.S, false) {
 		return ErrInvalidSig
 	}
@@ -144,15 +152,28 @@ func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.Amo
 func (tx *Transaction) Nonce() uint64      { return tx.data.AccountNonce }
 func (tx *Transaction) CheckNonce() bool   { return true }
 
+func (tx *Transaction) From() (*common.Address, error) {
+	if tx.data.V == nil {
+		return nil, errors.New("[invalid sender: nil V field]")
+	}
+
+	signer := deriveSigner(tx.data.V)
+	f, err := TxSender(signer, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &f, nil
+}
+
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
 func (tx *Transaction) To() *common.Address {
 	if tx.data.Recipient == nil {
 		return nil
-	} else {
-		to := *tx.data.Recipient
-		return &to
 	}
+	to := *tx.data.Recipient
+	return &to
 }
 
 // Hash hashes the RLP encoding of tx.
@@ -169,26 +190,23 @@ func (tx *Transaction) Hash() common.Hash {
 // ProtectedHash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (tx *Transaction) ProtectedHash(chainID *big.Int) common.Hash {
-	return rlpHash([]interface{}{
-		tx.data.AccountNonce,
-		tx.data.Price,
-		tx.data.GasLimit,
-		tx.data.Recipient,
-		tx.data.Amount,
-		tx.data.Payload,
-		chainID, uint(0), uint(0),
-	})
+	return tx.HashWithData(chainID, uint(0), uint(0))
 }
 
 func (tx *Transaction) UnprotectedHash() common.Hash {
-	return rlpHash([]interface{}{
+	return tx.HashWithData()
+}
+
+func (tx *Transaction) HashWithData(data ...interface{}) common.Hash {
+	txData := []interface{}{
 		tx.data.AccountNonce,
 		tx.data.Price,
 		tx.data.GasLimit,
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
-	})
+	}
+	return rlpHash(append(txData, data...))
 }
 
 // Protected returns whether the transaction is protected from replay protection.
@@ -256,7 +274,7 @@ func (tx *Transaction) Cost() *big.Int {
 }
 
 func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
-	return tx.data.R, tx.data.S, tx.data.V
+	return tx.data.V, tx.data.R, tx.data.S
 }
 
 func (tx *Transaction) String() string {
@@ -266,7 +284,7 @@ func (tx *Transaction) String() string {
 		// the sender.
 		signer := deriveSigner(tx.data.V)
 		if f, err := TxSender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
+			from = "[invalid sender: invalid sig] " + err.Error()
 		} else {
 			from = fmt.Sprintf("%x", f[:])
 		}

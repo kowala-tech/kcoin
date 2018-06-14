@@ -117,9 +117,9 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 	if head.LastCommitHash == types.EmptyRootHash && body.Commit != nil {
 		return nil, fmt.Errorf("server returned non-nil commit but block header indicates no commit")
 	}
-	if head.LastCommitHash != types.EmptyRootHash && body.Commit == nil {
-		return nil, fmt.Errorf("server returned nil commit but block header indicates a commit ")
-	}
+	//if head.LastCommitHash != types.EmptyRootHash && body.Commit == nil {
+	//	return nil, fmt.Errorf("server returned nil commit but block header indicates a commit ")
+	//}
 	if head.TxHash == types.EmptyRootHash && len(body.Transactions) > 0 {
 		return nil, fmt.Errorf("server returned non-empty transaction list but block header indicates no transactions")
 	}
@@ -311,6 +311,19 @@ func (ec *Client) NetworkID(ctx context.Context) (*big.Int, error) {
 	return version, nil
 }
 
+// Coinbase returns the coinbase address
+func (ec *Client) Coinbase(ctx context.Context) (*common.Address, error) {
+	var coinbaseStr string
+	if err := ec.c.CallContext(ctx, &coinbaseStr, "eth_coinbase"); err != nil {
+		return nil, err
+	}
+	if coinbaseStr == "" {
+		return nil, nil
+	}
+	coinbase := common.HexToAddress(coinbaseStr)
+	return &coinbase, nil
+}
+
 // BalanceAt returns the wei balance of the given account.
 // The block number can be nil, in which case the balance is taken from the latest known block.
 func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
@@ -470,7 +483,15 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	if err != nil {
 		return err
 	}
-	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(data))
+	return ec.SendRawTransaction(ctx, data)
+}
+
+// SendRawTransaction injects a raw signed transaction into the pending pool for execution.
+//
+// If the transaction was a contract creation use the TransactionReceipt method to get the
+// contract address after the transaction has been mined.
+func (ec *Client) SendRawTransaction(ctx context.Context, rawTx []byte) error {
+	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(rawTx))
 }
 
 func toCallArg(msg kowala.CallMsg) interface{} {

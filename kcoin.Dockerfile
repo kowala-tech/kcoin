@@ -3,16 +3,18 @@ RUN apk update && apk add --update git make gcc musl-dev linux-headers
 
 WORKDIR /kcoin/
 ADD . .
-RUN make kcoin
+RUN make kcoin control
 
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 WORKDIR /kcoin/
 COPY --from=builder /kcoin/build/bin/kcoin .
+COPY --from=builder /kcoin/build/bin/control .
 EXPOSE 22334
 EXPOSE 22334/udp
-ADD release/kcoin_with_new_account.sh .
-ADD release/testnet_console.toml .
-ADD release/testnet_genesis.json genesis.json
-ENTRYPOINT ["./kcoin_with_new_account.sh"]
-CMD ["--config", "/kcoin/testnet_console.toml", "console"]
+EXPOSE 8080
+ADD release/kcoin.sh .
+ADD release/testnet_genesis.json .
+ADD release/genesis.json .
+ENTRYPOINT ["./kcoin.sh"]
+RUN mkdir -p /root/.kcoin/keystore

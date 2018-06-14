@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/kowala-tech/kcoin/cmd/utils"
-	"github.com/kowala-tech/kcoin/kcoin"
+	"github.com/kowala-tech/kcoin/knode"
 	"github.com/kowala-tech/kcoin/params"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -35,12 +35,15 @@ The output of this command is supposed to be machine-readable.
 func version(ctx *cli.Context) error {
 	fmt.Println(strings.Title(clientIdentifier))
 	fmt.Println("Version:", params.Version)
-	if gitCommit != "" {
-		fmt.Println("Git Commit:", gitCommit)
+	if params.Commit != "" {
+		fmt.Println("Git Commit:", params.Commit)
+	}
+	if params.BuildTime != "" {
+		fmt.Println("BuildTime:", params.BuildTime)
 	}
 	fmt.Println("Architecture:", runtime.GOARCH)
-	fmt.Println("Protocol Versions:", kcoin.ProtocolVersions)
-	fmt.Println("Network Id:", kcoin.DefaultConfig.NetworkId)
+	fmt.Println("Protocol Versions:", knode.ProtocolVersions)
+	fmt.Println("Network Id:", knode.DefaultConfig.NetworkId)
 	fmt.Println("Go Version:", runtime.Version())
 	fmt.Println("Operating System:", runtime.GOOS)
 	fmt.Printf("GOPATH=%s\n", os.Getenv("GOPATH"))
@@ -60,7 +63,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with kcoin. If not, see <http://www.gnu.org/licenses/>.
+along with knode. If not, see <http://www.gnu.org/licenses/>.
 `)
 	return nil
 }

@@ -26,8 +26,6 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-var gitCommit = "" // Git SHA1 commit hash of the release (set via linker flags)
-
 var (
 	app = utils.NewApp(gitCommit, "the evm command line interface")
 

@@ -14,8 +14,8 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/console"
 	"github.com/kowala-tech/kcoin/internal/debug"
-	"github.com/kowala-tech/kcoin/kcoin"
 	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/knode"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/metrics"
 	"github.com/kowala-tech/kcoin/node"
@@ -27,8 +27,6 @@ const (
 )
 
 var (
-	// Git SHA1 commit hash of the release (set via linker flags)
-	gitCommit = ""
 	// Ethereum address of the kcoin release oracle.
 	relOracle = common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
 	// The app that holds all commands and flags.
@@ -77,7 +75,6 @@ var (
 		utils.TargetGasLimitFlag,
 		utils.NATFlag,
 		utils.NoDiscoverFlag,
-		utils.DiscoveryV5Flag,
 		utils.NetrestrictFlag,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
@@ -278,7 +275,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.ValidationEnabledFlag.Name) {
 		// Validation only makes sense if a full Kowala node is running
-		var kowala *kcoin.Kowala
+		var kowala *knode.Kowala
 		if err := stack.Service(&kowala); err != nil {
 			utils.Fatalf("kowala service not running: %v", err)
 		}
