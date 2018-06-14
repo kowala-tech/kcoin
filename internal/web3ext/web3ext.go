@@ -496,6 +496,10 @@ web3._extend({
 			call: 'validator_isRunning'
 		}),
 		new web3._extend.Method({
+			name: 'isValidating',
+			call: 'validator_isValidating'
+		}),
+		new web3._extend.Method({
 			name: 'redeemDeposits',
 			call: 'validator_redeemDeposits'
 		}),

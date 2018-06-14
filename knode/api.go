@@ -128,21 +128,28 @@ func (api *PrivateValidatorAPI) GetDeposits() (GetDepositsResult, error) {
 	if err != nil {
 		return GetDepositsResult{}, err
 	}
+
+	return depositsToResponse(rawDeposits), nil
+}
+
+func depositsToResponse(rawDeposits []*types.Deposit) GetDepositsResult {
 	deposits := make([]depositEntry, len(rawDeposits))
+
 	for i, deposit := range rawDeposits {
-		deposits[i] = depositEntry{
-			Amount: deposit.Amount(),
+		// @NOTE (rgeraldes) - zero values are not shown for this field
+		var availableAt string
+
+		if deposit.AvailableAtTimeUnix() != 0 {
+			availableAt = time.Unix(deposit.AvailableAtTimeUnix(), 0).String()
 		}
-		// @NOTE (rgeraldes) - time.IsZero works in a different way
-		if deposit.AvailableAtTimeUnix() == 0 {
-			// @NOTE (rgeraldes) - zero values are not shown for this field
-			deposits[i].AvailableAt = ""
-		} else {
-			deposits[i].AvailableAt = time.Unix(deposit.AvailableAtTimeUnix(), 0).String()
+
+		deposits[i] = depositEntry{
+			Amount:      deposit.Amount(),
+			AvailableAt: availableAt,
 		}
 	}
 
-	return GetDepositsResult{Deposits: deposits}, nil
+	return GetDepositsResult{Deposits: deposits}
 }
 
 // IsValidating returns the validator is currently validating
