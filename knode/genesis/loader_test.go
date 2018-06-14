@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"fmt"
+
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/stretchr/testify/require"
@@ -31,14 +33,30 @@ func TestLoaderFromConfig(t *testing.T) {
 }
 
 func TestLoaderFromFile(t *testing.T) {
-	deterministicBlock, _ := NetworkGenesisBlock("", "kusd", MainNetwork)
 	t.Run("We get a main net block from a saved file", func(t *testing.T) {
+		deterministicBlock, _ := NetworkGenesisBlock("", "kusd", MainNetwork)
 		if *update {
 			jsonConfig := jsonEncodeGenesisBlock(deterministicBlock, t)
-			updateGenesisGolden(t, genesisBlockFilename(), jsonConfig)
+			updateGenesisGolden(t, genesisBlockFilename("main"), jsonConfig)
 		}
 
-		loadedBlock, err := NetworkGenesisBlock(genesisBlockFilename(), "", "")
+		loadedBlock, err := NetworkGenesisBlock(genesisBlockFilename("main"), "", "")
+		require.NoError(t, err, "Unexpected error when creating genesis block")
+
+		require.Equal(t, deterministicBlock.Config.ChainID, loadedBlock.Config.ChainID)
+		require.Equal(t, deterministicBlock.Coinbase.Bytes(), loadedBlock.Coinbase.Bytes())
+
+		require.Equal(t, getHashFromGenesisBlock(deterministicBlock), getHashFromGenesisBlock(loadedBlock))
+	})
+
+	t.Run("We get a test net block from a saved file", func(t *testing.T) {
+		deterministicBlock, _ := NetworkGenesisBlock("", "kusd", TestNetwork)
+		if *update {
+			jsonConfig := jsonEncodeGenesisBlock(deterministicBlock, t)
+			updateGenesisGolden(t, genesisBlockFilename("test"), jsonConfig)
+		}
+
+		loadedBlock, err := NetworkGenesisBlock(genesisBlockFilename("test"), "", "")
 		require.NoError(t, err, "Unexpected error when creating genesis block")
 
 		require.Equal(t, deterministicBlock.Config.ChainID, loadedBlock.Config.ChainID)
@@ -60,8 +78,9 @@ func updateGenesisGolden(t *testing.T, filename string, jsonConfig bytes.Buffer)
 	}
 }
 
-func genesisBlockFilename() string {
-	return filepath.Join("testfiles", "genesis.json.golden")
+func genesisBlockFilename(strAppend string) string {
+	s := fmt.Sprintf("genesis-%s.json.golden", strAppend)
+	return filepath.Join("testfiles", s)
 }
 
 func jsonEncodeGenesisBlock(block *core.Genesis, t *testing.T) bytes.Buffer {
