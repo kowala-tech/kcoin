@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
@@ -21,7 +20,6 @@ import (
 	genesisgen "github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/kowala-tech/kcoin/log"
 	"github.com/kowala-tech/kcoin/trie"
-	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -129,38 +127,13 @@ Use "ethereum dump 0" to dump the genesis block.`,
 // the zero'd block (i.e. genesis) or will fail hard if it can't succeed.
 func initGenesis(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
-	genesis := new(core.Genesis)
 	genesisPath := ctx.Args().First()
-	var err error
+	networkKey := extractNetworkKey(ctx)
+	keyKoin := extractKeyCoin(ctx)
 
-	if len(genesisPath) == 0 {
-		networkKey := extractNetworkKey(ctx)
-		keyKoin := extractKeyCoin(ctx)
-
-		kcoinOptions, ok := genesisgen.Networks[keyKoin]
-		if !ok {
-			return errors.New("invalid kcoin")
-		}
-
-		genesisOpts, ok := kcoinOptions[networkKey]
-		if !ok {
-			return errors.New("invalid network options")
-		}
-
-		genesis, err = genesisgen.Generate(genesisOpts)
-		if err != nil {
-			return err
-		}
-	} else { // Extract from file.
-		file, err := os.Open(genesisPath)
-		if err != nil {
-			utils.Fatalf("Failed to read genesis file: %v", err)
-		}
-		defer file.Close()
-
-		if err := json.NewDecoder(file).Decode(genesis); err != nil {
-			utils.Fatalf("invalid genesis file: %v", err)
-		}
+	genesis, err := genesisgen.NetworkGenesisBlock(genesisPath, keyKoin, networkKey)
+	if err != nil {
+		return err
 	}
 
 	// Open an initialise both full and light databases

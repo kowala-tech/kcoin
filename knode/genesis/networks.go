@@ -2,7 +2,7 @@ package genesis
 
 var Networks = map[string]map[string]Options{
 	"kusd": {
-		"main": Options{
+		MainNetwork: Options{
 			Network:   MainNetwork,
 			ExtraData: "Kowala's first block",
 			Governance: &GovernanceOpts{
@@ -62,7 +62,7 @@ var Networks = map[string]map[string]Options{
 				},
 			},
 		},
-		"testnet": Options{
+		TestNetwork: Options{
 			Network:   TestNetwork,
 			ExtraData: "Kowala's first block",
 			Governance: &GovernanceOpts{
