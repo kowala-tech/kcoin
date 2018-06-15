@@ -163,14 +163,10 @@ func extractKeyCoin(ctx *cli.Context) string {
 	kcoin := ctx.GlobalString(utils.CurrencyFlag.Name)
 
 	if kcoin == "" {
-		return knode.KUSD
-	}
-
-	if kcoin != knode.KUSD {
 		kcoin = knode.KUSD
 	}
 
-	return knode.KUSD
+	return kcoin
 }
 
 //extractNetworkKey returns the network key based on the params of the command.

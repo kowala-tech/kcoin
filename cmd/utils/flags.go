@@ -125,7 +125,7 @@ var (
 	CurrencyFlag = cli.StringFlag{
 		Name:  "currency",
 		Usage: "Currency to use with the client",
-		Value: knode.KUSD,
+		Value: knode.DefaultConfig.Currency,
 	}
 	DocRootFlag = DirectoryFlag{
 		Name:  "docroot",
