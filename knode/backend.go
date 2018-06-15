@@ -320,12 +320,12 @@ func (s *Kowala) GetMinimumDeposit() (*big.Int, error) {
 }
 
 // set in js console via admin interface or wrapper from cli flags
-func (s *Kowala) SetDeposit(deposit *big.Int) {
+func (s *Kowala) SetDeposit(deposit *big.Int) error {
 	s.lock.Lock()
 	s.deposit = deposit
 	s.lock.Unlock()
 
-	s.validator.SetDeposit(deposit)
+	return s.validator.SetDeposit(deposit)
 }
 
 func (s *Kowala) StartValidating() error {

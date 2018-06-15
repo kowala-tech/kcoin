@@ -27,6 +27,8 @@ var (
 	ErrCantSetCoinbaseOnStartedValidator = errors.New("can't set coinbase, already started validating")
 	ErrCantAddProposalNotValidating      = errors.New("can't add proposal, not validating")
 	ErrCantAddBlockFragmentNotValidating = errors.New("can't add block fragment, not validating")
+	ErrIsNotRunning                      = errors.New("validator is not running")
+	ErrIsRunning                         = errors.New("validator is running, cannot change its parameters")
 )
 
 // Backend wraps all methods required for mining.
@@ -43,13 +45,13 @@ type Validator interface {
 	Validating() bool
 	Running() bool
 	SetCoinbase(walletAccount accounts.WalletAccount) error
-	SetDeposit(deposit *big.Int)
+	SetDeposit(deposit *big.Int) error
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
 	AddProposal(proposal *types.Proposal) error
 	AddVote(vote *types.Vote) error
 	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
-	Deposits() ([]*types.Deposit, error)
+	Deposits(address *common.Address) ([]*types.Deposit, error)
 	RedeemDeposits() error
 }
 
@@ -191,8 +193,14 @@ func (val *validator) SetCoinbase(walletAccount accounts.WalletAccount) error {
 	return nil
 }
 
-func (val *validator) SetDeposit(deposit *big.Int) {
+func (val *validator) SetDeposit(deposit *big.Int) error {
+	if val.Validating() {
+		return ErrIsRunning
+	}
+
 	val.deposit = deposit
+
+	return nil
 }
 
 // Pending returns the currently pending block and associated state.
@@ -641,10 +649,21 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 	return nil
 }
 
-func (val *validator) Deposits() ([]*types.Deposit, error) {
+func (val *validator) Deposits(address *common.Address) ([]*types.Deposit, error) {
+	if address != nil {
+		return val.consensus.Deposits(*address)
+	}
+
+	if val.walletAccount == nil {
+		return nil, errors.New("either address or validator.Start() required")
+	}
+
 	return val.consensus.Deposits(val.walletAccount.Account().Address)
 }
 
 func (val *validator) RedeemDeposits() error {
+	if !val.Validating() {
+		return ErrIsNotRunning
+	}
 	return val.consensus.RedeemDeposits(val.walletAccount)
 }

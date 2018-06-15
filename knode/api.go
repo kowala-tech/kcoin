@@ -21,6 +21,7 @@ import (
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/core/vm"
 	"github.com/kowala-tech/kcoin/internal/kcoinapi"
+	"github.com/kowala-tech/kcoin/knode/validator"
 	"github.com/kowala-tech/kcoin/params"
 	"github.com/kowala-tech/kcoin/rlp"
 	"github.com/kowala-tech/kcoin/rpc"
@@ -57,13 +58,20 @@ func NewPrivateValidatorAPI(kcoin *Kowala) *PrivateValidatorAPI {
 }
 
 // Start the validator.
-func (api *PrivateValidatorAPI) Start() error {
+func (api *PrivateValidatorAPI) Start(deposit *big.Int) error {
 	// Start the validator and return
 	if !api.kcoin.IsValidating() {
 		// Propagate the initial price point to the transaction pool
 		api.kcoin.lock.RLock()
 		price := api.kcoin.gasPrice
 		api.kcoin.lock.RUnlock()
+
+		if deposit != nil {
+			err := api.kcoin.SetDeposit(deposit)
+			if err != validator.ErrIsNotRunning {
+				return err
+			}
+		}
 
 		api.kcoin.txPool.SetGasPrice(price)
 		return api.kcoin.StartValidating()
@@ -101,12 +109,6 @@ func (api *PrivateValidatorAPI) SetCoinbase(coinbase common.Address) bool {
 	return true
 }
 
-// SetDeposit sets the deposit of the validator
-func (api *PrivateValidatorAPI) SetDeposit(deposit hexutil.Big) bool {
-	api.kcoin.SetDeposit((*big.Int)(&deposit))
-	return true
-}
-
 // GetMinimumDeposit gets the minimum deposit required to take a slot as a validator
 func (api *PrivateValidatorAPI) GetMinimumDeposit() (*big.Int, error) {
 	return api.kcoin.GetMinimumDeposit()
@@ -123,8 +125,8 @@ type depositEntry struct {
 }
 
 // GetDeposits returns the validator deposits
-func (api *PrivateValidatorAPI) GetDeposits() (GetDepositsResult, error) {
-	rawDeposits, err := api.kcoin.Validator().Deposits()
+func (api *PrivateValidatorAPI) GetDeposits(address *common.Address) (GetDepositsResult, error) {
+	rawDeposits, err := api.kcoin.Validator().Deposits(address)
 	if err != nil {
 		return GetDepositsResult{}, err
 	}
