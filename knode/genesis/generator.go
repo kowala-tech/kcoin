@@ -77,7 +77,6 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 			ChainID:    getNetwork(validOptions.network),
 			Tendermint: getConsensusEngine(validOptions.consensusEngine),
 		},
-		// @TODO (rgeraldes)
 		ExtraData: getExtraData(opts.ExtraData),
 	}
 
