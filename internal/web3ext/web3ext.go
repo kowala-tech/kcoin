@@ -454,6 +454,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'start',
 			call: 'validator_start',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'stop',
@@ -477,11 +479,6 @@ web3._extend({
 			inputFormatter: [web3._extend.utils.fromDecimal]
 		}),
 		new web3._extend.Method({
-			name: 'setDeposit',
-			call: 'validator_setDeposit',
-			params: 1
-		}),
-		new web3._extend.Method({
 			name: 'getMinimumDeposit',
 			call: 'validator_getMinimumDeposit',
 			params: 0,
@@ -489,7 +486,9 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'getDeposits',
-			call: 'validator_getDeposits'
+			call: 'validator_getDeposits',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'isRunning',
