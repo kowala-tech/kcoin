@@ -122,6 +122,11 @@ var (
 		Name:  "identity",
 		Usage: "Custom node name",
 	}
+	CurrencyFlag = cli.StringFlag{
+		Name:  "currency",
+		Usage: "Currency to use with the client",
+		Value: knode.KUSD,
+	}
 	DocRootFlag = DirectoryFlag{
 		Name:  "docroot",
 		Usage: "Document Root for HTTPClient file scheme",

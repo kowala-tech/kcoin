@@ -16,6 +16,7 @@ import (
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/knode"
 	"github.com/kowala-tech/kcoin/knode/downloader"
 	genesisgen "github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/kowala-tech/kcoin/log"
@@ -34,6 +35,7 @@ var (
 			utils.DataDirFlag,
 			utils.LightModeFlag,
 			utils.TestnetFlag,
+			utils.CurrencyFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -157,8 +159,18 @@ func initGenesis(ctx *cli.Context) error {
 }
 
 //extractKeyCoin returns the keycoin used for launching the client. For now it always return kusd.
-func extractKeyCoin(context *cli.Context) string {
-	return "kusd"
+func extractKeyCoin(ctx *cli.Context) string {
+	kcoin := ctx.GlobalString(utils.CurrencyFlag.Name)
+
+	if kcoin == "" {
+		return knode.KUSD
+	}
+
+	if kcoin != knode.KUSD {
+		kcoin = knode.KUSD
+	}
+
+	return knode.KUSD
 }
 
 //extractNetworkKey returns the network key based on the params of the command.
