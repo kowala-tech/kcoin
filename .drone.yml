@@ -17,6 +17,27 @@ pipeline:
     when:
       event: [pull_request]
 
+  # Builds the docker image that's going to be used in the `e2e` step right into the docker service.
+  docker-image-for-e2e:
+    image: docker
+    environment:
+    - DOCKER_HOST=tcp://docker:2375
+    commands: 
+    - docker build -t kowalatech/kusd:dev -f kcoin.Dockerfile .
+    when:
+      event: [pull_request]
+
+  e2e:
+    image: kowalatech/e2e:latest
+    pull: true
+    environment:
+    - DOCKER_HOST=tcp://docker:2375
+    - DOCKER_PUBLIC_IP=docker
+    commands: 
+    - /e2e
+    when:
+      event: [pull_request]
+
   build:
     image: kowalatech/go:1.0.3
     commands:
