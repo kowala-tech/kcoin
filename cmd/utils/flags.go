@@ -895,6 +895,7 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	}
 
+
 	// Ethereum needs to know maxPeers to calculate the light server peer ratio.
 	// TODO(fjl): ensure Ethereum can get MaxPeers from node.
 	cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
