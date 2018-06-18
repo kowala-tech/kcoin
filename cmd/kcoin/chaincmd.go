@@ -16,7 +16,6 @@ import (
 	"github.com/kowala-tech/kcoin/core/types"
 	"github.com/kowala-tech/kcoin/event"
 	"github.com/kowala-tech/kcoin/kcoindb"
-	"github.com/kowala-tech/kcoin/knode"
 	"github.com/kowala-tech/kcoin/knode/downloader"
 	genesisgen "github.com/kowala-tech/kcoin/knode/genesis"
 	"github.com/kowala-tech/kcoin/log"
@@ -161,10 +160,6 @@ func initGenesis(ctx *cli.Context) error {
 //extractKeyCoin returns the keycoin used for launching the client. For now it always return kusd.
 func extractKeyCoin(ctx *cli.Context) string {
 	kcoin := ctx.GlobalString(utils.CurrencyFlag.Name)
-
-	if kcoin == "" {
-		kcoin = knode.KUSD
-	}
 
 	return kcoin
 }
