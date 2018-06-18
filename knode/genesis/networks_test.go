@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"path/filepath"
@@ -58,4 +60,9 @@ func jsonEncodeGenesisConfig(config Options, t *testing.T) bytes.Buffer {
 	}
 	w.Flush()
 	return b
+}
+
+func getHashFromGenesisBlock(genesis *core.Genesis) common.Hash {
+	b, _ := genesis.ToBlock()
+	return b.Hash()
 }
