@@ -17,14 +17,6 @@ pipeline:
     when:
       event: [pull_request]
 
-  build:
-    image: kowalatech/go:1.0.3
-    commands:
-      - make
-    when:
-      event: [push, tag]
-      branch: [master, dev, refs/tags/*]
-
   docker_kusd_dev:
     group: docker-deployment
     image: plugins/docker
