@@ -17,12 +17,12 @@ func TestGenerateIsDeterministic(t *testing.T) {
 	assert.Equal(t, getHashFromGenesisBlock(generatedGenesis), getHashFromGenesisBlock(generatedGenesisTwo))
 }
 
-func TestGenerateIsDeterministicDifferent(t *testing.T) {
+func TestGenerateIsDeterministicHasDifferentHash(t *testing.T) {
 	options := Networks["kusd"][MainNetwork]
 	generatedGenesis, err := Generate(options)
 	assert.NoError(t, err)
 
-	options = Networks["kusd"][TestNetwork]
+	options.ExtraData = "Something different in this config"
 	generatedGenesisTwo, err := Generate(options)
 	assert.NoError(t, err)
 
