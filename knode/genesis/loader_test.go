@@ -9,9 +9,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"fmt"
-
-	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core"
 	"github.com/stretchr/testify/require"
 )
@@ -23,52 +20,22 @@ func TestLoaderFromConfig(t *testing.T) {
 
 		require.Equal(t, getNetwork(MainNetwork), block.Config.ChainID)
 	})
-
-	t.Run("We get a test net block", func(t *testing.T) {
-		block, err := NetworkGenesisBlock("", "kusd", TestNetwork)
-		require.NoError(t, err, "Unexpected error when creating genesis block")
-
-		require.Equal(t, getNetwork(TestNetwork), block.Config.ChainID)
-	})
 }
 
 func TestLoaderFromFile(t *testing.T) {
-	t.Run("We get a main net block from a saved file", func(t *testing.T) {
-		deterministicBlock, _ := NetworkGenesisBlock("", "kusd", MainNetwork)
+	deterministicBlock, err := NetworkGenesisBlock("", "kusd", MainNetwork)
+	require.NoError(t, err, "Unexpected error when creating genesis block")
+	t.Run("We get a block from a saved file", func(t *testing.T) {
 		if *update {
 			jsonConfig := jsonEncodeGenesisBlock(deterministicBlock, t)
-			updateGenesisGolden(t, genesisBlockFilename("main"), jsonConfig)
+			updateGenesisGolden(t, genesisSampleBlockFilename(), jsonConfig)
 		}
 
-		loadedBlock, err := NetworkGenesisBlock(genesisBlockFilename("main"), "", "")
+		loadedBlock, err := NetworkGenesisBlock(genesisSampleBlockFilename(), "", "")
 		require.NoError(t, err, "Unexpected error when creating genesis block")
-
-		require.Equal(t, deterministicBlock.Config.ChainID, loadedBlock.Config.ChainID)
-		require.Equal(t, deterministicBlock.Coinbase.Bytes(), loadedBlock.Coinbase.Bytes())
 
 		require.Equal(t, getHashFromGenesisBlock(deterministicBlock), getHashFromGenesisBlock(loadedBlock))
 	})
-
-	t.Run("We get a test net block from a saved file", func(t *testing.T) {
-		deterministicBlock, _ := NetworkGenesisBlock("", "kusd", TestNetwork)
-		if *update {
-			jsonConfig := jsonEncodeGenesisBlock(deterministicBlock, t)
-			updateGenesisGolden(t, genesisBlockFilename("test"), jsonConfig)
-		}
-
-		loadedBlock, err := NetworkGenesisBlock(genesisBlockFilename("test"), "", "")
-		require.NoError(t, err, "Unexpected error when creating genesis block")
-
-		require.Equal(t, deterministicBlock.Config.ChainID, loadedBlock.Config.ChainID)
-		require.Equal(t, deterministicBlock.Coinbase.Bytes(), loadedBlock.Coinbase.Bytes())
-
-		require.Equal(t, getHashFromGenesisBlock(deterministicBlock), getHashFromGenesisBlock(loadedBlock))
-	})
-}
-
-func getHashFromGenesisBlock(genesis *core.Genesis) common.Hash {
-	b, _ := genesis.ToBlock()
-	return b.Hash()
 }
 
 func updateGenesisGolden(t *testing.T, filename string, jsonConfig bytes.Buffer) {
@@ -78,9 +45,8 @@ func updateGenesisGolden(t *testing.T, filename string, jsonConfig bytes.Buffer)
 	}
 }
 
-func genesisBlockFilename(strAppend string) string {
-	s := fmt.Sprintf("genesis-%s.json.golden", strAppend)
-	return filepath.Join("testfiles", s)
+func genesisSampleBlockFilename() string {
+	return filepath.Join("testfiles", "genesis.json.golden")
 }
 
 func jsonEncodeGenesisBlock(block *core.Genesis, t *testing.T) bytes.Buffer {
