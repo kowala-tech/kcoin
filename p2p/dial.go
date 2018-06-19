@@ -322,6 +322,7 @@ func (t *dialTask) resolve(srv *Server) bool {
 func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 	fd, err := srv.Dialer.Dial(dest)
 	if err != nil {
+		log.Error(fmt.Sprintf("Dial error task %v err %v", t, err))
 		log.Trace("Dial error", "task", t, "err", err)
 		return false
 	}

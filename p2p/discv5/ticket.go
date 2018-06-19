@@ -12,6 +12,7 @@ import (
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/common/mclock"
 	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/log"
 )
 
 const (
@@ -164,6 +165,7 @@ func (s *ticketStore) addTopic(t Topic, register bool) {
 }
 
 func (s *ticketStore) addSearchTopic(t Topic, foundChn chan<- *Node) {
+	log.Error(fmt.Sprintf("=== <-net.topicSearchReq 2.4 %v", t))
 	s.addTopic(t, false)
 	if s.searchTopicMap[t].foundChn == nil {
 		s.searchTopicMap[t] = searchTopic{foundChn: foundChn}
@@ -602,6 +604,7 @@ func (s *ticketStore) cleanupTopicQueries(now mclock.AbsTime) {
 }
 
 func (s *ticketStore) gotTopicNodes(from *Node, hash common.Hash, nodes []rpcNode) (timeout bool) {
+	log.Error(fmt.Sprintf("=== gotTopicNodes %v %v %v", len(nodes), from.addr().String(), hash))
 	now := mclock.Now()
 	//fmt.Println("got", from.addr().String(), hash, len(nodes))
 	qq := s.queriesSent[from]
@@ -623,6 +626,7 @@ func (s *ticketStore) gotTopicNodes(from *Node, hash common.Hash, nodes []rpcNod
 		return false
 	}
 	for _, node := range nodes {
+		log.Error(fmt.Sprintf("=== gotTopicNodes NODE %q", node.ID.String()))
 		ip := node.IP
 		if ip.IsUnspecified() || ip.IsLoopback() {
 			ip = from.IP

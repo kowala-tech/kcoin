@@ -233,6 +233,7 @@ func (pm *ProtocolManager) Stop() {
 	pm.peers.Close()
 
 	// Wait for all peer handler goroutines and the loops to come down.
+	//fixme: data race on .Add() call
 	pm.wg.Wait()
 
 	log.Info("Kowala protocol stopped")

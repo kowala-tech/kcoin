@@ -363,26 +363,17 @@ func (net *Network) loop() {
 	// Tracking the next ticket to register.
 	var (
 		nextTicket        *ticketRef
-		nextRegisterTimer *time.Timer
-		nextRegisterTime  <-chan time.Time
+		nextRegisterTimer = time.NewTicker(1*time.Second)
+		nextRegisterTime  = nextRegisterTimer.C
 	)
 	defer func() {
-		if nextRegisterTimer != nil {
-			nextRegisterTimer.Stop()
-		}
+		nextRegisterTimer.Stop()
 	}()
+
 	resetNextTicket := func() {
-		t, timeout := net.ticketStore.nextFilteredTicket()
+		t, _ := net.ticketStore.nextFilteredTicket()
 		if t != nextTicket {
 			nextTicket = t
-			if nextRegisterTimer != nil {
-				nextRegisterTimer.Stop()
-				nextRegisterTime = nil
-			}
-			if t != nil {
-				nextRegisterTimer = time.NewTimer(timeout)
-				nextRegisterTime = nextRegisterTimer.C
-			}
 		}
 	}
 
@@ -400,6 +391,18 @@ func (net *Network) loop() {
 	<-topicRegisterLookupTick.C
 
 	statsDump := time.NewTicker(10 * time.Second)
+
+	go func() {
+		for range nextRegisterTime {
+			if nextTicket == nil {
+				continue
+			}
+			debugLog("<-nextRegisterTime")
+			net.ticketStore.ticketRegistered(*nextTicket)
+			//fmt.Println("sendTopicRegister", nextTicket.t.node.addr().String(), nextTicket.t.topics, nextTicket.idx, nextTicket.t.pong)
+			net.conn.sendTopicRegister(nextTicket.t.node, nextTicket.t.topics, nextTicket.idx, nextTicket.t.pong)
+		}
+	}()
 
 loop:
 	for {
@@ -502,12 +505,6 @@ loop:
 				target := topicRegisterLookupTarget.target
 				go func() { topicRegisterLookupDone <- net.lookup(target, false) }()
 			}
-
-		case <-nextRegisterTime:
-			debugLog("<-nextRegisterTime")
-			net.ticketStore.ticketRegistered(*nextTicket)
-			//fmt.Println("sendTopicRegister", nextTicket.t.node.addr().String(), nextTicket.t.topics, nextTicket.idx, nextTicket.t.pong)
-			net.conn.sendTopicRegister(nextTicket.t.node, nextTicket.t.topics, nextTicket.idx, nextTicket.t.pong)
 
 		case req := <-net.topicSearchReq:
 			if refreshDone == nil {
@@ -996,6 +993,7 @@ func init() {
 		name:     "unresponsive",
 		canQuery: true,
 		handle: func(net *Network, n *Node, ev nodeEvent, pkt *ingressPacket) (*nodeState, error) {
+			log.Error(fmt.Sprintf("@@@@ STATE unresponsive HANDLE"))
 			switch ev {
 			case pingPacket:
 				net.handlePing(n, pkt)
