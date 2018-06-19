@@ -46,6 +46,7 @@ func TestNetworkConfigs(t *testing.T) {
 
 func updateGolden(t *testing.T, filename string, jsonConfig bytes.Buffer) {
 	t.Logf("updated golden file for %s", filename)
+	
 	if err := ioutil.WriteFile(filename, jsonConfig.Bytes(), 0644); err != nil {
 		t.Fatalf("failed to update golden file: %s", err)
 	}
