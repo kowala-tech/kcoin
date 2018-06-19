@@ -63,7 +63,3 @@ func Crit(msg string, ctx ...interface{}) {
 	root.write(msg, LvlCrit, ctx)
 	os.Exit(1)
 }
-
-func withRootContext(ctx ...interface{}) []interface{} {
-	return newContext(root.ctx, ctx)
-}

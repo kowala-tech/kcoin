@@ -19,12 +19,3 @@ func TestSetContextMulti(t *testing.T) {
 	assert.Equal(t, "message 1", root.ctx[0])
 	assert.Equal(t, "message 2", root.ctx[1])
 }
-
-func TestWithContext(t *testing.T) {
-	SetContext("message 1")
-
-	ctx2 := withRootContext("message 2")
-
-	assert.Equal(t, "message 1", ctx2[0])
-	assert.Equal(t, "message 2", ctx2[1])
-}
