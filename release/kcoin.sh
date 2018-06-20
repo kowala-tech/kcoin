@@ -48,7 +48,7 @@ case $NEW_ACC in
 		;;
 esac
 
-./control --ipc /root/.kcoin/kcoin.ipc &
+./control --ipc /root/.kcoin/kusd/kcoin.ipc &
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to start control panel: $status"
