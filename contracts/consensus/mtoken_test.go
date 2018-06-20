@@ -18,8 +18,8 @@ import (
 
 var (
 	owner, _            = crypto.GenerateKey()
-	initialBalance      = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.KUSD))                       // 10 kUSD
-	miningTokenCap      = new(big.Int).Mul(new(big.Int).SetUint64(1073741824), new(big.Int).SetUint64(params.KUSD)) // 1073741824 mUSD
+	initialBalance      = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Kcoin))                       // 10 kUSD
+	miningTokenCap      = new(big.Int).Mul(new(big.Int).SetUint64(1073741824), new(big.Int).SetUint64(params.Kcoin)) // 1073741824 mUSD
 	miningTokenName     = "mUSD"
 	miningTokenDecimals = uint8(18)
 )
@@ -64,7 +64,7 @@ func (suite *MiningTokenSuite) TestDeploy() {
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
 		getAddress(owner): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.KUSD)),
+			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
 		},
 	})
 

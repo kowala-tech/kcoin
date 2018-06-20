@@ -12,7 +12,7 @@ const (
 	Shannon  = 1e9
 	Szabo    = 1e12
 	Finney   = 1e15
-	KUSD     = 1e18
+	Kcoin    = 1e18
 	Einstein = 1e21
 	Douglas  = 1e42
 )

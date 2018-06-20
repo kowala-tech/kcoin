@@ -156,7 +156,7 @@ func (suite *ValidatorMgrSuite) TestDeploy() {
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
 		getAddress(governor): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.KUSD)),
+			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
 		},
 	})
 
@@ -197,7 +197,7 @@ func (suite *ValidatorMgrSuite) TestDeploy_MaxNumValidatorsEqualZero() {
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
 		getAddress(governor): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.KUSD)),
+			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
 		},
 	})
 
@@ -213,7 +213,7 @@ func (suite *ValidatorMgrSuite) TestDeploy_MaxNumValidatorsEqualZero() {
 func (suite *ValidatorMgrSuite) TestIsValidator() {
 	req := suite.Require()
 
-	numTokens := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.KUSD))
+	numTokens := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin))
 	req.NoError(suite.registerValidator(user, numTokens))
 
 	// register and deregister validator
@@ -266,7 +266,7 @@ func (suite *ValidatorMgrSuite) TestIsValidator() {
 func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 	req := suite.Require()
 
-	numTokens := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.KUSD))
+	numTokens := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin))
 	req.NoError(suite.registerValidator(user, numTokens))
 
 	suite.backend.Commit()
@@ -312,7 +312,7 @@ func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_NotFull() {
 	storedMinDeposit, err := suite.validatorMgr.GetMinimumDeposit(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedMinDeposit)
-	req.Equal(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.KUSD)), storedMinDeposit)
+	req.Equal(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin)), storedMinDeposit)
 }
 
 func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
@@ -321,7 +321,7 @@ func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
 	storedMinDeposit, err := suite.validatorMgr.GetMinimumDeposit(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedMinDeposit)
-	req.Equal(new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.KUSD)), common.Big1), storedMinDeposit)
+	req.Equal(new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin)), common.Big1), storedMinDeposit)
 }
 
 func (suite *ValidatorMgrSuite) TestRegisterValidator_WhenPaused() {
@@ -329,14 +329,14 @@ func (suite *ValidatorMgrSuite) TestRegisterValidator_WhenPaused() {
 
 	suite.pauseService()
 
-	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.KUSD))
+	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin))
 	req.Error(suite.registerValidator(user, deposit), "cannot register the validator because the service is paused")
 }
 
 func (suite *ValidatorMgrSuite) TestRegisterValidator_Duplicate() {
 	req := suite.Require()
 
-	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.KUSD))
+	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin))
 	req.NoError(suite.registerValidator(user, deposit))
 	req.Error(suite.registerValidator(user, deposit), "cannot register the same validator twice")
 }
@@ -344,7 +344,7 @@ func (suite *ValidatorMgrSuite) TestRegisterValidator_Duplicate() {
 func (suite *ValidatorMgrSuite) TestRegisterValidator_WithoutMinDeposit() {
 	req := suite.Require()
 
-	deposit := new(big.Int).Sub(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.KUSD)), common.Big1)
+	deposit := new(big.Int).Sub(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin)), common.Big1)
 	req.Error(suite.registerValidator(user, deposit), "requires the minimum deposit")
 }
 
@@ -355,7 +355,7 @@ func (suite *ValidatorMgrSuite) TestRegister_NotFull_GreaterThan() {
 	req.NoError(err)
 	req.NotNil(initialValidatorCount)
 
-	deposit := new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.KUSD)), common.Big1)
+	deposit := new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin)), common.Big1)
 	req.NoError(suite.registerValidator(user, deposit))
 
 	suite.backend.Commit()
@@ -385,7 +385,7 @@ func (suite *ValidatorMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
 	req.NoError(err)
 	req.NotNil(initialValidatorCount)
 
-	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.KUSD))
+	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin))
 	req.NoError(suite.registerValidator(user, deposit))
 
 	suite.backend.Commit()
