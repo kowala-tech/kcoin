@@ -364,7 +364,7 @@ func escapeString(s string) string {
 	if needsQuotes {
 		ret = e.String()
 	} else {
-		ret = string(e.Bytes()[1: e.Len()-1])
+		ret = string(e.Bytes()[1 : e.Len()-1])
 	}
 	e.Reset()
 	stringBufPool.Put(e)

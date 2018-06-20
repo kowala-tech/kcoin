@@ -35,35 +35,31 @@ func SetContext(ctx ...interface{}) {
 
 // Trace is a convenient alias for Root().Trace
 func Trace(msg string, ctx ...interface{}) {
-	root.write(msg, LvlTrace, withRootContext(ctx))
+	root.write(msg, LvlTrace, ctx)
 }
 
 // Debug is a convenient alias for Root().Debug
 func Debug(msg string, ctx ...interface{}) {
-	root.write(msg, LvlDebug, withRootContext(ctx))
+	root.write(msg, LvlDebug, ctx)
 }
 
 // Info is a convenient alias for Root().Info
 func Info(msg string, ctx ...interface{}) {
-	root.write(msg, LvlInfo, withRootContext(ctx))
+	root.write(msg, LvlInfo, ctx)
 }
 
 // Warn is a convenient alias for Root().Warn
 func Warn(msg string, ctx ...interface{}) {
-	root.write(msg, LvlWarn, withRootContext(ctx))
+	root.write(msg, LvlWarn, ctx)
 }
 
 // Error is a convenient alias for Root().Error
 func Error(msg string, ctx ...interface{}) {
-	root.write(msg, LvlError, withRootContext(ctx))
+	root.write(msg, LvlError, ctx)
 }
 
 // Crit is a convenient alias for Root().Crit
 func Crit(msg string, ctx ...interface{}) {
-	root.write(msg, LvlCrit, withRootContext(ctx))
+	root.write(msg, LvlCrit, ctx)
 	os.Exit(1)
-}
-
-func withRootContext(ctx ...interface{}) []interface{} {
-	return []interface{}{root.ctx, ctx}
 }
