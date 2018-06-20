@@ -109,13 +109,13 @@ endif
 ## Docker
 
 docker-build-bootnode:
-	cd client; docker build -t kowalatech/bootnode -f bootnode.Dockerfile .
+	docker build -t kowalatech/bootnode -f client/bootnode.Dockerfile .
 
 docker-build-kusd:
-	cd client; docker build -t kowalatech/kusd -f kcoin.Dockerfile .
+	docker build -t kowalatech/kusd -f client/kcoin.Dockerfile .
 
 docker-build-faucet:
-	cd client; docker build -t kowalatech/faucet -f faucet.Dockerfile .
+	docker build -t kowalatech/faucet -f client/faucet.Dockerfile .
 
 
 docker-publish-bootnode:

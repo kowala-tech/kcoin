@@ -7,5 +7,5 @@ RUN make bootnode
 
 FROM alpine:3.7
 WORKDIR /bootnode/
-COPY --from=builder /bootnode/build/bin/bootnode .
+COPY --from=builder /bootnode/client/build/bin/bootnode .
 ENTRYPOINT ["./bootnode"] 
