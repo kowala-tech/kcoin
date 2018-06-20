@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/core"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"path/filepath"
@@ -44,6 +46,7 @@ func TestNetworkConfigs(t *testing.T) {
 
 func updateGolden(t *testing.T, filename string, jsonConfig bytes.Buffer) {
 	t.Logf("updated golden file for %s", filename)
+
 	if err := ioutil.WriteFile(filename, jsonConfig.Bytes(), 0644); err != nil {
 		t.Fatalf("failed to update golden file: %s", err)
 	}
@@ -58,4 +61,9 @@ func jsonEncodeGenesisConfig(config Options, t *testing.T) bytes.Buffer {
 	}
 	w.Flush()
 	return b
+}
+
+func getHashFromGenesisBlock(genesis *core.Genesis) common.Hash {
+	b, _ := genesis.ToBlock()
+	return b.Hash()
 }
