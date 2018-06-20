@@ -106,6 +106,22 @@ pipeline:
       event: [push, tag]
       branch: [dev]
 
+  notify-dev:
+    group: notify
+    image: plugins/slack
+    secrets: [ slack_webhook ] 
+    channel: ci-notifications
+    username: drone
+    template: >
+        *CI build #{{build.number}}* ({{build.event}} to `{{build.branch}}`{{#if build.pull}}[PR #{{build.pull}}]{{/if}} by @{{build.author}}) *{{#success build.status}}successful{{else}}failed{{/success}}* after {{since build.started}}
+
+        _${DRONE_COMMIT_MESSAGE}_
+        
+        {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}>
+    when:
+      status: failure 
+      event: [push, tag, pull_request]
+
 services:
   docker:
     image: docker:dind
