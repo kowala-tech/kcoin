@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 type unpackTest struct {

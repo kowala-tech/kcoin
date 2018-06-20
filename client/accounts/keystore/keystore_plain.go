@@ -22,7 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 type keyStorePlain struct {

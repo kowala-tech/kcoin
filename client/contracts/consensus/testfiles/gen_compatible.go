@@ -6,10 +6,10 @@ package testfiles
 import (
 	"strings"
 
-	"github.com/kowala-tech/kcoin/accounts/abi"
-	"github.com/kowala-tech/kcoin/accounts/abi/bind"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/client/accounts/abi"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // CompatibleABI is the input ABI used to generate the binding from.

@@ -19,7 +19,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 func makeStackFunc(pop, push int) stackValidationFunc {

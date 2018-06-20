@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/pkg/errors"
 )
 

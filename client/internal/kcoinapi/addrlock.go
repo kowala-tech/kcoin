@@ -3,7 +3,7 @@ package kcoinapi
 import (
 	"sync"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 type AddrLocker struct {

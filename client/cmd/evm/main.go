@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/kowala-tech/kcoin/cmd/utils"
+	"github.com/kowala-tech/kcoin/client/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 )
 

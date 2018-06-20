@@ -7,13 +7,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoindb"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/metrics"
-	"github.com/kowala-tech/kcoin/params"
-	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/metrics"
+	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
 // DatabaseReader wraps the Get method of a backing data store.

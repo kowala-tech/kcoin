@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 // unpacker is a utility interface that enables us to have

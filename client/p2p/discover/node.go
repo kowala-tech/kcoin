@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/crypto/secp256k1"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/crypto/secp256k1"
 )
 
 const NodeIDBits = 512

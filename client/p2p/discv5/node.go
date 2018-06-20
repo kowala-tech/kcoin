@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 // Node represents a host on the network.

@@ -3,9 +3,9 @@ package keystore
 import (
 	"math/big"
 
-	ethereum "github.com/kowala-tech/kcoin"
-	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/core/types"
+	ethereum "github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original

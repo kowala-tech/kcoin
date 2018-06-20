@@ -3,12 +3,12 @@ package tendermint
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/consensus"
-	"github.com/kowala-tech/kcoin/core/state"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/params"
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/consensus"
+	"github.com/kowala-tech/kcoin/client/core/state"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
 var (

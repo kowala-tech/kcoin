@@ -25,23 +25,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/accounts/keystore"
-	"github.com/kowala-tech/kcoin/cmd/utils"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoinclient"
-	"github.com/kowala-tech/kcoin/knode"
-	"github.com/kowala-tech/kcoin/knode/downloader"
-	genesis2 "github.com/kowala-tech/kcoin/knode/genesis"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/node"
-	"github.com/kowala-tech/kcoin/p2p"
-	"github.com/kowala-tech/kcoin/p2p/discover"
-	"github.com/kowala-tech/kcoin/p2p/discv5"
-	"github.com/kowala-tech/kcoin/p2p/nat"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts/keystore"
+	"github.com/kowala-tech/kcoin/client/cmd/utils"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/kcoinclient"
+	"github.com/kowala-tech/kcoin/client/knode"
+	"github.com/kowala-tech/kcoin/client/knode/downloader"
+	genesis2 "github.com/kowala-tech/kcoin/client/knode/genesis"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/node"
+	"github.com/kowala-tech/kcoin/client/p2p"
+	"github.com/kowala-tech/kcoin/client/p2p/discover"
+	"github.com/kowala-tech/kcoin/client/p2p/discv5"
+	"github.com/kowala-tech/kcoin/client/p2p/nat"
+	"github.com/kowala-tech/kcoin/client/params"
 	"golang.org/x/net/websocket"
 )
 
@@ -360,7 +360,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		if err != nil {
 
 			// @NOTE (rgeraldes) - Unmarshalling errors are probably due to this return message:
-			// https://github.com/kowala-tech/kcoin/blob/dev/internal/kcoinapi/api.go#L698
+			// https://github.com/kowala-tech/kcoin/client/blob/dev/internal/kcoinapi/api.go#L698
 			// new fields in the header (required fields) must be added to that return msg.
 			if err = sendError(conn, errors.New("Faucet offline: "+err.Error())); err != nil {
 				log.Warn("Failed to send faucet error to client", "err", err)
@@ -472,7 +472,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		case *noauthFlag:
 			username, avatar, address, err = authNoAuth(msg.URL)
 		default:
-			err = errors.New("Something funky happened, please open an issue at https://github.com/kowala-tech/kcoin/issues")
+			err = errors.New("Something funky happened, please open an issue at https://github.com/kowala-tech/kcoin/client/issues")
 		}
 		if err != nil {
 			if err = sendError(conn, err); err != nil {

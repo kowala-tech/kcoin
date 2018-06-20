@@ -6,10 +6,10 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/consensus"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/consensus"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 

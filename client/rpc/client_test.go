@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 func TestClientRequest(t *testing.T) {

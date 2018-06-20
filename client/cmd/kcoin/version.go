@@ -1,6 +1,6 @@
 package main
 
-import "github.com/kowala-tech/kcoin/params"
+import "github.com/kowala-tech/kcoin/client/params"
 
 var (
 	// Git SHA1 commit hash of the release (set via linker flags)

@@ -10,13 +10,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/internal/debug"
-	"github.com/kowala-tech/kcoin/kcoindb"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/p2p"
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/event"
+	"github.com/kowala-tech/kcoin/client/internal/debug"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/p2p"
+	"github.com/kowala-tech/kcoin/client/rpc"
 	"github.com/prometheus/prometheus/util/flock"
 )
 

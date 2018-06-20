@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common/math"
-	"github.com/kowala-tech/kcoin/consensus"
-	"github.com/kowala-tech/kcoin/core/state"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/common/math"
+	"github.com/kowala-tech/kcoin/client/consensus"
+	"github.com/kowala-tech/kcoin/client/core/state"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and

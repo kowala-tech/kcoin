@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/hexutil"
-	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
 //go:generate gencodec -type Log -field-override logMarshaling -out gen_log_json.go

@@ -36,11 +36,11 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/node"
-	"github.com/kowala-tech/kcoin/p2p"
-	"github.com/kowala-tech/kcoin/p2p/discover"
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/node"
+	"github.com/kowala-tech/kcoin/client/p2p"
+	"github.com/kowala-tech/kcoin/client/p2p/discover"
+	"github.com/kowala-tech/kcoin/client/rpc"
 	"golang.org/x/net/websocket"
 )
 

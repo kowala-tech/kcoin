@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common/hexutil"
-	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 type bytesBacked interface {

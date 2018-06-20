@@ -22,10 +22,10 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/rlp"
-	"github.com/kowala-tech/kcoin/trie"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/rlp"
+	"github.com/kowala-tech/kcoin/client/trie"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)

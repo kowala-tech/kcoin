@@ -29,12 +29,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/p2p"
-	"github.com/kowala-tech/kcoin/p2p/discover"
-	"github.com/kowala-tech/kcoin/p2p/simulations"
-	"github.com/kowala-tech/kcoin/p2p/simulations/adapters"
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/p2p"
+	"github.com/kowala-tech/kcoin/client/p2p/discover"
+	"github.com/kowala-tech/kcoin/client/p2p/simulations"
+	"github.com/kowala-tech/kcoin/client/p2p/simulations/adapters"
+	"github.com/kowala-tech/kcoin/client/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

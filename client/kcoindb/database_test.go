@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
 )
 
 func newTestLDB() (*kcoindb.LDBDatabase, func()) {

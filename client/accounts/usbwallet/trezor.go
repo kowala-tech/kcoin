@@ -12,12 +12,12 @@ import (
 	"math/big"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/accounts/usbwallet/internal/trezor"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/hexutil"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts/usbwallet/internal/trezor"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 // ErrTrezorPINNeeded is returned if opening the trezor requires a PIN code. In

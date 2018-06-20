@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common/mclock"
-	"github.com/kowala-tech/kcoin/kcoindb"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/p2p"
-	"github.com/kowala-tech/kcoin/p2p/discover"
-	"github.com/kowala-tech/kcoin/p2p/discv5"
-	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/client/common/mclock"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/p2p"
+	"github.com/kowala-tech/kcoin/client/p2p/discover"
+	"github.com/kowala-tech/kcoin/client/p2p/discv5"
+	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
 const (

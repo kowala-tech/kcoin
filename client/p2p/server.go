@@ -9,14 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/mclock"
-	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/p2p/discover"
-	"github.com/kowala-tech/kcoin/p2p/discv5"
-	"github.com/kowala-tech/kcoin/p2p/nat"
-	"github.com/kowala-tech/kcoin/p2p/netutil"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/mclock"
+	"github.com/kowala-tech/kcoin/client/event"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/p2p/discover"
+	"github.com/kowala-tech/kcoin/client/p2p/discv5"
+	"github.com/kowala-tech/kcoin/client/p2p/nat"
+	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 )
 
 const (

@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/accounts/abi/bind"
-	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/contracts/consensus"
-	"github.com/kowala-tech/kcoin/contracts/consensus/testfiles"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind/backends"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/consensus/testfiles"
+	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/stretchr/testify/suite"
 )
 

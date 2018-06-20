@@ -1,6 +1,6 @@
 pragma solidity 0.4.21;
 
-import "github.com/kowala-tech/kcoin/contracts/token/contracts/MintableToken.sol" as mint;
+import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/MintableToken.sol" as mint;
 
 /**
  * @title Capped token

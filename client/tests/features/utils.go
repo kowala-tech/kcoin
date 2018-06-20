@@ -3,7 +3,7 @@ package features
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 func toWei(kcoin int64) *big.Int {

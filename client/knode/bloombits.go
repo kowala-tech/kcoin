@@ -3,13 +3,13 @@ package knode
 import (
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/bitutil"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/core/bloombits"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoindb"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/bitutil"
+	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/core/bloombits"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 const (

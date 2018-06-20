@@ -25,13 +25,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/state"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/metrics"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/state"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/event"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/metrics"
+	"github.com/kowala-tech/kcoin/client/params"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 

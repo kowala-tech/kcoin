@@ -3,7 +3,7 @@ package bloombits
 import (
 	"errors"
 
-	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // errSectionOutOfBounds is returned if the user tried to add more bloom filters

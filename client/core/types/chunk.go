@@ -2,9 +2,9 @@ package types
 
 import (
 	"bytes"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/hexutil"
-	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
 // @TODO (rgeraldes) - review uint64/int

@@ -3,12 +3,12 @@ package knode
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/hexutil"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/knode/downloader"
-	"github.com/kowala-tech/kcoin/knode/gasprice"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/knode/downloader"
+	"github.com/kowala-tech/kcoin/client/knode/gasprice"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 const KUSD = "kusd"

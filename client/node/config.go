@@ -9,14 +9,14 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/accounts/keystore"
-	"github.com/kowala-tech/kcoin/accounts/usbwallet"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/p2p"
-	"github.com/kowala-tech/kcoin/p2p/discover"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts/keystore"
+	"github.com/kowala-tech/kcoin/client/accounts/usbwallet"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/p2p"
+	"github.com/kowala-tech/kcoin/client/p2p/discover"
 )
 
 const (

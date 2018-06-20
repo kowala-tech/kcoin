@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/kcoinclient"
 
-	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/client/log"
 	"golang.org/x/net/websocket"
 )
 

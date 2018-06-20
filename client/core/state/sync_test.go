@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/kcoindb"
-	"github.com/kowala-tech/kcoin/trie"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
+	"github.com/kowala-tech/kcoin/client/trie"
 )
 
 // testAccount is the data associated with an account used by the state tests.

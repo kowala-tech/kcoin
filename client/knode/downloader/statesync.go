@@ -7,12 +7,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/state"
-	"github.com/kowala-tech/kcoin/crypto/sha3"
-	"github.com/kowala-tech/kcoin/kcoindb"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/trie"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/state"
+	"github.com/kowala-tech/kcoin/client/crypto/sha3"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/trie"
 )
 
 // stateReq represents a batch of state fetch requests groupped together into

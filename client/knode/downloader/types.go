@@ -3,7 +3,7 @@ package downloader
 import (
 	"fmt"
 
-	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.

@@ -26,7 +26,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
 var (

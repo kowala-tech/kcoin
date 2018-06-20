@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 // ContractRef is a reference to the contract's backing object

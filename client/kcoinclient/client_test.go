@@ -6,9 +6,9 @@ import (
 
 	"math/big"
 
-	"github.com/kowala-tech/kcoin"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/kcoinclient/mocks"
+	"github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/kcoinclient/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

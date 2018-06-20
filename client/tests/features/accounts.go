@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/DATA-DOG/godog/gherkin"
-	"github.com/kowala-tech/kcoin/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts"
 )
 
 var (

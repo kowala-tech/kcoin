@@ -14,9 +14,9 @@ import (
 
 	check "gopkg.in/check.v1"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
 )
 
 // Tests that updating a state trie does not leak any database writes prior to

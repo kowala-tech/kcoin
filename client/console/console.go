@@ -11,9 +11,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/internal/jsre"
-	"github.com/kowala-tech/kcoin/internal/web3ext"
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/internal/jsre"
+	"github.com/kowala-tech/kcoin/client/internal/web3ext"
+	"github.com/kowala-tech/kcoin/client/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"

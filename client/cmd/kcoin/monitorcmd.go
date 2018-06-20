@@ -25,9 +25,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kcoin/cmd/utils"
-	"github.com/kowala-tech/kcoin/node"
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/cmd/utils"
+	"github.com/kowala-tech/kcoin/client/node"
+	"github.com/kowala-tech/kcoin/client/rpc"
 	"github.com/gizak/termui"
 	"gopkg.in/urfave/cli.v1"
 )

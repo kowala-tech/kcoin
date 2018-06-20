@@ -1,6 +1,6 @@
 workspace:
   base: /go
-  path: src/github.com/kowala-tech/kcoin
+  path: src/github.com/kowala-tech/kcoin/client
 
 clone:
   git:

@@ -23,7 +23,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 // DefaultRootDerivationPath is the root path to which custom derivation endpoints

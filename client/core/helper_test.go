@@ -4,9 +4,9 @@ import (
 	"container/list"
 	"fmt"
 
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/event"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
 )
 
 // Implement our EthTest Manager

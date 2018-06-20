@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/accounts/abi"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/state"
-	"github.com/kowala-tech/kcoin/core/vm"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/client/accounts/abi"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/state"
+	"github.com/kowala-tech/kcoin/client/core/vm"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
 )
 
 func TestDefaults(t *testing.T) {

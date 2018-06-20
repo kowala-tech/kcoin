@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 const testSectionSize = 4096

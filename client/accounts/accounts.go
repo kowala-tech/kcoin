@@ -4,10 +4,10 @@ package accounts
 import (
 	"math/big"
 
-	kcoin "github.com/kowala-tech/kcoin"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/event"
+	kcoin "github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/event"
 )
 
 // Account represents a Kowala account located at a specific location defined

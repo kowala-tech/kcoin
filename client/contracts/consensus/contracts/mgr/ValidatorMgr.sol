@@ -1,9 +1,9 @@
 pragma solidity 0.4.21;
 
-import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
-import "github.com/kowala-tech/kcoin/contracts/token/contracts/ERC223.sol" as token;
-// @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/issues/284
-//import "github.com/kowala-tech/kcoin/contracts/token/contracts/TokenReceiver.sol" as receiver; 
+import "github.com/kowala-tech/kcoin/client/contracts/lifecycle/contracts/Pausable.sol" as pausable;
+import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/ERC223.sol" as token;
+// @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
+//import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
 
 contract ValidatorMgr is pausable.Pausable {
     uint public baseDeposit;       

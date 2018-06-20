@@ -3,8 +3,8 @@ package token
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 type Token interface {

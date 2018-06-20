@@ -4,9 +4,9 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already

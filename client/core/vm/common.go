@@ -19,8 +19,8 @@ package vm
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/math"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/math"
 )
 
 // calculates the memory size required for a step

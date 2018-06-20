@@ -5,10 +5,10 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/cmd/utils"
-	"github.com/kowala-tech/kcoin/console"
-	"github.com/kowala-tech/kcoin/node"
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/cmd/utils"
+	"github.com/kowala-tech/kcoin/client/console"
+	"github.com/kowala-tech/kcoin/client/node"
+	"github.com/kowala-tech/kcoin/client/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

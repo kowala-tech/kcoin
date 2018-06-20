@@ -19,7 +19,7 @@ package state
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 type journalEntry interface {

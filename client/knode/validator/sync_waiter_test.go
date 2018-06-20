@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/knode/downloader"
+	"github.com/kowala-tech/kcoin/client/event"
+	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/stretchr/testify/assert"
 )
 

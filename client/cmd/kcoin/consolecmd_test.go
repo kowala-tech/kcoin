@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 const (

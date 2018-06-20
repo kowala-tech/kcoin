@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog"
-	"github.com/kowala-tech/kcoin/cluster"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/client/cluster"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 type ValidationContext struct {

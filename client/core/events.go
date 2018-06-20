@@ -3,8 +3,8 @@ package core
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // TxPreEvent is posted when a transaction enters the transaction pool.

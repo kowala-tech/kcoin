@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/client/log"
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
 

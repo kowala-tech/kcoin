@@ -20,7 +20,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 func TestSet(t *testing.T) {

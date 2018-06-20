@@ -8,7 +8,7 @@ import (
 
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/gherkin"
-	"github.com/kowala-tech/kcoin/tests/features"
+	"github.com/kowala-tech/kcoin/client/tests/features"
 )
 
 var (

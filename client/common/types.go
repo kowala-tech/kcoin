@@ -7,8 +7,8 @@ import (
 	"math/rand"
 	"reflect"
 
-	"github.com/kowala-tech/kcoin/common/hexutil"
-	"github.com/kowala-tech/kcoin/crypto/sha3"
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/crypto/sha3"
 )
 
 const (

@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/kowala-tech/kcoin/core"
+	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/stretchr/testify/require"
 )
 

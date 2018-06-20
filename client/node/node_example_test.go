@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/kowala-tech/kcoin/node"
-	"github.com/kowala-tech/kcoin/p2p"
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/node"
+	"github.com/kowala-tech/kcoin/client/p2p"
+	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
 // SampleService is a trivial network service that can be attached to a node for

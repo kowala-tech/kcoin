@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	kowala "github.com/kowala-tech/kcoin"
-	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/rpc"
+	kowala "github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client/event"
+	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.

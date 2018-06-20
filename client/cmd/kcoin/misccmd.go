@@ -6,9 +6,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/cmd/utils"
-	"github.com/kowala-tech/kcoin/knode"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/cmd/utils"
+	"github.com/kowala-tech/kcoin/client/knode"
+	"github.com/kowala-tech/kcoin/client/params"
 	"gopkg.in/urfave/cli.v1"
 )
 

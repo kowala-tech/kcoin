@@ -23,8 +23,8 @@ import (
 	"crypto/elliptic"
 	"fmt"
 
-	"github.com/kowala-tech/kcoin/common/math"
-	"github.com/kowala-tech/kcoin/crypto/secp256k1"
+	"github.com/kowala-tech/kcoin/client/common/math"
+	"github.com/kowala-tech/kcoin/client/crypto/secp256k1"
 )
 
 func Ecrecover(hash, sig []byte) ([]byte, error) {

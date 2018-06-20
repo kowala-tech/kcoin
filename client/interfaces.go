@@ -6,8 +6,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // NotFound is returned by API methods if the requested item does not exist.

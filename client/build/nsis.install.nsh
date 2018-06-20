@@ -3,9 +3,9 @@ InstallDir "$InstDir"
 OutFile "${OUTPUTFILE}" # set through command line arguments
 
 # Links for "Add/Remove Programs"
-!define HELPURL "https://github.com/kowala-tech/kcoin/issues"
-!define UPDATEURL "https://github.com/kowala-tech/kcoin/releases"
-!define ABOUTURL "https://github.com/kowala-tech/kcoin#ethereum-go"
+!define HELPURL "https://github.com/kowala-tech/kcoin/client/issues"
+!define UPDATEURL "https://github.com/kowala-tech/kcoin/client/releases"
+!define ABOUTURL "https://github.com/kowala-tech/kcoin/client#ethereum-go"
 !define /date NOW "%Y%m%d"
 
 PageEx license

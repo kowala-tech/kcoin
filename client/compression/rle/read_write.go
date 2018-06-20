@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 const (

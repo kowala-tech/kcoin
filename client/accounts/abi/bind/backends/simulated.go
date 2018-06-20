@@ -8,17 +8,17 @@ import (
 	"sync"
 	"time"
 
-	kowala "github.com/kowala-tech/kcoin"
-	"github.com/kowala-tech/kcoin/accounts/abi/bind"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/math"
-	"github.com/kowala-tech/kcoin/consensus/tendermint"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/core/state"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/core/vm"
-	"github.com/kowala-tech/kcoin/kcoindb"
-	"github.com/kowala-tech/kcoin/params"
+	kowala "github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/math"
+	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
+	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/core/state"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/core/vm"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.

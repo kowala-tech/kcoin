@@ -9,9 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/mclock"
-	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/mclock"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 const (

@@ -26,12 +26,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/internal/debug"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/node"
-	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/internal/debug"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/node"
+	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
 const (

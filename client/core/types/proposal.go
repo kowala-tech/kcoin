@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/hexutil"
-	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
 //go:generate gencodec -type proposaldata -field-override proposaldataMarshalling -out gen_proposal_json.go

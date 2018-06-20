@@ -19,9 +19,9 @@ package core
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/core/state"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/client/core/state"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/core/vm"
 )
 
 // Validator is an interface which defines the standard for block validation. It

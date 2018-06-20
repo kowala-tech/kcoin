@@ -4,10 +4,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/core/types/mocks"
-	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/core/types/mocks"
+	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

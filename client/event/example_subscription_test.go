@@ -3,7 +3,7 @@ package event_test
 import (
 	"fmt"
 
-	"github.com/kowala-tech/kcoin/event"
+	"github.com/kowala-tech/kcoin/client/event"
 )
 
 func ExampleNewSubscription() {

@@ -6,10 +6,10 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/internal/kcoinapi"
-	"github.com/kowala-tech/kcoin/params"
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
+	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
 var maxPrice = big.NewInt(500 * params.Shannon)

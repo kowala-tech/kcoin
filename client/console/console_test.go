@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/internal/jsre"
-	"github.com/kowala-tech/kcoin/kcoin"
-	"github.com/kowala-tech/kcoin/node"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/internal/jsre"
+	"github.com/kowala-tech/kcoin/client/kcoin"
+	"github.com/kowala-tech/kcoin/client/node"
 )
 
 const (

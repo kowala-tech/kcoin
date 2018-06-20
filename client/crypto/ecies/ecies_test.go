@@ -40,7 +40,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 var dumpEnc bool

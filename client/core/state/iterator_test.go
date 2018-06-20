@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 // Tests that the node iterator indeed walks over the entire database contents.

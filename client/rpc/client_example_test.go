@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kcoin/rpc"
+	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
 // In this example, our client whishes to track the latest 'block number'

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 // In this test, nodes try to randomly resolve each other.

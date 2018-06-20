@@ -21,9 +21,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/math"
-	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/math"
+	"github.com/kowala-tech/kcoin/client/core/vm"
 )
 
 type JSONLogger struct {

@@ -7,7 +7,7 @@ import (
 
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

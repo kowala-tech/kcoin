@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin"
-	"github.com/kowala-tech/kcoin/accounts/abi"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client/accounts/abi"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to

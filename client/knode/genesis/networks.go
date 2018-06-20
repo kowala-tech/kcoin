@@ -1,6 +1,6 @@
 package genesis
 
-import "github.com/kowala-tech/kcoin/knode"
+import "github.com/kowala-tech/kcoin/client/knode"
 
 var Networks = map[string]map[string]Options{
 	knode.KUSD: {

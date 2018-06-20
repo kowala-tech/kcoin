@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common/mclock"
+	"github.com/kowala-tech/kcoin/client/common/mclock"
 )
 
 // Subscription represents a stream of events. The carrier of the events is typically a

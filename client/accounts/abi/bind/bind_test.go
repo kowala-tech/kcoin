@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 	"golang.org/x/tools/imports"
 )
 

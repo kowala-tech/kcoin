@@ -5,7 +5,7 @@ import (
 	"container/heap"
 	"errors"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 // Iterator is a key-value trie iterator that traverses a Trie.

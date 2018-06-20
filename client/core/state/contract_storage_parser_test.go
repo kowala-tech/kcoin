@@ -11,14 +11,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/accounts/abi"
-	"github.com/kowala-tech/kcoin/accounts/abi/bind"
-	"github.com/kowala-tech/kcoin/accounts/abi/bind/backends"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/core/state"
-	"github.com/kowala-tech/kcoin/crypto"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/accounts/abi"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind/backends"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/core/state"
+	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 //go:generate solc --bin --abi --overwrite --out test_contracts test_contracts/SmallInts.sol

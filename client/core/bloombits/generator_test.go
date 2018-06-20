@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // Tests that batched bloom bits are correctly rotated from the input bloom

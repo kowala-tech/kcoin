@@ -1,7 +1,7 @@
 pragma solidity 0.4.21;
 
 import "./Token.sol";
-import "github.com/kowala-tech/kcoin/contracts/ownership/contracts/Ownable.sol" as ownable;
+import "github.com/kowala-tech/kcoin/client/contracts/ownership/contracts/Ownable.sol" as ownable;
 
 contract MintableToken is Token, ownable.Ownable {
     event Mint(address indexed to, uint256 amount);

@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common/bitutil"
-	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/client/common/bitutil"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong

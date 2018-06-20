@@ -19,9 +19,9 @@ package state
 import (
 	"bytes"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/rlp"
-	"github.com/kowala-tech/kcoin/trie"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/rlp"
+	"github.com/kowala-tech/kcoin/client/trie"
 )
 
 // NewStateSync create a new state trie download scheduler.

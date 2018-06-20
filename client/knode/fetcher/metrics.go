@@ -3,7 +3,7 @@
 package fetcher
 
 import (
-	"github.com/kowala-tech/kcoin/metrics"
+	"github.com/kowala-tech/kcoin/client/metrics"
 )
 
 var (

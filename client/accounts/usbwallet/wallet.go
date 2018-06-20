@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/karalabe/hid"
-	kowala "github.com/kowala-tech/kcoin"
-	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/log"
+	kowala "github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 // Maximum time between wallet health checks to detect USB unplugs.

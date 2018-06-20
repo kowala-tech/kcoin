@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/cmd/utils"
-	"github.com/kowala-tech/kcoin/internal/debug"
+	"github.com/kowala-tech/kcoin/client/cmd/utils"
+	"github.com/kowala-tech/kcoin/client/internal/debug"
 	"gopkg.in/urfave/cli.v1"
 )
 

@@ -26,10 +26,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/cmd/internal/browser"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/cmd/internal/browser"
+	"github.com/kowala-tech/kcoin/client/params"
 
-	"github.com/kowala-tech/kcoin/cmd/utils"
+	"github.com/kowala-tech/kcoin/client/cmd/utils"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -41,7 +41,7 @@ var bugCommand = cli.Command{
 	Category:  "MISCELLANEOUS COMMANDS",
 }
 
-const issueUrl = "https://github.com/kowala-tech/kcoin/issues/new"
+const issueUrl = "https://github.com/kowala-tech/kcoin/client/issues/new"
 
 // reportBug reports a bug by opening a new URL to the go-ethereum GH issue
 // tracker and setting default values as the issue body.

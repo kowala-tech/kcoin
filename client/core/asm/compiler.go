@@ -23,8 +23,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/common/math"
-	"github.com/kowala-tech/kcoin/core/vm"
+	"github.com/kowala-tech/kcoin/client/common/math"
+	"github.com/kowala-tech/kcoin/client/core/vm"
 )
 
 // Compiler contains information about the parsed source

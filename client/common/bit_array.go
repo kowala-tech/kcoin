@@ -3,7 +3,7 @@ package common
 import (
 	"sync"
 
-	"github.com/kowala-tech/kcoin/log"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 // @TODO (rgeraldes) - add interval validation for the index (Get, Set)

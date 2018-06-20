@@ -3,8 +3,8 @@ package state
 import (
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/kcoindb"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
 )
 
 var addr = common.BytesToAddress([]byte("test"))

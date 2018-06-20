@@ -1,7 +1,7 @@
 package accounts
 
 import (
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

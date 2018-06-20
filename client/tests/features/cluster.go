@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/cluster"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/kcoinclient"
-	"github.com/kowala-tech/kcoin/knode/genesis"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/cluster"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/kcoinclient"
+	"github.com/kowala-tech/kcoin/client/knode/genesis"
 	"github.com/lazada/awg"
 )
 

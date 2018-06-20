@@ -5,13 +5,13 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/accounts/abi"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/contracts/consensus"
-	"github.com/kowala-tech/kcoin/contracts/oracle"
-	"github.com/kowala-tech/kcoin/contracts/ownership"
-	"github.com/kowala-tech/kcoin/core"
-	"github.com/kowala-tech/kcoin/core/vm/runtime"
+	"github.com/kowala-tech/kcoin/client/accounts/abi"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/ownership"
+	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 )
 
 type contract struct {
@@ -219,7 +219,7 @@ func registerValidators(contract *contract, opts *validGenesisOptions) error {
 			"transfer",
 			contract.address,
 			validator.deposit,
-			[]byte("not_zero"), // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/issues/285
+			[]byte("not_zero"), // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/285
 			consensus.RegistrationHandler,
 		)
 		if err != nil {

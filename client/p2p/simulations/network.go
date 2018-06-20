@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/kowala-tech/kcoin/event"
-	"github.com/kowala-tech/kcoin/log"
-	"github.com/kowala-tech/kcoin/p2p"
-	"github.com/kowala-tech/kcoin/p2p/discover"
-	"github.com/kowala-tech/kcoin/p2p/simulations/adapters"
+	"github.com/kowala-tech/kcoin/client/event"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/p2p"
+	"github.com/kowala-tech/kcoin/client/p2p/discover"
+	"github.com/kowala-tech/kcoin/client/p2p/simulations/adapters"
 )
 
 // NetworkConfig defines configuration options for starting a Network

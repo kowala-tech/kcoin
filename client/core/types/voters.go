@@ -6,8 +6,8 @@ import (
 
 	"io"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/rlp"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
 var ErrInvalidParams = errors.New("voters set needs at least one voter")

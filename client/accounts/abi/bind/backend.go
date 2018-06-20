@@ -5,9 +5,9 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 var (

@@ -4,12 +4,12 @@ import (
 	"io/ioutil"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/accounts"
-	"github.com/kowala-tech/kcoin/accounts/keystore"
-	"github.com/kowala-tech/kcoin/cluster"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
-	"github.com/kowala-tech/kcoin/kcoinclient"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts/keystore"
+	"github.com/kowala-tech/kcoin/client/cluster"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/kcoinclient"
 )
 
 type Context struct {

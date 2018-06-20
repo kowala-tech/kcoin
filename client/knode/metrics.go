@@ -1,8 +1,8 @@
 package knode
 
 import (
-	"github.com/kowala-tech/kcoin/metrics"
-	"github.com/kowala-tech/kcoin/p2p"
+	"github.com/kowala-tech/kcoin/client/metrics"
+	"github.com/kowala-tech/kcoin/client/p2p"
 )
 
 var (

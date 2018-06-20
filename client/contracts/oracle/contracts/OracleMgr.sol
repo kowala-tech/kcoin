@@ -1,6 +1,6 @@
 pragma solidity 0.4.21;
 
-import "github.com/kowala-tech/kcoin/contracts/lifecycle/contracts/Pausable.sol" as pausable;
+import "github.com/kowala-tech/kcoin/client/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 
 contract OracleMgr is pausable.Pausable {
     uint public baseDeposit;       

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/core/types"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // senderFromServer is a types.Signer that remembers the sender address returned by the RPC

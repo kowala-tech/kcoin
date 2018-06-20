@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
 )
 
 // Tests that data bitset encoding and decoding works and is bijective.

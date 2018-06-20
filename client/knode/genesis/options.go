@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/params"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/pkg/errors"
 )
 

@@ -20,8 +20,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/crypto"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 func TestEventId(t *testing.T) {

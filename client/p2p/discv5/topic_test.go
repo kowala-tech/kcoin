@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/kcoin/common/mclock"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/mclock"
 )
 
 func TestTopicRadius(t *testing.T) {
