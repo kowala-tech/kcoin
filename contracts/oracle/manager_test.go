@@ -21,8 +21,8 @@ const secondsPerDay = 86400
 var (
 	owner, _       = crypto.GenerateKey()
 	user, _        = crypto.GenerateKey()
-	initialBalance = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Kcoin)) // 10 kUSD
-	baseDeposit    = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin))  // 1 kUSD
+	initialBalance = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Kcoin)) // 10 Kcoin
+	baseDeposit    = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin))  // 1 Kcoin
 	maxNumOracles  = common.Big256
 	freezePeriod   = common.Big32
 	oneDollar      = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin)) // $1
