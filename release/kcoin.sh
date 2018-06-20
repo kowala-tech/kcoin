@@ -4,6 +4,7 @@ set -e
 TESTNET=false;
 NEW_ACC=false;
 NEW_ACC_PASS="";
+GENESIS_PATH="";
 
 command="";
 
@@ -23,6 +24,9 @@ do
 	  "--new-account-password="*)
 		NEW_ACC_PASS="${opt#*=}"
 		;;
+	  "--genesis-path="*)
+		GENESIS_PATH="${opt#*=}"
+		;;
 	  *)
 		command="$command$opt " # make sure this passed to the binary
 		;;
@@ -32,8 +36,8 @@ done
 cd /kcoin
 
 case $TESTNET in
-	(true)  ./kcoin init /kcoin/testnet_genesis.json;;
-	(false) ./kcoin init /kcoin/genesis.json;;
+	(true)  ./kcoin init --testnet "$GENESIS_PATH";;
+	(false) ./kcoin init "$GENESIS_PATH";;
 esac
 
 case $NEW_ACC in
@@ -44,7 +48,7 @@ case $NEW_ACC in
 		;;
 esac
 
-./control --ipc /root/.kcoin/kcoin.ipc &
+./control --ipc /root/.kcoin/kusd/kcoin.ipc &
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to start control panel: $status"

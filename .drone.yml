@@ -8,7 +8,6 @@ clone:
     tags: true
 
 pipeline:
-
   test:
     group: testing
     image: kowalatech/go:1.0.3
@@ -17,14 +16,6 @@ pipeline:
       - make lint
     when:
       event: [pull_request]
-
-  build:
-    image: kowalatech/go:1.0.3
-    commands:
-      - make
-    when:
-      event: [push, tag]
-      branch: [master, dev, refs/tags/*]
 
   docker_kusd_dev:
     group: docker-deployment
@@ -91,3 +82,32 @@ pipeline:
     dockerfile: faucet.Dockerfile
     when:
       event: tag
+
+  build-artifacts:
+    image: kowalatech/go:1.0.3
+    environment:
+      - DOCKER_HOST=tcp://docker:2375
+    commands:
+      - make kcoin-cross
+    when:
+      event: [push, tag]
+      branch: [dev]
+
+  s3:
+    image: plugins/s3
+    bucket: releases.kowala.io
+    region: us-east-1
+    acl: public-read
+    source: build/bin/kcoin-*.zip
+    strip_prefix: build/bin/
+    target: /
+    secrets: [aws_access_key_id, aws_secret_access_key]
+    when:
+      event: [push, tag]
+      branch: [dev]
+
+services:
+  docker:
+    image: docker:dind
+    command: [ '-l', 'fatal' ]
+    privileged: true

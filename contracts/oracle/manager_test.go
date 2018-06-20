@@ -21,11 +21,11 @@ const secondsPerDay = 86400
 var (
 	owner, _       = crypto.GenerateKey()
 	user, _        = crypto.GenerateKey()
-	initialBalance = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Ether)) // 10 kUSD
-	baseDeposit    = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Ether))  // 1 kUSD
+	initialBalance = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.KUSD)) // 10 kUSD
+	baseDeposit    = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KUSD))  // 1 kUSD
 	maxNumOracles  = common.Big256
 	freezePeriod   = common.Big32
-	oneDollar      = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Ether)) // $1
+	oneDollar      = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KUSD)) // $1
 )
 
 type OracleMgrSuite struct {
@@ -77,7 +77,7 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr() {
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
 		getAddress(owner): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Ether)),
+			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.KUSD)),
 		},
 	})
 	req.NotNil(backend)
@@ -114,7 +114,7 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_MaxNumOraclesEqualZero() {
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
 		getAddress(owner): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Ether)),
+			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.KUSD)),
 		},
 	})
 	req.NotNil(backend)
@@ -332,7 +332,7 @@ func (suite *OracleMgrSuite) TestReleaseDeposits_LockedDeposits() {
 	req.NotNil(initialBalance)
 
 	// @NOTE (rgeraldes) - leave funds for the gas costs (1 kUSD)
-	deposit := new(big.Int).Sub(initialBalance, new(big.Int).Sub(initialBalance, new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Ether))))
+	deposit := new(big.Int).Sub(initialBalance, new(big.Int).Sub(initialBalance, new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KUSD))))
 	req.NoError(suite.registerOracle(user, deposit))
 	req.NoError(suite.deregisterOracle(user))
 	req.NoError(suite.releaseDeposits(user))
@@ -356,7 +356,7 @@ func (suite *OracleMgrSuite) TestReleaseDeposits_UnlockedDeposit() {
 	req.NotNil(initialBalance)
 
 	// @NOTE (rgeraldes) - leave funds for the gas costs (1 kUSD)
-	deposit := new(big.Int).Sub(initialBalance, new(big.Int).Sub(initialBalance, new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Ether))))
+	deposit := new(big.Int).Sub(initialBalance, new(big.Int).Sub(initialBalance, new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KUSD))))
 	req.NoError(suite.registerOracle(user, deposit))
 	req.NoError(suite.deregisterOracle(user))
 

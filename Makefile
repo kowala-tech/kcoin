@@ -3,10 +3,7 @@
 # don't need to bother with make.
 
 .PHONY: kcoin android ios kcoin-cross swarm evm genesis all test clean
-.PHONY: kcoin-linux kcoin-linux-386 kcoin-linux-amd64 kcoin-linux-mips64 kcoin-linux-mips64le
-.PHONY: kcoin-linux-arm kcoin-linux-arm-5 kcoin-linux-arm-6 kcoin-linux-arm-7 kcoin-linux-arm64
-.PHONY: kcoin-darwin kcoin-darwin-386 kcoin-darwin-amd64
-.PHONY: kcoin-windows kcoin-windows-386 kcoin-windows-amd64
+.PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
 
 GOBIN = $(pwd)/build/bin
 GO ?= latest
@@ -82,96 +79,32 @@ devtools:
 
 # Cross Compilation Targets (xgo)
 
-kcoin-cross: kcoin-linux kcoin-darwin kcoin-windows kcoin-android kcoin-ios
-	@echo "Full cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-*
+kcoin-cross: kcoin-cross-build kcoin-cross-compress kcoin-cross-rename
+	@echo "Full cross compilation done."
 
-kcoin-linux: kcoin-linux-386 kcoin-linux-amd64 kcoin-linux-arm kcoin-linux-mips64 kcoin-linux-mips64le
-	@echo "Linux cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-*
+kcoin-cross-build:
+	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
+	mv build/bin/kcoin-darwin-10.6-amd64 build/bin/kcoin-osx-10.6-amd64
 
-kcoin-linux-386:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/386 -v ./cmd/kcoin
-	@echo "Linux 386 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep 386
+kcoin-cross-compress:
+	cd build/bin; for f in kcoin*; do zip $$f.zip $$f; rm $$f; done; cd -
 
-kcoin-linux-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64 -v ./cmd/kcoin
-	@echo "Linux amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep amd64
-
-kcoin-linux-arm: kcoin-linux-arm-5 kcoin-linux-arm-6 kcoin-linux-arm-7 kcoin-linux-arm64
-	@echo "Linux ARM cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm
-
-kcoin-linux-arm-5:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-5 -v ./cmd/kcoin
-	@echo "Linux ARMv5 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm-5
-
-kcoin-linux-arm-6:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-6 -v ./cmd/kcoin
-	@echo "Linux ARMv6 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm-6
-
-kcoin-linux-arm-7:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm-7 -v ./cmd/kcoin
-	@echo "Linux ARMv7 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm-7
-
-kcoin-linux-arm64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/arm64 -v ./cmd/kcoin
-	@echo "Linux ARM64 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep arm64
-
-kcoin-linux-mips:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips --ldflags '-extldflags "-static"' -v ./cmd/kcoin
-	@echo "Linux MIPS cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep mips
-
-kcoin-linux-mipsle:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mipsle --ldflags '-extldflags "-static"' -v ./cmd/kcoin
-	@echo "Linux MIPSle cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep mipsle
-
-kcoin-linux-mips64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64 --ldflags '-extldflags "-static"' -v ./cmd/kcoin
-	@echo "Linux MIPS64 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep mips64
-
-kcoin-linux-mips64le:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/mips64le --ldflags '-extldflags "-static"' -v ./cmd/kcoin
-	@echo "Linux MIPS64le cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-linux-* | grep mips64le
-
-kcoin-darwin: kcoin-darwin-386 kcoin-darwin-amd64
-	@echo "Darwin cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-darwin-*
-
-kcoin-darwin-386:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/386 -v ./cmd/kcoin
-	@echo "Darwin 386 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-darwin-* | grep 386
-
-kcoin-darwin-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=darwin/amd64 -v ./cmd/kcoin
-	@echo "Darwin amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-darwin-* | grep amd64
-
-kcoin-windows: kcoin-windows-386 kcoin-windows-amd64
-	@echo "Windows cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-windows-*
-
-kcoin-windows-386:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/386 -v ./cmd/kcoin
-	@echo "Windows 386 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-windows-* | grep 386
-
-kcoin-windows-amd64:
-	build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/kcoin
-	@echo "Windows amd64 cross compilation done:"
-	@ls -ld $(GOBIN)/kcoin-windows-* | grep amd64
-
+kcoin-cross-rename:
+ifdef DRONE_TAG
+	cd build/bin && for f in kcoin-*; do \
+		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_TAG)"); print }');\
+		cp $$f $$release;\
+		mv $$f $$version;\
+	done;
+else
+	cd build/bin && for f in kcoin-*; do \
+		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-unstable"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_COMMIT_SHA)"); print }');\
+		cp $$f $$release;\
+		mv $$f $$version;\
+	done;
+endif
 
 ## Docker
 

@@ -2,5 +2,4 @@
 set -e
 
 ./faucet \
-  --genesis /faucet/genesis.json \
   $@

@@ -257,8 +257,12 @@ func doInstall(cmdline []string) {
 
 func buildFlags(env build.Environment) (flags []string) {
 	var ld []string
+	ld = append(ld, "-X", fmt.Sprintf("main.buildTime=%v", time.Now().UnixNano()))
 	if env.Commit != "" {
 		ld = append(ld, "-X", "main.gitCommit="+env.Commit)
+	}
+	if env.Tag != "" {
+		ld = append(ld, "-X", "main.gitTag="+env.Tag)
 	}
 	if runtime.GOOS == "darwin" {
 		ld = append(ld, "-s")

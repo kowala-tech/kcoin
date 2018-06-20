@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"time"
 
 	"github.com/kowala-tech/kcoin/common"
 	"github.com/kowala-tech/kcoin/core"
@@ -14,6 +13,8 @@ import (
 	"github.com/kowala-tech/kcoin/kcoindb"
 	"github.com/kowala-tech/kcoin/params"
 )
+
+const genesisTimestamp = 1528988194
 
 type Generator interface {
 	Generate(opts *Options) (*core.Genesis, error)
@@ -70,14 +71,13 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 	}
 
 	genesis := &core.Genesis{
-		Timestamp: uint64(time.Now().Unix()),
+		Timestamp: uint64(genesisTimestamp),
 		GasLimit:  4700000,
 		Alloc:     gen.alloc,
 		Config: &params.ChainConfig{
 			ChainID:    getNetwork(validOptions.network),
 			Tendermint: getConsensusEngine(validOptions.consensusEngine),
 		},
-		// @TODO (rgeraldes)
 		ExtraData: getExtraData(opts.ExtraData),
 	}
 
