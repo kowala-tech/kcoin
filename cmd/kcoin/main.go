@@ -80,7 +80,6 @@ var (
 		utils.NodeKeyHexFlag,
 		utils.DevModeFlag,
 		utils.TestnetFlag,
-		utils.CurrencyFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,

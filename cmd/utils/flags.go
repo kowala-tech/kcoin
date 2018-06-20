@@ -122,11 +122,6 @@ var (
 		Name:  "identity",
 		Usage: "Custom node name",
 	}
-	CurrencyFlag = cli.StringFlag{
-		Name:  "currency",
-		Usage: "Currency to use with the client",
-		Value: knode.DefaultConfig.Currency,
-	}
 	DocRootFlag = DirectoryFlag{
 		Name:  "docroot",
 		Usage: "Document Root for HTTPClient file scheme",
@@ -894,7 +889,6 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	} else if ctx.GlobalBool(TestnetFlag.Name) {
 		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	}
-
 
 	// Ethereum needs to know maxPeers to calculate the light server peer ratio.
 	// TODO(fjl): ensure Ethereum can get MaxPeers from node.

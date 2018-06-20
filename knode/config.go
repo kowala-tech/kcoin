@@ -11,8 +11,6 @@ import (
 	"github.com/kowala-tech/kcoin/params"
 )
 
-const KUSD = "kusd"
-
 // DefaultConfig contains default settings for use on the Kowala main net.
 var DefaultConfig = Config{
 	SyncMode:      downloader.FastSync,
@@ -26,7 +24,6 @@ var DefaultConfig = Config{
 		Blocks:     10,
 		Percentile: 50,
 	},
-	Currency: KUSD,
 }
 
 //go:generate gencodec -type Config -field-override configMarshaling -formats toml -out gen_config.go
@@ -67,8 +64,6 @@ type Config struct {
 
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
-
-	Currency string
 }
 
 type configMarshaling struct {

@@ -1,9 +1,7 @@
 package genesis
 
-import "github.com/kowala-tech/kcoin/knode"
-
 var Networks = map[string]map[string]Options{
-	knode.KUSD: {
+	"kusd": {
 		MainNetwork: Options{
 			Network:   MainNetwork,
 			ExtraData: "Kowala's first block",

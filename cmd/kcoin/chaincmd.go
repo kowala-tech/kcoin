@@ -34,7 +34,6 @@ var (
 			utils.DataDirFlag,
 			utils.LightModeFlag,
 			utils.TestnetFlag,
-			utils.CurrencyFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -130,9 +129,9 @@ func initGenesis(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
 	genesisPath := ctx.Args().First()
 	networkKey := extractNetworkKey(ctx)
-	kCoin := ctx.GlobalString(utils.CurrencyFlag.Name)
+	keyKoin := extractKeyCoin(ctx)
 
-	genesis, err := genesisgen.NetworkGenesisBlock(genesisPath, kCoin, networkKey)
+	genesis, err := genesisgen.NetworkGenesisBlock(genesisPath, keyKoin, networkKey)
 	if err != nil {
 		return err
 	}
@@ -155,6 +154,11 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+//extractKeyCoin returns the keycoin used for launching the client. For now it always return kusd.
+func extractKeyCoin(context *cli.Context) string {
+	return "kusd"
 }
 
 //extractNetworkKey returns the network key based on the params of the command.
