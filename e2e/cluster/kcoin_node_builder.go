@@ -71,7 +71,7 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 	}
 
 	for i, account := range builder.accounts {
-		file := fmt.Sprintf("/root/.kcoin/keystore/%v.json", i)
+		file := fmt.Sprintf("/root/.kcoin/kusd/keystore/%v.json", i)
 		files[file] = account
 	}
 
