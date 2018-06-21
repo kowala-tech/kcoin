@@ -9,7 +9,6 @@ clone:
 
 pipeline:
   test:
-    group: testing
     image: kowalatech/go:1.0.3
     commands:
       - make test
@@ -17,8 +16,18 @@ pipeline:
     when:
       event: [pull_request]
 
+  # Builds the docker image to be used in the `e2e` step right into the docker service.
+  docker-image-for-e2e:
+    image: docker
+    environment:
+    - DOCKER_HOST=tcp://docker:2375
+    commands: 
+    - docker build -t kowalatech/kusd:dev -f client/kcoin.Dockerfile .
+    - docker build -t kowalatech/bootnode:dev -f client/bootnode.Dockerfile .
+    when:
+      event: [pull_request]
+
   e2e:
-    group: testing
     image: kowalatech/go:1.0.3
     environment:
     - DOCKER_HOST=tcp://docker:2375
