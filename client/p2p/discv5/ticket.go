@@ -13,6 +13,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/mclock"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -626,12 +627,14 @@ func (s *ticketStore) gotTopicNodes(from *Node, hash common.Hash, nodes []rpcNod
 		return false
 	}
 	for _, node := range nodes {
-		log.Error(fmt.Sprintf("=== gotTopicNodes NODE %q", node.ID.String()))
+		log.Error(fmt.Sprintf("=== gotTopicNodes NODE %v", spew.Sdump(node)))
 		ip := node.IP
 		if ip.IsUnspecified() || ip.IsLoopback() {
 			ip = from.IP
 		}
-		n := NewNode(node.ID, ip, node.UDP-1, node.TCP-1) // subtract one from port while discv5 is running in test mode on UDPport+1
+
+		//fixme: beware! for some reason it was "node.UDP-1, node.TCP-1". if your discovery doesn't work, maybe this is the reason.
+		n := NewNode(node.ID, ip, node.UDP, node.TCP) // subtract one from port while discv5 is running in test mode on UDPport+1
 		select {
 		case chn <- n:
 		default:
