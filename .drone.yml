@@ -23,7 +23,7 @@ pipeline:
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: kcoin.Dockerfile
+    dockerfile: client/kcoin.Dockerfile
     when:
       branch: [dev]
       event: [push, tag]
@@ -34,7 +34,7 @@ pipeline:
     repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: bootnode.Dockerfile
+    dockerfile: client/bootnode.Dockerfile
     when:
       branch: [dev]
       event: [push, tag]
@@ -45,7 +45,7 @@ pipeline:
     repo: kowalatech/faucet
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: faucet.Dockerfile
+    dockerfile: client/faucet.Dockerfile
     when:
       branch: [dev]
       event: [push, tag]
@@ -57,7 +57,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: kcoin.Dockerfile
+    dockerfile: client/kcoin.Dockerfile
     when:
       event: tag
 
@@ -68,7 +68,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: bootnode.Dockerfile
+    dockerfile: client/bootnode.Dockerfile
     when:
       event: tag
 
@@ -79,7 +79,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: faucet.Dockerfile
+    dockerfile: client/faucet.Dockerfile
     when:
       event: tag
 
@@ -98,8 +98,8 @@ pipeline:
     bucket: releases.kowala.io
     region: us-east-1
     acl: public-read
-    source: build/bin/kcoin-*.zip
-    strip_prefix: build/bin/
+    source: client/build/bin/kcoin-*.zip
+    strip_prefix: client/build/bin/
     target: /
     secrets: [aws_access_key_id, aws_secret_access_key]
     when:
