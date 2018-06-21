@@ -251,7 +251,7 @@ func (runner *dockerNodeRunner) copyFile(nodeID NodeID, filename string, content
 }
 
 func KcoinExecCommand(command string) []string {
-	return []string{"./kcoin", "attach", "--exec", command}
+	return []string{"./kcoin", "attach", "/root/.kcoin/kusd/kcoin.ipc", "--exec", command}
 }
 
 func (runner *dockerNodeRunner) logStream(nodeID NodeID, w io.Writer) error {
