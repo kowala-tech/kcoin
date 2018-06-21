@@ -84,7 +84,7 @@ kcoin-cross: kcoin-cross-build kcoin-cross-compress kcoin-cross-rename
 
 kcoin-cross-build:
 	cd client; build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
-	mv build/bin/kcoin-darwin-10.6-amd64 build/bin/kcoin-osx-10.6-amd64
+	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-osx-10.6-amd64
 
 kcoin-cross-compress:
 	cd client/build/bin; for f in kcoin*; do zip $$f.zip $$f; rm $$f; done; cd -
