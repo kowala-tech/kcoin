@@ -9,7 +9,7 @@ import (
 
 	"github.com/DATA-DOG/godog"
 	"github.com/kowala-tech/kcoin/e2e/cluster"
-	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/e2e/common"
 	"github.com/kowala-tech/kcoin/client/log"
 )
 
@@ -74,7 +74,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.globalCtx.bootnode).
-		WithLogLevel(3).
+		WithLogLevel(5).
 		WithID(ctx.nodeID().String()).
 		WithSyncMode("full").
 		WithNetworkId(ctx.globalCtx.chainID.String()).

@@ -38,7 +38,7 @@ func FeatureContext(opts *FeatureContextOpts) {
 		}
 	})
 
-	opts.suite.BeforeScenario(func(interface{}) {
+	opts.suite.AfterScenario(func(scenario interface{}, err error) {
 		context.Reset()
 		validationCtx.Reset()
 	})

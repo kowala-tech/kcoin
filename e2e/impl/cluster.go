@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/e2e/cluster"
+	"github.com/kowala-tech/kcoin/e2e/common"
 	"github.com/kowala-tech/kcoin/client/accounts"
-	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"
 	"github.com/kowala-tech/kcoin/client/knode/genesis"
 )
@@ -165,7 +165,7 @@ func (ctx *Context) runBootnode() error {
 func (ctx *Context) runGenesisValidator() error {
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.bootnode).
-		WithLogLevel(3).
+		WithLogLevel(5).
 		WithID("genesis-validator-"+ctx.nodeSuffix).
 		WithSyncMode("full").
 		WithNetworkId(ctx.chainID.String()).
@@ -191,11 +191,12 @@ func (ctx *Context) runRpc() error {
 
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.bootnode).
-		WithLogLevel(3).
+		WithLogLevel(5).
 		WithID("rpc-" + ctx.nodeSuffix).
 		WithSyncMode("full").
 		WithNetworkId(ctx.chainID.String()).
 		WithGenesis(ctx.genesis).
+		WithAccount(ctx.AccountsStorage, ctx.seederAccount).
 		WithRpc(ctx.rpcPort).
 		NodeSpec()
 

@@ -19,7 +19,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
-	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/e2e/common"
 	"github.com/kowala-tech/kcoin/client/log"
 )
 
