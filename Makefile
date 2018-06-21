@@ -136,4 +136,4 @@ ifndef GODOG_BIN
 	@echo "Installing godog..."
 	@go get github.com/DATA-DOG/godog/cmd/godog
 endif
-	@cd client; @build/env.sh sh -c "cd tests && godog -c=$(NPROCS) -f=progress ../features"
+	@cd client; build/env.sh sh -c "cd tests && godog -c=$(NPROCS) -f=progress ../features"
