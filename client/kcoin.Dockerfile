@@ -15,4 +15,4 @@ EXPOSE 22334/udp
 EXPOSE 8080
 ADD client/release/kcoin.sh .
 ENTRYPOINT ["./kcoin.sh"]
-RUN mkdir -p /root/.kcoin/keystore
+RUN mkdir -p /root/.kcoin/kusd/keystore
