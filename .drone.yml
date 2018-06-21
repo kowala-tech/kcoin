@@ -1,6 +1,6 @@
 workspace:
   base: /go
-  path: src/github.com/kowala-tech/kcoin
+  path: src/github.com/kowala-tech/kcoin/client
 
 clone:
   git:
@@ -17,21 +17,13 @@ pipeline:
     when:
       event: [pull_request]
 
-  build:
-    image: kowalatech/go:1.0.3
-    commands:
-      - make
-    when:
-      event: [push, tag]
-      branch: [master, dev, refs/tags/*]
-
   docker_kusd_dev:
     group: docker-deployment
     image: plugins/docker
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: kcoin.Dockerfile
+    dockerfile: client/kcoin.Dockerfile
     when:
       branch: [dev]
       event: [push, tag]
@@ -42,7 +34,7 @@ pipeline:
     repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: bootnode.Dockerfile
+    dockerfile: client/bootnode.Dockerfile
     when:
       branch: [dev]
       event: [push, tag]
@@ -53,7 +45,7 @@ pipeline:
     repo: kowalatech/faucet
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: faucet.Dockerfile
+    dockerfile: client/faucet.Dockerfile
     when:
       branch: [dev]
       event: [push, tag]
@@ -65,7 +57,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: kcoin.Dockerfile
+    dockerfile: client/kcoin.Dockerfile
     when:
       event: tag
 
@@ -76,7 +68,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: bootnode.Dockerfile
+    dockerfile: client/bootnode.Dockerfile
     when:
       event: tag
 
@@ -87,7 +79,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: faucet.Dockerfile
+    dockerfile: client/faucet.Dockerfile
     when:
       event: tag
 
@@ -106,13 +98,29 @@ pipeline:
     bucket: releases.kowala.io
     region: us-east-1
     acl: public-read
-    source: build/bin/kcoin-*.zip
-    strip_prefix: build/bin/
+    source: client/build/bin/kcoin-*.zip
+    strip_prefix: client/build/bin/
     target: /
     secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       event: [push, tag]
       branch: [dev]
+
+  notify-dev:
+    group: notify
+    image: plugins/slack
+    secrets: [ slack_webhook ] 
+    channel: ci-notifications
+    username: drone
+    template: >
+        *CI build #{{build.number}}* ({{build.event}} to `{{build.branch}}`{{#if build.pull}}[PR #{{build.pull}}]{{/if}} by @{{build.author}}) *{{#success build.status}}successful{{else}}failed{{/success}}* after {{since build.started}}
+
+        _${DRONE_COMMIT_MESSAGE}_
+        
+        {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}>
+    when:
+      status: failure 
+      event: [push, tag, pull_request]
 
 services:
   docker:
