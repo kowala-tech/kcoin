@@ -10,3 +10,5 @@ client/build/bin
 e2e
 notifications/vendor
 
+*.mp4
+*.ppm
