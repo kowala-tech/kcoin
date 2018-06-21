@@ -30,6 +30,7 @@ func BootnodeSpec(nodeSuffix string) (*NodeSpec, error) {
 		Image: "kowalatech/bootnode:dev",
 		Cmd: []string{
 			"--nodekeyhex", randStringBytes(64),
+			"--v5",
 		},
 		Files: map[string][]byte{},
 	}

@@ -1,45 +1,48 @@
-package features
+package impl
 
 import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/kowala-tech/kcoin/e2e/cluster"
 	"github.com/kowala-tech/kcoin/client/accounts"
-	"github.com/kowala-tech/kcoin/client/cluster"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"
 	"github.com/kowala-tech/kcoin/client/knode/genesis"
-	"github.com/lazada/awg"
 )
 
 var (
 	enodeSecretRegexp = regexp.MustCompile(`enode://([a-f0-9]*)@`)
+	genesisMtx        sync.Mutex
 )
 
 func (ctx *Context) DeleteCluster() error {
 	return ctx.nodeRunner.StopAll()
 }
 
-func (ctx *Context) PrepareCluster() error {
+func (ctx *Context) PrepareCluster(logsToStdout bool) error {
 	var err error
-	logsDir := "./logs"
 
-	if err := ctx.initLogs(logsDir); err != nil {
-		return err
+	nodeRunnerOpts := &cluster.NewNodeRunnerOpts{
+		Feature:      ctx.Name,
+		LogsToStdout: logsToStdout,
+	}
+	if !logsToStdout {
+		logsDir := "./logs"
+
+		if err := ctx.initLogs(logsDir); err != nil {
+			return err
+		}
+		nodeRunnerOpts.LogsDir = logsDir
 	}
 
-	if ctx.nodeRunner, err = cluster.NewDockerNodeRunner(logsDir, ctx.Name); err != nil {
-		return err
-	}
-
-	if err = ctx.buildDockerImages(); err != nil {
+	if ctx.nodeRunner, err = cluster.NewDockerNodeRunner(nodeRunnerOpts); err != nil {
 		return err
 	}
 
@@ -63,13 +66,11 @@ var initLogsOnce sync.Once
 func (ctx *Context) initLogs(logsDir string) error {
 	var err error
 	initLogsOnce.Do(func() {
-		if err = os.RemoveAll(logsDir); err != nil {
+		err = createDir(logsDir)
+		if err != nil {
 			return
 		}
-
-		if err = os.Mkdir(logsDir, 0700); err != nil {
-			return
-		}
+		err = clearDir(logsDir)
 	})
 
 	return err
@@ -124,22 +125,6 @@ func (ctx *Context) newAccount() (*accounts.Account, error) {
 }
 
 var initImagesOnce sync.Once
-
-func (ctx *Context) buildDockerImages() error {
-	wg := awg.AdvancedWaitGroup{}
-
-	initImagesOnce.Do(func() {
-		fmt.Println("Building docker images")
-		wg.Add(func() error {
-			return ctx.nodeRunner.BuildDockerImage("kowalatech/bootnode:dev", "bootnode.Dockerfile")
-		})
-		wg.Add(func() error {
-			return ctx.nodeRunner.BuildDockerImage("kowalatech/kusd:dev", "kcoin.Dockerfile")
-		})
-	})
-
-	return wg.SetStopOnError(true).Start().GetLastError()
-}
 
 func (ctx *Context) runBootnode() error {
 	bootnode, err := cluster.BootnodeSpec(ctx.nodeSuffix)
@@ -258,8 +243,11 @@ func (ctx *Context) triggerGenesisValidation() error {
 }
 
 func (ctx *Context) buildGenesis() error {
-	validatorAddr := ctx.genesisValidatorAccount.Address.Hex()
-	baseDeposit := uint64(10000000) // 10000000 mUSD
+	genesisMtx.Lock()
+	defer genesisMtx.Unlock()
+
+	genesisValidatorAddr := ctx.genesisValidatorAccount.Address.Hex()
+	baseDeposit := uint64(20)
 
 	newGenesis, err := genesis.Generate(genesis.Options{
 		Network: "test",
@@ -269,7 +257,7 @@ func (ctx *Context) buildGenesis() error {
 			FreezePeriod:     30,
 			BaseDeposit:      baseDeposit,
 			Validators: []genesis.Validator{{
-				Address: validatorAddr,
+				Address: genesisValidatorAddr,
 				Deposit: baseDeposit,
 			}},
 			MiningToken: &genesis.MiningTokenOpts{
@@ -277,7 +265,7 @@ func (ctx *Context) buildGenesis() error {
 				Symbol:   "mUSD",
 				Cap:      1000,
 				Decimals: 18,
-				Holders:  []genesis.TokenHolder{{Address: validatorAddr, NumTokens: baseDeposit}},
+				Holders:  []genesis.TokenHolder{{Address: genesisValidatorAddr, NumTokens: baseDeposit * 3}},
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
@@ -289,6 +277,20 @@ func (ctx *Context) buildGenesis() error {
 			MaxNumOracles: 10,
 			FreezePeriod:  0,
 			BaseDeposit:   0,
+		},
+		PrefundedAccounts: []genesis.PrefundedAccount{
+			{
+				Address: ctx.genesisValidatorAccount.Address.Hex(),
+				Balance: baseDeposit * 10,
+			},
+			{
+				Address: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+				Balance: baseDeposit * 10,
+			},
+			{
+				Address: ctx.seederAccount.Address.Hex(),
+				Balance: baseDeposit * 1000,
+			},
 		},
 	})
 	if err != nil {

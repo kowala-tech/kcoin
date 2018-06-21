@@ -37,6 +37,7 @@ func NewKcoinNodeBuilder() *KcoinNodeBuilder {
 
 func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 	cmd := []string{
+		"--testnet",
 		"--gasprice", "1",
 		"--networkid", builder.networkId,
 		"--bootnodes", builder.bootnode,
@@ -52,7 +53,7 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 	if builder.rpcPort != nil {
 		cmd = append(cmd, "--rpc")
 		cmd = append(cmd, "--rpcaddr", "0.0.0.0")
-		cmd = append(cmd, "--rpccorsdomain", "*")
+		cmd = append(cmd, "--rpccorsdomain", `"*"`)
 		cmd = append(cmd, "--rpcport", fmt.Sprintf("%v", *builder.rpcPort))
 		portMapping[*builder.rpcPort] = *builder.rpcPort
 	}
@@ -65,6 +66,7 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 	}
 
 	if len(builder.genesisContent) > 0 {
+		cmd = append(cmd, "--genesis-path=/kcoin/genesis.json")
 		files["/kcoin/genesis.json"] = builder.genesisContent
 	}
 

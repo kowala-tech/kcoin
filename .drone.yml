@@ -1,6 +1,6 @@
 workspace:
-  base: /go
-  path: src/github.com/kowala-tech/kcoin/client
+  base: /kowala/workspace
+  path: src/github.com/kowala-tech/kcoin
 
 clone:
   git:
@@ -14,6 +14,17 @@ pipeline:
     commands:
       - make test
       - make lint
+    when:
+      event: [pull_request]
+
+  e2e:
+    group: testing
+    image: kowalatech/go:1.0.3
+    environment:
+    - DOCKER_HOST=tcp://docker:2375
+    - DOCKER_PUBLIC_IP=docker
+    commands:
+      - make e2e
     when:
       event: [pull_request]
 

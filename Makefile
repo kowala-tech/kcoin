@@ -4,6 +4,7 @@
 
 .PHONY: kcoin android ios kcoin-cross swarm evm genesis all test clean
 .PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
+.PHONY: e2e
 
 GOBIN = $(pwd)/client/build/bin
 GO ?= latest
@@ -129,11 +130,14 @@ docker-publish-faucet:
 
 ## E2E tests
 
-GODOG_BIN := $(shell command -v godog 2> /dev/null)
+DEP_BIN := $(shell command -v dep 2> /dev/null)
 
 e2e:
-ifndef GODOG_BIN
-	@echo "Installing godog..."
-	@go get github.com/DATA-DOG/godog/cmd/godog
+ifndef DEP_BIN
+	@echo "Installing dep..."
+	@go get github.com/golang/dep/cmd/dep
 endif
-	@cd client; build/env.sh sh -c "cd tests && godog -c=$(NPROCS) -f=progress ../features"
+	cd e2e && \
+	dep ensure --vendor-only && \
+	go build && \
+	./e2e --features ./features --stdout-logs

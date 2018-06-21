@@ -1,4 +1,4 @@
-package features
+package impl
 
 import (
 	"github.com/DATA-DOG/godog"

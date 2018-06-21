@@ -1,12 +1,12 @@
-package features
+package impl
 
 import (
 	"io/ioutil"
 	"math/big"
 
+	"github.com/kowala-tech/kcoin/e2e/cluster"
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
-	"github.com/kowala-tech/kcoin/client/cluster"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"

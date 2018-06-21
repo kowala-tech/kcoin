@@ -1,4 +1,4 @@
-package features
+package impl
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog"
-	"github.com/kowala-tech/kcoin/client/cluster"
+	"github.com/kowala-tech/kcoin/e2e/cluster"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/log"
 )
@@ -44,13 +44,8 @@ func (ctx *ValidationContext) IWaitForTheUnbondingPeriodToBeOver() error {
 }
 
 func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
-	err := ctx.waiter.Do(ctx.makeExecFunc(setDeposit(kcoin)))
-	if err != nil {
-		return err
-	}
-
 	return ctx.waiter.Do(
-		ctx.makeExecFunc(validatorStartCommand()),
+		ctx.makeExecFunc(validatorStartCommand(kcoin)),
 		func() error {
 			res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isRunningCommand())
 			if err != nil {
@@ -171,7 +166,9 @@ func (ctx *ValidationContext) Do(cmd []string, condFunc func() error) error {
 func (ctx *ValidationContext) CurrentBlock() (uint64, error) {
 	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), blockNumberCommand())
 	if err != nil {
-		log.Debug(res.StdOut)
+		if res != nil {
+			log.Debug(res.StdOut)
+		}
 		return 0, err
 	}
 
@@ -182,10 +179,25 @@ func (ctx *ValidationContext) makeExecFunc(command []string) func() error {
 	return func() error {
 		res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), command)
 		if err != nil {
-			log.Debug(res.StdOut)
+			return fmt.Errorf("error while executing '%v': %q", command, err)
 		}
-		return err
+
+		if err = isError(res.StdOut); err != nil {
+			return fmt.Errorf("error while executing '%v': %q", command, err)
+		}
+
+		return nil
 	}
+}
+
+func isError(s string) error {
+	if strings.HasPrefix(s, "Error: EOF") {
+		return nil
+	}
+	if strings.HasPrefix(s, "Error:") {
+		return errors.New(s)
+	}
+	return nil
 }
 
 func blockNumberCommand() []string {
@@ -196,12 +208,8 @@ func isSyncedCommand() []string {
 	return cluster.KcoinExecCommand("eth.blockNumber > 0 && eth.syncing == false")
 }
 
-func setDeposit(kcoin int64) []string {
-	return cluster.KcoinExecCommand(fmt.Sprintf("validator.setDeposit(%d)", toWei(kcoin)))
-}
-
-func validatorStartCommand() []string {
-	return cluster.KcoinExecCommand("validator.start()")
+func validatorStartCommand(kcoin int64) []string {
+	return cluster.KcoinExecCommand(fmt.Sprintf("validator.start(\"%#x\")", toWei(kcoin)))
 }
 
 func stopValidatingCommand() []string {
