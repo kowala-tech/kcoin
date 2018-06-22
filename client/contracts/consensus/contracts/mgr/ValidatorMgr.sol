@@ -77,7 +77,7 @@ contract ValidatorMgr is pausable.Pausable {
         deposit = validator.deposits[validator.deposits.length - 1].amount;
     }
 
-    function _hasAvailability() public view returns (bool available) {
+    function _hasAvailability() private view returns (bool available) {
         return (maxNumValidators - validatorPool.length) > 0;
     }
 
