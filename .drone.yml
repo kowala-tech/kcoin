@@ -28,8 +28,9 @@ pipeline:
       event: [pull_request]
 
   e2e:
-    image: kowalatech/go:1.0.3
+    image: golang:1.10
     environment:
+    - GOPATH=/kowala/workspace
     - DOCKER_HOST=tcp://docker:2375
     - DOCKER_PUBLIC_IP=docker
     commands:

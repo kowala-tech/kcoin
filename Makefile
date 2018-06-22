@@ -138,6 +138,6 @@ ifndef DEP_BIN
 	@go get github.com/golang/dep/cmd/dep
 endif
 	cd e2e && \
-	dep ensure --vendor-only && \
+	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go build && \
 	./e2e --features ./features --stdout-logs
