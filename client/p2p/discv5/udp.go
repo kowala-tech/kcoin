@@ -234,7 +234,7 @@ func ListenUDP(priv *ecdsa.PrivateKey, laddr string, natm nat.Interface, nodeDBP
 	go transport.readLoop()
 
 	enode := net.tab.self.String()
-	log.Warn("UDP listener up. Enode: " + enode)
+	log.Warn("UDP listener up for DiscoveryV5. Enode: " + enode)
 	return net, nil
 }
 

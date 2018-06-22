@@ -12,8 +12,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
 	"github.com/kowala-tech/kcoin/client/crypto"
-	"github.com/kowala-tech/kcoin/client/log"
-	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -166,7 +164,6 @@ func (s *ticketStore) addTopic(t Topic, register bool) {
 }
 
 func (s *ticketStore) addSearchTopic(t Topic, foundChn chan<- *Node) {
-	log.Error(fmt.Sprintf("===  <-net.topicSearchReq ticketStore %v", t))
 	s.addTopic(t, false)
 	if s.searchTopicMap[t].foundChn == nil {
 		s.searchTopicMap[t] = searchTopic{foundChn: foundChn}
@@ -605,7 +602,6 @@ func (s *ticketStore) cleanupTopicQueries(now mclock.AbsTime) {
 }
 
 func (s *ticketStore) gotTopicNodes(from *Node, hash common.Hash, nodes []rpcNode) (timeout bool) {
-	log.Error(fmt.Sprintf("=== gotTopicNodes %v %v %v", len(nodes), from.addr().String(), hash))
 	now := mclock.Now()
 	//fmt.Println("got", from.addr().String(), hash, len(nodes))
 	qq := s.queriesSent[from]
@@ -627,14 +623,11 @@ func (s *ticketStore) gotTopicNodes(from *Node, hash common.Hash, nodes []rpcNod
 		return false
 	}
 	for _, node := range nodes {
-		log.Error(fmt.Sprintf("=== gotTopicNodes NODE %v", spew.Sdump(node)))
 		ip := node.IP
 		if ip.IsUnspecified() || ip.IsLoopback() {
 			ip = from.IP
 		}
-
-		//fixme: beware! for some reason it was "node.UDP-1, node.TCP-1". if your discovery doesn't work, maybe this is the reason.
-		n := NewNode(node.ID, ip, node.UDP, node.TCP) // subtract one from port while discv5 is running in test mode on UDPport+1
+		n := NewNode(node.ID, ip, node.UDP-1, node.TCP-1) // subtract one from port while discv5 is running in test mode on UDPport+1
 		select {
 		case chn <- n:
 		default:

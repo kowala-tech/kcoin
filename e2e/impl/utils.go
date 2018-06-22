@@ -9,7 +9,7 @@ import (
 )
 
 func toWei(kcoin int64) *big.Int {
-	return new(big.Int).Mul(big.NewInt(kcoin), big.NewInt(params.KUSD))
+	return new(big.Int).Mul(big.NewInt(kcoin), big.NewInt(params.Kcoin))
 }
 
 func createDir(dir string) error {

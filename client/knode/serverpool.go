@@ -260,7 +260,6 @@ func (pool *serverPool) eventLoop() {
 	for {
 		select {
 		case entry := <-pool.timeout:
-			log.Error(fmt.Sprintf("=== pool.timeout %q", entry.id.String()))
 			pool.lock.Lock()
 			if !entry.removed {
 				pool.checkDialTimeout(entry)
@@ -268,7 +267,6 @@ func (pool *serverPool) eventLoop() {
 			pool.lock.Unlock()
 
 		case entry := <-pool.enableRetry:
-			log.Error(fmt.Sprintf("=== pool.enableRetry %q", entry.id.String()))
 			pool.lock.Lock()
 			if !entry.removed {
 				entry.delayedRetry = false
@@ -277,7 +275,6 @@ func (pool *serverPool) eventLoop() {
 			pool.lock.Unlock()
 
 		case adj := <-pool.adjustStats:
-			log.Error(fmt.Sprintf("=== pool.adjustStats"))
 			pool.lock.Lock()
 			switch adj.adjustType {
 			case pseBlockDelay:
@@ -291,14 +288,12 @@ func (pool *serverPool) eventLoop() {
 			pool.lock.Unlock()
 
 		case node := <-pool.discNodes:
-			log.Error(fmt.Sprintf("=== pool.discNodes %q", node.String()))
 			pool.lock.Lock()
 			entry := pool.findOrNewNode(discover.NodeID(node.ID), node.IP, node.TCP)
 			pool.updateCheckDial(entry)
 			pool.lock.Unlock()
 
 		case conv := <-pool.discLookups:
-			log.Error(fmt.Sprintf("=== pool.discLookups %v", conv))
 			if conv {
 				if lookupCnt == 0 {
 					convTime = mclock.Now()
@@ -313,7 +308,6 @@ func (pool *serverPool) eventLoop() {
 			}
 
 		case <-pool.quit:
-			log.Error(fmt.Sprintf("=== pool.quit"))
 			if pool.discSetPeriod != nil {
 				close(pool.discSetPeriod)
 			}
@@ -433,7 +427,6 @@ func (pool *serverPool) setRetryDial(entry *poolEntry) {
 // updateCheckDial is called when an entry can potentially be dialed again. It updates
 // its selection weights and checks if new dials can/should be made.
 func (pool *serverPool) updateCheckDial(entry *poolEntry) {
-	log.Error("+++ updateCheckDial")
 	pool.newSelect.update((*discoveredEntry)(entry))
 	pool.knownSelect.update((*knownEntry)(entry))
 	pool.checkDial()

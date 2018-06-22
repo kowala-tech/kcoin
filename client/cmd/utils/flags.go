@@ -574,16 +574,23 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 // setListenAddress creates a TCP listening address string from set command
 // line flags.
 func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
+	port := ListenPortFlag.Value
 	if ctx.GlobalIsSet(ListenPortFlag.Name) {
-		cfg.ListenAddr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name))
+		port = ctx.GlobalInt(ListenPortFlag.Name)
 	}
+	cfg.ListenAddr = fmt.Sprintf(":%d", port)
 }
 
 // setDiscoveryV5Address creates a UDP listening address string from set command
 // line flags for the V5 discovery protocol.
+// fixme: uses ListenPortFlag
 func setDiscoveryV5Address(ctx *cli.Context, cfg *p2p.Config) {
-	if ctx.GlobalIsSet(ListenPortFlag.Name) {
-		cfg.DiscoveryV5Addr = fmt.Sprintf(":%d", ctx.GlobalInt(ListenPortFlag.Name)+1)
+	if len(cfg.BootstrapNodesV5) > 0 {
+		port := ListenPortFlag.Value
+		if ctx.GlobalIsSet(ListenPortFlag.Name) {
+			port = ctx.GlobalInt(ListenPortFlag.Name)
+		}
+		cfg.DiscoveryV5Addr = fmt.Sprintf(":%d", port+1)
 	}
 }
 
@@ -745,10 +752,10 @@ func MakePasswordList(ctx *cli.Context) []string {
 func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
-	setListenAddress(ctx, cfg)
-	setDiscoveryV5Address(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
 	setBootstrapNodesV5(ctx, cfg)
+	setListenAddress(ctx, cfg)
+	setDiscoveryV5Address(ctx, cfg)
 
 	if ctx.GlobalIsSet(MaxPeersFlag.Name) {
 		cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
