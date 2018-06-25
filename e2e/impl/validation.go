@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/e2e/cluster"
 	"github.com/kowala-tech/kcoin/e2e/common"
-	"github.com/kowala-tech/kcoin/client/log"
 )
 
 type ValidationContext struct {
@@ -209,7 +209,7 @@ func isSyncedCommand() []string {
 }
 
 func validatorStartCommand(kcoin int64) []string {
-	return cluster.KcoinExecCommand(fmt.Sprintf("validator.start(\"%#x\")", toWei(kcoin)))
+	return cluster.KcoinExecCommand(fmt.Sprintf("validator.start(%i)", toWei(kcoin)))
 }
 
 func stopValidatingCommand() []string {

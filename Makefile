@@ -140,4 +140,4 @@ endif
 	cd e2e && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go build -a && \
-	./e2e --features ./features --stdout-logs
+	./e2e --features ./features
