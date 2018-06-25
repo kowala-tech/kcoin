@@ -1,11 +1,11 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/log"
-	"github.com/pkg/errors"
 )
 
 func WaitFor(errorMessage string, tickTime, timeout time.Duration, condition func() error) error {

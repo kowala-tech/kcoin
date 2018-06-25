@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/e2e/cluster"
-	"github.com/kowala-tech/kcoin/e2e/common"
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"
 	"github.com/kowala-tech/kcoin/client/knode/genesis"
@@ -132,7 +132,7 @@ func (ctx *Context) runBootnode() error {
 		return err
 	}
 
-	if err := ctx.nodeRunner.Run(bootnode, ctx.scenarioNumber); err != nil {
+	if err := ctx.nodeRunner.Run(bootnode, ctx.GetScenarioNumber()); err != nil {
 		return err
 	}
 	err = common.WaitFor("fetching bootnode enode", 1*time.Second, 20*time.Second, func() error {
@@ -175,7 +175,7 @@ func (ctx *Context) runGenesisValidator() error {
 		WithDeposit(big.NewInt(1)).
 		NodeSpec()
 
-	if err := ctx.nodeRunner.Run(spec, ctx.scenarioNumber); err != nil {
+	if err := ctx.nodeRunner.Run(spec, ctx.GetScenarioNumber()); err != nil {
 		return err
 	}
 
@@ -200,7 +200,7 @@ func (ctx *Context) runRpc() error {
 		WithRpc(ctx.rpcPort).
 		NodeSpec()
 
-	if err := ctx.nodeRunner.Run(spec, ctx.scenarioNumber); err != nil {
+	if err := ctx.nodeRunner.Run(spec, ctx.GetScenarioNumber()); err != nil {
 		return err
 	}
 
@@ -211,6 +211,7 @@ func (ctx *Context) runRpc() error {
 	}
 
 	ctx.client = client
+	ctx.rpcNodeID = spec.ID
 	return nil
 }
 
@@ -266,7 +267,16 @@ func (ctx *Context) buildGenesis() error {
 				Symbol:   "mUSD",
 				Cap:      1000,
 				Decimals: 18,
-				Holders:  []genesis.TokenHolder{{Address: genesisValidatorAddr, NumTokens: baseDeposit * 3}},
+				Holders: []genesis.TokenHolder{
+					{
+						Address:   genesisValidatorAddr,
+						NumTokens: baseDeposit * 10,
+					},
+					{
+						Address:   ctx.seederAccount.Address.String(),
+						NumTokens: baseDeposit * 10,
+					},
+				},
 			},
 		},
 		Governance: &genesis.GovernanceOpts{

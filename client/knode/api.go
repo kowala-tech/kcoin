@@ -68,7 +68,7 @@ func (api *PrivateValidatorAPI) Start(deposit *big.Int) error {
 
 		if deposit != nil {
 			err := api.kcoin.SetDeposit(deposit)
-			if err != validator.ErrIsNotRunning {
+			if err != nil && err != validator.ErrIsNotRunning {
 				return err
 			}
 		}

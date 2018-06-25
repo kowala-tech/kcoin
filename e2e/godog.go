@@ -44,7 +44,7 @@ func FeatureContext(opts *FeatureContextOpts) {
 	})
 
 	// Creating accounts
-	opts.suite.Step(`^I have the following accounts:$`, context.IHaveTheFollowingAccounts)
+	opts.suite.Step(`^I have the following accounts:$`, validationCtx.IHaveTheFollowingAccounts)
 	opts.suite.Step(`^I created an account with password '(\w+)'$`, context.ICreatedAnAccountWithPassword)
 
 	// Unlocking accounts
@@ -69,14 +69,18 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^the transaction should fail$`, context.LastTransactionFailed)
 
 	// validation
-	opts.suite.Step(`^I start validator with (\d+) kcoins deposit$`, validationCtx.IStartTheValidator)
+	opts.suite.Step(`^I start validator with (\d+) mTokens? deposit$`, validationCtx.IStartTheValidator)
 	opts.suite.Step(`^I have my node running using account (\w+)$`, validationCtx.IHaveMyNodeRunning)
 	opts.suite.Step(`^I stop validation$`, validationCtx.IStopValidation)
 	opts.suite.Step(`^I wait for the unbonding period to be over$`, validationCtx.IWaitForTheUnbondingPeriodToBeOver)
 	opts.suite.Step(`^I withdraw my node from validation$`, validationCtx.IWithdrawMyNodeFromValidation)
-	opts.suite.Step(`^there should be (\d+) kcoins available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
+	opts.suite.Step(`^there should be (\d+) mTokens? available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
 	opts.suite.Step(`^My node should be not be a validator$`, validationCtx.MyNodeShouldBeNotBeAValidator)
 	opts.suite.Step(`^I wait for my node to be synced$`, validationCtx.IWaitForMyNodeToBeSynced)
+
+	// mTokens
+	opts.suite.Step(`^the deposit of (\w+) should be (\d+) mTokens?$`, validationCtx.IsMTokensBalanceExact)
+	opts.suite.Step(`^I transfer (\d+) mTokens? from (\w+) to (\w+)$`, validationCtx.ITransferMTokens)
 
 	// Nodes
 	opts.suite.Step(`^I start a new node$`, context.IStartANewNode)

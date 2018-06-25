@@ -19,12 +19,12 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
-	"github.com/kowala-tech/kcoin/e2e/common"
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/log"
 )
 
 type NodeRunner interface {
-	Run(node *NodeSpec, scenarioNumber int) error
+	Run(node *NodeSpec, scenarioNumber int32) error
 	Stop(nodeID NodeID) error
 	StopAll() error
 	Log(nodeID NodeID) (string, error)
@@ -68,7 +68,7 @@ func NewDockerNodeRunner(opts *NewNodeRunnerOpts) (*dockerNodeRunner, error) {
 	}, nil
 }
 
-func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int) error {
+func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int32) error {
 	portSpec := make([]string, 0)
 
 	if err := runner.pullIfNecessary(node.Image); err != nil {

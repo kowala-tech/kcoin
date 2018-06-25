@@ -19,6 +19,8 @@ type AccountEntry struct {
 	AccountName     string
 	AccountPassword string
 	Funds           int64
+	Tokens          int64
+	Validating      bool
 }
 
 func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEntry, error) {
@@ -44,6 +46,14 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 					return nil, err
 				}
 				account.Funds = parsed
+			case "tokens":
+				parsed, err := strconv.ParseInt(cell.Value, 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				account.Tokens = parsed
+			case "validator":
+				account.Validating = cell.Value == "true"
 			default:
 				return nil, fmt.Errorf("unexpected column name: %s", head[n].Value)
 			}
@@ -56,25 +66,6 @@ func parseAccountsDataTable(accountsDataTable *gherkin.DataTable) ([]*AccountEnt
 func (ctx *Context) ICreatedAnAccountWithPassword(password string) error {
 	_, err := ctx.createAccount(unnamedAccountName, password)
 	return err
-}
-
-func (ctx *Context) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
-	accountsData, err := parseAccountsDataTable(accountsDataTable)
-	if err != nil {
-		return err
-	}
-
-	for _, accountData := range accountsData {
-		acct, err := ctx.createAccount(accountData.AccountName, accountData.AccountPassword)
-		if err != nil {
-			return err
-		}
-		if _, err := ctx.sendFundsAndWait(ctx.seederAccount, acct, accountData.Funds); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (ctx *Context) ITryUnlockMyAccountWithPassword(password string) error {
@@ -144,6 +135,42 @@ func (ctx *Context) theBalanceIs(accountName string, cmp string, expectedKcoin i
 	}
 	if !cmpFunc(expected, balance) {
 		return fmt.Errorf("balance expected to be %s %v but is %v", cmp, expected, balance)
+	}
+
+	return nil
+}
+
+func (vctx *ValidationContext) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
+	ctx := vctx.globalCtx
+
+	accountsData, err := parseAccountsDataTable(accountsDataTable)
+	if err != nil {
+		return err
+	}
+
+	for _, accountData := range accountsData {
+		acct, err := ctx.createAccount(accountData.AccountName, accountData.AccountPassword)
+		if err != nil {
+			return err
+		}
+
+		if accountData.Validating {
+			if err := vctx.IHaveMyNodeRunning(accountData.AccountName); err != nil {
+				return err
+			}
+		}
+
+		if accountData.Funds != 0 {
+			if _, err := ctx.sendFundsAndWait(ctx.seederAccount, acct, accountData.Funds); err != nil {
+				return err
+			}
+		}
+
+		if accountData.Tokens != 0 {
+			if err := vctx.sendTokensAndWait(ctx.seederAccount, acct, int(accountData.Tokens)); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

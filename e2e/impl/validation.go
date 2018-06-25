@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -8,9 +9,11 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog"
+	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/e2e/cluster"
-	"github.com/kowala-tech/kcoin/e2e/common"
 )
 
 type ValidationContext struct {
@@ -47,9 +50,8 @@ func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
 	return ctx.waiter.Do(
 		ctx.makeExecFunc(validatorStartCommand(kcoin)),
 		func() error {
-			res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isRunningCommand())
-			if err != nil {
-				log.Debug(res.StdOut)
+			res := &cluster.ExecResponse{}
+			if err := ctx.execCommand(isValidatingCommand(), res); err != nil {
 				return err
 			}
 			if strings.TrimSpace(res.StdOut) != "true" {
@@ -80,9 +82,10 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 		WithNetworkId(ctx.globalCtx.chainID.String()).
 		WithGenesis(ctx.globalCtx.genesis).
 		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.accounts[account]).
+		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.seederAccount).
 		NodeSpec()
 
-	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.scenarioNumber); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.GetScenarioNumber()); err != nil {
 		return err
 	}
 
@@ -93,21 +96,15 @@ func (ctx *ValidationContext) IWithdrawMyNodeFromValidation() error {
 	return ctx.waiter.Do(ctx.makeExecFunc(stopValidatingCommand()))
 }
 
-func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expectedKcoins, days int) error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), getDepositsCommand())
+func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expectedMTokens, days int) error {
+	deposit, err := ctx.getMTokensDeposit()
 	if err != nil {
-		log.Debug(res.StdOut)
 		return err
 	}
 
-	deposit, err := parseDepositResponse(res.StdOut)
+	err = ctx.isMTokensDepositExact(deposit, expectedMTokens)
 	if err != nil {
-		log.Debug(res.StdOut)
 		return err
-	}
-
-	if expectedKcoins != *deposit.Value {
-		return errors.New(fmt.Sprintf("kcoins don't match expected %d kcoins got %d", expectedKcoins, *deposit.Value))
 	}
 
 	daysExpected := time.Hour * 24 * time.Duration(days)
@@ -120,6 +117,70 @@ func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expected
 	return nil
 }
 
+func (ctx *ValidationContext) IsMTokensBalanceExact(account string, expectedMTokens int) error {
+	acc, ok := ctx.globalCtx.accounts[account]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", account)
+	}
+
+	return ctx.checkTokenBalance(acc, expectedMTokens)
+}
+
+func (ctx *ValidationContext) checkTokenBalance(account accounts.Account, expectedMTokens int) error {
+	res := &cluster.ExecResponse{}
+	if err := ctx.execCommand(getTokenBalance(account.Address), res); err != nil {
+		return err
+	}
+
+	currentDeposit, err := strconv.Atoi(res.StdOut)
+	if err != nil {
+		return fmt.Errorf("incorrect mToken deposit %q of %s", res.StdOut, account.Address.String())
+	}
+
+	if currentDeposit != expectedMTokens {
+		return fmt.Errorf("account %s have %v, expected %v", account.Address.String(), currentDeposit, expectedMTokens)
+	}
+
+	return nil
+}
+
+func (ctx *ValidationContext) ITransferMTokens(mTokens int, from, to string) error {
+	fromAccount, ok := ctx.globalCtx.accounts[from]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", from)
+	}
+
+	toAccount, ok := ctx.globalCtx.accounts[to]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", to)
+	}
+
+	return ctx.sendTokensAndWait(fromAccount, toAccount, mTokens)
+}
+
+func (ctx *ValidationContext) isMTokensDepositExact(deposit *Deposit, expectedMTokens int) error {
+	if expectedMTokens != *deposit.Value {
+		return errors.New(fmt.Sprintf("kcoins don't match expected %d kcoins got %d", expectedMTokens, *deposit.Value))
+	}
+
+	return nil
+}
+
+func (ctx *ValidationContext) getMTokensDeposit() (*Deposit, error) {
+	res := &cluster.ExecResponse{}
+	if err := ctx.execCommand(getDepositsCommand(), res); err != nil {
+		return nil, err
+	}
+
+	deposit, err := parseDepositResponse(res.StdOut)
+	if err != nil {
+		log.Debug(res.StdOut)
+		return nil, err
+	}
+
+	return &deposit, nil
+}
+
 func isSameDay(date1, date2 time.Time) bool {
 	expectedYear, expectedMonth, expectedDay := date1.Date()
 	availableYear, availableMonth, availableDay := date2.Date()
@@ -129,9 +190,8 @@ func isSameDay(date1, date2 time.Time) bool {
 }
 
 func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isRunningCommand())
-	if err != nil {
-		log.Debug(res.StdOut)
+	res := &cluster.ExecResponse{}
+	if err := ctx.execCommand(isValidatingCommand(), res); err != nil {
 		return err
 	}
 	if strings.TrimSpace(res.StdOut) != "false" {
@@ -147,9 +207,8 @@ func (ctx *ValidationContext) Reset() {
 }
 
 func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), isSyncedCommand())
-	if err != nil {
-		log.Debug(res.StdOut)
+	res := &cluster.ExecResponse{}
+	if err := ctx.execCommand(isSyncedCommand(), res); err != nil {
 		return err
 	}
 	if strings.TrimSpace(res.StdOut) != "true" {
@@ -164,22 +223,27 @@ func (ctx *ValidationContext) Do(cmd []string, condFunc func() error) error {
 }
 
 func (ctx *ValidationContext) CurrentBlock() (uint64, error) {
-	res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), blockNumberCommand())
-	if err != nil {
-		if res != nil {
-			log.Debug(res.StdOut)
-		}
+	res := &cluster.ExecResponse{}
+	if err := ctx.execCommand(blockNumberCommand(), res); err != nil {
 		return 0, err
 	}
 
 	return strconv.ParseUint(strings.TrimSpace(res.StdOut), 10, 64)
 }
 
-func (ctx *ValidationContext) makeExecFunc(command []string) func() error {
+func (ctx *ValidationContext) makeExecFunc(command []string, response ...*cluster.ExecResponse) func() error {
 	return func() error {
 		res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), command)
 		if err != nil {
+			if res != nil {
+				log.Debug(res.StdOut)
+			}
+
 			return fmt.Errorf("error while executing '%v': %q", command, err)
+		}
+
+		if len(response) != 0 {
+			*response[0] = *res
 		}
 
 		if err = isError(res.StdOut); err != nil {
@@ -188,6 +252,10 @@ func (ctx *ValidationContext) makeExecFunc(command []string) func() error {
 
 		return nil
 	}
+}
+
+func (ctx *ValidationContext) execCommand(command []string, response ...*cluster.ExecResponse) error {
+	return ctx.makeExecFunc(command, response...)()
 }
 
 func isError(s string) error {
@@ -209,17 +277,26 @@ func isSyncedCommand() []string {
 }
 
 func validatorStartCommand(kcoin int64) []string {
-	return cluster.KcoinExecCommand(fmt.Sprintf("validator.start(%i)", toWei(kcoin)))
+	return cluster.KcoinExecCommand(fmt.Sprintf("validator.start(%d)", kcoin))
 }
 
 func stopValidatingCommand() []string {
 	return cluster.KcoinExecCommand("validator.stop()")
 }
 
-func isRunningCommand() []string {
-	return cluster.KcoinExecCommand("validator.isRunning()")
+func isValidatingCommand() []string {
+	return cluster.KcoinExecCommand("validator.isValidating()")
 }
 
 func getDepositsCommand() []string {
 	return cluster.KcoinExecCommand("validator.getDeposits()")
+}
+
+func getTokenBalance(at common.Address) []string {
+	return cluster.KcoinExecCommand(fmt.Sprintf("mtoken.getBalance('%s')", at.String()))
+}
+
+func transferTokens(transferArgs knode.TransferArgs) []string {
+	args, _ := json.Marshal(transferArgs)
+	return cluster.KcoinExecCommand(fmt.Sprintf("mtoken.transfer(%s)", string(args)))
 }

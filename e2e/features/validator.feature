@@ -4,30 +4,27 @@ Feature: Joining network as a validator
 
   Background:
     Given I have the following accounts:
-      | account | password | funds |
-      | A       | test     | 20    |
-      | B       | test     | 10    |
+      | account | password | tokens | validator |
+      | A       | test     | 20     | true      |
+      | B       | test     | 10     | false     |
 
   Scenario: Start validator
-    Given I have my node running using account A
-    When I start validator with 5 kcoins deposit
+    When I start validator with 5 mTokens deposit
     And I wait for my node to be synced
-    Then the balance of A should be around 15 kcoins
+    Then the deposit of A should be 15 mTokens
 
   Scenario: Stop mining
-    Given I have my node running using account A
-    And I start validator with 5 kcoins deposit
+    And I start validator with 5 mTokens deposit
     And I wait for my node to be synced
-    And the balance of A should be around 15 kcoins
+    And the deposit of A should be 15 mTokens
     When I withdraw my node from validation
-    Then there should be 5 kcoins available to me after 5 days
+    Then there should be 5 mTokens available to me after 5 days
 
    Scenario: Mining rewards: basic
-    Given I have my node running using account A
-    And I start validator with 5 kcoins deposit
+    And I start validator with 5 mTokens deposit
     And I wait for my node to be synced
-    And the balance of A should be around 15 kcoins
+    And the deposit of A should be 15 mTokens
     When I unlock the account A with password 'test'
-    And I transfer 10 kcoin from A to B
-    Then the balance of A should be greater 5 kcoins
-    And the balance of B should be 20 kcoins
+    And I transfer 10 mTokens from A to B
+    Then the deposit of A should be 5 mTokens
+    And the deposit of B should be 20 mTokens
