@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"fmt"
-	"math/big"
 	"strconv"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
@@ -20,8 +19,8 @@ type KcoinNodeBuilder struct {
 	logLevel       int16
 	validate       bool
 	rpcPort        *int32
-	deposit        *big.Int
-	unlockAccount  string
+	coinbase       string
+	unlockAccounts string
 
 	err error
 }
@@ -57,12 +56,12 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 		cmd = append(cmd, "--rpcport", fmt.Sprintf("%v", *builder.rpcPort))
 		portMapping[*builder.rpcPort] = *builder.rpcPort
 	}
-	if builder.deposit != nil {
-		cmd = append(cmd, "--deposit", builder.deposit.String())
+	if builder.coinbase != "" {
+		cmd = append(cmd, "--coinbase", builder.coinbase)
 	}
-	if builder.unlockAccount != "" {
+	if builder.unlockAccounts != "" {
 		files["/kcoin/password.txt"] = []byte("test")
-		cmd = append(cmd, "--password", "/kcoin/password.txt", "--unlock", builder.unlockAccount)
+		cmd = append(cmd, "--password", "/kcoin/password.txt", "--unlock", builder.unlockAccounts)
 	}
 
 	if len(builder.genesisContent) > 0 {
@@ -121,8 +120,8 @@ func (builder *KcoinNodeBuilder) WithValidation() *KcoinNodeBuilder {
 	return builder
 }
 
-func (builder *KcoinNodeBuilder) WithDeposit(deposit *big.Int) *KcoinNodeBuilder {
-	builder.deposit = deposit
+func (builder *KcoinNodeBuilder) WithCoinbase(account accounts.Account) *KcoinNodeBuilder {
+	builder.coinbase = account.Address.Hex()
 	return builder
 }
 
@@ -133,7 +132,11 @@ func (builder *KcoinNodeBuilder) WithAccount(ks *keystore.KeyStore, account acco
 		return builder
 	}
 	builder.accounts = append(builder.accounts, raw)
-	builder.unlockAccount = account.Address.Hex()
+	if builder.unlockAccounts == "" {
+		builder.unlockAccounts = account.Address.Hex()
+	} else {
+		builder.unlockAccounts = fmt.Sprintf("%s,%s", builder.unlockAccounts, account.Address.Hex())
+	}
 	return builder
 }
 
