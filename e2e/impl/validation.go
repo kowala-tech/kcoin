@@ -279,8 +279,8 @@ func isSyncedCommand() []string {
 	return cluster.KcoinExecCommand("eth.blockNumber > 0 && eth.syncing == false")
 }
 
-func validatorStartCommand(kcoin int64) []string {
-	return cluster.KcoinExecCommand(fmt.Sprintf("validator.start(%d)", kcoin))
+func validatorStartCommand(mtokens int64) []string {
+	return cluster.KcoinExecCommand(fmt.Sprintf("validator.start(%d)", mtokens))
 }
 
 func stopValidatingCommand() []string {
