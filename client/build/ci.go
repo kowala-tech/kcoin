@@ -135,7 +135,8 @@ var (
 		"./accounts",
 		"./core/types",
 		"./params",
-		"../e2e",
+		// "../e2e/cluster",
+		// "../e2e/impl",
 	}
 
 	allPackages = []string{"./..."}
