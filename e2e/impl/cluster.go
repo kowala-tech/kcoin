@@ -266,7 +266,7 @@ func (ctx *Context) buildGenesis() error {
 		Consensus: &genesis.ConsensusOpts{
 			Engine:           "tendermint",
 			MaxNumValidators: 10,
-			FreezePeriod:     30,
+			FreezePeriod:     5,
 			BaseDeposit:      baseDeposit,
 			Validators: []genesis.Validator{{
 				Address: genesisValidatorAddr,

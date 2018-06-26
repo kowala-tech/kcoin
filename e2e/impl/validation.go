@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -94,16 +95,28 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 }
 
 func (ctx *ValidationContext) IWithdrawMyNodeFromValidation() error {
-	return ctx.waiter.Do(ctx.makeExecFunc(stopValidatingCommand()))
+	return ctx.waiter.Do(
+		ctx.makeExecFunc(stopValidatingCommand()),
+		func() error {
+			res := &cluster.ExecResponse{}
+			if err := ctx.execCommand(isValidatingCommand(), res); err != nil {
+				return err
+			}
+			if strings.TrimSpace(res.StdOut) != "false" {
+				return errors.New("validator is not running")
+			}
+			return nil
+		})
 }
 
-func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expectedMTokens, days int) error {
+func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expectedMTokens int64, days int) error {
+	expectedWei := toWei(expectedMTokens)
 	deposit, err := ctx.getMTokensDeposit()
 	if err != nil {
 		return err
 	}
 
-	err = ctx.isMTokensDepositExact(deposit, expectedMTokens)
+	err = ctx.isMTokensDepositExact(deposit, expectedWei)
 	if err != nil {
 		return err
 	}
@@ -160,8 +173,8 @@ func (ctx *ValidationContext) ITransferMTokens(mTokens int64, from, to string) e
 	return ctx.sendTokensAndWait(fromAccount, toAccount, mTokens)
 }
 
-func (ctx *ValidationContext) isMTokensDepositExact(deposit *Deposit, expectedMTokens int) error {
-	if expectedMTokens != *deposit.Value {
+func (ctx *ValidationContext) isMTokensDepositExact(deposit *Deposit, expectedMTokens *big.Int) error {
+	if expectedMTokens.Cmp(deposit.Value) != 0 {
 		return errors.New(fmt.Sprintf("kcoins don't match expected %d kcoins got %d", expectedMTokens, *deposit.Value))
 	}
 
