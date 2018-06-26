@@ -158,6 +158,9 @@ func (vctx *ValidationContext) IHaveTheFollowingAccounts(accountsDataTable *gher
 			if err := vctx.IHaveMyNodeRunning(accountData.AccountName); err != nil {
 				return err
 			}
+			if err := vctx.MyNodeIsAlreadySynchronised(); err != nil {
+				return err
+			}
 		}
 
 		if accountData.Funds != 0 {
