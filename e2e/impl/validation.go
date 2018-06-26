@@ -56,7 +56,6 @@ func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
 				return err
 			}
 			if strings.TrimSpace(res.StdOut) != "true" {
-				log.Debug(res.StdOut)
 				return errors.New("validator is not running")
 			}
 			return nil
