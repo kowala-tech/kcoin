@@ -9,7 +9,7 @@ import (
 	"github.com/kowala-tech/kcoin/e2e/cluster"
 )
 
-func (ctx *ValidationContext) sendTokensAndWait(from, to accounts.Account, tokens int) error {
+func (ctx *ValidationContext) sendTokensAndWait(from, to accounts.Account, tokens int64) error {
 	return ctx.waiter.Do(
 		func() error {
 			var err error
@@ -21,13 +21,13 @@ func (ctx *ValidationContext) sendTokensAndWait(from, to accounts.Account, token
 		})
 }
 
-func (ctx *ValidationContext) sendTokens(from, to accounts.Account, tokens int) error {
-	bigPointer := big.NewInt(int64(tokens))
-	hexBig := hexutil.Big(*bigPointer)
+func (ctx *ValidationContext) sendTokens(from, to accounts.Account, tokens int64) error {
+	weis := toWei(tokens)
+	hexWeis := hexutil.Big(*weis)
 	args := knode.TransferArgs{
 		From:  from.Address,
 		To:    &to.Address,
-		Value: &hexBig,
+		Value: &hexWeis,
 	}
 
 	res := &cluster.ExecResponse{}

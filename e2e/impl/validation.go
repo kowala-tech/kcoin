@@ -118,7 +118,7 @@ func (ctx *ValidationContext) ThereShouldBeTokensAvailableToMeAfterDays(expected
 	return nil
 }
 
-func (ctx *ValidationContext) IsMTokensBalanceExact(account string, expectedMTokens int) error {
+func (ctx *ValidationContext) IsMTokensBalanceExact(account string, expectedMTokens int64) error {
 	acc, ok := ctx.globalCtx.accounts[account]
 	if !ok {
 		return fmt.Errorf("can't get account for %q", account)
@@ -127,25 +127,26 @@ func (ctx *ValidationContext) IsMTokensBalanceExact(account string, expectedMTok
 	return ctx.checkTokenBalance(acc, expectedMTokens)
 }
 
-func (ctx *ValidationContext) checkTokenBalance(account accounts.Account, expectedMTokens int) error {
+func (ctx *ValidationContext) checkTokenBalance(account accounts.Account, expectedMTokens int64) error {
+	expectedWei := toWei(expectedMTokens)
 	res := &cluster.ExecResponse{}
 	if err := ctx.execCommand(getTokenBalance(account.Address), res); err != nil {
 		return err
 	}
 
-	currentDeposit, err := strconv.Atoi(res.StdOut)
-	if err != nil {
+	currentDeposit, ok := new(big.Int).SetString(res.StdOut, 10)
+	if !ok {
 		return fmt.Errorf("incorrect mToken deposit %q of %s", res.StdOut, account.Address.String())
 	}
 
-	if currentDeposit != expectedMTokens {
-		return fmt.Errorf("account %s have %v, expected %v", account.Address.String(), currentDeposit, expectedMTokens)
+	if currentDeposit.Cmp(expectedWei) != 0 {
+		return fmt.Errorf("account %s have %v, expected %v", account.Address.String(), currentDeposit, expectedWei)
 	}
 
 	return nil
 }
 
-func (ctx *ValidationContext) ITransferMTokens(mTokens int, from, to string) error {
+func (ctx *ValidationContext) ITransferMTokens(mTokens int64, from, to string) error {
 	fromAccount, ok := ctx.globalCtx.accounts[from]
 	if !ok {
 		return fmt.Errorf("can't get account for %q", from)
@@ -279,7 +280,7 @@ func isSyncedCommand() []string {
 }
 
 func validatorStartCommand(mtokens int64) []string {
-	return cluster.KcoinExecCommand(fmt.Sprintf("validator.start(%d)", mtokens))
+	return cluster.KcoinExecCommand(fmt.Sprintf("validator.start(%d)", toWei(mtokens)))
 }
 
 func stopValidatingCommand() []string {

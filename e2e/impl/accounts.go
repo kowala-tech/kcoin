@@ -170,7 +170,7 @@ func (vctx *ValidationContext) IHaveTheFollowingAccounts(accountsDataTable *gher
 		}
 
 		if accountData.Tokens != 0 {
-			if err := vctx.sendTokensAndWait(ctx.mtokensSeederAccount, acct, int(accountData.Tokens)); err != nil {
+			if err := vctx.sendTokensAndWait(ctx.mtokensSeederAccount, acct, accountData.Tokens); err != nil {
 				return err
 			}
 		}
