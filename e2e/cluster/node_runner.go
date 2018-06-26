@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
+	"net/url"
 	"os"
-	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -25,14 +24,13 @@ import (
 )
 
 type NodeRunner interface {
-	Run(node *NodeSpec, scenarioNumber int) error
+	Run(node *NodeSpec, scenarioNumber int32) error
 	Stop(nodeID NodeID) error
 	StopAll() error
 	Log(nodeID NodeID) (string, error)
 	HostIP() string
 	IP(nodeID NodeID) (string, error)
 	Exec(nodeID NodeID, command []string) (*ExecResponse, error)
-	BuildDockerImage(tag, dockerFile string) error
 }
 
 type ExecResponse struct {
@@ -41,13 +39,22 @@ type ExecResponse struct {
 }
 
 type dockerNodeRunner struct {
+	pullMtx sync.Mutex
+
 	runningNodes map[NodeID]bool
 	client       *client.Client
+	logsToStdout bool
 	logsDir      string
 	feature      string
 }
 
-func NewDockerNodeRunner(logsDir, feature string) (*dockerNodeRunner, error) {
+type NewNodeRunnerOpts struct {
+	Feature      string
+	LogsToStdout bool
+	LogsDir      string
+}
+
+func NewDockerNodeRunner(opts *NewNodeRunnerOpts) (*dockerNodeRunner, error) {
 	client, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
@@ -55,13 +62,18 @@ func NewDockerNodeRunner(logsDir, feature string) (*dockerNodeRunner, error) {
 	return &dockerNodeRunner{
 		client:       client,
 		runningNodes: make(map[NodeID]bool, 0),
-		logsDir:      logsDir,
-		feature:      feature,
+		logsDir:      opts.LogsDir,
+		logsToStdout: opts.LogsToStdout,
+		feature:      opts.Feature,
 	}, nil
 }
 
-func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int) error {
+func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int32) error {
 	portSpec := make([]string, 0)
+
+	if err := runner.pullIfNecessary(node.Image); err != nil {
+		return err
+	}
 
 	for hostPortRaw, containerPortRaw := range node.PortMapping {
 		portSpec = append(portSpec, fmt.Sprintf("%v:%v", hostPortRaw, containerPortRaw))
@@ -94,17 +106,22 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int) error {
 		return err
 	}
 
-	logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%03d-%v.log", runner.feature, scenarioNumber, node.ID))
-	logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
-	if err != nil {
-		log.Error(fmt.Sprintf("error creating container logs file %q: %s", logFilename, err))
-		return err
-	}
-	go func() {
-		defer logFile.Close()
-		err := runner.logStream(node.ID, logFile)
+	logStream := os.Stdout
+	if !runner.logsToStdout {
+		logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%03d-%v.log", runner.feature, scenarioNumber, node.ID))
+		logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0777)
 		if err != nil {
-			log.Error(fmt.Sprintf("error saving container logs to file %q: %s", logFilename, err))
+			log.Error(fmt.Sprintf("error creating container logs file %q: %s", logFilename, err))
+			return err
+		}
+		logStream = logFile
+	}
+
+	go func() {
+		defer logStream.Close()
+		err := runner.logStream(node.ID, logStream)
+		if err != nil {
+			log.Error(fmt.Sprintf("error saving container logs to file: %s", err))
 		}
 	}()
 
@@ -150,12 +167,17 @@ func (runner *dockerNodeRunner) Log(nodeID NodeID) (string, error) {
 }
 
 func (runner *dockerNodeRunner) HostIP() string {
-	hostIP := runner.client.DaemonHost()
-	if addr := net.ParseIP(hostIP); addr == nil {
-		// Assume non-ip based hosts mean localhost
-		return "localhost"
+	ip := os.Getenv("DOCKER_PUBLIC_IP")
+	if ip == "" {
+		parsed, err := url.Parse(os.Getenv("DOCKER_HOST"))
+		if err == nil {
+			ip = parsed.Hostname()
+		}
 	}
-	return hostIP
+	if ip == "" {
+		ip = "localhost"
+	}
+	return ip
 }
 
 func (runner *dockerNodeRunner) IP(nodeID NodeID) (string, error) {
@@ -175,7 +197,7 @@ func (runner *dockerNodeRunner) Exec(nodeID NodeID, command []string) (*ExecResp
 	if err != nil {
 		return nil, err
 	}
-	res, err := runner.client.ContainerExecAttach(context.Background(), contExec.ID, types.ExecStartCheck{})
+	res, err := runner.client.ContainerExecAttach(context.Background(), contExec.ID, types.ExecConfig{})
 	if err != nil {
 		return nil, err
 	}
@@ -193,18 +215,6 @@ func (runner *dockerNodeRunner) Exec(nodeID NodeID, command []string) (*ExecResp
 		StdOut: strings.TrimSpace(stdOut.String()),
 		StdErr: strings.TrimSpace(stdErr.String()),
 	}, nil
-}
-
-func (runner *dockerNodeRunner) BuildDockerImage(tag, dockerFile string) error {
-	cmd := exec.Command("docker", "build", "-t", tag, "-f", path.Join(rootPath, dockerFile), rootPath)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-	if !cmd.ProcessState.Success() {
-		return fmt.Errorf("Error building docker image")
-	}
-	return nil
 }
 
 func (runner *dockerNodeRunner) copyFile(nodeID NodeID, filename string, contents []byte) error {
@@ -241,7 +251,7 @@ func (runner *dockerNodeRunner) copyFile(nodeID NodeID, filename string, content
 }
 
 func KcoinExecCommand(command string) []string {
-	return []string{"./kcoin", "attach", "--exec", command}
+	return []string{"./kcoin", "attach", "/root/.kcoin/kusd/kcoin.ipc", "--exec", command}
 }
 
 func (runner *dockerNodeRunner) logStream(nodeID NodeID, w io.Writer) error {
@@ -257,4 +267,27 @@ func (runner *dockerNodeRunner) logStream(nodeID NodeID, w io.Writer) error {
 
 	_, err = stdcopy.StdCopy(w, w, log)
 	return err
+}
+
+func (runner *dockerNodeRunner) pullIfNecessary(image string) error {
+	runner.pullMtx.Lock()
+	defer runner.pullMtx.Unlock()
+
+	images, err := runner.client.ImageList(context.Background(), types.ImageListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, img := range images {
+		for _, v := range img.RepoTags {
+			if v == image {
+				return nil
+			}
+		}
+	}
+	r, err := runner.client.ImagePull(context.Background(), image, types.ImagePullOptions{})
+	if err != nil {
+		return err
+	}
+	ioutil.ReadAll(r)
+	return nil
 }

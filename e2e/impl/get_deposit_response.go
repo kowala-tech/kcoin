@@ -1,8 +1,9 @@
-package features
+package impl
 
 import (
 	"encoding/json"
 	"errors"
+	"math/big"
 	"regexp"
 	"time"
 )
@@ -13,7 +14,7 @@ type DepositResponse struct {
 
 type Deposit struct {
 	AvailableAt *GethTime
-	Value       *int
+	Value       *big.Int
 }
 
 type GethTime time.Time

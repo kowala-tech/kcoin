@@ -1,4 +1,4 @@
-FROM golang:1.9.2-alpine as builder
+FROM golang:1.10.3-alpine3.7 as builder
 RUN apk update && apk add --update git make gcc musl-dev linux-headers
 
 WORKDIR /bootnode/

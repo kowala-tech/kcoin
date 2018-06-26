@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"fmt"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -27,7 +26,6 @@ type stateFn func() stateFn
 func (val *validator) notLoggedInState() stateFn {
 	isGenesis, err := val.consensus.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
-		fmt.Printf("states.go ===> %[2]v: %[1]v\n", err, `err`)
 		log.Warn("Failed to verify the voter information", "err", err)
 		return nil
 	}

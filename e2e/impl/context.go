@@ -1,15 +1,17 @@
-package features
+package impl
 
 import (
 	"io/ioutil"
 	"math/big"
 
+	"sync/atomic"
+
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
-	"github.com/kowala-tech/kcoin/client/cluster"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"
+	"github.com/kowala-tech/kcoin/e2e/cluster"
 )
 
 type Context struct {
@@ -22,12 +24,14 @@ type Context struct {
 
 	nodeRunner             cluster.NodeRunner
 	genesisValidatorNodeID cluster.NodeID
+	rpcNodeID              cluster.NodeID
 	rpcPort                int32
 	client                 *kcoinclient.Client
 	chainID                *big.Int
 
 	genesisValidatorAccount accounts.Account
-	seederAccount           accounts.Account
+	mtokensSeederAccount    accounts.Account
+	kusdSeederAccount       accounts.Account
 	accounts                map[string]accounts.Account
 
 	lastTx              *types.Transaction
@@ -36,7 +40,7 @@ type Context struct {
 
 	lastUnlockErr error
 
-	scenarioNumber int
+	scenarioNumber *int32
 	nodeSuffix     string
 
 	waiter doer
@@ -50,8 +54,9 @@ func NewTestContext(chainID *big.Int) *Context {
 		AccountsStorage: accountsStorage,
 		chainID:         chainID,
 
-		accounts:   make(map[string]accounts.Account),
-		nodeSuffix: common.RandomString(4),
+		accounts:       make(map[string]accounts.Account),
+		scenarioNumber: new(int32),
+		nodeSuffix:     common.RandomString(4),
 	}
 
 	ctx.waiter = common.NewWaiter(ctx)
@@ -59,12 +64,18 @@ func NewTestContext(chainID *big.Int) *Context {
 	return ctx
 }
 
+func (ctx *Context) GetScenarioNumber() int32 {
+	return atomic.LoadInt32(ctx.scenarioNumber)
+}
+
+func (ctx *Context) IncreaseScenarioNumber() int32 {
+	return atomic.AddInt32(ctx.scenarioNumber, 1)
+}
+
 func (ctx *Context) Reset() {
 	ctx.accounts = make(map[string]accounts.Account)
-	ctx.nodeRunner.StopAll()
 
-	ctx.scenarioNumber++
-	ctx.runNodes()
+	ctx.IncreaseScenarioNumber()
 }
 
 type doer interface {

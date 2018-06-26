@@ -10,6 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -113,6 +114,8 @@ func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensu
 }
 
 func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) error {
+	log.Warn(fmt.Sprintf("Joining the network %v with a deposit %v. Account %q",
+		consensus.chainID.String(), deposit.String(), walletAccount.Account().Address.String()))
 	_, err := consensus.mtoken.Transfer(walletAccount, consensus.managerAddr, deposit, []byte("not_zero"), RegistrationHandler)
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
@@ -122,6 +125,8 @@ func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *
 }
 
 func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) error {
+	log.Warn(fmt.Sprintf("Leaving the network %v. Account %q",
+		consensus.chainID.String(), walletAccount.Account().Address.String()))
 	_, err := consensus.manager.DeregisterValidator(transactOpts(walletAccount, consensus.chainID))
 	if err != nil {
 		return err
@@ -131,6 +136,8 @@ func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) error {
 }
 
 func (consensus *consensus) RedeemDeposits(walletAccount accounts.WalletAccount) error {
+	log.Warn(fmt.Sprintf("Redeem deposit from the network %v. Account %q",
+		consensus.chainID.String(), walletAccount.Account().Address.String()))
 	_, err := consensus.manager.ReleaseDeposits(transactOpts(walletAccount, consensus.chainID))
 	if err != nil {
 		return err

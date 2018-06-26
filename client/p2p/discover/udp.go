@@ -210,7 +210,7 @@ func ListenUDP(priv *ecdsa.PrivateKey, laddr string, natm nat.Interface, nodeDBP
 	}
 
 	enode := tab.self.String()
-	log.Warn("UDP listener up. Enode: " + enode)
+	log.Warn("UDP listener up for DiscoveryV4. Enode: " + enode)
 	return tab, nil
 }
 
