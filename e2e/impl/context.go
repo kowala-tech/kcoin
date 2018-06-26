@@ -30,7 +30,8 @@ type Context struct {
 	chainID                *big.Int
 
 	genesisValidatorAccount accounts.Account
-	seederAccount           accounts.Account
+	mtokensSeederAccount    accounts.Account
+	kusdSeederAccount       accounts.Account
 	accounts                map[string]accounts.Account
 
 	lastTx              *types.Transaction

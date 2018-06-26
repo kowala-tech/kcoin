@@ -100,11 +100,17 @@ func (ctx *Context) runNodes() error {
 }
 
 func (ctx *Context) generateAccounts() error {
-	seederAccount, err := ctx.newAccount()
+	kusdSeederAccount, err := ctx.newAccount()
 	if err != nil {
 		return err
 	}
-	ctx.seederAccount = *seederAccount
+	ctx.kusdSeederAccount = *kusdSeederAccount
+
+	mtokensSeederAccount, err := ctx.newAccount()
+	if err != nil {
+		return err
+	}
+	ctx.mtokensSeederAccount = *mtokensSeederAccount
 
 	genesisValidatorAccount, err := ctx.newAccount()
 	if err != nil {
@@ -199,8 +205,8 @@ func (ctx *Context) runRpc() error {
 		WithSyncMode("full").
 		WithNetworkId(ctx.chainID.String()).
 		WithGenesis(ctx.genesis).
-		WithCoinbase(ctx.seederAccount).
-		WithAccount(ctx.AccountsStorage, ctx.seederAccount).
+		WithCoinbase(ctx.kusdSeederAccount).
+		WithAccount(ctx.AccountsStorage, ctx.kusdSeederAccount).
 		WithRpc(ctx.rpcPort).
 		NodeSpec()
 
@@ -223,7 +229,7 @@ func (ctx *Context) triggerGenesisValidation() error {
 	command := fmt.Sprintf(`
 		personal.unlockAccount(eth.coinbase, "test");
 		eth.sendTransaction({from:eth.coinbase,to: "%v",value: 1})
-	`, ctx.seederAccount.Address.Hex())
+	`, ctx.kusdSeederAccount.Address.Hex())
 	_, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand(command))
 	if err != nil {
 		return err
@@ -277,7 +283,7 @@ func (ctx *Context) buildGenesis() error {
 						NumTokens: baseDeposit * 10,
 					},
 					{
-						Address:   ctx.seederAccount.Address.String(),
+						Address:   ctx.mtokensSeederAccount.Address.String(),
 						NumTokens: baseDeposit * 10,
 					},
 				},
@@ -303,7 +309,11 @@ func (ctx *Context) buildGenesis() error {
 				Balance: baseDeposit * 10,
 			},
 			{
-				Address: ctx.seederAccount.Address.Hex(),
+				Address: ctx.kusdSeederAccount.Address.Hex(),
+				Balance: baseDeposit * 1000,
+			},
+			{
+				Address: ctx.mtokensSeederAccount.Address.Hex(),
 				Balance: baseDeposit * 1000,
 			},
 		},

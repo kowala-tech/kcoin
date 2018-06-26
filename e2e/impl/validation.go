@@ -83,7 +83,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 		WithGenesis(ctx.globalCtx.genesis).
 		WithCoinbase(ctx.globalCtx.accounts[account]).
 		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.accounts[account]).
-		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.seederAccount).
+		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.mtokensSeederAccount).
 		NodeSpec()
 
 	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.GetScenarioNumber()); err != nil {
