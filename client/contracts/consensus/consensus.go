@@ -10,8 +10,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
-	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 //go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=/usr/local/include/solidity/ contracts/mgr/ValidatorMgr.sol

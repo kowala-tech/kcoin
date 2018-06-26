@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-const rootPath = ".."
-
 var src = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func randStringBytes(n int) string {

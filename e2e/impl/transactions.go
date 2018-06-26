@@ -8,10 +8,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kcoin/e2e/cluster"
 	"github.com/kowala-tech/kcoin/client"
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/e2e/cluster"
 )
 
 func (ctx *Context) CurrentBlock() (uint64, error) {

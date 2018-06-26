@@ -3,10 +3,10 @@ package impl
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/e2e/cluster"
 	"github.com/kowala-tech/kcoin/client/accounts"
-	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/knode"
+	"github.com/kowala-tech/kcoin/e2e/cluster"
 )
 
 func (ctx *ValidationContext) sendTokensAndWait(from, to accounts.Account, tokens int) error {
@@ -25,8 +25,8 @@ func (ctx *ValidationContext) sendTokens(from, to accounts.Account, tokens int) 
 	bigPointer := big.NewInt(int64(tokens))
 	hexBig := hexutil.Big(*bigPointer)
 	args := knode.TransferArgs{
-		From: from.Address,
-		To: &to.Address,
+		From:  from.Address,
+		To:    &to.Address,
 		Value: &hexBig,
 	}
 

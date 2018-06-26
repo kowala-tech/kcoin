@@ -209,15 +209,15 @@ func (ctx *ValidationContext) Reset() {
 
 func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
 	return common.WaitFor("node is synchronised", 200*time.Millisecond, time.Second*20, func() error {
-	res := &cluster.ExecResponse{}
-	if err := ctx.execCommand(isSyncedCommand(), res); err != nil {
-		return err
-	}
-	if strings.TrimSpace(res.StdOut) != "true" {
-		log.Debug(res.StdOut)
+		res := &cluster.ExecResponse{}
+		if err := ctx.execCommand(isSyncedCommand(), res); err != nil {
+			return err
+		}
+		if strings.TrimSpace(res.StdOut) != "true" {
+			log.Debug(res.StdOut)
 			return errors.New("node is not synchronised")
-	}
-	return nil
+		}
+		return nil
 	})
 }
 
