@@ -97,11 +97,6 @@ func (w *waiter) waitBlocksFrom(block, n uint64, condFuncs ...func() error) erro
 			if lastErr == nil {
 				return nil
 			}
-
-			// blocks := newBlock - block
-			// if blocks >= n {
-			// 	return nil
-			// }
 		}
 	}
 
