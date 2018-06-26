@@ -204,7 +204,6 @@ func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
 
 func (ctx *ValidationContext) Reset() {
 	ctx.nodeRunning = false
-	ctx.globalCtx.nodeRunner.Stop(ctx.nodeID())
 }
 
 func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
