@@ -25,7 +25,7 @@ func (ctx *Context) DeleteCluster() error {
 	return ctx.nodeRunner.StopAll()
 }
 
-func (ctx *Context) PrepareCluster(logsToStdout bool) error {
+func (ctx *Context) InitCluster(logsToStdout bool) error {
 	var err error
 
 	nodeRunnerOpts := &cluster.NewNodeRunnerOpts{
@@ -52,7 +52,11 @@ func (ctx *Context) PrepareCluster(logsToStdout bool) error {
 	if err := ctx.buildGenesis(); err != nil {
 		return err
 	}
+	return nil
+}
 
+func (ctx *Context) RunCluster() error {
+	ctx.nodeRunner.StopAll()
 	if err := ctx.runNodes(); err != nil {
 		return err
 	}

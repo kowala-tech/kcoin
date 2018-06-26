@@ -7,8 +7,8 @@ import (
 
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/gherkin"
-	"github.com/kowala-tech/kcoin/e2e/impl"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/e2e/impl"
 )
 
 var (
@@ -27,7 +27,13 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.BeforeFeature(func(ft *gherkin.Feature) {
 		context.Name = getFeatureName(ft.Name)
 
-		if err := context.PrepareCluster(opts.logsToStdout); err != nil {
+		if err := context.InitCluster(opts.logsToStdout); err != nil {
+			log.Fatal(err)
+		}
+	})
+
+	opts.suite.BeforeScenario(func(scenario interface{}) {
+		if err := context.RunCluster(); err != nil {
 			log.Fatal(err)
 		}
 	})

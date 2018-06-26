@@ -4,13 +4,14 @@ import (
 	"io/ioutil"
 	"math/big"
 
+	"sync/atomic"
+
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"
 	"github.com/kowala-tech/kcoin/e2e/cluster"
-	"sync/atomic"
 )
 
 type Context struct {
@@ -72,10 +73,8 @@ func (ctx *Context) IncreaseScenarioNumber() int32 {
 
 func (ctx *Context) Reset() {
 	ctx.accounts = make(map[string]accounts.Account)
-	ctx.nodeRunner.StopAll()
 
 	ctx.IncreaseScenarioNumber()
-	ctx.runNodes()
 }
 
 type doer interface {
