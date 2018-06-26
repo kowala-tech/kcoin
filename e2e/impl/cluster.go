@@ -259,7 +259,7 @@ func (ctx *Context) buildGenesis() error {
 	defer genesisMtx.Unlock()
 
 	genesisValidatorAddr := ctx.genesisValidatorAccount.Address.Hex()
-	baseDeposit := uint64(20)
+	baseDeposit := uint64(1)
 
 	newGenesis, err := genesis.Generate(genesis.Options{
 		Network: "test",
@@ -280,11 +280,11 @@ func (ctx *Context) buildGenesis() error {
 				Holders: []genesis.TokenHolder{
 					{
 						Address:   genesisValidatorAddr,
-						NumTokens: baseDeposit * 10,
+						NumTokens: baseDeposit * 100,
 					},
 					{
 						Address:   ctx.mtokensSeederAccount.Address.String(),
-						NumTokens: baseDeposit * 10,
+						NumTokens: baseDeposit * 100,
 					},
 				},
 			},
@@ -302,19 +302,19 @@ func (ctx *Context) buildGenesis() error {
 		PrefundedAccounts: []genesis.PrefundedAccount{
 			{
 				Address: ctx.genesisValidatorAccount.Address.Hex(),
-				Balance: baseDeposit * 10,
+				Balance: baseDeposit * 100,
 			},
 			{
 				Address: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-				Balance: baseDeposit * 10,
+				Balance: baseDeposit * 100,
 			},
 			{
 				Address: ctx.kusdSeederAccount.Address.Hex(),
-				Balance: baseDeposit * 1000,
+				Balance: baseDeposit * 10000,
 			},
 			{
 				Address: ctx.mtokensSeederAccount.Address.Hex(),
-				Balance: baseDeposit * 1000,
+				Balance: baseDeposit * 10000,
 			},
 		},
 	})
