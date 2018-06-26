@@ -4,9 +4,9 @@ Feature: Joining network as a validator
 
   Background:
     Given I have the following accounts:
-      | account | password | tokens | validator |
-      | A       | test     | 20     | true      |
-      | B       | test     | 10     | false     |
+      | account | password | tokens | funds | validator |
+      | A       | test     | 20     | 10    | true      |
+      | B       | test     | 10     | 10    | false     |
 
   Scenario: Start validator
     When I start validator with 5 mTokens deposit
