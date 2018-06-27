@@ -551,7 +551,8 @@ loop:
 		case res := <-topicSearchLookupDone:
 			activeSearchCount--
 			if lookupChn := searchInfo[res.target.topic].lookupChn; lookupChn != nil {
-				lookupChn <- net.ticketStore.radius[res.target.topic].converged
+				rad, _ := net.ticketStore.radius.get(res.target.topic)
+				lookupChn <- rad.converged
 			}
 			net.ticketStore.searchLookupDone(res.target, res.nodes, func(n *Node, topic Topic) []byte {
 				if n.state != nil && n.state.canQuery {
@@ -577,7 +578,9 @@ loop:
 			}*/
 
 			tm := mclock.Now()
-			for topic, r := range net.ticketStore.radius {
+
+			net.ticketStore.radius.RLock()
+			for topic, r := range net.ticketStore.radius.m {
 				if printTestImgLogs {
 					rad := r.radius / (maxRadius/1000000 + 1)
 					minrad := r.minRadius / (maxRadius/1000000 + 1)
@@ -585,6 +588,8 @@ loop:
 					fmt.Printf("*MR %d %v %016x %v\n", tm/1000000, topic, net.tab.self.sha[:8], minrad)
 				}
 			}
+			net.ticketStore.radius.RUnlock()
+
 			for topic, t := range net.topictab.topics {
 				wp := t.wcl.nextWaitPeriod(tm)
 				if printTestImgLogs {
@@ -1176,7 +1181,7 @@ func (net *Network) handleQueryEvent(n *Node, ev nodeEvent, pkt *ingressPacket) 
 		// TODO: handle expiration
 		topic := pkt.data.(*topicQuery).Topic
 		results := net.topictab.getEntries(topic)
-		if _, ok := net.ticketStore.tickets[topic]; ok {
+		if _, ok := net.ticketStore.tickets.get(topic); ok {
 			results = append(results, net.tab.self) // we're not registering in our own table but if we're advertising, return ourselves too
 		}
 		if len(results) > 10 {

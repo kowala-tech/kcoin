@@ -108,24 +108,24 @@ func ticketToPong(t *ticket, pong *pong) {
 type ticketStore struct {
 	// radius detector and target address generator
 	// exists for both searched and registered topics
-	radius map[Topic]*topicRadius
+	radius *radius
 
 	// Contains buckets (for each absolute minute) of tickets
 	// that can be used in that minute.
 	// This is only set if the topic is being registered.
-	tickets map[Topic]*topicTickets
+	tickets *tickets
 
-	regQueue []Topic            // Topic registration queue for round robin attempts
-	regSet   map[Topic]struct{} // Topic registration queue contents for fast filling
+	regQueue []Topic     // Topic registration queue for round robin attempts
+	regSet   *requestSet // Topic registration queue contents for fast filling
 
-	nodes       map[*Node]*ticket
-	nodeLastReq map[*Node]reqInfo
+	nodes       *nodeTickets
+	nodeLastReq *requestInfo
 
 	lastBucketFetched timeBucket
 	nextTicketCached  *ticketRef
 	nextTicketReg     mclock.AbsTime
 
-	searchTopicMap        map[Topic]searchTopic
+	searchTopicMap        *searchTopics
 	nextTopicQueryCleanup mclock.AbsTime
 	queriesSent           map[*Node]map[common.Hash]sentQuery
 }
@@ -147,12 +147,12 @@ type topicTickets struct {
 
 func newTicketStore() *ticketStore {
 	return &ticketStore{
-		radius:         make(map[Topic]*topicRadius),
-		tickets:        make(map[Topic]*topicTickets),
-		regSet:         make(map[Topic]struct{}),
-		nodes:          make(map[*Node]*ticket),
-		nodeLastReq:    make(map[*Node]reqInfo),
-		searchTopicMap: make(map[Topic]searchTopic),
+		radius:         newRadius(),
+		tickets:        newTickets(),
+		regSet:         newRequestSet(),
+		nodes:          newNodeTickets(),
+		nodeLastReq:    newRequestInfo(),
+		searchTopicMap: newSearchTopics(),
 		queriesSent:    make(map[*Node]map[common.Hash]sentQuery),
 	}
 }
@@ -161,76 +161,87 @@ func newTicketStore() *ticketStore {
 // the local node will register the topic and tickets will be collected.
 func (s *ticketStore) addTopic(topic Topic, register bool) {
 	log.Trace("Adding discovery topic", "topic", topic, "register", register)
-	if s.radius[topic] == nil {
-		s.radius[topic] = newTopicRadius(topic)
+	if _, ok := s.radius.get(topic); !ok {
+		s.radius.set(topic, newTopicRadius(topic))
 	}
-	if register && s.tickets[topic] == nil {
-		s.tickets[topic] = &topicTickets{buckets: make(map[timeBucket][]ticketRef)}
+	_, ok := s.tickets.get(topic)
+	if register && !ok {
+		s.tickets.set(topic, &topicTickets{buckets: make(map[timeBucket][]ticketRef)})
 	}
 }
 
 func (s *ticketStore) addSearchTopic(t Topic, foundChn chan<- *Node) {
 	s.addTopic(t, false)
-	if s.searchTopicMap[t].foundChn == nil {
-		s.searchTopicMap[t] = searchTopic{foundChn: foundChn}
+	if !s.searchTopicMap.has(t) {
+		s.searchTopicMap.set(t, searchTopic{foundChn: foundChn})
 	}
 }
 
 func (s *ticketStore) removeSearchTopic(t Topic) {
-	if st := s.searchTopicMap[t]; st.foundChn != nil {
-		delete(s.searchTopicMap, t)
+	if s.searchTopicMap.has(t) {
+		s.searchTopicMap.delete(t)
 	}
 }
 
 // removeRegisterTopic deletes all tickets for the given topic.
 func (s *ticketStore) removeRegisterTopic(topic Topic) {
 	log.Trace("Removing discovery topic", "topic", topic)
-	if s.tickets[topic] == nil {
+
+	ticket, ok := s.tickets.get(topic)
+	if !ok {
 		log.Warn("Removing non-existent discovery topic", "topic", topic)
 		return
 	}
-	for _, list := range s.tickets[topic].buckets {
+	for _, list := range ticket.buckets {
 		for _, ref := range list {
 			ref.t.refCnt--
 			if ref.t.refCnt == 0 {
-				delete(s.nodes, ref.t.node)
-				delete(s.nodeLastReq, ref.t.node)
+				s.nodes.delete(ref.t.node)
+				s.nodeLastReq.delete(ref.t.node)
 			}
 		}
 	}
-	delete(s.tickets, topic)
+	s.tickets.delete(topic)
 }
 
 func (s *ticketStore) regTopicSet() []Topic {
-	topics := make([]Topic, 0, len(s.tickets))
-	for topic := range s.tickets {
+	topics := make([]Topic, 0, s.tickets.len())
+
+	s.tickets.RLock()
+	for topic := range s.tickets.m {
 		topics = append(topics, topic)
 	}
+	s.tickets.RUnlock()
 	return topics
 }
 
 // nextRegisterLookup returns the target of the next lookup for ticket collection.
 func (s *ticketStore) nextRegisterLookup() (lookupInfo, time.Duration) {
 	// Queue up any new topics (or discarded ones), preserving iteration order
-	for topic := range s.tickets {
-		if _, ok := s.regSet[topic]; !ok {
+	s.tickets.RLock()
+	for topic := range s.tickets.m {
+		if ok := s.regSet.get(topic); !ok {
 			s.regQueue = append(s.regQueue, topic)
-			s.regSet[topic] = struct{}{}
+			s.regSet.set(topic)
 		}
 	}
+	s.tickets.RUnlock()
+
 	// Iterate over the set of all topics and look up the next suitable one
 	for len(s.regQueue) > 0 {
 		// Fetch the next topic from the queue, and ensure it still exists
 		topic := s.regQueue[0]
 		s.regQueue = s.regQueue[1:]
-		delete(s.regSet, topic)
+		s.regSet.delete(topic)
 
-		if s.tickets[topic] == nil {
+		ticket, ok := s.tickets.get(topic)
+		if !ok {
 			continue
 		}
 		// If the topic needs more tickets, return it
-		if s.tickets[topic].nextLookup < mclock.Now() {
-			next, delay := s.radius[topic].nextTarget(false), 100*time.Millisecond
+		if ticket.nextLookup < mclock.Now() {
+			rad, _ := s.radius.get(topic)
+			next, delay := rad.nextTarget(false), 100*time.Millisecond
 			log.Trace("Found discovery topic to register", "topic", topic, "target", next.target, "delay", delay)
 			return next, delay
 		}
@@ -242,7 +253,7 @@ func (s *ticketStore) nextRegisterLookup() (lookupInfo, time.Duration) {
 }
 
 func (s *ticketStore) nextSearchLookup(topic Topic) lookupInfo {
-	tr := s.radius[topic]
+	tr, _ := s.radius.get(topic)
 	target := tr.nextTarget(tr.radiusLookupCnt >= searchForceQuery)
 	if target.radiusLookup {
 		tr.radiusLookupCnt++
@@ -255,14 +266,15 @@ func (s *ticketStore) nextSearchLookup(topic Topic) lookupInfo {
 // ticketsInWindow returns the tickets of a given topic in the registration window.
 func (s *ticketStore) ticketsInWindow(topic Topic) []ticketRef {
 	// Sanity check that the topic still exists before operating on it
-	if s.tickets[topic] == nil {
+	ticket, ok := s.tickets.get(topic)
+	if !ok {
 		log.Warn("Listing non-existing discovery tickets", "topic", topic)
 		return nil
 	}
 	// Gather all the tickers in the next time window
 	var tickets []ticketRef
 
-	buckets := s.tickets[topic].buckets
+	buckets := ticket.buckets
 	for idx := timeBucket(0); idx < timeWindow; idx++ {
 		tickets = append(tickets, buckets[s.lastBucketFetched+idx]...)
 	}
@@ -305,8 +317,8 @@ func (s ticketRefByWaitTime) Swap(i, j int) {
 
 func (s *ticketStore) addTicketRef(r ticketRef) {
 	topic := r.t.topics[r.idx]
-	tickets := s.tickets[topic]
-	if tickets == nil {
+	tickets, ok := s.tickets.get(topic)
+	if !ok {
 		log.Warn("Adding ticket to non-existent topic", "topic", topic)
 		return
 	}
@@ -334,7 +346,9 @@ func (s *ticketStore) nextFilteredTicket() (*ticketRef, time.Duration) {
 
 		regTime := now + mclock.AbsTime(wait)
 		topic := ticket.t.topics[ticket.idx]
-		if s.tickets[topic] != nil && regTime >= s.tickets[topic].nextReg {
+
+		tic, ok := s.tickets.get(topic)
+		if ok && regTime >= tic.nextReg {
 			return ticket, wait
 		}
 		s.removeTicketRef(*ticket)
@@ -345,13 +359,13 @@ func (s *ticketStore) ticketRegistered(ref ticketRef) {
 	now := mclock.Now()
 
 	topic := ref.t.topics[ref.idx]
-	tickets := s.tickets[topic]
+	tickets, _ := s.tickets.get(topic)
 	min := now - mclock.AbsTime(registerFrequency)*maxRegisterDebt
 	if min > tickets.nextReg {
 		tickets.nextReg = min
 	}
 	tickets.nextReg += mclock.AbsTime(registerFrequency)
-	s.tickets[topic] = tickets
+	s.tickets.set(topic, tickets)
 
 	s.removeTicketRef(ref)
 }
@@ -375,7 +389,9 @@ func (s *ticketStore) nextRegisterableTicket() (*ticketRef, time.Duration) {
 			empty      = true    // true if there are no tickets
 			nextTicket ticketRef // uninitialized if this bucket is empty
 		)
-		for _, tickets := range s.tickets {
+
+		s.tickets.RLock()
+		for _, tickets := range s.tickets.m {
 			//s.removeExcessTickets(topic)
 			if len(tickets.buckets) != 0 {
 				empty = false
@@ -389,6 +405,8 @@ func (s *ticketStore) nextRegisterableTicket() (*ticketRef, time.Duration) {
 				}
 			}
 		}
+		s.tickets.RUnlock()
+
 		if empty {
 			return nil, 0
 		}
@@ -408,12 +426,13 @@ func (s *ticketStore) removeTicketRef(ref ticketRef) {
 	s.nextTicketCached = nil
 
 	topic := ref.topic()
-	tickets := s.tickets[topic]
 
-	if tickets == nil {
+	tickets, ok := s.tickets.get(topic)
+	if !ok {
 		log.Trace("Removing tickets from unknown topic", "topic", topic)
 		return
 	}
+
 	bucket := timeBucket(ref.t.regTime[ref.idx] / mclock.AbsTime(ticketTimeBucketLen))
 	list := tickets.buckets[bucket]
 	idx := -1
@@ -434,8 +453,8 @@ func (s *ticketStore) removeTicketRef(ref ticketRef) {
 	}
 	ref.t.refCnt--
 	if ref.t.refCnt == 0 {
-		delete(s.nodes, ref.t.node)
-		delete(s.nodeLastReq, ref.t.node)
+		s.nodes.delete(ref.t.node)
+		s.nodeLastReq.delete(ref.t.node)
 	}
 }
 
@@ -464,14 +483,15 @@ func (t *ticket) findIdx(topic Topic) int {
 func (s *ticketStore) registerLookupDone(lookup lookupInfo, nodes []*Node, ping func(n *Node) []byte) {
 	now := mclock.Now()
 	for i, n := range nodes {
-		if i == 0 || (binary.BigEndian.Uint64(n.sha[:8])^binary.BigEndian.Uint64(lookup.target[:8])) < s.radius[lookup.topic].minRadius {
+		rad, _ := s.radius.get(lookup.topic)
+		if i == 0 || (binary.BigEndian.Uint64(n.sha[:8])^binary.BigEndian.Uint64(lookup.target[:8])) < rad.minRadius {
 			if lookup.radiusLookup {
-				if lastReq, ok := s.nodeLastReq[n]; !ok || time.Duration(now-lastReq.time) > radiusTC {
-					s.nodeLastReq[n] = reqInfo{pingHash: ping(n), lookup: lookup, time: now}
+				if lastReq, ok := s.nodeLastReq.get(n); !ok || time.Duration(now-lastReq.time) > radiusTC {
+					s.nodeLastReq.set(n, reqInfo{pingHash: ping(n), lookup: lookup, time: now})
 				}
 			} else {
-				if s.nodes[n] == nil {
-					s.nodeLastReq[n] = reqInfo{pingHash: ping(n), lookup: lookup, time: now}
+				if _, ok := s.nodes.get(n); !ok {
+					s.nodeLastReq.set(n, reqInfo{pingHash: ping(n), lookup: lookup, time: now})
 				}
 			}
 		}
@@ -481,10 +501,11 @@ func (s *ticketStore) registerLookupDone(lookup lookupInfo, nodes []*Node, ping 
 func (s *ticketStore) searchLookupDone(lookup lookupInfo, nodes []*Node, query func(n *Node, topic Topic) []byte) {
 	now := mclock.Now()
 	for i, n := range nodes {
-		if i == 0 || (binary.BigEndian.Uint64(n.sha[:8])^binary.BigEndian.Uint64(lookup.target[:8])) < s.radius[lookup.topic].minRadius {
+		rad, _ := s.radius.get(lookup.topic)
+		if i == 0 || (binary.BigEndian.Uint64(n.sha[:8])^binary.BigEndian.Uint64(lookup.target[:8])) < rad.minRadius {
 			if lookup.radiusLookup {
-				if lastReq, ok := s.nodeLastReq[n]; !ok || time.Duration(now-lastReq.time) > radiusTC {
-					s.nodeLastReq[n] = reqInfo{pingHash: nil, lookup: lookup, time: now}
+				if lastReq, ok := s.nodeLastReq.get(n); !ok || time.Duration(now-lastReq.time) > radiusTC {
+					s.nodeLastReq.set(n, reqInfo{pingHash: nil, lookup: lookup, time: now})
 				}
 			} // else {
 			if s.canQueryTopic(n, lookup.topic) {
@@ -500,7 +521,7 @@ func (s *ticketStore) searchLookupDone(lookup lookupInfo, nodes []*Node, query f
 
 func (s *ticketStore) adjustWithTicket(now mclock.AbsTime, targetHash common.Hash, t *ticket) {
 	for i, topic := range t.topics {
-		if tt, ok := s.radius[topic]; ok {
+		if tt, ok := s.radius.get(topic); ok {
 			tt.adjustWithTicket(now, targetHash, ticketRef{t, i})
 		}
 	}
@@ -509,13 +530,14 @@ func (s *ticketStore) adjustWithTicket(now mclock.AbsTime, targetHash common.Has
 func (s *ticketStore) addTicket(localTime mclock.AbsTime, pingHash []byte, ticket *ticket) {
 	log.Trace("Adding discovery ticket", "node", ticket.node.ID, "serial", ticket.serial)
 
-	lastReq, ok := s.nodeLastReq[ticket.node]
+	lastReq, ok := s.nodeLastReq.get(ticket.node)
 	if !(ok && bytes.Equal(pingHash, lastReq.pingHash)) {
 		return
 	}
 	s.adjustWithTicket(localTime, lastReq.lookup.target, ticket)
 
-	if lastReq.lookup.radiusLookup || s.nodes[ticket.node] != nil {
+	_, ok = s.nodes.get(ticket.node)
+	if lastReq.lookup.radiusLookup || ok {
 		return
 	}
 
@@ -530,7 +552,7 @@ func (s *ticketStore) addTicket(localTime mclock.AbsTime, pingHash []byte, ticke
 		s.lastBucketFetched = bucket
 	}
 
-	if _, ok := s.tickets[topic]; ok {
+	if _, ok := s.tickets.get(topic); ok {
 		wait := ticket.regTime[topicIdx] - localTime
 		rnd := rand.ExpFloat64()
 		if rnd > 10 {
@@ -545,17 +567,8 @@ func (s *ticketStore) addTicket(localTime mclock.AbsTime, pingHash []byte, ticke
 
 	if ticket.refCnt > 0 {
 		s.nextTicketCached = nil
-		s.nodes[ticket.node] = ticket
+		s.nodes.set(ticket.node, ticket)
 	}
-}
-
-func (s *ticketStore) getNodeTicket(node *Node) *ticket {
-	if s.nodes[node] == nil {
-		log.Trace("Retrieving node ticket", "node", node.ID, "serial", nil)
-	} else {
-		log.Trace("Retrieving node ticket", "node", node.ID, "serial", s.nodes[node].serial)
-	}
-	return s.nodes[node]
 }
 
 func (s *ticketStore) canQueryTopic(node *Node, topic Topic) bool {
@@ -615,12 +628,17 @@ func (s *ticketStore) gotTopicNodes(from *Node, hash common.Hash, nodes []rpcNod
 	if len(nodes) > 0 {
 		inside = 1
 	}
-	s.radius[q.lookup.topic].adjust(now, q.lookup.target, from.sha, inside)
-	chn := s.searchTopicMap[q.lookup.topic].foundChn
-	if chn == nil {
+
+	rad, _ := s.radius.get(q.lookup.topic)
+	rad.adjust(now, q.lookup.target, from.sha, inside)
+
+	if !s.searchTopicMap.has(q.lookup.topic) {
 		//fmt.Println("no channel")
 		return false
 	}
+
+	searchTopics, _ := s.searchTopicMap.get(q.lookup.topic)
+
 	for _, node := range nodes {
 		ip := node.IP
 		if ip.IsUnspecified() || ip.IsLoopback() {
@@ -628,7 +646,7 @@ func (s *ticketStore) gotTopicNodes(from *Node, hash common.Hash, nodes []rpcNod
 		}
 		n := NewNode(node.ID, ip, node.UDP, node.TCP)
 		select {
-		case chn <- n:
+		case searchTopics.foundChn <- n:
 		default:
 			return false
 		}
