@@ -1,0 +1,87 @@
+version: '3'
+
+services:
+    nsqlookupd:
+        image: nsqio/nsq
+        command: /nsqlookupd
+        ports:
+            - 4160
+            - 4161
+    nsqd:
+        image: nsqio/nsq
+        command: /nsqd --lookupd-tcp-address=nsqlookupd:4160
+        depends_on:
+            - nsqlookupd
+        ports:
+            - 4150:4150
+            - 4151
+    nsqadmin:
+        image: nsqio/nsq
+        command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
+        depends_on:
+            - nsqlookupd  
+        ports:
+            - 4171:4171
+    redis:
+        image: "redis:alpine"
+        ports:
+            - 6380:6379
+
+    smtp:
+        image:  namshi/smtp
+        ports:
+            - "9025:25"
+
+    transactions_publisher:
+        image: kowalatech/transactions-publisher:latest
+        build: 
+            context: .
+            dockerfile: ./transactions_publisher.Dockerfile
+        depends_on:
+            - redis
+            - nsqd
+        environment: 
+            - NSQ_ADDR=nsqd:4150
+            - REDIS_ADDR=redis:6379
+            - TESTNET_RPC_ADDR=http://testnet-eth.kowala.io:18545
+
+    transactions_db_synchronize:
+        build:
+            context: .
+            dockerfile: ./transactions_db_synchronize.Dockerfile
+        depends_on:
+            - redis
+        environment:
+            - REDIS_ADDR=redis:6379
+            - TESTNET_RPC_ADDR=http://rpcnode.kowala.io:30503
+
+    emailer:
+        image: kowalatech/emailer:latest
+        build: 
+            context: .
+            dockerfile: ./emailer.Dockerfile
+        depends_on:
+            - redis
+            - nsqd
+            - smtp
+        environment: 
+            - NSQ_ADDR=nsqd:4150
+            - REDIS_ADDR=redis:6379
+            - SMTP_FROM=from@test.com
+            - SMTP_HOST=smtp
+            - SMTP_PORT=25
+            - SMTP_USERNAME=
+            - SMTP_PASSWORD=
+
+    api:
+        image: kowalatech/api:latest
+        build: 
+            context: .
+            dockerfile: ./api.Dockerfile
+        depends_on:
+            - redis
+        ports:
+            - 3000:3000
+        environment: 
+            - PORT=3000
+            - REDIS_ADDR=redis:6379
