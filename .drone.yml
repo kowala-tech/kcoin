@@ -38,6 +38,15 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     tags: dev
     dockerfile: client/release/kcoin.Dockerfile
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
     when:
       branch: [dev]
       event: [push, tag]
@@ -49,6 +58,15 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     tags: dev
     dockerfile: client/release/bootnode.Dockerfile
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
     when:
       branch: [dev]
       event: [push, tag]
@@ -60,6 +78,15 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     tags: dev
     dockerfile: client/release/faucet.Dockerfile
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
     when:
       branch: [dev]
       event: [push, tag]
