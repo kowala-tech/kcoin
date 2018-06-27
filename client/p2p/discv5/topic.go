@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
 )
 
@@ -221,7 +222,7 @@ func (t *topicTable) deleteEntry(e *topicEntry) {
 
 // It is assumed that topics and waitPeriods have the same length.
 func (t *topicTable) useTicket(node *Node, serialNo uint32, topics []Topic, idx int, issueTime uint64, waitPeriods []uint32) (registered bool) {
-	debugLog(fmt.Sprintf("useTicket %v %v %v", serialNo, topics, waitPeriods))
+	log.Trace("Using discovery ticket", "serial", serialNo, "topics", topics, "waits", waitPeriods)
 	//fmt.Println("useTicket", serialNo, topics, waitPeriods)
 	t.collectGarbage()
 
@@ -243,7 +244,7 @@ func (t *topicTable) useTicket(node *Node, serialNo uint32, topics []Topic, idx 
 	currTime := uint64(tm / mclock.AbsTime(time.Second))
 	regTime := issueTime + uint64(waitPeriods[idx])
 	relTime := int64(currTime - regTime)
-	if relTime <= regTimeWindow+1 { // give clients a little security margin on both ends
+	if relTime >= -1 && relTime <= regTimeWindow+1 { // give clients a little security margin on both ends
 		if e := n.entries[topics[idx]]; e == nil {
 			t.addEntry(node, topics[idx])
 		} else {
@@ -256,15 +257,15 @@ func (t *topicTable) useTicket(node *Node, serialNo uint32, topics []Topic, idx 
 	return false
 }
 
-func (topictab *topicTable) getTicket(node *Node, topics []Topic) *ticket {
-	topictab.collectGarbage()
+func (t *topicTable) getTicket(node *Node, topics []Topic) *ticket {
+	t.collectGarbage()
 
 	now := mclock.Now()
-	n := topictab.getOrNewNode(node)
+	n := t.getOrNewNode(node)
 	n.lastIssuedTicket++
-	topictab.storeTicketCounters(node)
+	t.storeTicketCounters(node)
 
-	t := &ticket{
+	tic := &ticket{
 		issueTime: now,
 		topics:    topics,
 		serial:    n.lastIssuedTicket,
@@ -272,15 +273,15 @@ func (topictab *topicTable) getTicket(node *Node, topics []Topic) *ticket {
 	}
 	for i, topic := range topics {
 		var waitPeriod time.Duration
-		if topic := topictab.topics[topic]; topic != nil {
+		if topic := t.topics[topic]; topic != nil {
 			waitPeriod = topic.wcl.waitPeriod
 		} else {
 			waitPeriod = minWaitPeriod
 		}
 
-		t.regTime[i] = now + mclock.AbsTime(waitPeriod)
+		tic.regTime[i] = now + mclock.AbsTime(waitPeriod)
 	}
-	return t
+	return tic
 }
 
 const gcInterval = time.Minute
