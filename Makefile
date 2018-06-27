@@ -107,27 +107,6 @@ else
 	done;
 endif
 
-## Docker
-
-docker-build-bootnode:
-	docker build -t kowalatech/bootnode -f client/bootnode.Dockerfile .
-
-docker-build-kusd:
-	docker build -t kowalatech/kusd -f client/kcoin.Dockerfile .
-
-docker-build-faucet:
-	docker build -t kowalatech/faucet -f client/faucet.Dockerfile .
-
-
-docker-publish-bootnode:
-	docker push kowalatech/bootnode
-
-docker-publish-kusd:
-	docker push kowalatech/kusd
-
-docker-publish-faucet:
-	docker push kowalatech/faucet
-
 ## E2E tests
 
 DEP_BIN := $(shell command -v dep 2> /dev/null)
