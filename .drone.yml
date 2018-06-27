@@ -26,6 +26,8 @@ pipeline:
       - REDIS_ADDR=redis:6379
     commands:
       - make test_notifications
+    when:
+      event: [pull_request]
 
   e2e:
     group: testing
