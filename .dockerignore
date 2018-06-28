@@ -8,4 +8,5 @@ client/build/_workspace
 client/build/bin
 
 e2e
+notifications/vendor
 
