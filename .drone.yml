@@ -138,7 +138,7 @@ pipeline:
     when:
       event: tag
 
-  docker_notifications_api:
+  docker_notifications_api_tag:
     group: docker-deployment
     image: kowalatech/drone-docker
     repo: kowalatech/backend_api
@@ -149,7 +149,7 @@ pipeline:
     when:
       event: [tag]
 
-  docker_notifications_emailer:
+  docker_notifications_emailer_tag:
     group: docker-deployment
     image: kowalatech/drone-docker
     repo: kowalatech/emailer
@@ -160,7 +160,7 @@ pipeline:
     when:
       event: [tag]
 
-  docker_notifications_db_sync:
+  docker_notifications_db_sync_tag:
     group: docker-deployment
     image: kowalatech/drone-docker
     repo: kowalatech/transactions_persistance
