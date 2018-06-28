@@ -301,6 +301,11 @@ func (ctx *Context) buildGenesis() error {
 			MaxNumOracles: 10,
 			FreezePeriod:  0,
 			BaseDeposit:   0,
+			Price: genesis.PriceOpts{
+				InitialPrice:  1,
+				SyncFrequency: 600,
+				UpdatePeriod:  30,
+			},
 		},
 		PrefundedAccounts: []genesis.PrefundedAccount{
 			{
