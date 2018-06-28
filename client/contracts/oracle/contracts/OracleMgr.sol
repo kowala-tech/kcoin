@@ -13,7 +13,7 @@ contract OracleMgr is pausable.Pausable {
     uint public baseDeposit;       
     uint public maxNumOracles;
     uint public freezePeriod;
-    uint public price; // one dollar
+    uint public price;
 
     struct Deposit {
         uint amount;
