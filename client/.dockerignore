@@ -4,10 +4,9 @@
 !.git/refs/heads
 **/*_test.go
 
-build/_workspace
-build/_bin
-tests/**
-features/*
-cluster/*
-godog.test
+client/build/_workspace
+client/build/bin
+
+e2e
+notifications/vendor
 

@@ -9,12 +9,23 @@ clone:
     tags: true
 
 pipeline:
-  test:
+  test_kcoin:
     group: testing
     image: kowalatech/go:1.0.3
     commands:
       - make test
       - make lint
+    when:
+      event: [pull_request]
+
+  test_notifications:
+    group: testing
+    image: kowalatech/go:1.0.3
+    environment:
+      - NSQ_ADDR=nsqd:4150
+      - REDIS_ADDR=redis:6379
+    commands:
+      - make test_notifications
     when:
       event: [pull_request]
 
@@ -25,8 +36,8 @@ pipeline:
       - DOCKER_HOST=tcp://docker:2375
       - DOCKER_PUBLIC_IP=docker
     commands:
-      - docker build -t kowalatech/kusd:dev -f client/kcoin.Dockerfile .
-      - docker build -t kowalatech/bootnode:dev -f client/bootnode.Dockerfile .
+      - docker build -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
+      - docker build -t kowalatech/bootnode:dev -f client/release/bootnode.Dockerfile .
       - make e2e
     when:
       event: [pull_request]
@@ -37,7 +48,7 @@ pipeline:
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: client/kcoin.Dockerfile
+    dockerfile: client/release/kcoin.Dockerfile
     when:
       branch: [dev]
       event: [push, tag]
@@ -48,7 +59,7 @@ pipeline:
     repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: client/bootnode.Dockerfile
+    dockerfile: client/release/bootnode.Dockerfile
     when:
       branch: [dev]
       event: [push, tag]
@@ -59,7 +70,37 @@ pipeline:
     repo: kowalatech/faucet
     secrets: [ docker_username, docker_password ]
     tags: dev
-    dockerfile: client/faucet.Dockerfile
+    dockerfile: client/release/faucet.Dockerfile
+    when:
+      branch: [dev]
+      event: [push, tag]
+
+  docker_notifications_api:
+    group: docker-deployment
+    image: plugins/docker
+    repo: kowalatech/backend_api
+    dockerfile: notifications/api.Dockerfile
+    secrets: [ docker_username, docker_password ]
+    when:
+      branch: [dev]
+      event: [push, tag]
+
+  docker_notifications_emailer:
+    group: docker-deployment
+    image: plugins/docker
+    repo: kowalatech/emailer
+    dockerfile: notifications/emailer.Dockerfile
+    secrets: [ docker_username, docker_password ]
+    when:
+      branch: [dev]
+      event: [push, tag]
+
+  docker_notifications_db_sync:
+    group: docker-deployment
+    image: plugins/docker
+    repo: kowalatech/transactions_persistance
+    dockerfile: notifications/transactions_db_synchronize.Dockerfile
+    secrets: [ docker_username, docker_password ]
     when:
       branch: [dev]
       event: [push, tag]
@@ -71,7 +112,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: client/kcoin.Dockerfile
+    dockerfile: client/release/kcoin.Dockerfile
     when:
       event: tag
 
@@ -82,7 +123,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: client/bootnode.Dockerfile
+    dockerfile: client/release/bootnode.Dockerfile
     when:
       event: tag
 
@@ -93,9 +134,42 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: client/faucet.Dockerfile
+    dockerfile: client/release/faucet.Dockerfile
     when:
       event: tag
+
+  docker_notifications_api:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/backend_api
+    dockerfile: notifications/api.Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      event: [tag]
+
+  docker_notifications_emailer:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/emailer
+    dockerfile: notifications/emailer.Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      event: [tag]
+
+  docker_notifications_db_sync:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/transactions_persistance
+    dockerfile: notifications/transactions_db_synchronize.Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      event: [tag]
 
   build-artifacts:
     image: kowalatech/go:1.0.3
@@ -141,3 +215,16 @@ services:
     image: docker:dind
     command: [ '-l', 'fatal' ]
     privileged: true
+
+  nsqlookupd:
+    image: nsqio/nsq
+    commands:
+      - /nsqlookupd
+
+  nsqd:
+    image: nsqio/nsq
+    commands:
+      - /nsqd --lookupd-tcp-address=nsqlookupd:4160
+
+  redis:
+    image: redis:alpine

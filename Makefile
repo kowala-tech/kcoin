@@ -4,7 +4,7 @@
 
 .PHONY: kcoin android ios kcoin-cross swarm evm genesis all test clean
 .PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
-.PHONY: e2e
+.PHONY: dep e2e
 
 GOBIN = $(pwd)/client/build/bin
 GO ?= latest
@@ -63,6 +63,11 @@ ios:
 test: all
 	cd client; build/env.sh go run build/ci.go test
 
+test_notifications: dep
+	cd notifications && \
+	$(GOPATH)/bin/dep ensure --vendor-only && \
+	go test ./... -tags=integration
+
 lint: all
 	cd client; build/env.sh go run build/ci.go lint
 
@@ -107,37 +112,19 @@ else
 	done;
 endif
 
-## Docker
-
-docker-build-bootnode:
-	docker build -t kowalatech/bootnode -f client/bootnode.Dockerfile .
-
-docker-build-kusd:
-	docker build -t kowalatech/kusd -f client/kcoin.Dockerfile .
-
-docker-build-faucet:
-	docker build -t kowalatech/faucet -f client/faucet.Dockerfile .
-
-
-docker-publish-bootnode:
-	docker push kowalatech/bootnode
-
-docker-publish-kusd:
-	docker push kowalatech/kusd
-
-docker-publish-faucet:
-	docker push kowalatech/faucet
-
 ## E2E tests
 
-DEP_BIN := $(shell command -v dep 2> /dev/null)
-
-e2e:
-ifndef DEP_BIN
-	@echo "Installing dep..."
-	@go get github.com/golang/dep/cmd/dep
-endif
+e2e: dep
 	cd e2e && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go build -a && \
 	./e2e --features ./features
+
+# Tools
+
+DEP_BIN := $(shell command -v dep 2> /dev/null)
+dep:
+ifndef DEP_BIN
+	@echo "Installing dep..."
+	@go get github.com/golang/dep/cmd/dep
+endif
