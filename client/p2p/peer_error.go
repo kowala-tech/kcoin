@@ -32,8 +32,8 @@ func newPeerError(code int, format string, v ...interface{}) *peerError {
 	return err
 }
 
-func (pe *peerError) Error() string {
-	return pe.message
+func (self *peerError) Error() string {
+	return self.message
 }
 
 var errProtocolReturned = errors.New("protocol returned")

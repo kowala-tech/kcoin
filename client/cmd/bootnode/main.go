@@ -4,7 +4,10 @@ import (
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
+<<<<<<< HEAD
+=======
 	"net"
+>>>>>>> dev
 	"os"
 
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
@@ -80,6 +83,14 @@ func main() {
 		}
 	}
 
+<<<<<<< HEAD
+	if *runv5 {
+		if _, err := discv5.ListenUDP(nodeKey, *listenAddr, natm, "", restrictList); err != nil {
+			utils.Fatalf("%v", err)
+		}
+	} else {
+		if _, err := discover.ListenUDP(nodeKey, *listenAddr, natm, "", restrictList); err != nil {
+=======
 	addr, err := net.ResolveUDPAddr("udp", *listenAddr)
 	if err != nil {
 		utils.Fatalf("-ResolveUDPAddr: %v", err)
@@ -111,6 +122,7 @@ func main() {
 			NetRestrict:  restrictList,
 		}
 		if _, err := discover.ListenUDP(conn, cfg); err != nil {
+>>>>>>> dev
 			utils.Fatalf("%v", err)
 		}
 	}

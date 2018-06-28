@@ -92,14 +92,8 @@ func (t *rlpx) close(err error) {
 	// Tell the remote end why we're disconnecting if possible.
 	if t.rw != nil {
 		if r, ok := err.(DiscReason); ok && r != DiscNetworkError {
-			// rlpx tries to send DiscReason to disconnected peer
-			// if the connection is net.Pipe (in-memory simulation)
-			// it hangs forever, since net.Pipe does not implement
-			// a write deadline. Because of this only try to send
-			// the disconnect reason message if there is no error.
-			if err := t.fd.SetWriteDeadline(time.Now().Add(discWriteTimeout)); err == nil {
-				SendItems(t.rw, discMsg, r)
-			}
+			t.fd.SetWriteDeadline(time.Now().Add(discWriteTimeout))
+			SendItems(t.rw, discMsg, r)
 		}
 	}
 	t.fd.Close()
@@ -159,10 +153,6 @@ func readProtocolHandshake(rw MsgReader, our *protoHandshake) (*protoHandshake, 
 	return &hs, nil
 }
 
-// doEncHandshake runs the protocol handshake using authenticated
-// messages. the protocol handshake is the first authenticated message
-// and also verifies whether the encryption handshake 'worked' and the
-// remote side actually provided the right public key.
 func (t *rlpx) doEncHandshake(prv *ecdsa.PrivateKey, dial *discover.Node) (discover.NodeID, error) {
 	var (
 		sec secrets
@@ -479,7 +469,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r 
 	}
 	// Attempt decoding pre-EIP-8 "plain" format.
 	key := ecies.ImportECDSA(prv)
-	if dec, err := key.Decrypt(buf, nil, nil); err == nil {
+	if dec, err := key.Decrypt(rand.Reader, buf, nil, nil); err == nil {
 		msg.decodePlain(dec)
 		return buf, nil
 	}
@@ -493,7 +483,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r 
 	if _, err := io.ReadFull(r, buf[plainSize:]); err != nil {
 		return buf, err
 	}
-	dec, err := key.Decrypt(buf[2:], nil, prefix)
+	dec, err := key.Decrypt(rand.Reader, buf[2:], nil, prefix)
 	if err != nil {
 		return buf, err
 	}

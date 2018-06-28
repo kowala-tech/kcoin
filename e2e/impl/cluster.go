@@ -56,10 +56,14 @@ func (ctx *Context) InitCluster(logsToStdout bool) error {
 }
 
 func (ctx *Context) RunCluster() error {
+<<<<<<< HEAD
+	ctx.nodeRunner.StopAll()
+=======
 	if err := ctx.nodeRunner.StopAll(); err != nil {
 		return err
 	}
 
+>>>>>>> dev
 	if err := ctx.runNodes(); err != nil {
 		return err
 	}

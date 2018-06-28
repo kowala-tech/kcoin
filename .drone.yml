@@ -171,7 +171,6 @@ pipeline:
     when:
       event: [tag]
 
-
   build-artifacts:
     image: kowalatech/go:1.0.3
     environment:

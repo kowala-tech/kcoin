@@ -304,13 +304,8 @@ func (d *Downloader) Synchronise(id string, head common.Hash, blockNumber *big.I
 		errEmptyHeaderSet, errPeersUnavailable,
 		errInvalidAncestor, errInvalidChain:
 		log.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
-		if d.dropPeer == nil {
-			// The dropPeer method is nil when `--copydb` is used for a local copy.
-			// Timeouts can occur if e.g. compaction hits at the wrong time, and can be ignored
-			log.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", id)
-		} else {
-			d.dropPeer(id)
-		}
+		d.dropPeer(id)
+
 	default:
 		log.Warn("Synchronisation failed, retrying", "err", err)
 	}
@@ -556,11 +551,6 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 			}
 			// Make sure the peer actually gave something valid
 			headers := packet.(*headerPack).headers
-			if len(headers) == 0 {
-				log.Debug("Received empty headers from peer", "peer", packet.PeerId())
-				break
-			}
-
 			if len(headers) != 1 {
 				p.log.Debug("Multiple headers for single request", "headers", len(headers))
 				return nil, errBadPeer

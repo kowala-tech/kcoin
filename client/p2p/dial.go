@@ -138,13 +138,10 @@ func (s *dialstate) addStatic(n *discover.Node) {
 func (s *dialstate) removeStatic(n *discover.Node) {
 	// This removes a task so future attempts to connect will not be made.
 	delete(s.static, n.ID)
-	// This removes a previous dial timestamp so that application
-	// can force a server to reconnect with chosen peer immediately.
-	s.hist.remove(n.ID)
 }
 
 func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now time.Time) []task {
-	if s.start.IsZero() {
+	if s.start == (time.Time{}) {
 		s.start = now
 	}
 
@@ -278,14 +275,11 @@ func (t *dialTask) Do(srv *Server) {
 			return
 		}
 	}
-	err := t.dial(srv, t.dest)
-	if err != nil {
-		log.Trace("Dial error", "task", t, "err", err)
-		// Try resolving the ID of static nodes if dialing failed.
-		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
-			if t.resolve(srv) {
-				t.dial(srv, t.dest)
-			}
+	success := t.dial(srv, t.dest)
+	// Try resolving the ID of static nodes if dialing failed.
+	if !success && t.flags&staticDialedConn != 0 {
+		if t.resolve(srv) {
+			t.dial(srv, t.dest)
 		}
 	}
 }
@@ -324,19 +318,16 @@ func (t *dialTask) resolve(srv *Server) bool {
 	return true
 }
 
-type dialError struct {
-	error
-}
-
 // dial performs the actual connection attempt.
-func (t *dialTask) dial(srv *Server, dest *discover.Node) error {
+func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 	fd, err := srv.Dialer.Dial(dest)
 	if err != nil {
 		log.Trace("Dial error", "task", t, "err", err)
-		return &dialError{err}
+		return false
 	}
 	mfd := newMeteredConn(fd, false)
-	return srv.SetupConn(mfd, t.flags, dest)
+	srv.SetupConn(mfd, t.flags, dest)
+	return true
 }
 
 func (t *dialTask) String() string {
@@ -378,16 +369,6 @@ func (h dialHistory) min() pastDial {
 }
 func (h *dialHistory) add(id discover.NodeID, exp time.Time) {
 	heap.Push(h, pastDial{id, exp})
-
-}
-func (h *dialHistory) remove(id discover.NodeID) bool {
-	for i, v := range *h {
-		if v.id == id {
-			heap.Remove(h, i)
-			return true
-		}
-	}
-	return false
 }
 func (h dialHistory) contains(id discover.NodeID) bool {
 	for _, v := range h {

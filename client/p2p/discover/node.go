@@ -13,7 +13,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/crypto"
@@ -36,8 +35,9 @@ type Node struct {
 	// with ID.
 	sha common.Hash
 
-	// Time when the node was added to the table.
-	addedAt time.Time
+	// whether this node is currently being pinged in order to replace
+	// it in a bucket
+	contested bool
 }
 
 // NewNode creates a new node. It is mostly meant to be used for
