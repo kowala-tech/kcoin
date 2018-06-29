@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-kit/kit/log"
-	"github.com/kowala-tech/wallet-backend/application/command"
+	"github.com/kowala-tech/kcoin/wallet-backend/application/command"
 )
 
 //NewBlockHeightHandler returns an http.Handler for the use case of getting the Block Height from the Blockchain.

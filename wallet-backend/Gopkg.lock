@@ -208,63 +208,6 @@
   revision = "28a76e7211bcfe41f875413b8466832c077393a3"
 
 [[projects]]
-  branch = "dev"
-  name = "github.com/kowala-tech/kcoin"
-  packages = [
-    ".",
-    "accounts",
-    "accounts/abi",
-    "accounts/abi/bind",
-    "accounts/keystore",
-    "common",
-    "common/hexutil",
-    "common/math",
-    "common/mclock",
-    "consensus",
-    "consensus/tendermint",
-    "contracts/consensus",
-    "contracts/oracle",
-    "contracts/ownership",
-    "contracts/token",
-    "core",
-    "core/state",
-    "core/types",
-    "core/vm",
-    "core/vm/runtime",
-    "crypto",
-    "crypto/bn256",
-    "crypto/randentropy",
-    "crypto/secp256k1",
-    "crypto/sha3",
-    "event",
-    "kcoinclient",
-    "kcoindb",
-    "knode/genesis",
-    "log",
-    "metrics",
-    "params",
-    "rlp",
-    "rpc",
-    "trie"
-  ]
-  revision = "965b7b9da292cb9c28a188be3c6a2bf552021567"
-
-[[projects]]
-  branch = "feature/db-transactions-saving"
-  name = "github.com/kowala-tech/notifications"
-  packages = [
-    "protocolbuffer",
-    "protocolbuffer/mocks"
-  ]
-  revision = "feb500b43111b013fdfcdf6ab50d7b4821f041ee"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/kowala-tech/toolbox"
-  packages = ["testnet"]
-  revision = "7ca960616eb9c3232c70bfcb627e30475f042f4d"
-
-[[projects]]
   branch = "master"
   name = "github.com/kr/logfmt"
   packages = ["."]

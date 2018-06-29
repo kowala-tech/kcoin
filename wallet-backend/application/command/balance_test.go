@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/wallet-backend/blockchain/mocks"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/wallet-backend/blockchain/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

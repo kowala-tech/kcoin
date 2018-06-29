@@ -4,7 +4,7 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/kowala-tech/wallet-backend/blockchain"
+	"github.com/kowala-tech/kcoin/wallet-backend/blockchain"
 )
 
 //GetBlockHeightHandler represents the use case of getting the block height from the

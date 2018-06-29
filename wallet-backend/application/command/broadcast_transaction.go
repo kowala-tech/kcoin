@@ -3,7 +3,7 @@ package command
 import (
 	"context"
 
-	"github.com/kowala-tech/wallet-backend/blockchain"
+	"github.com/kowala-tech/kcoin/wallet-backend/blockchain"
 )
 
 //BroadcastTransactionHandler represents the use case of sending a signed transaction to the Blockchain.

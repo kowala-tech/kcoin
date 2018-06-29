@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/websocket"
-	"github.com/kowala-tech/wallet-backend/application/command"
+	"github.com/kowala-tech/kcoin/wallet-backend/application/command"
 )
 
 //Handler is an http.Handler used to bind a websocket connection to all use cases that are sent

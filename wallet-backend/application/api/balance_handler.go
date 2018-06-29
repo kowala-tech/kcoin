@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/wallet-backend/application/command"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/wallet-backend/application/command"
 )
 
 //NewBalanceHandler returns an http.Handler to use as an endpoint api to get the balance. This handler wraps

@@ -4,8 +4,8 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
-	"github.com/kowala-tech/wallet-backend/blockchain"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/wallet-backend/blockchain"
 )
 
 //GetBalanceHandler is the domain use case that represents getting a balance from a specific address.

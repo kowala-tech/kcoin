@@ -2,7 +2,7 @@ package mocks
 
 import big "math/big"
 
-import common "github.com/kowala-tech/kcoin/common"
+import common "github.com/kowala-tech/kcoin/client/common"
 import context "context"
 import mock "github.com/stretchr/testify/mock"
 

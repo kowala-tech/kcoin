@@ -17,15 +17,14 @@ import (
 	"github.com/dougEfresh/kitz"
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
-	"github.com/kowala-tech/kcoin/kcoinclient"
-	"github.com/kowala-tech/notifications/protocolbuffer"
-	"github.com/kowala-tech/wallet-backend/application/api"
-	"github.com/kowala-tech/wallet-backend/application/command"
-	"github.com/kowala-tech/wallet-backend/application/websocket"
-	"github.com/kowala-tech/wallet-backend/blockchain"
+	"github.com/kowala-tech/kcoin/client/kcoinclient"
+	"github.com/kowala-tech/kcoin/notifications/protocolbuffer"
+	"github.com/kowala-tech/kcoin/wallet-backend/application/api"
+	"github.com/kowala-tech/kcoin/wallet-backend/application/command"
+	"github.com/kowala-tech/kcoin/wallet-backend/application/websocket"
+	"github.com/kowala-tech/kcoin/wallet-backend/blockchain"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -155,7 +154,7 @@ func createRouter(l log.Logger) http.Handler {
 	r := mux.NewRouter()
 
 	nodeConnection := createNodeConnection(viper.GetString(nodeEndpointConfigKey))
-	notificationsConn := createTransactionServiceClient(viper.GetString(nodeDefaultNotificationsRPCConfigKey))
+	notificationsConn := protocolbuffer.DialNewTransactionServiceClient(viper.GetString(nodeDefaultNotificationsRPCConfigKey))
 
 	// Websocket
 	r.Methods("GET").PathPrefix("/ws").Handler(createWebsocketHandler(l, nodeConnection))
@@ -217,15 +216,6 @@ func createNodeConnection(endpoint string) blockchain.Client {
 	go heartBeatNodeConnection(client)
 
 	return client
-}
-
-func createTransactionServiceClient(endpoint string) protocolbuffer.TransactionServiceClient {
-	conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
-	if err != nil {
-		panic("Error connection to notifications endpoint: " + err.Error())
-	}
-
-	return protocolbuffer.NewTransactionServiceClient(conn)
 }
 
 func heartBeatNodeConnection(client blockchain.Client) {

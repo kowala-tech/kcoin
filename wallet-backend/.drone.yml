@@ -1,6 +1,6 @@
 workspace:
   base: /root/go
-  path: src/github.com/kowala-tech/wallet-backend
+  path: src/github.com/kowala-tech/kcoin/wallet-backend
 
 pipeline:
   linter:

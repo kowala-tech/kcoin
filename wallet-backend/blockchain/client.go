@@ -4,7 +4,7 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/common"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 //Client is an interface of a generic client to connect to a blockchain instance.

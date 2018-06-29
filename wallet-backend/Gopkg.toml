@@ -29,15 +29,6 @@
   go-tests = true
   unused-packages = true
 
-[[prune.project]]
- name = "github.com/kowala-tech/kcoin"
- non-go = true
- unused-packages = false
-
-[[constraint]]
-  name = "github.com/kowala-tech/kcoin"
-  branch = "dev"
-
 [[constraint]]
   name = "github.com/stretchr/testify"
   version = "1.2.1"
@@ -63,13 +54,5 @@
   name = "github.com/dougEfresh/kitz"
 
 [[constraint]]
-  branch = "feature/db-transactions-saving"
-  name = "github.com/kowala-tech/notifications"
-
-[[constraint]]
   name = "docker.io/go-docker"
   version = "1.0.0"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/kowala-tech/toolbox"

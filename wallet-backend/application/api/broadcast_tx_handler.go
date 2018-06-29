@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
-	"github.com/kowala-tech/wallet-backend/application/command"
+	"github.com/kowala-tech/kcoin/wallet-backend/application/command"
 )
 
 //NewBroadcastTransactionHandler creates an http.Handler for the use case of broadcast a signed transaction.

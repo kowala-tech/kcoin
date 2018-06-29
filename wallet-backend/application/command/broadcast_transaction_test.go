@@ -5,7 +5,7 @@ import (
 
 	"context"
 
-	"github.com/kowala-tech/wallet-backend/blockchain/mocks"
+	"github.com/kowala-tech/kcoin/wallet-backend/blockchain/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
