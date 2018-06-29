@@ -1,6 +1,7 @@
 #!/bin/sh
 set -e
 
+DO_INIT=true;
 TESTNET=false;
 NEW_ACC=false;
 NEW_ACC_PASS="";
@@ -16,6 +17,10 @@ do
     case "$opt" in
 	  "--testnet")
 		TESTNET=true
+		command="$command$opt " # make sure this passed to the binary
+		;;
+	  "version")
+		DO_INIT=false
 		command="$command$opt " # make sure this passed to the binary
 		;;
 	  "--new-account")
@@ -35,9 +40,12 @@ done
 
 cd /kcoin
 
-case $TESTNET in
-	(true)  ./kcoin init --testnet "$GENESIS_PATH";;
-	(false) ./kcoin init "$GENESIS_PATH";;
+case $DO_INIT in
+	(true)
+		case $TESTNET in
+			(true)  ./kcoin init --testnet "$GENESIS_PATH";;
+			(false) ./kcoin init "$GENESIS_PATH";;
+		esac
 esac
 
 case $NEW_ACC in
