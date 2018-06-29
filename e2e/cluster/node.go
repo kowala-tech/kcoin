@@ -37,6 +37,17 @@ func BootnodeSpec(nodeSuffix string) (*NodeSpec, error) {
 	return spec, nil
 }
 
+func WalletBackendSpec(nodeSuffix string) (*NodeSpec, error) {
+	id := NodeID("wallet-backend-" + nodeSuffix)
+	spec := &NodeSpec{
+		ID:    id,
+		Image: "kowalatech/wallet_backend:dev",
+		Cmd:   []string{},
+		Files: map[string][]byte{},
+	}
+	return spec, nil
+}
+
 func kcoinIsReadyFn(nodeID NodeID) func(NodeRunner) error {
 	return func(runner NodeRunner) error {
 		randomStr := randStringBytes(64)
