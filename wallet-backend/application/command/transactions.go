@@ -5,8 +5,8 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/notifications/protocolbuffer"
 	"github.com/kowala-tech/kcoin/wallet-backend/blockchain"
+	"github.com/kowala-tech/kcoin/wallet-backend/protocolbuffer"
 )
 
 //GetTransactions represents the parameters needed to perform the use case for getting the transactions of a

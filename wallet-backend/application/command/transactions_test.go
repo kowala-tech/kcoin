@@ -7,8 +7,8 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/notifications/protocolbuffer"
-	"github.com/kowala-tech/kcoin/notifications/protocolbuffer/mocks"
+	"github.com/kowala-tech/kcoin/wallet-backend/protocolbuffer"
+	"github.com/kowala-tech/kcoin/wallet-backend/protocolbuffer/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
