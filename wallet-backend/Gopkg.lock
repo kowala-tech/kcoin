@@ -8,12 +8,6 @@
   version = "v2.0.1"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/btcsuite/btcd"
-  packages = ["btcec"]
-  revision = "675abc5df3c5531bc741b56a765e35623459da6d"
-
-[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -115,29 +109,6 @@
   version = "v1.0"
 
 [[projects]]
-  name = "github.com/kowala-tech/kcoin"
-  packages = [
-    "client",
-    "client/common",
-    "client/common/hexutil",
-    "client/common/math",
-    "client/core/types",
-    "client/crypto",
-    "client/crypto/secp256k1",
-    "client/crypto/sha3",
-    "client/kcoinclient",
-    "client/log",
-    "client/params",
-    "client/rlp",
-    "client/rpc",
-    "client/trie",
-    "notifications/protocolbuffer",
-    "notifications/protocolbuffer/mocks"
-  ]
-  revision = "57f29973ed85190a4f233a8aee2c6b68a595bf14"
-  version = "1.0.11"
-
-[[projects]]
   branch = "master"
   name = "github.com/kr/logfmt"
   packages = ["."]
@@ -162,12 +133,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  name = "github.com/pkg/errors"
-  packages = ["."]
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
-
-[[projects]]
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
@@ -175,21 +140,9 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/rcrowley/go-metrics"
-  packages = ["."]
-  revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
-
-[[projects]]
-  branch = "master"
   name = "github.com/ricochet2200/go-disk-usage"
   packages = ["du"]
   revision = "f0d1b743428fc09792f93233d9412f89f88fa2ab"
-
-[[projects]]
-  name = "github.com/rs/cors"
-  packages = ["."]
-  revision = "feef513b9575b32f84bafa580aad89b011259019"
-  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/spf13/afero"
@@ -280,8 +233,7 @@
     "http2/hpack",
     "idna",
     "internal/timeseries",
-    "trace",
-    "websocket"
+    "trace"
   ]
   revision = "2491c5de3490fced2f6cff376127c667efeed857"
 
@@ -350,24 +302,6 @@
   version = "v1.12.0"
 
 [[projects]]
-  name = "gopkg.in/fatih/set.v0"
-  packages = ["."]
-  revision = "57907de300222151a123d29255ed17f5ed43fad3"
-  version = "v0.1.0"
-
-[[projects]]
-  branch = "v2"
-  name = "gopkg.in/karalabe/cookiejar.v2"
-  packages = ["collections/prque"]
-  revision = "8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57"
-
-[[projects]]
-  branch = "v2"
-  name = "gopkg.in/natefinch/npipe.v2"
-  packages = ["."]
-  revision = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6"
-
-[[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
@@ -376,6 +310,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d63c7005c87e8fd729a0083ba7b9c836f6f51f794ca418fcce9a54527043d1ee"
+  inputs-digest = "0a6dc2734fb9ca27bf810048bb22ff408b915c41c8a0c3cd637230241b343877"
   solver-name = "gps-cdcl"
   solver-version = 1
