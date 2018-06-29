@@ -1,4 +1,4 @@
-[![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kcoin/status.svg)](http://ci.kowala.io/kowala-tech/kcoin) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://zygote.kowala.io)
+[![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kcoin/status.svg)](http://ci.kowala.io/kowala-tech/kcoin) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://zygote.kowala.tech)
 
 ## kCoin
 
@@ -6,7 +6,7 @@ Official implementation of the Kowala protocol based on the [go-ethereum client]
 
 ## Getting Started
 
-[Join the public Zygote testnet](http://zygote.kowala.io)
+[Join the public Zygote testnet](http://zygote.kowala.tech)
 
 ## Core Contributors
 
