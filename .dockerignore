@@ -9,4 +9,5 @@ client/build/bin
 
 e2e
 notifications/vendor
+wallet-backend/vendor
 
