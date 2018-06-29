@@ -42,161 +42,83 @@ pipeline:
     when:
       event: [pull_request]
 
-  docker_kusd_dev:
+  docker_kusd:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
+    pull: true
     repo: kowalatech/kusd
     secrets: [ docker_username, docker_password ]
-    tags: dev
+    privileged: true
+    auto_tag: true
     dockerfile: client/release/kcoin.Dockerfile
-    build_args:
-      - CI
-      - DRONE
-      - DRONE_REPO
-      - DRONE_COMMIT_SHA
-      - DRONE_COMMIT_BRANCH
-      - DRONE_TAG
-      - DRONE_BUILD_NUMBER
-      - DRONE_BUILD_EVENT
     when:
-      branch: [dev]
+      branch: [dev, master]
       event: [push, tag]
 
-  docker_bootnode_dev:
+  docker_bootnode:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
+    pull: true
     repo: kowalatech/bootnode
     secrets: [ docker_username, docker_password ]
-    tags: dev
+    privileged: true
+    auto_tag: true
     dockerfile: client/release/bootnode.Dockerfile
-    build_args:
-      - CI
-      - DRONE
-      - DRONE_REPO
-      - DRONE_COMMIT_SHA
-      - DRONE_COMMIT_BRANCH
-      - DRONE_TAG
-      - DRONE_BUILD_NUMBER
-      - DRONE_BUILD_EVENT
     when:
-      branch: [dev]
+      branch: [dev, master]
       event: [push, tag]
 
-  docker_faucet_dev:
+  docker_faucet:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
+    pull: true
     repo: kowalatech/faucet
     secrets: [ docker_username, docker_password ]
-    tags: dev
+    privileged: true
+    auto_tag: true
     dockerfile: client/release/faucet.Dockerfile
-    build_args:
-      - CI
-      - DRONE
-      - DRONE_REPO
-      - DRONE_COMMIT_SHA
-      - DRONE_COMMIT_BRANCH
-      - DRONE_TAG
-      - DRONE_BUILD_NUMBER
-      - DRONE_BUILD_EVENT
     when:
-      branch: [dev]
+      branch: [dev, master]
       event: [push, tag]
 
   docker_notifications_api:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
+    pull: true
     repo: kowalatech/backend_api
     dockerfile: notifications/api.Dockerfile
     secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
     when:
-      branch: [dev]
+      branch: [dev, master]
       event: [push, tag]
 
   docker_notifications_emailer:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
+    pull: true
     repo: kowalatech/emailer
     dockerfile: notifications/emailer.Dockerfile
     secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
     when:
-      branch: [dev]
+      branch: [dev, master]
       event: [push, tag]
 
   docker_notifications_db_sync:
     group: docker-deployment
-    image: plugins/docker
+    image: kowalatech/drone-docker
+    pull: true
     repo: kowalatech/transactions_persistance
     dockerfile: notifications/transactions_db_synchronize.Dockerfile
     secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
     when:
-      branch: [dev]
+      branch: [dev, master]
       event: [push, tag]
-
-  docker_kusd_tag:
-    group: docker-deployment
-    image: kowalatech/drone-docker
-    repo: kowalatech/kusd
-    secrets: [ docker_username, docker_password ]
-    privileged: true
-    auto_tag: true
-    dockerfile: client/release/kcoin.Dockerfile
-    when:
-      event: tag
-
-  docker_bootnode_tag:
-    group: docker-deployment
-    image: kowalatech/drone-docker
-    repo: kowalatech/bootnode
-    secrets: [ docker_username, docker_password ]
-    privileged: true
-    auto_tag: true
-    dockerfile: client/release/bootnode.Dockerfile
-    when:
-      event: tag
-
-  docker_faucet_tag:
-    group: docker-deployment
-    image: kowalatech/drone-docker
-    repo: kowalatech/faucet
-    secrets: [ docker_username, docker_password ]
-    privileged: true
-    auto_tag: true
-    dockerfile: client/release/faucet.Dockerfile
-    when:
-      event: tag
-
-  docker_notifications_api_tag:
-    group: docker-deployment
-    image: kowalatech/drone-docker
-    repo: kowalatech/backend_api
-    dockerfile: notifications/api.Dockerfile
-    secrets: [ docker_username, docker_password ]
-    privileged: true
-    auto_tag: true
-    when:
-      event: [tag]
-
-  docker_notifications_emailer_tag:
-    group: docker-deployment
-    image: kowalatech/drone-docker
-    repo: kowalatech/emailer
-    dockerfile: notifications/emailer.Dockerfile
-    secrets: [ docker_username, docker_password ]
-    privileged: true
-    auto_tag: true
-    when:
-      event: [tag]
-
-  docker_notifications_db_sync_tag:
-    group: docker-deployment
-    image: kowalatech/drone-docker
-    repo: kowalatech/transactions_persistance
-    dockerfile: notifications/transactions_db_synchronize.Dockerfile
-    secrets: [ docker_username, docker_password ]
-    privileged: true
-    auto_tag: true
-    when:
-      event: [tag]
 
 
   build-artifacts:

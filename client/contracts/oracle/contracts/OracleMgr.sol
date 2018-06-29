@@ -3,10 +3,17 @@ pragma solidity 0.4.21;
 import "github.com/kowala-tech/kcoin/client/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 
 contract OracleMgr is pausable.Pausable {
+    /** 
+        syncFrequency/updatePeriod should remain as the first variables being declared
+        because of the getStorageAt dependencies (other clients)
+    */
+    uint public syncFrequency;
+    /// updatePeriod is ignored if syncFrequency is set to 0 (sync disabled)
+    uint public updatePeriod;
     uint public baseDeposit;       
     uint public maxNumOracles;
     uint public freezePeriod;
-    uint public price = 1 ether; // one dollar
+    uint public price;
 
     struct Deposit {
         uint amount;
@@ -45,12 +52,29 @@ contract OracleMgr is pausable.Pausable {
         _;
     }
 
-    function OracleMgr(uint _baseDeposit, uint _maxNumOracles, uint _freezePeriod) public {
+    function OracleMgr(
+        uint _initialPrice, 
+        uint _baseDeposit,
+        uint _maxNumOracles,
+        uint _freezePeriod,
+        uint _syncFrequency,
+        uint _updatePeriod) 
+    public {
+        require(_initialPrice > 0);
         require(_maxNumOracles > 0);
+        require(_syncFrequency >= 0);
 
+        // sync enabled
+        if (_syncFrequency > 0) {
+            require(_updatePeriod > 0 && _updatePeriod <= _syncFrequency);
+        }
+        
+        price = _initialPrice;
         baseDeposit = _baseDeposit;
         maxNumOracles = _maxNumOracles;
         freezePeriod = _freezePeriod * 1 days;
+        syncFrequency = _syncFrequency;
+        updatePeriod = _updatePeriod;
     }
 
     function _isOracle(address identity) public view returns (bool isIndeed) {
@@ -176,7 +200,7 @@ contract OracleMgr is pausable.Pausable {
         }
     }
 
-    function addPrice(uint _price) public whenNotPaused  onlyOracle onlyValidPrice(_price) {
+    function addPrice(uint _price) public whenNotPaused onlyOracle onlyValidPrice(_price) {
         price = _price;
     }
 }
