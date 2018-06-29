@@ -1,4 +1,4 @@
-pragma solidity 0.4.21;
+pragma solidity ^0.4.21;
 
 import "github.com/kowala-tech/kcoin/client/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 

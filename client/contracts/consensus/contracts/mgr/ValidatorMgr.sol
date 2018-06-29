@@ -1,4 +1,4 @@
-pragma solidity 0.4.21;
+pragma solidity ^0.4.21;
 
 import "github.com/kowala-tech/kcoin/client/contracts/lifecycle/contracts/Pausable.sol" as pausable;
 import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/ERC223.sol" as token;
@@ -86,7 +86,7 @@ contract ValidatorMgr is pausable.Pausable {
         deposit = validator.deposits[validator.deposits.length - 1].amount;
     }
 
-    function _hasAvailability() public view returns (bool available) {
+    function _hasAvailability() private view returns (bool available) {
         return (maxNumValidators - validatorPool.length) > 0;
     }
 
