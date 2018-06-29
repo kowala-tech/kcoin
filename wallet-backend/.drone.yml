@@ -1,0 +1,42 @@
+workspace:
+  base: /root/go
+  path: src/github.com/kowala-tech/wallet-backend
+
+pipeline:
+  linter:
+    image: moogar0880/gometalinter:latest
+    commands:
+      - gometalinter --install
+      - gometalinter --fast --vendor --disable-all --enable=vet --enable=golint --enable=gofmt ./...
+
+  build:
+    image: docker:18
+    environment:
+      - DOCKER_HOST=tcp://docker:2375
+    commands:
+      - apk update
+      - apk add go
+      - apk add build-base
+      - make ci
+
+  docker_wallet_backend_master:
+    image: plugins/docker
+    repo: kowalatech/wallet_backend
+    secrets: [ docker_username, docker_password ]
+    tags: latest
+    when:
+      branch: [master]
+
+  docker_wallet_backend_dev:
+    image: plugins/docker
+    repo: kowalatech/wallet_backend
+    secrets: [ docker_username, docker_password ]
+    tags: dev
+    when:
+      branch: [dev]
+
+services:
+  docker:
+    image: docker:dind
+    command: [ '-l', 'fatal' ]
+    privileged: true
