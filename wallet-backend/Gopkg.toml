@@ -52,7 +52,3 @@
 [[constraint]]
   branch = "master"
   name = "github.com/dougEfresh/kitz"
-
-[[constraint]]
-  name = "docker.io/go-docker"
-  version = "1.0.0"
