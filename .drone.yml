@@ -38,6 +38,7 @@ pipeline:
     commands:
       - docker build -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
       - docker build -t kowalatech/bootnode:dev -f client/release/bootnode.Dockerfile .
+      - docker build -t kowalatech/wallet_backend:dev -f wallet-backend/Dockerfile .
       - make e2e
     when:
       event: [pull_request]
