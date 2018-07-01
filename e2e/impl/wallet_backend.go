@@ -1,9 +1,13 @@
 package impl
 
-import "github.com/DATA-DOG/godog"
+import (
+	"github.com/DATA-DOG/godog"
+	"github.com/kowala-tech/kcoin/e2e/cluster"
+)
 
 type WalletBackendContext struct {
 	globalCtx *Context
+	nodeRunning bool
 }
 
 func NewWalletBackendContext(parentCtx *Context) *WalletBackendContext {
@@ -17,7 +21,21 @@ func (ctx *WalletBackendContext) Reset() {
 }
 
 func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
-	return godog.ErrPending
+	if ctx.nodeRunning {
+		return nil
+	}
+	ctx.nodeRunning = true
+
+	spec, err := cluster.WalletBackendSpec(ctx.globalCtx.nodeSuffix)
+	if err != nil {
+		return err
+	}
+
+	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (ctx *WalletBackendContext) ICheckTheCurrentBlockHeightInTheWalletBackendAPI() error {
