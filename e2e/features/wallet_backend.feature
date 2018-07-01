@@ -1,14 +1,15 @@
-# Feature: Using the wallet backend
-#   As a wall
-#   I want to perform wallet operations
+Feature: Using the wallet backend
+   As a wall
+   I want to perform wallet operations
 
-#   Background:
-#     Given the wallet backend node is running
+   Background:
+     Given the wallet backend node is running
 
-#   Scenario: I can get the block height
-#     Given I check the current block height in the wallet backend API
-#     When I wait for 2 blocks
-#     Then the new block height in the wallet backend API has increased by at least 2
+   Scenario: I can get the block height
+     Given I wait for 2 seconds
+     And I check the current block height in the wallet backend API
+     Then I wait for 2 seconds
+     And the new block height in the wallet backend API has increased by at least 2
 
 #   Scenario: I can get the list of transactions
 #     Given I have the following accounts:

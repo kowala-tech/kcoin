@@ -43,6 +43,9 @@ func WalletBackendSpec(nodeSuffix string) (*NodeSpec, error) {
 		ID:    id,
 		Image: "kowalatech/wallet_backend:dev",
 		Cmd:   []string{},
+		PortMapping: map[int32]int32{
+			8080 : 8080,
+		},
 		Files: map[string][]byte{},
 	}
 	return spec, nil
