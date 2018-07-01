@@ -24,7 +24,6 @@ func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 	if ctx.nodeRunning {
 		return nil
 	}
-	ctx.nodeRunning = true
 
 	spec, err := cluster.WalletBackendSpec(ctx.globalCtx.nodeSuffix)
 	if err != nil {
@@ -34,6 +33,8 @@ func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.GetScenarioNumber()); err != nil {
 		return err
 	}
+
+	ctx.nodeRunning = true
 
 	return nil
 }
