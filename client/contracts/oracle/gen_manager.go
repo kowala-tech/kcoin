@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethersphere/go-ethereum/accounts/abi"
-	"github.com/ethersphere/go-ethereum/accounts/abi/bind"
-	"github.com/ethersphere/go-ethereum/common"
-	"github.com/ethersphere/go-ethereum/core/types"
+	"github.com/kowala-tech/kcoin/client/accounts/abi"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // OracleMgrABI is the input ABI used to generate the binding from.
