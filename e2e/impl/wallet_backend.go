@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/godog"
+	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/e2e/cluster"
 	"github.com/kowala-tech/kcoin/wallet-backend/application/command"
@@ -32,6 +33,11 @@ func (ctx *WalletBackendContext) Reset() {
 }
 
 func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
+	rpcIP, err := ctx.globalCtx.nodeRunner.IP(ctx.globalCtx.rpcNodeID)
+	if err != nil {
+		return err
+	}
+	rpcAddr := fmt.Sprintf("http://%v:%v", rpcIP, ctx.globalCtx.rpcPort)
 
 	redisSpec, err := cluster.RedisSpec(ctx.globalCtx.nodeSuffix)
 	if err != nil {
@@ -46,6 +52,14 @@ func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 	}
 	redisAddr := fmt.Sprintf("%v:6379", redisIP)
 
+	transactionsPersistanceSpec, err := cluster.TransactionsPersistanceSpec(ctx.globalCtx.nodeSuffix, rpcAddr, redisAddr)
+	if err != nil {
+		return err
+	}
+	if err := ctx.globalCtx.nodeRunner.Run(transactionsPersistanceSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+		return err
+	}
+
 	notificationsApiSpec, err := cluster.NotificationsApiSpec(ctx.globalCtx.nodeSuffix, redisAddr)
 	if err != nil {
 		return err
@@ -57,13 +71,9 @@ func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 	if err != nil {
 		return err
 	}
-	notificationsApiAddr := fmt.Sprintf("http://%v:%v", notificationsApiIP, "8080")
+	notificationsApiAddr := fmt.Sprintf("%v:%v", notificationsApiIP, "3000")
 
-	rpcIP, err := ctx.globalCtx.nodeRunner.IP(ctx.globalCtx.rpcNodeID)
-	if err != nil {
-		return err
-	}
-	rpcAddr := fmt.Sprintf("http://%v:%v", rpcIP, ctx.globalCtx.rpcPort)
+	fmt.Printf("wallet_backend.go:68 ===> %[2]v: %[1]v\n", rpcAddr, `rpcAddr`)
 	spec, err := cluster.WalletBackendSpec(ctx.globalCtx.nodeSuffix, rpcAddr, notificationsApiAddr)
 	if err != nil {
 		return err
@@ -104,29 +114,6 @@ func (ctx *WalletBackendContext) ICheckTheCurrentBlockHeightInTheWalletBackendAP
 	return nil
 }
 
-func (ctx *WalletBackendContext) getBlockHeight() (*big.Int, error) {
-	res, err := http.Get(
-		fmt.Sprintf("http://%s:8080/api/blockheight", ctx.globalCtx.nodeRunner.HostIP()),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error connecting to wallet backend to get block height. %s", err)
-	}
-
-	rawResp, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, fmt.Errorf("error parsing response from wallet backend to get block height. %s", err)
-	}
-
-	var blockHeightResponse *command.BlockHeightResponse
-	err = json.Unmarshal(rawResp, &blockHeightResponse)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling from json response. %s", err)
-	}
-
-	return blockHeightResponse.BlockHeight, nil
-}
-
 func (ctx *WalletBackendContext) IWaitForBlocks(blocks int) error {
 	baseHeight, err := ctx.getBlockHeight()
 	if err != nil {
@@ -141,7 +128,7 @@ func (ctx *WalletBackendContext) IWaitForBlocks(blocks int) error {
 		diff := new(big.Int).Sub(height, baseHeight)
 
 		if diff.Cmp(big.NewInt(int64(blocks))) < 0 {
-			return fmt.Errorf("block difference is %v, expected %v.", diff.Int64, blocks)
+			return fmt.Errorf("block difference is %v, expected %v", diff.Int64, blocks)
 		}
 		return nil
 	})
@@ -167,14 +154,77 @@ func (ctx *WalletBackendContext) ITransferKcoinFromAToBUsingTheWalletAPI(arg1 in
 	return godog.ErrPending
 }
 
-func (ctx *WalletBackendContext) TheTransactionIsListedInTheWalletBackendAPI() error {
+func (ctx *WalletBackendContext) TheTransactionsOfAccountShouldContainLastTransaction(acc string) error {
+	lastTx := ctx.globalCtx.lastTx
+	account, ok := ctx.globalCtx.accounts[acc]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", acc)
+	}
+
+	return common.WaitFor("find the transaction in the list", time.Second, time.Second*20, func() error {
+		transactions, err := ctx.getTransactions(account)
+		if err != nil {
+			return err
+		}
+		for _, tx := range transactions.Transactions {
+			if tx.Hash == lastTx.Hash().String() {
+				return nil
+			}
+		}
+		return errors.New("transaction not found")
+	})
+}
+
+func (ctx *WalletBackendContext) TheBalanceUsingTheWalletBackendShouldBeAroundKcoins(account string, arg1 int) error {
 	return godog.ErrPending
 }
 
-func (ctx *WalletBackendContext) TheBalanceOfAUsingTheWalletBackendShouldBeAroundKcoins(arg1 int) error {
+func (ctx *WalletBackendContext) TheBalanceUsingTheWalletBackendShouldBeKcoins(account string, arg1 int) error {
 	return godog.ErrPending
 }
 
-func (ctx *WalletBackendContext) TheBalanceOfBUsingTheWalletBackendShouldBeKcoins(arg1 int) error {
-	return godog.ErrPending
+func (ctx *WalletBackendContext) getBlockHeight() (*big.Int, error) {
+	res, err := http.Get(
+		fmt.Sprintf("http://%s:8080/api/blockheight", ctx.globalCtx.nodeRunner.HostIP()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to wallet backend to get block height. %s", err)
+	}
+
+	rawResp, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response from wallet backend to get block height. %s", err)
+	}
+
+	var blockHeightResponse *command.BlockHeightResponse
+	err = json.Unmarshal(rawResp, &blockHeightResponse)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling from json response. %s", err)
+	}
+
+	return blockHeightResponse.BlockHeight, nil
+}
+
+func (ctx *WalletBackendContext) getTransactions(acc accounts.Account) (*command.TransactionsResponse, error) {
+	url := fmt.Sprintf("http://%s:8080/api/transactions/%s", ctx.globalCtx.nodeRunner.HostIP(), acc.Address.String())
+	fmt.Printf("wallet_backend.go:204 ===> %[2]v: %[1]v\n", url, `url`)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error getting transactions. %s", err)
+	}
+
+	rawResp, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var txResp command.TransactionsResponse
+	err = json.Unmarshal(rawResp, &txResp)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("wallet_backend.go:219 ===> %[2]v: %[1]v\n", txResp, `txResp`)
+
+	return &txResp, nil
 }

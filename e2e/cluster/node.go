@@ -69,11 +69,26 @@ func WalletBackendSpec(nodeSuffix, rpcAddr, notificationsAddr string) (*NodeSpec
 	return spec, nil
 }
 
+func TransactionsPersistanceSpec(nodeSuffix, rpcAddr, redisAddr string) (*NodeSpec, error) {
+	id := NodeID("transactions-persistance-" + nodeSuffix)
+	spec := &NodeSpec{
+		ID:    id,
+		Image: "kowalatech/transactions_persistance:dev",
+		Cmd:   []string{},
+		Env: []string{
+			fmt.Sprintf("REDIS_ADDR=%v", redisAddr),
+			fmt.Sprintf("TESTNET_RPC_ADDR=%v", rpcAddr),
+		},
+		PortMapping: map[int32]int32{},
+	}
+	return spec, nil
+}
+
 func NotificationsApiSpec(nodeSuffix, redisAddr string) (*NodeSpec, error) {
 	id := NodeID("notifications-api-" + nodeSuffix)
 	spec := &NodeSpec{
 		ID:    id,
-		Image: "kowalatech/backend_api:latest",
+		Image: "kowalatech/backend_api:dev",
 		Cmd:   []string{},
 		Env: []string{
 			"PORT=3000",
