@@ -38,12 +38,12 @@ contract OracleMgr is pausable.Pausable {
     }
 
     modifier onlyOracle {
-        require(_isOracle(msg.sender));
+        require(isOracle(msg.sender));
         _;
     }
 
     modifier onlyNewCandidate {
-        require(!_isOracle(msg.sender));
+        require(!isOracle(msg.sender));
         _;
     }
 
@@ -77,7 +77,7 @@ contract OracleMgr is pausable.Pausable {
         updatePeriod = _updatePeriod;
     }
 
-    function _isOracle(address identity) public view returns (bool isIndeed) {
+    function isOracle(address identity) public view returns (bool isIndeed) {
         return oracleRegistry[identity].isOracle;
     }
 
