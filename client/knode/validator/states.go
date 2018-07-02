@@ -10,6 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
+	"fmt"
 )
 
 // work is the proposer current environment and holds all of the current state information
@@ -240,6 +241,7 @@ func (val *validator) commitState() stateFn {
 		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}
 	if !voter {
+		log.Info(fmt.Sprintf("Logging out. Account %q is not a validator", val.walletAccount.Account().Address.String()))
 		return val.loggedOutState
 	}
 
