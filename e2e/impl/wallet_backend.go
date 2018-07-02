@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/DATA-DOG/godog"
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/e2e/cluster"
 	"github.com/kowala-tech/kcoin/wallet-backend/application/command"
 )
@@ -73,7 +73,6 @@ func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 	}
 	notificationsApiAddr := fmt.Sprintf("%v:%v", notificationsApiIP, "3000")
 
-	fmt.Printf("wallet_backend.go:68 ===> %[2]v: %[1]v\n", rpcAddr, `rpcAddr`)
 	spec, err := cluster.WalletBackendSpec(ctx.globalCtx.nodeSuffix, rpcAddr, notificationsApiAddr)
 	if err != nil {
 		return err
@@ -150,8 +149,47 @@ func (ctx *WalletBackendContext) TheNewBlockHeightInTheWalletBackendAPIHasIncrea
 	return nil
 }
 
-func (ctx *WalletBackendContext) ITransferKcoinFromAToBUsingTheWalletAPI(arg1 int) error {
-	return godog.ErrPending
+func (ctx *WalletBackendContext) ITransferKcoin(kcoin int64, from, to string) error {
+	fromAccount, ok := ctx.globalCtx.accounts[from]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", from)
+	}
+
+	toAccount, ok := ctx.globalCtx.accounts[to]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", to)
+	}
+
+	tx, err := ctx.globalCtx.buildTx(fromAccount, toAccount, kcoin)
+	if err != nil {
+		return err
+	}
+
+	rawTx, err := rlp.EncodeToBytes(tx)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Get(
+		fmt.Sprintf("http://%s:8080/api/broadcasttx/%x", ctx.globalCtx.nodeRunner.HostIP(), rawTx),
+	)
+	if err != nil {
+		return fmt.Errorf("error sending signed transaction. %s", err)
+	}
+
+	rawResp, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var appResp command.BroadcastTransactionResponse
+
+	err = json.Unmarshal(rawResp, &appResp)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (ctx *WalletBackendContext) TheTransactionsOfAccountShouldContainLastTransaction(acc string) error {
@@ -175,12 +213,53 @@ func (ctx *WalletBackendContext) TheTransactionsOfAccountShouldContainLastTransa
 	})
 }
 
-func (ctx *WalletBackendContext) TheBalanceUsingTheWalletBackendShouldBeAroundKcoins(account string, arg1 int) error {
-	return godog.ErrPending
+func (ctx *WalletBackendContext) TheBalanceIsAround(accountName string, expectedKcoin int64) error {
+	return ctx.theBalanceIs(accountName, "around", expectedKcoin)
 }
 
-func (ctx *WalletBackendContext) TheBalanceUsingTheWalletBackendShouldBeKcoins(account string, arg1 int) error {
-	return godog.ErrPending
+func (ctx *WalletBackendContext) TheBalanceIsGreater(accountName string, expectedKcoin int64) error {
+	return ctx.theBalanceIs(accountName, "greater", expectedKcoin)
+}
+
+func (ctx *WalletBackendContext) TheBalanceIsExactly(accountName string, expectedKcoin int64) error {
+	return ctx.theBalanceIs(accountName, "equal", expectedKcoin)
+}
+
+func (ctx *WalletBackendContext) theBalanceIs(accountName string, cmp string, expectedKcoin int64) error {
+	return common.WaitFor("the balance satisfies a condition", time.Second, 10*time.Second, func() error {
+		expected := toWei(expectedKcoin)
+		account := ctx.globalCtx.accounts[accountName]
+
+		res, err := http.Get(
+			fmt.Sprintf("http://%s:8080/api/balance/%s", ctx.globalCtx.nodeRunner.HostIP(), account.Address.String()),
+		)
+		if err != nil {
+			return fmt.Errorf("error connecting to wallet backend to get balance. %s", err)
+		}
+
+		rawResp, err := ioutil.ReadAll(res.Body)
+		defer res.Body.Close()
+		if err != nil {
+			return fmt.Errorf("error parsing response from wallet backend to get block height. %s", err)
+		}
+
+		var balanceResponse *command.BalanceResponse
+
+		err = json.Unmarshal(rawResp, &balanceResponse)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling from json response. %s", err)
+		}
+
+		cmpFunc, err := newCompare(cmp)
+		if err != nil {
+			return err
+		}
+		if !cmpFunc(expected, balanceResponse.Balance) {
+			return fmt.Errorf("balance expected to be %s %v but is %v", cmp, expected, balanceResponse.Balance)
+		}
+
+		return nil
+	})
 }
 
 func (ctx *WalletBackendContext) getBlockHeight() (*big.Int, error) {
@@ -208,7 +287,6 @@ func (ctx *WalletBackendContext) getBlockHeight() (*big.Int, error) {
 
 func (ctx *WalletBackendContext) getTransactions(acc accounts.Account) (*command.TransactionsResponse, error) {
 	url := fmt.Sprintf("http://%s:8080/api/transactions/%s", ctx.globalCtx.nodeRunner.HostIP(), acc.Address.String())
-	fmt.Printf("wallet_backend.go:204 ===> %[2]v: %[1]v\n", url, `url`)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("error getting transactions. %s", err)
@@ -224,7 +302,6 @@ func (ctx *WalletBackendContext) getTransactions(acc accounts.Account) (*command
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("wallet_backend.go:219 ===> %[2]v: %[1]v\n", txResp, `txResp`)
 
 	return &txResp, nil
 }

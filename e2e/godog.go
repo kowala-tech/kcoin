@@ -105,10 +105,10 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^I check the current block height in the wallet backend API$`, walletBackendCtx.ICheckTheCurrentBlockHeightInTheWalletBackendAPI)
 	opts.suite.Step(`^I wait for (\d+) blocks$`, walletBackendCtx.IWaitForBlocks)
 	opts.suite.Step(`^the new block height in the wallet backend API has increased by at least (\d+)$`, walletBackendCtx.TheNewBlockHeightInTheWalletBackendAPIHasIncreasedByAtLeast)
-	opts.suite.Step(`^I transfer (\d+) kcoin from A to B using the wallet API$`, walletBackendCtx.ITransferKcoinFromAToBUsingTheWalletAPI)
+	opts.suite.Step(`^I transfer (\d+) kcoin from (\w+) to (\w+) using the wallet API$`, walletBackendCtx.ITransferKcoin)
 	opts.suite.Step(`^the transactions of (\w+) in the wallet backend API contains the last transaction$`, walletBackendCtx.TheTransactionsOfAccountShouldContainLastTransaction)
-	opts.suite.Step(`^the balance of (\w+) using the wallet backend should be around (\d+) kcoins$`, walletBackendCtx.TheBalanceUsingTheWalletBackendShouldBeAroundKcoins)
-	opts.suite.Step(`^the balance of (\w+) using the wallet backend should be (\d+) kcoins$`, walletBackendCtx.TheBalanceUsingTheWalletBackendShouldBeKcoins)
+	opts.suite.Step(`^the balance of (\w+) using the wallet backend should be around (\d+) kcoins$`, walletBackendCtx.TheBalanceIsAround)
+	opts.suite.Step(`^the balance of (\w+) using the wallet backend should be (\d+) kcoins$`, walletBackendCtx.TheBalanceIsExactly)
 
 }
 
