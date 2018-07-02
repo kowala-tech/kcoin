@@ -109,7 +109,6 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^the transaction is listed in the wallet backend API$`, walletBackendCtx.TheTransactionIsListedInTheWalletBackendAPI)
 	opts.suite.Step(`^the balance of A using the wallet backend should be around (\d+) kcoins$`, walletBackendCtx.TheBalanceOfAUsingTheWalletBackendShouldBeAroundKcoins)
 	opts.suite.Step(`^the balance of B using the wallet backend should be (\d+) kcoins$`, walletBackendCtx.TheBalanceOfBUsingTheWalletBackendShouldBeKcoins)
-	opts.suite.Step(`^I wait for (\d+) seconds$`, walletBackendCtx.IWaitForSeconds)
 
 }
 

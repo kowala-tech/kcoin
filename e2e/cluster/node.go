@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/kowala-tech/kcoin/client/common"
@@ -17,6 +18,7 @@ func (id NodeID) String() string {
 type NodeSpec struct {
 	ID          NodeID
 	Image       string
+	Env         []string
 	Files       map[string][]byte
 	PortMapping map[int32]int32
 	Cmd         []string
@@ -28,6 +30,7 @@ func BootnodeSpec(nodeSuffix string) (*NodeSpec, error) {
 	spec := &NodeSpec{
 		ID:    id,
 		Image: "kowalatech/bootnode:dev",
+		Env:   []string{},
 		Cmd: []string{
 			"--nodekeyhex", randStringBytes(64),
 			"--v5",
@@ -37,16 +40,62 @@ func BootnodeSpec(nodeSuffix string) (*NodeSpec, error) {
 	return spec, nil
 }
 
-func WalletBackendSpec(nodeSuffix string) (*NodeSpec, error) {
+func WalletBackendSpec(nodeSuffix, rpcAddr, notificationsAddr string) (*NodeSpec, error) {
 	id := NodeID("wallet-backend-" + nodeSuffix)
 	spec := &NodeSpec{
 		ID:    id,
 		Image: "kowalatech/wallet_backend:dev",
-		Cmd:   []string{},
-		PortMapping: map[int32]int32{
-			8080 : 8080,
+		Cmd: []string{
+			"--node-endpoint", rpcAddr,
+			"--notifications-endpoint", notificationsAddr,
 		},
-		Files: map[string][]byte{},
+		Env: []string{},
+		PortMapping: map[int32]int32{
+			8080: 8080,
+		},
+		IsReadyFn: func(runner NodeRunner) error {
+			res, err := http.Get(
+				fmt.Sprintf("http://%s:8080/api/blockheight", runner.HostIP()),
+			)
+			if err != nil {
+				return err
+			}
+			if res.StatusCode != 200 {
+				return fmt.Errorf("wallet backend API response code is %v", res.StatusCode)
+			}
+			return nil
+		},
+	}
+	return spec, nil
+}
+
+func NotificationsApiSpec(nodeSuffix, redisAddr string) (*NodeSpec, error) {
+	id := NodeID("notifications-api-" + nodeSuffix)
+	spec := &NodeSpec{
+		ID:    id,
+		Image: "kowalatech/backend_api:latest",
+		Cmd:   []string{},
+		Env: []string{
+			"PORT=3000",
+			fmt.Sprintf("REDIS_ADDR=%v", redisAddr),
+		},
+		PortMapping: map[int32]int32{
+			3000: 3000,
+		},
+	}
+	return spec, nil
+}
+
+func RedisSpec(nodeSuffix string) (*NodeSpec, error) {
+	id := NodeID("redis-" + nodeSuffix)
+	spec := &NodeSpec{
+		ID:    id,
+		Image: "redis:alpine",
+		Cmd:   []string{},
+		Env:   []string{},
+		PortMapping: map[int32]int32{
+			6379: 6379,
+		},
 	}
 	return spec, nil
 }
