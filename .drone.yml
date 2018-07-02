@@ -4,7 +4,7 @@ workspace:
 
 clone:
   git:
-    image: plugins/git
+    image: plugins/git:next
     tags: true
 
 pipeline:
