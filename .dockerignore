@@ -1,0 +1,12 @@
+**/.git
+.git
+!.git/HEAD
+!.git/refs/heads
+**/*_test.go
+
+client/build/_workspace
+client/build/bin
+
+e2e
+notifications/vendor
+

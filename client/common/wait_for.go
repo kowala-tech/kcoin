@@ -1,11 +1,11 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/log"
-	"github.com/pkg/errors"
 )
 
 func WaitFor(errorMessage string, tickTime, timeout time.Duration, condition func() error) error {
@@ -79,25 +79,22 @@ func (w *waiter) waitBlocksFrom(block, n uint64, condFuncs ...func() error) erro
 
 	var (
 		err      error
+		lastErr  error
 		newBlock uint64
 	)
 
 	for {
 		select {
 		case <-timeout.C:
-			return fmt.Errorf("timeout. started with block %d, finished with %d", block, newBlock)
+			return fmt.Errorf("timeout. started with block %d, finished with %d. Last error: %v", block, newBlock, lastErr.Error())
 		case <-t.C:
 			newBlock, err = w.api.CurrentBlock()
 			if err != nil {
 				return err
 			}
 
-			if runConditions(block, newBlock, condFuncs...) {
-				return nil
-			}
-
-			blocks := newBlock - block
-			if blocks >= n {
+			lastErr = runConditions(block, newBlock, condFuncs...)
+			if lastErr == nil {
 				return nil
 			}
 		}
@@ -106,11 +103,11 @@ func (w *waiter) waitBlocksFrom(block, n uint64, condFuncs ...func() error) erro
 	return nil
 }
 
-func runConditions(block, newBlock uint64, condFuncs ...func() error) bool {
-	result := false
+func runConditions(block, newBlock uint64, condFuncs ...func() error) error {
+	if len(condFuncs) == 0 {
+		return errors.New("No conditions specified")
+	}
 	for _, condFunc := range condFuncs {
-		result = true
-
 		err := condFunc()
 		if err != nil && err != ErrConditionNotMet {
 			log.Warn(fmt.Sprintf("error while executing the condition: %q. "+
@@ -118,8 +115,8 @@ func runConditions(block, newBlock uint64, condFuncs ...func() error) bool {
 				err.Error(), block, newBlock))
 		}
 		if err != nil {
-			return false
+			return err
 		}
 	}
-	return result
+	return nil
 }

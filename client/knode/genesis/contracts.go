@@ -146,9 +146,12 @@ var OracleMgrContract = &contract{
 
 		managerParams, err := managerABI.Pack(
 			"",
+			args.price.initialPrice,
 			args.baseDeposit,
 			args.maxNumOracles,
 			args.freezePeriod,
+			args.price.syncFrequency,
+			args.price.updatePeriod,
 		)
 		if err != nil {
 			return err

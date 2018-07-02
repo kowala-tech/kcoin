@@ -28,12 +28,21 @@ contract ValidatorMgr is Pausable, ERC223 {
         // will have a new deposit for the current election.
         Deposit[] deposits; 
     }
+
+    struct TKN {
+        address sender;
+        uint value;
+        //bytes data;
+        //bytes4 sig;
+    }
     
     mapping (address => Validator) private validatorRegistry;
     
     // validatorPool contains the validator code ordered by the biggest deposit to
     // the smallest deposit.
     address[] validatorPool;
+
+    TKN tkn;
 
     modifier onlyWithMinDeposit {
         require(tkn.value >= getMinimumDeposit());
@@ -209,15 +218,6 @@ contract ValidatorMgr is Pausable, ERC223 {
             mtoken.transfer(msg.sender, refund);
         }
     }
-
-    struct TKN {
-        address sender;
-        uint value;
-        //bytes data;
-        //bytes4 sig;
-    }
-
-    TKN tkn;
 
     function registerValidator(address _from, uint _value, bytes _data) public {
         //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);

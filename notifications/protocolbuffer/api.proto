@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package protocolbuffer;
+
+service EmailMapping {
+  rpc Register (RegisterRequest) returns (RegisterReply) {}
+  rpc Unregister (UnregisterRequest) returns (UnregisterReply) {}
+}
+
+service TransactionService {
+    rpc GetTransactions (GetTransactionsRequest) returns (GetTransactionsReply) {}
+}
+
+message RegisterRequest {
+  string wallet = 1;
+  string email = 2;
+}
+message UnregisterRequest {
+  string wallet = 1;
+}
+
+message RegisterReply {
+}
+
+message UnregisterReply {
+}
+
+message GetTransactionsRequest {
+  string account = 1;
+}
+
+message GetTransactionsReply {
+    repeated Transaction transactions = 1;
+}
+
+message Transaction {
+    string to = 1;
+    int64 amount = 2;
+    string from = 3;
+    string hash = 4;
+    int64 timestamp = 5;
+    int64 block_height = 6;
+    int64 gas_used = 7;
+    int64 gas_price = 8;
+}

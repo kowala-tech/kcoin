@@ -13,7 +13,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/internal/jsre"
-	"github.com/kowala-tech/kcoin/client/kcoin"
+	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/node"
 )
 
@@ -57,7 +57,7 @@ func (p *hookedPrompter) SetWordCompleter(completer WordCompleter) {}
 type tester struct {
 	workspace string
 	stack     *node.Node
-	kowala    *kcoin.Kowala
+	kowala    *knode.Kowala
 	console   *Console
 	input     *hookedPrompter
 	output    *bytes.Buffer
@@ -65,7 +65,7 @@ type tester struct {
 
 // newTester creates a test environment based on which the console can operate.
 // Please ensure you call Close() on the returned tester to avoid leaks.
-func newTester(t *testing.T, confOverride func(*kcoin.Config)) *tester {
+func newTester(t *testing.T, confOverride func(*knode.Config)) *tester {
 	// Create a temporary storage for the node keys and initialize it
 	workspace, err := ioutil.TempDir("", "console-tester-")
 	if err != nil {
@@ -77,7 +77,7 @@ func newTester(t *testing.T, confOverride func(*kcoin.Config)) *tester {
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)
 	}
-	kcoinConf := &kcoin.Config{
+	kcoinConf := &knode.Config{
 		Genesis:  core.DeveloperGenesisBlock(15, common.Address{}),
 		Coinbase: common.HexToAddress(testAddress),
 		PowTest:  true,
@@ -85,7 +85,7 @@ func newTester(t *testing.T, confOverride func(*kcoin.Config)) *tester {
 	if confOverride != nil {
 		confOverride(kcoinConf)
 	}
-	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return kcoin.New(ctx, kcoinConf) }); err != nil {
+	if err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) { return knode.New(ctx, kcoinConf) }); err != nil {
 		t.Fatalf("failed to register Kowala protocol: %v", err)
 	}
 	// Start the node and assemble the JavaScript console around it
@@ -111,7 +111,7 @@ func newTester(t *testing.T, confOverride func(*kcoin.Config)) *tester {
 		t.Fatalf("failed to create JavaScript console: %v", err)
 	}
 	// Create the final tester and return
-	var kowala *kcoin.Kowala
+	var kowala *knode.Kowala
 	stack.Service(&kowala)
 
 	return &tester{
