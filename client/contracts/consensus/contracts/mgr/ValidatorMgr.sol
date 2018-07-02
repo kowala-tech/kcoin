@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "../../token/ERC223.sol";
+import "../../../token/contracts/ERC223.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
 //import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
 

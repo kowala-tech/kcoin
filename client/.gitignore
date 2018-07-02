@@ -8,10 +8,16 @@
 /build/_workspace/
 /build/bin/
 /kcoin*.zip
-/tests/logs
+/test/e2e/logs
 godog.test
 
 # dashboard
 /dashboard/assets/node_modules
 /dashboard/assets/stats.json
 /dashboard/assets/public/bundle.js
+
+#truffle and npm
+/node_modules/
+/coverage/
+/build/contracts
+/coverage.json
