@@ -1,11 +1,11 @@
-pragma solidity 0.4.21;
+pragma solidity ^0.4.24;
 
-import "github.com/kowala-tech/kcoin/client/contracts/lifecycle/contracts/Pausable.sol" as pausable;
-import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/ERC223.sol" as token;
+import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
+import "../../../token/contracts/ERC223.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
 //import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
 
-contract ValidatorMgr is pausable.Pausable {
+contract ValidatorMgr is Pausable, ERC223 {
     uint public baseDeposit;       
     uint public maxNumValidators;
     uint public freezePeriod;
@@ -214,7 +214,7 @@ contract ValidatorMgr is pausable.Pausable {
         _removeDeposits(msg.sender, i);
 
         if (refund > 0) {
-            token.ERC223 mtoken = token.ERC223(miningTokenAddr);
+            ERC223 mtoken = ERC223(miningTokenAddr);
             mtoken.transfer(msg.sender, refund);
         }
     }

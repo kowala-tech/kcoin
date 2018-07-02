@@ -1,15 +1,9 @@
-pragma solidity 0.4.21;
+pragma solidity ^0.4.24;
 
-import "github.com/kowala-tech/kcoin/client/contracts/lifecycle/contracts/Pausable.sol" as pausable;
+import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 
-contract OracleMgr is pausable.Pausable {
-    /** 
-        syncFrequency/updatePeriod should remain as the first variables being declared
-        because of the getStorageAt dependencies (other clients)
-    */
-    uint public syncFrequency;
-    /// updatePeriod is ignored if syncFrequency is set to 0 (sync disabled)
-    uint public updatePeriod;
+contract OracleMgr is Pausable {
+
     uint public baseDeposit;       
     uint public maxNumOracles;
     uint public freezePeriod;
