@@ -181,7 +181,7 @@ func (ctx *Context) transactionBlock(tx *types.Transaction) (*types.Block, error
 	return nil, errors.New("the transaction is not in the chain")
 }
 
-func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
+func (ctx *Context) buildTx(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
 	nonce, err := ctx.client.NonceAt(context.Background(), from.Address, nil)
 	if err != nil {
 		return nil, err
@@ -204,7 +204,12 @@ func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Tr
 
 	tx := types.NewTransaction(nonce, to.Address, toWei(kcoin), gas, gp, nil)
 
-	tx, err = ctx.AccountsStorage.SignTx(from, tx, ctx.chainID)
+	return ctx.AccountsStorage.SignTx(from, tx, ctx.chainID)
+}
+
+func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
+	tx, err := ctx.buildTx(from, to, kcoin)
+
 	if err != nil {
 		return nil, err
 	}
