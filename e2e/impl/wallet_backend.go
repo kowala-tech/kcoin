@@ -13,7 +13,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/e2e/cluster"
-	"github.com/kowala-tech/kcoin/wallet-backend/application/command"
 )
 
 type WalletBackendContext struct {
@@ -182,9 +181,9 @@ func (ctx *WalletBackendContext) ITransferKcoin(kcoin int64, from, to string) er
 		return err
 	}
 
-	var appResp command.BroadcastTransactionResponse
+	var resp map[string]interface{}
 
-	err = json.Unmarshal(rawResp, &appResp)
+	err = json.Unmarshal(rawResp, &resp)
 	if err != nil {
 		return err
 	}
@@ -200,7 +199,7 @@ func (ctx *WalletBackendContext) TheTransactionsOfAccountShouldContainLastTransa
 	}
 
 	return common.WaitFor("find the transaction in the list", time.Second, time.Second*20, func() error {
-		transactions, err := ctx.getTransactions(account)
+		transactions, err := ctx.getTransactionsHashes(account)
 		if err != nil {
 			return err
 		}
@@ -243,9 +242,11 @@ func (ctx *WalletBackendContext) theBalanceIs(accountName string, cmp string, ex
 			return fmt.Errorf("error parsing response from wallet backend to get block height. %s", err)
 		}
 
-		var balanceResponse *command.BalanceResponse
+		var resp struct {
+			Balance *big.Int `json:"balance"`
+		}
 
-		err = json.Unmarshal(rawResp, &balanceResponse)
+		err = json.Unmarshal(rawResp, &resp)
 		if err != nil {
 			return fmt.Errorf("error unmarshalling from json response. %s", err)
 		}
@@ -254,8 +255,8 @@ func (ctx *WalletBackendContext) theBalanceIs(accountName string, cmp string, ex
 		if err != nil {
 			return err
 		}
-		if !cmpFunc(expected, balanceResponse.Balance) {
-			return fmt.Errorf("balance expected to be %s %v but is %v", cmp, expected, balanceResponse.Balance)
+		if !cmpFunc(expected, resp.Balance) {
+			return fmt.Errorf("balance expected to be %s %v but is %v", cmp, expected, resp.Balance)
 		}
 
 		return nil
@@ -276,32 +277,44 @@ func (ctx *WalletBackendContext) getBlockHeight() (*big.Int, error) {
 		return nil, fmt.Errorf("error parsing response from wallet backend to get block height. %s", err)
 	}
 
-	var blockHeightResponse *command.BlockHeightResponse
-	err = json.Unmarshal(rawResp, &blockHeightResponse)
+	var resp struct {
+		BlockHeight *big.Int `json:"block_height"`
+	}
+
+	err = json.Unmarshal(rawResp, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling from json response. %s", err)
 	}
 
-	return blockHeightResponse.BlockHeight, nil
+	return resp.BlockHeight, nil
 }
 
-func (ctx *WalletBackendContext) getTransactions(acc accounts.Account) (*command.TransactionsResponse, error) {
+func (ctx *WalletBackendContext) getTransactionsHashes(acc accounts.Account) ([]string, error) {
 	url := fmt.Sprintf("http://%s:8080/api/transactions/%s", ctx.globalCtx.nodeRunner.HostIP(), acc.Address.String())
-	resp, err := http.Get(url)
+	httpRes, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("error getting transactions. %s", err)
 	}
 
-	rawResp, err := ioutil.ReadAll(resp.Body)
+	rawResp, err := ioutil.ReadAll(httpRes.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	var txResp command.TransactionsResponse
-	err = json.Unmarshal(rawResp, &txResp)
+	var resp struct {
+		Transactions []struct {
+			Hash string `json:"hash"`
+		} `json:"transactions"`
+	}
+	err = json.Unmarshal(rawResp, &resp)
 	if err != nil {
 		return nil, err
 	}
 
-	return &txResp, nil
+	hashes := make([]string, len(resp.Transactions))
+	for i, tx := range resp.Transactions {
+		hashes[i] = tx.Hash
+	}
+
+	return hashes, nil
 }
