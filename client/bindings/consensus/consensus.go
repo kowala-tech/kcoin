@@ -7,8 +7,8 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/bindings/token"
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/contracts/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/params"
 )
