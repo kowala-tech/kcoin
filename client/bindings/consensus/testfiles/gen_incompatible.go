@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 )
