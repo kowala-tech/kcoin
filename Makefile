@@ -78,7 +78,7 @@ clean:
 # The devtools target installs tools required for 'go generate'.
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
-generate-contract-bindings:
+generate-contract-bindings: devtools
 	cd client/bindings/consensus; go generate
 	cd client/bindings/oracle; go generate
 	cd client/bindings/ownership; go generate
