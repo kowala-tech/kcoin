@@ -1,0 +1,25 @@
+{
+    "nodeAddr":     "rpcnode.zygote.kowala.tech",
+    "gethPort":     30503,
+    "startBlock":   0,
+    "endBlock":     "latest",
+    "quiet":        true,
+    "syncAll":      true,
+    "patch":        true,
+    "patchBlocks":  100,
+    "settings": {
+        "symbol": "KUSD",
+        "name": "Kcoin",
+        "title": "Kcoin Block Explorer",
+        "author": "Elaine, Cody, Hackmod, Bakon",
+        "contact": "mailto:ethereumclassicanthony@gmail.com",
+        "about": "This is the Kcoin Blockchain Explorer.",
+        "logo": "/img/kowala.svg",
+        "customCss": "default.css",
+        "copyright": "2018 &copy; Kowala Tech.",
+        "useEthFiat": false,
+        "poweredbyCustom": false,
+        "poweredbyEtcImage": "/img/powered-by-etcexplorer-w.png",
+        "poweredbyEtc": false
+    }
+}

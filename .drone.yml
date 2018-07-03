@@ -54,6 +54,17 @@ pipeline:
     when:
       event: [pull_request]
 
+  docker_build:
+    group: build-artifacts
+    image: kowalatech/go:1.0.4
+    environment:
+      - DOCKER_HOST=tcp://docker:2375
+      - DOCKER_PUBLIC_IP=docker
+    commands:
+      - make dev_docker_images
+    when:
+      event: [push]
+
   docker_kusd:
     group: docker-deployment
     image: kowalatech/drone-docker
@@ -138,6 +149,19 @@ pipeline:
     pull: true
     repo: kowalatech/netstats
     dockerfile: netstats/Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_explorer:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    pull: true
+    repo: kowalatech/kexplorer
+    dockerfile: explorer/Dockerfile
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
