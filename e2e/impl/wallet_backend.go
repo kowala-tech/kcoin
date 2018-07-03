@@ -169,14 +169,14 @@ func (ctx *WalletBackendContext) ITransferKcoin(kcoin int64, from, to string) er
 		return err
 	}
 
-	resp, err := http.Get(
+	httpResp, err := http.Get(
 		fmt.Sprintf("http://%s:8080/api/broadcasttx/%x", ctx.globalCtx.nodeRunner.HostIP(), rawTx),
 	)
 	if err != nil {
 		return fmt.Errorf("error sending signed transaction. %s", err)
 	}
 
-	rawResp, err := ioutil.ReadAll(resp.Body)
+	rawResp, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
 		return err
 	}
@@ -203,8 +203,8 @@ func (ctx *WalletBackendContext) TheTransactionsOfAccountShouldContainLastTransa
 		if err != nil {
 			return err
 		}
-		for _, tx := range transactions.Transactions {
-			if tx.Hash == lastTx.Hash().String() {
+		for _, hash := range transactions {
+			if hash == lastTx.Hash().String() {
 				return nil
 			}
 		}
