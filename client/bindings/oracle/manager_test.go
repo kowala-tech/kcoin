@@ -25,9 +25,7 @@ var (
 	baseDeposit    = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin))  // 1 Kcoin
 	maxNumOracles  = common.Big256
 	freezePeriod   = common.Big32
-	initialPrice   = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin)) // $1
-	syncFrequency  = big.NewInt(600)
-	updatePeriod   = big.NewInt(30)
+	oneDollar      = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin)) // $1
 )
 
 type OracleMgrSuite struct {
@@ -66,7 +64,7 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 	}
 
 	// OracleMgr instance
-	oracleMgr, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, finalMaxNumOracles, finalFreezePeriod, syncFrequency, updatePeriod)
+	oracleMgr, err := suite.deployOracleMgr(owner, backend, baseDeposit, finalMaxNumOracles, finalFreezePeriod)
 	req.NoError(err)
 	req.NotNil(oracleMgr)
 	suite.oracleMgr = oracleMgr
@@ -84,7 +82,7 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr() {
 	})
 	req.NotNil(backend)
 
-	oracleMgr, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
+	oracleMgr, err := suite.deployOracleMgr(owner, backend, baseDeposit, maxNumOracles, freezePeriod)
 	req.NoError(err)
 	req.NotNil(oracleMgr)
 
@@ -105,20 +103,10 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr() {
 	req.NotNil(storedFreezePeriod)
 	req.Equal(dtos(freezePeriod), storedFreezePeriod)
 
-	storedInitialPrice, err := oracleMgr.Price(&bind.CallOpts{})
+	storedPrice, err := oracleMgr.Price(&bind.CallOpts{})
 	req.NoError(err)
-	req.NotNil(storedInitialPrice)
-	req.Equal(initialPrice, storedInitialPrice)
-
-	storedSyncFrequency, err := oracleMgr.SyncFrequency(&bind.CallOpts{})
-	req.NoError(err)
-	req.NotNil(storedSyncFrequency)
-	req.Equal(syncFrequency, storedSyncFrequency)
-
-	storedUpdatePeriod, err := oracleMgr.UpdatePeriod(&bind.CallOpts{})
-	req.NoError(err)
-	req.NotNil(storedUpdatePeriod)
-	req.Equal(updatePeriod, storedUpdatePeriod)
+	req.NotNil(storedPrice)
+	req.Equal(oneDollar, storedPrice)
 }
 
 func (suite *OracleMgrSuite) TestDeployOracleMgr_MaxNumOraclesEqualZero() {
@@ -131,54 +119,8 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_MaxNumOraclesEqualZero() {
 	})
 	req.NotNil(backend)
 
-	maxNumOracles := common.Big0
-	_, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
-	req.Error(err, "maximum number of oracles cannot be zero")
-}
-
-func (suite *OracleMgrSuite) TestDeployOracleMgr_InitialPriceEqualsZero() {
-	req := suite.Require()
-
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(owner): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
-		},
-	})
-	req.NotNil(backend)
-
-	initialPrice := common.Big0
-	_, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
-	req.Error(err, "initial price cannot be zero")
-}
-
-func (suite *OracleMgrSuite) TestDeployOracleMgr_SyncEnabled_UpdatePeriodEqualsZero() {
-	req := suite.Require()
-
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(owner): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
-		},
-	})
-	req.NotNil(backend)
-
-	updatePeriod := common.Big0
-	_, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
-	req.Error(err, "update period cannot be zero if sync is enabled")
-}
-
-func (suite *OracleMgrSuite) TestDeployOracleMgr_SyncEnabled_UpdatePeriodGreaterThanSyncFrequency() {
-	req := suite.Require()
-
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(owner): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
-		},
-	})
-	req.NotNil(backend)
-
-	updatePeriod := new(big.Int).Add(syncFrequency, common.Big1)
-	_, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
-	req.Error(err, "update period cannot be greater that sync frequency if sync is enabled")
+	_, err := suite.deployOracleMgr(owner, backend, baseDeposit, maxNumOracles, freezePeriod)
+	req.NoError(err, "maximum number of oracles cannot be zero")
 }
 
 func (suite *OracleMgrSuite) TestGetMinimumDeposit_NotFull() {
@@ -389,7 +331,7 @@ func (suite *OracleMgrSuite) TestReleaseDeposits_LockedDeposits() {
 	initialBalance := suite.balanceOf(user)
 	req.NotNil(initialBalance)
 
-	// @NOTE (rgeraldes) - leave funds for the gas costs (1 Kcoin)
+	// @NOTE (rgeraldes) - leave funds for the gas costs (1 kUSD)
 	deposit := new(big.Int).Sub(initialBalance, new(big.Int).Sub(initialBalance, new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin))))
 	req.NoError(suite.registerOracle(user, deposit))
 	req.NoError(suite.deregisterOracle(user))
@@ -403,7 +345,7 @@ func (suite *OracleMgrSuite) TestReleaseDeposits_LockedDeposits() {
 
 	finalBalance := suite.balanceOf(user)
 	req.NotNil(finalBalance)
-	// @NOTE (rgeraldes) - final balance should be 1 Kcoin minus the gas costs
+	// @NOTE (rgeraldes) - final balance should be 1 kUSD minus the gas costs
 	req.Zero(finalBalance.Cmp(common.Big1) < 0)
 }
 
@@ -413,7 +355,7 @@ func (suite *OracleMgrSuite) TestReleaseDeposits_UnlockedDeposit() {
 	initialBalance := suite.balanceOf(user)
 	req.NotNil(initialBalance)
 
-	// @NOTE (rgeraldes) - leave funds for the gas costs (1 Kcoin)
+	// @NOTE (rgeraldes) - leave funds for the gas costs (1 kUSD)
 	deposit := new(big.Int).Sub(initialBalance, new(big.Int).Sub(initialBalance, new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin))))
 	req.NoError(suite.registerOracle(user, deposit))
 	req.NoError(suite.deregisterOracle(user))
@@ -430,13 +372,13 @@ func (suite *OracleMgrSuite) TestReleaseDeposits_UnlockedDeposit() {
 
 	finalBalance := suite.balanceOf(user)
 	req.NotNil(finalBalance)
-	// @NOTE (rgeraldes) - final balance should be the deposit + 1 Kcoin - the gas costs
+	// @NOTE (rgeraldes) - final balance should be the deposit + 1 kUSD - the gas costs
 	req.True(finalBalance.Cmp(common.Big1) > 0)
 }
 
-func (suite *OracleMgrSuite) deployOracleMgr(user *ecdsa.PrivateKey, backend bind.ContractBackend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod *big.Int) (*OracleMgr, error) {
+func (suite *OracleMgrSuite) deployOracleMgr(user *ecdsa.PrivateKey, backend bind.ContractBackend, _baseDeposit *big.Int, _maxNumOracles *big.Int, _freezePeriod *big.Int) (*OracleMgr, error) {
 	transactOpts := bind.NewKeyedTransactor(user)
-	_, _, oracleMgr, err := DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
+	_, _, oracleMgr, err := DeployOracleMgr(transactOpts, backend, _baseDeposit, _maxNumOracles, _freezePeriod)
 	return oracleMgr, err
 }
 

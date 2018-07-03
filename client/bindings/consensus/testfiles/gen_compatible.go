@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
-	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 )
@@ -16,7 +15,7 @@ import (
 const CompatibleABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"test\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // CompatibleBin is the compiled bytecode used for deploying new contracts.
-const CompatibleBin = `60606040523415600e57600080fd5b60848061001c6000396000f300606060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063f8a8fd6d146044575b600080fd5b3415604e57600080fd5b60546056565b005b5600a165627a7a723058205221c04cfe256f3f671a60e16b9f99e2d47d7ea9e11321b8f59be4c1d27010c30029`
+const CompatibleBin = `6080604052348015600f57600080fd5b5060868061001e6000396000f300608060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063f8a8fd6d146044575b600080fd5b348015604f57600080fd5b5060566058565b005b5600a165627a7a72305820c78b71ec6a158deb9adf28503d1aea5c377922c2236f7e1d38aae268fbe84ae90029`
 
 // DeployCompatible deploys a new Ethereum contract, binding an instance of Compatible to it.
 func DeployCompatible(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Compatible, error) {
@@ -28,13 +27,14 @@ func DeployCompatible(auth *bind.TransactOpts, backend bind.ContractBackend) (co
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	return address, tx, &Compatible{CompatibleCaller: CompatibleCaller{contract: contract}, CompatibleTransactor: CompatibleTransactor{contract: contract}}, nil
+	return address, tx, &Compatible{CompatibleCaller: CompatibleCaller{contract: contract}, CompatibleTransactor: CompatibleTransactor{contract: contract}, CompatibleFilterer: CompatibleFilterer{contract: contract}}, nil
 }
 
 // Compatible is an auto generated Go binding around an Ethereum contract.
 type Compatible struct {
 	CompatibleCaller     // Read-only binding to the contract
 	CompatibleTransactor // Write-only binding to the contract
+	CompatibleFilterer   // Log filterer for contract events
 }
 
 // CompatibleCaller is an auto generated read-only Go binding around an Ethereum contract.
@@ -44,6 +44,11 @@ type CompatibleCaller struct {
 
 // CompatibleTransactor is an auto generated write-only Go binding around an Ethereum contract.
 type CompatibleTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// CompatibleFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type CompatibleFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
@@ -86,16 +91,16 @@ type CompatibleTransactorRaw struct {
 
 // NewCompatible creates a new instance of Compatible, bound to a specific deployed contract.
 func NewCompatible(address common.Address, backend bind.ContractBackend) (*Compatible, error) {
-	contract, err := bindCompatible(address, backend, backend)
+	contract, err := bindCompatible(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &Compatible{CompatibleCaller: CompatibleCaller{contract: contract}, CompatibleTransactor: CompatibleTransactor{contract: contract}}, nil
+	return &Compatible{CompatibleCaller: CompatibleCaller{contract: contract}, CompatibleTransactor: CompatibleTransactor{contract: contract}, CompatibleFilterer: CompatibleFilterer{contract: contract}}, nil
 }
 
 // NewCompatibleCaller creates a new read-only instance of Compatible, bound to a specific deployed contract.
 func NewCompatibleCaller(address common.Address, caller bind.ContractCaller) (*CompatibleCaller, error) {
-	contract, err := bindCompatible(address, caller, nil)
+	contract, err := bindCompatible(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -104,20 +109,29 @@ func NewCompatibleCaller(address common.Address, caller bind.ContractCaller) (*C
 
 // NewCompatibleTransactor creates a new write-only instance of Compatible, bound to a specific deployed contract.
 func NewCompatibleTransactor(address common.Address, transactor bind.ContractTransactor) (*CompatibleTransactor, error) {
-	contract, err := bindCompatible(address, nil, transactor)
+	contract, err := bindCompatible(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &CompatibleTransactor{contract: contract}, nil
 }
 
+// NewCompatibleFilterer creates a new log filterer instance of Compatible, bound to a specific deployed contract.
+func NewCompatibleFilterer(address common.Address, filterer bind.ContractFilterer) (*CompatibleFilterer, error) {
+	contract, err := bindCompatible(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &CompatibleFilterer{contract: contract}, nil
+}
+
 // bindCompatible binds a generic wrapper to an already deployed contract.
-func bindCompatible(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor) (*bind.BoundContract, error) {
+func bindCompatible(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(CompatibleABI))
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor), nil
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
