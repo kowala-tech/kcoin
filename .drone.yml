@@ -36,11 +36,7 @@ pipeline:
       - DOCKER_HOST=tcp://docker:2375
       - DOCKER_PUBLIC_IP=docker
     commands:
-      - docker build -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
-      - docker build -t kowalatech/bootnode:dev -f client/release/bootnode.Dockerfile .
-      - docker build -t kowalatech/wallet_backend:dev -f wallet-backend/Dockerfile .
-      - docker build -t kowalatech/transactions_persistance:dev -f notifications/transactions_db_synchronize.Dockerfile .
-      - docker build -t kowalatech/backend_api:dev -f notifications/api.Dockerfile .
+      - make -j 8 dev_docker_images
       - make e2e
     when:
       event: [pull_request]
