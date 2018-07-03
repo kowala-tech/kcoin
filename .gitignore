@@ -1,3 +1,5 @@
 /build/_workspace/
 /build/bin/
-
+*.mp4
+*.ppm
+.DS_Store
