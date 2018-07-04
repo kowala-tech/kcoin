@@ -7,6 +7,7 @@
 # used by the Makefile
 /build/_workspace/
 /build/bin/
+/build/contracts/
 /kcoin*.zip
 /test/e2e/logs
 godog.test
@@ -17,7 +18,13 @@ godog.test
 /dashboard/assets/public/bundle.js
 
 #truffle and npm
-/contract/truffle/node_modules/
-/contract/truffle/coverage/
-/contract/truffle/build/contracts
-/contract/truffle/coverage.json
+/contracts/truffle/node_modules/
+/contracts/truffle/coverage/
+/contracts/truffle/build/contracts
+/contracts/truffle/coverage.json
+
+#go bindings
+/contracts/bindings/consensus/build/
+/contracts/bindings/consensus/testfiles/build/
+/contracts/bindings/oracle/build/
+/contracts/bindings/ownership/build/
