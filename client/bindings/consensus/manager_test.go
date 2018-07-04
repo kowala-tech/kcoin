@@ -10,9 +10,9 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind/backends"
-	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/bindings/ownership"
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/knode/genesis"
@@ -67,6 +67,11 @@ func getDefaultOpts() genesis.Options {
 			MaxNumOracles: 10,
 			FreezePeriod:  0,
 			BaseDeposit:   0,
+			Price: genesis.PriceOpts{
+				InitialPrice:  1,
+				SyncFrequency: 600,
+				UpdatePeriod:  30,
+			},
 		},
 		PrefundedAccounts: []genesis.PrefundedAccount{
 			{
@@ -165,9 +170,6 @@ func (suite *ValidatorMgrSuite) TestDeploy() {
 	freezePeriod := new(big.Int).SetUint64(100)
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-
-	mgr, err := consensus.NewValidatorMgr(validatorMgrAddr, backend)
-
 	_, _, mgr, err := consensus.DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr)
 	req.NoError(err)
 	req.NotNil(mgr)
