@@ -10,11 +10,13 @@ import (
 		"github.com/kowala-tech/kcoin/notifications/core"
 	"github.com/kowala-tech/kcoin/notifications/environment"
 		"github.com/kowala-tech/kcoin/notifications/persistence"
+	"github.com/kowala-tech/kcoin/notifications/pubsub"
 )
 
 func main() {
 	envReader := environment.NewReaderOs()
 	redisAddr := envReader.Read("REDIS_ADDR")
+	nsqAddr := envReader.Read("NSQ_ADDR")
 	logLevelRaw := envReader.Read("LOG_LEVEL")
 	if logLevelRaw == "" {
 		logLevelRaw = "info"
@@ -40,12 +42,13 @@ func main() {
 		panic(err)
 	}
 
-	worker := core.NewDbTransactionsPersistence(logrus.NewEntry(logger))
+	worker := core.NewTransactionsPersistanceWorker(logrus.NewEntry(logger))
 
 	g := inj.NewGraph()
 	g.Provide(
 		worker,
 		persistence.NewRedisPersistence(redisClient),
+		pubsub.NewNSQSubscriber("notifications", "db-persistance", nsqAddr, logrus.NewEntry(logger)),
 	)
 
 	if valid, errors := g.Assert(); !valid {

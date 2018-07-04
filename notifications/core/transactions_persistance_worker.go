@@ -6,26 +6,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type DbTransactionsPersistance struct {
+type TransactionsPersistanceWorker struct {
 	Persistence persistence.TransactionRepository `inj:""`
 	Subscriber  pubsub.Subscriber                 `inj:""`
 
 	logger *logrus.Entry
 }
 
-func NewDbTransactionsPersistence(logger *logrus.Entry) *DbTransactionsPersistance {
-	return &DbTransactionsPersistance{
+func NewTransactionsPersistanceWorker(logger *logrus.Entry) *TransactionsPersistanceWorker {
+	return &TransactionsPersistanceWorker{
 		logger: logger.WithField("app", "core/transactions_db_persistence"),
 	}
 }
 
-func (tp *DbTransactionsPersistance) Start() error {
+func (tp *TransactionsPersistanceWorker) Start() error {
 	tp.logger.Debug("Starting...")
 	tp.logger.Debug("Getting blocks from queue...")
 
 	return nil
 }
 
-func (tp *DbTransactionsPersistance) Stop() {
+func (tp *TransactionsPersistanceWorker) Stop() {
 	tp.logger.Debug("Stopping...")
 }
