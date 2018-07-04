@@ -57,7 +57,7 @@ func main() {
 		panic(err)
 	}
 
-	worker := core.NewDbTransactionsSynchronizer(logrus.NewEntry(logger))
+	worker := core.NewDbTransactionsPersistence(logrus.NewEntry(logger))
 
 	g := inj.NewGraph()
 	g.Provide(
