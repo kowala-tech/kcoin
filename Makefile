@@ -84,11 +84,11 @@ clean:
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
 generate-contract-bindings: devtools
-	cd client && npm i
-	cd client/bindings/consensus; go generate
-	cd client/bindings/consensus/testfiles; go generate
-	cd client/bindings/oracle; go generate
-	cd client/bindings/ownership; go generate
+	cd client/contracts/truffle && npm i
+	cd client/contracts/bindings/consensus; go generate
+	cd client/contracts/bindings/consensus/testfiles; go generate
+	cd client/contracts/bindings/oracle; go generate
+	cd client/contracts/bindings/ownership; go generate
 
 devtools: abigen
 	env GOBIN= go get -u golang.org/x/tools/cmd/stringer

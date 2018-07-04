@@ -17,7 +17,7 @@ godog.test
 /dashboard/assets/public/bundle.js
 
 #truffle and npm
-/node_modules/
-/coverage/
-/build/contracts
-/coverage.json
+/contract/truffle/node_modules/
+/contract/truffle/coverage/
+/contract/truffle/build/contracts
+/contract/truffle/coverage.json

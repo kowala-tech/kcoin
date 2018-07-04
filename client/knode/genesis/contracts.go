@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
-	"github.com/kowala-tech/kcoin/client/bindings/consensus"
-	"github.com/kowala-tech/kcoin/client/bindings/oracle"
-	"github.com/kowala-tech/kcoin/client/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 )
