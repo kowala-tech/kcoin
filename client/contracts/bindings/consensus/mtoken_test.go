@@ -7,9 +7,9 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind/backends"
-	"github.com/kowala-tech/kcoin/client/bindings/consensus"
-	"github.com/kowala-tech/kcoin/client/bindings/consensus/testfiles"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus/testfiles"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/params"
