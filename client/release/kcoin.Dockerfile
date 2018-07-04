@@ -1,5 +1,5 @@
 FROM golang:1.10.3-alpine3.7 as builder
-RUN apk update && apk add --update git make gcc musl-dev linux-headers
+RUN apk update && apk add --update git make gcc musl-dev linux-headers nodejs
 
 WORKDIR /kcoin/
 ADD . .
