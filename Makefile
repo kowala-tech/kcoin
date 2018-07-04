@@ -86,6 +86,7 @@ clean:
 generate-contract-bindings: devtools
 	cd client && npm i
 	cd client/bindings/consensus; go generate
+	cd client/bindings/consensus/testfiles; go generate
 	cd client/bindings/oracle; go generate
 	cd client/bindings/ownership; go generate
 

@@ -28,14 +28,13 @@ func DeployIncompatible(auth *bind.TransactOpts, backend bind.ContractBackend) (
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	return address, tx, &Incompatible{IncompatibleCaller: IncompatibleCaller{contract: contract}, IncompatibleTransactor: IncompatibleTransactor{contract: contract}, IncompatibleFilterer: IncompatibleFilterer{contract: contract}}, nil
+	return address, tx, &Incompatible{IncompatibleCaller: IncompatibleCaller{contract: contract}, IncompatibleTransactor: IncompatibleTransactor{contract: contract}}, nil
 }
 
 // Incompatible is an auto generated Go binding around an Ethereum contract.
 type Incompatible struct {
 	IncompatibleCaller     // Read-only binding to the contract
 	IncompatibleTransactor // Write-only binding to the contract
-	IncompatibleFilterer   // Log filterer for contract events
 }
 
 // IncompatibleCaller is an auto generated read-only Go binding around an Ethereum contract.
@@ -45,11 +44,6 @@ type IncompatibleCaller struct {
 
 // IncompatibleTransactor is an auto generated write-only Go binding around an Ethereum contract.
 type IncompatibleTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IncompatibleFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type IncompatibleFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
@@ -92,16 +86,16 @@ type IncompatibleTransactorRaw struct {
 
 // NewIncompatible creates a new instance of Incompatible, bound to a specific deployed contract.
 func NewIncompatible(address common.Address, backend bind.ContractBackend) (*Incompatible, error) {
-	contract, err := bindIncompatible(address, backend, backend, backend)
+	contract, err := bindIncompatible(address, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &Incompatible{IncompatibleCaller: IncompatibleCaller{contract: contract}, IncompatibleTransactor: IncompatibleTransactor{contract: contract}, IncompatibleFilterer: IncompatibleFilterer{contract: contract}}, nil
+	return &Incompatible{IncompatibleCaller: IncompatibleCaller{contract: contract}, IncompatibleTransactor: IncompatibleTransactor{contract: contract}}, nil
 }
 
 // NewIncompatibleCaller creates a new read-only instance of Incompatible, bound to a specific deployed contract.
 func NewIncompatibleCaller(address common.Address, caller bind.ContractCaller) (*IncompatibleCaller, error) {
-	contract, err := bindIncompatible(address, caller, nil, nil)
+	contract, err := bindIncompatible(address, caller, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -110,29 +104,20 @@ func NewIncompatibleCaller(address common.Address, caller bind.ContractCaller) (
 
 // NewIncompatibleTransactor creates a new write-only instance of Incompatible, bound to a specific deployed contract.
 func NewIncompatibleTransactor(address common.Address, transactor bind.ContractTransactor) (*IncompatibleTransactor, error) {
-	contract, err := bindIncompatible(address, nil, transactor, nil)
+	contract, err := bindIncompatible(address, nil, transactor)
 	if err != nil {
 		return nil, err
 	}
 	return &IncompatibleTransactor{contract: contract}, nil
 }
 
-// NewIncompatibleFilterer creates a new log filterer instance of Incompatible, bound to a specific deployed contract.
-func NewIncompatibleFilterer(address common.Address, filterer bind.ContractFilterer) (*IncompatibleFilterer, error) {
-	contract, err := bindIncompatible(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &IncompatibleFilterer{contract: contract}, nil
-}
-
 // bindIncompatible binds a generic wrapper to an already deployed contract.
-func bindIncompatible(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+func bindIncompatible(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor) (*bind.BoundContract, error) {
 	parsed, err := abi.JSON(strings.NewReader(IncompatibleABI))
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, parsed, caller, transactor), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
