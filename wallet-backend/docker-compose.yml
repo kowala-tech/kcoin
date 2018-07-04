@@ -1,0 +1,26 @@
+version: '2'
+
+services:
+    dbsync:
+        image: kowalatech/transactions_persistance:latest
+        depends_on:
+            - redis
+        environment:
+            - REDIS_ADDR=redis:6379
+            - TESTNET_RPC_ADDR=http://rpcnode.testnet.kowala.io:30503
+    backend:
+        build: .
+        ports:
+            - "8080:8080"
+    api:
+        image: kowalatech/backend_api:latest
+        depends_on:
+            - redis
+        environment:
+            - PORT=3000
+            - REDIS_ADDR=redis:6379
+
+    redis:
+        image: "redis:alpine"
+        ports:
+            - 6380:6379

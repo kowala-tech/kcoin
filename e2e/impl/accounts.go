@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/DATA-DOG/godog/gherkin"
 	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 var (
@@ -121,23 +123,25 @@ func (ctx *Context) TheBalanceIsExactly(accountName string, expectedKcoin int64)
 }
 
 func (ctx *Context) theBalanceIs(accountName string, cmp string, expectedKcoin int64) error {
-	expected := toWei(expectedKcoin)
+	return common.WaitFor("the balance satisfies a condition", time.Second, 10*time.Second, func() error {
+		expected := toWei(expectedKcoin)
 
-	account := ctx.accounts[accountName]
-	balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
-	if err != nil {
-		return err
-	}
+		account := ctx.accounts[accountName]
+		balance, err := ctx.client.BalanceAt(context.Background(), account.Address, nil)
+		if err != nil {
+			return err
+		}
 
-	cmpFunc, err := newCompare(cmp)
-	if err != nil {
-		return err
-	}
-	if !cmpFunc(expected, balance) {
-		return fmt.Errorf("balance expected to be %s %v but is %v", cmp, expected, balance)
-	}
+		cmpFunc, err := newCompare(cmp)
+		if err != nil {
+			return err
+		}
+		if !cmpFunc(expected, balance) {
+			return fmt.Errorf("balance expected to be %s %v but is %v", cmp, expected, balance)
+		}
 
-	return nil
+		return nil
+	})
 }
 
 func (vctx *ValidationContext) IHaveTheFollowingAccounts(accountsDataTable *gherkin.DataTable) error {
