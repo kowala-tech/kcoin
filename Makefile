@@ -28,6 +28,11 @@ control:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/control\" to launch control."
 
+abigen:
+	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/abigen\" to launch abigen."
+
 bootnode:
 	cd client; build/env.sh go run build/ci.go install ./cmd/bootnode
 	@echo "Done building."
@@ -79,15 +84,15 @@ clean:
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
 generate-contract-bindings: devtools
+	cd client && npm i
 	cd client/bindings/consensus; go generate
 	cd client/bindings/oracle; go generate
 	cd client/bindings/ownership; go generate
 
-devtools:
+devtools: abigen
 	env GOBIN= go get -u golang.org/x/tools/cmd/stringer
 	env GOBIN= go get -u github.com/jteeuwen/go-bindata/go-bindata
 	env GOBIN= go get -u github.com/fjl/gencodec
-	env GOBIN= go install ./client/cmd/abigen
 
 # Cross Compilation Targets (xgo)
 

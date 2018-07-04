@@ -13,10 +13,10 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
-//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=/usr/local/include/solidity/ openzeppelin-solidity/=/usr/local/include/solidity/openzeppelin-solidity/  ../../contracts/consensus/contracts/mgr/ValidatorMgr.sol
-//go:generate abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
-//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=/usr/local/include/solidity/ openzeppelin-solidity/=/usr/local/include/solidity/openzeppelin-solidity/ ../../contracts/consensus/contracts/token/MiningToken.sol
-//go:generate abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
+//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../contracts openzeppelin-solidity/=../../node_modules/openzeppelin-solidity/  ../../contracts/consensus/contracts/mgr/ValidatorMgr.sol
+//go:generate ../../build/bin/abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
+//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../contracts openzeppelin-solidity/=../../node_modules/openzeppelin-solidity/ ../../contracts/consensus/contracts/token/MiningToken.sol
+//go:generate ../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
 
 const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 
