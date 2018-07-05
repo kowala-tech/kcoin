@@ -173,6 +173,15 @@ func (ctx *ValidationContext) ITransferMTokens(mTokens int64, from, to string) e
 	return ctx.sendTokensAndWait(fromAccount, toAccount, mTokens)
 }
 
+func (ctx *ValidationContext) MintMTokens(m, n int64, mTokens int64, to string) error {
+	toAccount, ok := ctx.globalCtx.accounts[to]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", to)
+	}
+
+	return ctx.mintTokensAndWait(ctx.globalCtx.mtokensGovernanceAccounts[:m], toAccount, mTokens)
+}
+
 func (ctx *ValidationContext) isMTokensDepositExact(deposit *Deposit, expectedMTokens *big.Int) error {
 	if expectedMTokens.Cmp(deposit.Value) != 0 {
 		return errors.New(fmt.Sprintf("kcoins don't match expected %d kcoins got %d", expectedMTokens, *deposit.Value))

@@ -87,6 +87,7 @@ func FeatureContext(opts *FeatureContextOpts) {
 	// mTokens
 	opts.suite.Step(`^the deposit of (\w+) should be (\d+) mTokens?$`, validationCtx.IsMTokensBalanceExact)
 	opts.suite.Step(`^I transfer (\d+) mTokens? from (\w+) to (\w+)$`, validationCtx.ITransferMTokens)
+	opts.suite.Step(`^(\d+) of (\d+) governance accounts? mints? (\d+) mTokens? to (\w+)$`, validationCtx.MintMTokens)
 
 	// Nodes
 	opts.suite.Step(`^I start a new node$`, context.IStartANewNode)

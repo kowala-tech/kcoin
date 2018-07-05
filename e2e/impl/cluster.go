@@ -115,6 +115,15 @@ func (ctx *Context) generateAccounts() error {
 	}
 	ctx.mtokensSeederAccount = *mtokensSeederAccount
 
+	ctx.mtokensGovernanceAccounts = append(ctx.mtokensGovernanceAccounts, *mtokensSeederAccount)
+	for i := 0; i < 2; i++ {
+		mtokensGovernanceAccount, err := ctx.newAccount()
+		if err != nil {
+			return err
+		}
+		ctx.mtokensGovernanceAccounts = append(ctx.mtokensGovernanceAccounts, *mtokensGovernanceAccount)
+	}
+
 	genesisValidatorAccount, err := ctx.newAccount()
 	if err != nil {
 		return err
@@ -282,22 +291,13 @@ func (ctx *Context) buildGenesis() error {
 				Symbol:   "mUSD",
 				Cap:      1000,
 				Decimals: 18,
-				Holders: []genesis.TokenHolder{
-					{
-						Address:   genesisValidatorAddr,
-						NumTokens: baseDeposit * 100,
-					},
-					{
-						Address:   ctx.mtokensSeederAccount.Address.String(),
-						NumTokens: baseDeposit * 100,
-					},
-				},
+				Holders:  ctx.getMTokenHolders(baseDeposit, genesisValidatorAddr),
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
 			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-			Governors:        []string{ctx.mtokensSeederAccount.Address.Hex()},
-			NumConfirmations: 1,
+			Governors:        ctx.getGovernors(),
+			NumConfirmations: 2,
 		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{
 			MaxNumOracles: 10,
@@ -309,7 +309,7 @@ func (ctx *Context) buildGenesis() error {
 				UpdatePeriod:  30,
 			},
 		},
-		PrefundedAccounts: []genesis.PrefundedAccount{
+		PrefundedAccounts: ctx.getPrefundedAccounts(baseDeposit, []genesis.PrefundedAccount{
 			{
 				Address: ctx.genesisValidatorAccount.Address.Hex(),
 				Balance: baseDeposit * 100,
@@ -322,11 +322,7 @@ func (ctx *Context) buildGenesis() error {
 				Address: ctx.kusdSeederAccount.Address.Hex(),
 				Balance: baseDeposit * 10000,
 			},
-			{
-				Address: ctx.mtokensSeederAccount.Address.Hex(),
-				Balance: baseDeposit * 10000,
-			},
-		},
+		}...),
 	})
 	if err != nil {
 		return err
@@ -339,4 +335,45 @@ func (ctx *Context) buildGenesis() error {
 	ctx.genesis = rawJson
 
 	return nil
+}
+
+func (ctx *Context) getMTokenHolders(baseDeposit uint64, genesisValidatorAddr string) []genesis.TokenHolder {
+	holders := []genesis.TokenHolder{
+		{
+			Address:   genesisValidatorAddr,
+			NumTokens: baseDeposit * 100,
+		},
+	}
+
+	for _, acc := range ctx.mtokensGovernanceAccounts {
+		holders = append(holders, genesis.TokenHolder{
+			Address:   acc.Address.String(),
+			NumTokens: baseDeposit * 100,
+		})
+	}
+
+	return holders
+}
+
+func (ctx *Context) getGovernors() []string {
+	var governors []string
+
+	for _, acc := range ctx.mtokensGovernanceAccounts {
+		governors = append(governors, acc.Address.Hex())
+	}
+
+	return governors
+}
+
+func (ctx *Context) getPrefundedAccounts(baseDeposit uint64, accs ...genesis.PrefundedAccount) []genesis.PrefundedAccount {
+	var governors []genesis.PrefundedAccount
+
+	for _, acc := range ctx.mtokensGovernanceAccounts {
+		governors = append(governors, genesis.PrefundedAccount{
+			Address: acc.Address.Hex(),
+			Balance: baseDeposit * 10000,
+		})
+	}
+
+	return append(governors, accs...)
 }

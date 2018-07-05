@@ -44,7 +44,7 @@ func (ctx *ValidationContext) sendTokens(from, to accounts.Account, tokens int64
 	return ctx.execCommand(transferTokens(args), res)
 }
 
-func (ctx *ValidationContext) mintTokensAndWait(from, to accounts.Account, tokens int64) error {
+func (ctx *ValidationContext) mintTokensAndWait(governance []accounts.Account, to accounts.Account, tokens int64) error {
 	res := &cluster.ExecResponse{}
 	if err := ctx.execCommand(getTokenBalance(to.Address), res); err != nil {
 		return err
@@ -57,7 +57,14 @@ func (ctx *ValidationContext) mintTokensAndWait(from, to accounts.Account, token
 
 	return ctx.waiter.Do(
 		func() error {
-			return ctx.mintTokens(from, to, tokens, AccountPass)
+			var err error
+			for _, from := range governance {
+				err = ctx.mintTokens(from, to, tokens, AccountPass)
+				if err != nil {
+					break
+				}
+			}
+			return err
 		},
 		func() error {
 			return ctx.checkTokenBalance(to, currentBalance+tokens)
