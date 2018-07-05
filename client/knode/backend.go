@@ -14,7 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
-	"github.com/kowala-tech/kcoin/client/contracts/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
 	"github.com/kowala-tech/kcoin/client/core/types"
