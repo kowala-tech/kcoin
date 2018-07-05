@@ -13,8 +13,6 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.4
     commands:
-      - apk update && apk add --update git build-base nodejs python2 curl
-      - curl -L https://github.com/ethereum/solidity/releases/download/v0.4.24/solc-static-linux -o /bin/solc && chmod +x /bin/solc
       - make bindings
       - make test
       - make lint
