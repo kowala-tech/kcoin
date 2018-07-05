@@ -11,9 +11,14 @@ import (
 	"github.com/kowala-tech/kcoin/notifications/environment"
 		"github.com/kowala-tech/kcoin/notifications/persistence"
 	"github.com/kowala-tech/kcoin/notifications/pubsub"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
+	exitSignal := make(chan os.Signal)
+	signal.Notify(exitSignal, syscall.SIGINT, syscall.SIGTERM)
+
 	envReader := environment.NewReaderOs()
 	redisAddr := envReader.Read("REDIS_ADDR")
 	nsqAddr := envReader.Read("NSQ_ADDR")
@@ -48,7 +53,7 @@ func main() {
 	g.Provide(
 		worker,
 		persistence.NewRedisPersistence(redisClient),
-		pubsub.NewNSQSubscriber("notifications", "db-persistance", nsqAddr, logrus.NewEntry(logger)),
+		pubsub.NewNSQSubscriber("transactions", "db-persistance", nsqAddr, logrus.NewEntry(logger)),
 	)
 
 	if valid, errors := g.Assert(); !valid {
@@ -59,4 +64,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	<-exitSignal
+	worker.Stop()
 }

@@ -1,8 +1,16 @@
 package core
 
-import "testing"
+import (
+	"testing"
+	"github.com/kowala-tech/kcoin/notifications/persistence/mocks"
+	"github.com/yourheropaul/inj"
+)
 
 func TestWeSaveWhenWeReceiveABlock(t *testing.T) {
+	mockedPersistance := mocks.TransactionRepository{}
+
 	worker := NewTransactionsPersistanceWorker(logger)
-	worker.Start()
+
+	gr := inj.NewGraph()
+	gr.Inject(worker, mockedPersistance)
 }
