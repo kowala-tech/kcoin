@@ -1,9 +1,9 @@
-pragma solidity 0.4.21;
+pragma solidity ^0.4.24;
 
 import "./Token.sol";
-import "github.com/kowala-tech/kcoin/client/contracts/ownership/contracts/Ownable.sol" as ownable;
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract MintableToken is Token, ownable.Ownable {
+contract MintableToken is Token, Ownable {
     event Mint(address indexed to, uint256 amount);
     event MintFinished();
 

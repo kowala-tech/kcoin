@@ -25,6 +25,15 @@
 #  name = "github.com/ethereum/go-ethereum"
 #  version = "1.7.3"
 
+ignored = [
+  "github.com/kowala-tech/kcoin/client",
+  "github.com/kowala-tech/kcoin/client/*"
+]
+
+[prune]
+  go-tests = true
+  unused-packages = true
+
 [[constraint]]
   name = "github.com/go-redis/redis"
   version = "6.7.5"

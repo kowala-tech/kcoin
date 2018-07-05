@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 
@@ -43,11 +42,8 @@ func version(ctx *cli.Context) error {
 	}
 	fmt.Println("Architecture:", runtime.GOARCH)
 	fmt.Println("Protocol Versions:", knode.ProtocolVersions)
-	fmt.Println("Network Id:", knode.DefaultConfig.NetworkId)
 	fmt.Println("Go Version:", runtime.Version())
 	fmt.Println("Operating System:", runtime.GOOS)
-	fmt.Printf("GOPATH=%s\n", os.Getenv("GOPATH"))
-	fmt.Printf("GOROOT=%s\n", runtime.GOROOT())
 	return nil
 }
 

@@ -1,12 +1,12 @@
-pragma solidity 0.4.21;
+pragma solidity ^0.4.24;
 
-import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/MintableToken.sol" as mint;
+import "../../../token/contracts/MintableToken.sol";
 
 /**
  * @title Capped token
  * @dev Mintable token with a token cap.
  */
-contract CappedToken is mint.MintableToken {
+contract CappedToken is MintableToken {
     uint256 public cap;
 
     function CappedToken(uint256 _cap) public {

@@ -2,28 +2,10 @@
 
 
 [[projects]]
-  name = "github.com/beeker1121/goque"
-  packages = ["."]
-  revision = "e1e63ca63c14b41209e160f54c8e7669564eacc4"
-  version = "v2.0.1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/btcsuite/btcd"
-  packages = ["btcec"]
-  revision = "675abc5df3c5531bc741b56a765e35623459da6d"
-
-[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/dougEfresh/logzio-go"
-  packages = ["."]
-  revision = "6106d27d2c7524e7afa913b0e9953cd517d281e4"
 
 [[projects]]
   name = "github.com/go-mail/mail"
@@ -45,12 +27,6 @@
   ]
   revision = "877867d2845fbaf86798befe410b6ceb6f5c29a3"
   version = "v6.10.2"
-
-[[projects]]
-  name = "github.com/go-stack/stack"
-  packages = ["."]
-  revision = "259ab82a6cad3992b4e21ff5cac294ccb06474bc"
-  version = "v1.7.0"
 
 [[projects]]
   name = "github.com/gobuffalo/packr"
@@ -101,24 +77,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/rcrowley/go-metrics"
-  packages = ["."]
-  revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/ricochet2200/go-disk-usage"
-  packages = ["du"]
-  revision = "f0d1b743428fc09792f93233d9412f89f88fa2ab"
-
-[[projects]]
-  name = "github.com/rs/cors"
-  packages = ["."]
-  revision = "feef513b9575b32f84bafa580aad89b011259019"
-  version = "v1.3.0"
-
-[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
@@ -141,35 +99,10 @@
   version = "v1.2.1"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/syndtr/goleveldb"
-  packages = [
-    "leveldb",
-    "leveldb/cache",
-    "leveldb/comparer",
-    "leveldb/errors",
-    "leveldb/filter",
-    "leveldb/iterator",
-    "leveldb/journal",
-    "leveldb/memdb",
-    "leveldb/opt",
-    "leveldb/storage",
-    "leveldb/table",
-    "leveldb/util"
-  ]
-  revision = "ae970a0732be3a1f5311da86118d37b9f4bd2a5a"
-
-[[projects]]
   name = "github.com/yourheropaul/inj"
   packages = ["."]
   revision = "b5ea4d82b4adc2af7e46d6e547440a1f51c13234"
   version = "1.2.0"
-
-[[projects]]
-  name = "go.uber.org/atomic"
-  packages = ["."]
-  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
-  version = "v1.3.2"
 
 [[projects]]
   branch = "master"
@@ -188,8 +121,7 @@
     "idna",
     "internal/timeseries",
     "lex/httplex",
-    "trace",
-    "websocket"
+    "trace"
   ]
   revision = "640f4622ab692b87c2f3a94265e6f579fe38263d"
 
@@ -265,27 +197,9 @@
   packages = ["."]
   revision = "2caba252f4dc53eaf6b553000885530023f54623"
 
-[[projects]]
-  name = "gopkg.in/fatih/set.v0"
-  packages = ["."]
-  revision = "57907de300222151a123d29255ed17f5ed43fad3"
-  version = "v0.1.0"
-
-[[projects]]
-  branch = "v2"
-  name = "gopkg.in/karalabe/cookiejar.v2"
-  packages = ["collections/prque"]
-  revision = "8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57"
-
-[[projects]]
-  branch = "v2"
-  name = "gopkg.in/natefinch/npipe.v2"
-  packages = ["."]
-  revision = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4845d3a44dd600cdbdbf189e92a069d2e80e91f3031bf632d5eb22dbdf762ac9"
+  inputs-digest = "cce30d919964c67723c1bd584844a00b2f5d6b4d47f394ba0da337b03567e7b4"
   solver-name = "gps-cdcl"
   solver-version = 1
