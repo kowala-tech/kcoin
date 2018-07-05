@@ -55,9 +55,10 @@ type blockChain interface {
 type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
-	server *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	kcoin  *knode.Kowala    // Full Kowala service if monitoring a full node
-	engine consensus.Engine // Consensus engine to retrieve variadic block fields
+	server    *p2p.Server      // Peer-to-peer server to retrieve networking infos
+	kcoin     *knode.Kowala    // Full Kowala service if monitoring a full node
+	engine    consensus.Engine // Consensus engine to retrieve variadic block fields
+	oracleMgr                  // oracle manager to retrieve oracle fields
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
@@ -461,11 +462,11 @@ type blockStats struct {
 
 // contractsStats is the information to report about individual blocks.
 type contractsStats struct {
-	MinimumDeposit *big.Int `json:"minDeposit"`
-	Validators     uint64   `json:"validators"`
-	MaxValidators  uint64   `json:"maxValidators"`
-	Oracles        uint64   `json:"oracles"`
-	CurrencyPrice  *big.Int `json:"currencyPrice"`
+	MinDeposit    *big.Int `json:"minDeposit"`
+	Validators    uint64   `json:"validators"`
+	MaxValidators uint64   `json:"maxValidators"`
+	Oracles       uint64   `json:"oracles"`
+	CurrencyPrice *big.Int `json:"currencyPrice"`
 }
 
 // txStats is the information to report about individual transactions.
@@ -571,7 +572,7 @@ func (s *Service) assembleContractsStats() (*contractsStats, error) {
 	}
 
 	return &contractsStats{
-		MinimumDeposit: minDeposit,
+		MinDeposit: minDeposit,
 		/*
 			Validators:,
 			MaxValidators:,
