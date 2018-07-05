@@ -156,7 +156,6 @@ pipeline:
     acl: public-read
     source: gource-audio.mp4
     target: /kowala-kcoin-development-history.mp4
-    secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       branch: [dev]
       event: [push]
