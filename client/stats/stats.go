@@ -518,7 +518,7 @@ func (s *Service) reportContracts(conn *websocket.Conn) error {
 		"contracts": details,
 	}
 	report := map[string][]interface{}{
-		"emit": {"core", stats},
+		"emit": {"contracts", stats},
 	}
 	return websocket.JSON.Send(conn, report)
 }
