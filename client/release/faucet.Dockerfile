@@ -1,6 +1,6 @@
 FROM kowalatech/go:1.0.4 as builder
 
-WORKDIR /go/src/kowala-tech/kcoin/
+WORKDIR /go/src/github.com/kowala-tech/kcoin/
 ADD . .
 
 ARG CI
@@ -17,7 +17,7 @@ RUN make faucet
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 WORKDIR /faucet/
-COPY --from=builder /go/src/kowala-tech/kcoin/client/build/bin/faucet .
+COPY --from=builder /go/src/github.com/kowala-tech/kcoin/client/build/bin/faucet .
 ADD client/release/run_faucet.sh run_faucet.sh
 EXPOSE 80
 ENTRYPOINT ["./run_faucet.sh"]

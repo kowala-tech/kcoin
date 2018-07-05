@@ -1,6 +1,6 @@
 FROM kowalatech/go:1.0.4 as builder
 
-WORKDIR /go/src/kowala-tech/kcoin/
+WORKDIR /go/src/github.com/kowala-tech/kcoin/
 ADD . .
 
 ARG CI
@@ -16,5 +16,5 @@ RUN make bootnode
 
 FROM alpine:3.7
 WORKDIR /bootnode/
-COPY --from=builder /go/src/kowala-tech/kcoin/client/build/bin/bootnode .
+COPY --from=builder /go/src/github.com/kowala-tech/kcoin/client/build/bin/bootnode .
 ENTRYPOINT ["./bootnode"] 

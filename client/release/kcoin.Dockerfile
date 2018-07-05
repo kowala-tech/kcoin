@@ -1,6 +1,6 @@
 FROM kowalatech/go:1.0.4 as builder
 
-WORKDIR /go/src/kowala-tech/kcoin/
+WORKDIR /go/src/github.com/kowala-tech/kcoin/
 ADD . .
 
 ARG CI
@@ -17,8 +17,8 @@ RUN make kcoin control
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 WORKDIR /kcoin/
-COPY --from=builder /go/src/kowala-tech/kcoin/client/build/bin/kcoin .
-COPY --from=builder /go/src/kowala-tech/kcoin/client/build/bin/control .
+COPY --from=builder /go/src/github.com/kowala-tech/kcoin/client/build/bin/kcoin .
+COPY --from=builder /go/src/github.com/kowala-tech/kcoin/client/build/bin/control .
 EXPOSE 22334
 EXPOSE 22334/udp
 EXPOSE 8080
