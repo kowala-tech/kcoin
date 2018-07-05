@@ -1,4 +1,4 @@
-FROM golang:1.10.3-alpine3.7 as build
+FROM kowalatech/go:1.0.4 as build
 RUN apk update && apk add --update git make gcc musl-dev linux-headers
 
 WORKDIR /go/src/github.com/kowala-tech/kcoin/
