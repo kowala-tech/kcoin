@@ -4,6 +4,12 @@
 # or operating system, you probably want to add a global ignore instead:
 #   git config --global core.excludesfile ~/.gitignore_global
 
+/build/_workspace/
+/build/bin/
+*.mp4
+*.ppm
+.DS_Store
+
 # used by the Makefile
 /client/build/_workspace/
 /client/build/bin/
