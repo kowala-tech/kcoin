@@ -236,6 +236,9 @@ func (s *Service) loop() {
 				if err = s.reportBlock(conn, head); err != nil {
 					log.Warn("Block stats report failed", "err", err)
 				}
+				if err := s.reportContracts(conn); err != nil {
+					log.Warn("State report failed", "err", err)
+				}
 				if err = s.reportPending(conn); err != nil {
 					log.Warn("Post-block transaction stats report failed", "err", err)
 				}
@@ -393,6 +396,9 @@ func (s *Service) report(conn *websocket.Conn) error {
 	if err := s.reportBlock(conn, nil); err != nil {
 		return err
 	}
+	if err := s.reportContracts(conn); err != nil {
+		return err
+	}
 	if err := s.reportPending(conn); err != nil {
 		return err
 	}
@@ -445,15 +451,21 @@ type blockStats struct {
 	Hash       common.Hash    `json:"hash"`
 	ParentHash common.Hash    `json:"parentHash"`
 	Timestamp  *big.Int       `json:"timestamp"`
-	Miner      common.Address `json:"miner"`
+	Validator  common.Address `json:"validator"`
 	GasUsed    *big.Int       `json:"gasUsed"`
 	GasLimit   *big.Int       `json:"gasLimit"`
-	Diff       string         `json:"difficulty"`
-	TotalDiff  string         `json:"totalDifficulty"`
 	Txs        []txStats      `json:"transactions"`
 	TxHash     common.Hash    `json:"transactionsRoot"`
 	Root       common.Hash    `json:"stateRoot"`
-	Uncles     uncleStats     `json:"uncles"`
+}
+
+// contractsStats is the information to report about individual blocks.
+type contractsStats struct {
+	MinimumDeposit *big.Int `json:"minDeposit"`
+	Validators     uint64   `json:"validators"`
+	MaxValidators  uint64   `json:"maxValidators"`
+	Oracles        uint64   `json:"oracles"`
+	CurrencyPrice  *big.Int `json:"currencyPrice"`
 }
 
 // txStats is the information to report about individual transactions.
@@ -490,6 +502,27 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	return websocket.JSON.Send(conn, report)
 }
 
+// reportContracts reports core contracts stats to the stats server
+func (s *Service) reportContracts(conn *websocket.Conn) error {
+	// Gather the core contracts details from the block chain
+	details, err := s.assembleContractsStats()
+	if err != nil {
+		return err
+	}
+
+	// Assemble the contracts report and send it to the server
+	log.Trace("Sending contracts to kcoinstats")
+
+	stats := map[string]interface{}{
+		"id":        s.node,
+		"contracts": details,
+	}
+	report := map[string][]interface{}{
+		"emit": {"core", stats},
+	}
+	return websocket.JSON.Send(conn, report)
+}
+
 // assembleBlockStats retrieves any required metadata to report a single block
 // and assembles the block stats. If block is nil, the current head is processed.
 func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
@@ -518,13 +551,34 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		Hash:       header.Hash(),
 		ParentHash: header.ParentHash,
 		Timestamp:  header.Time,
-		Miner:      author,
+		Validator:  author,
 		GasUsed:    new(big.Int).Set(header.GasUsed),
 		GasLimit:   new(big.Int).Set(header.GasLimit),
 		Txs:        txs,
 		TxHash:     header.TxHash,
 		Root:       header.Root,
 	}
+}
+
+// assembleContractsStats retrieves any required metadata to report the core
+// contracts and assembles the contracts stats.
+func (s *Service) assembleContractsStats() (*contractsStats, error) {
+	// Gather the contracts info from the local blockchain
+
+	minDeposit, err := s.kcoin.Consensus().MinimumDeposit()
+	if err != nil {
+		return nil, err
+	}
+
+	return &contractsStats{
+		MinimumDeposit: minDeposit,
+		/*
+			Validators:,
+			MaxValidators:,
+			Oracles:,
+			Price:,
+		*/
+	}, nil
 }
 
 // reportHistory retrieves the most recent batch of blocks and reports it to the

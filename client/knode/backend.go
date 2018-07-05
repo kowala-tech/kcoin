@@ -374,6 +374,7 @@ func (s *Kowala) IsListening() bool                  { return true } // Always l
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkId }
 func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *Kowala) Consensus() consensus.Consensus     { return s.consensus }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
