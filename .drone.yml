@@ -138,9 +138,10 @@ pipeline:
     repo: kowalatech/kcoin
     when:
       branch: [dev]
-      event: [push, tag]
+      event: [push]
 
   upload-gource-mp4-to-s3:
+    group: asset-deployment
     image: plugins/s3
     bucket: releases.kowala.io
     region: us-east-1
@@ -150,9 +151,10 @@ pipeline:
     secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       branch: [dev]
-      event: [push, tag]
+      event: [push]
 
-  s3:
+  upload-binary-assets-to-s3:
+    group: asset-deployment
     image: plugins/s3
     bucket: releases.kowala.io
     region: us-east-1
