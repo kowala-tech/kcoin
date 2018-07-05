@@ -11,3 +11,5 @@ e2e
 notifications/vendor
 wallet-backend/vendor
 
+*.mp4
+*.ppm
