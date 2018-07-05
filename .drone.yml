@@ -37,7 +37,7 @@ pipeline:
       - DOCKER_HOST=tcp://docker:2375
       - DOCKER_PUBLIC_IP=docker
     commands:
-      - make -j 8 dev_docker_images
+      - make dev_docker_images
       - make e2e
     when:
       event: [pull_request]
