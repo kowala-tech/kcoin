@@ -33,12 +33,12 @@ abigen:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/abigen\" to launch abigen."
 
-bootnode:
+bootnode: bindings
 	cd client; build/env.sh go run build/ci.go install ./cmd/bootnode
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
 
-faucet:
+faucet: bindings
 	cd client; build/env.sh go run build/ci.go install ./cmd/faucet
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/faucet\" to launch faucet."
