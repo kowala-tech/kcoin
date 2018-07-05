@@ -1,0 +1,12 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Snackbar it should match the snapshot 1`] = `
+<Snackbar
+  classes={
+    Object {
+      "close": "Snackbar-close-1",
+    }
+  }
+  message="Hello! I am a snackbar."
+/>
+`;

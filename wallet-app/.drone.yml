@@ -1,0 +1,37 @@
+pipeline:
+    install:
+        image: node:9
+        commands:
+            - make install
+        when:
+            branch: [develop, master]
+    lint:
+        image: node:9
+        commands:
+            - make lint
+        when:
+            branch: [develop, master]
+    test:
+        image: node:9
+        commands:
+            - make test
+        when:
+            branch: [develop, master]
+    build-kusd-zygote:
+        image: node:9
+        commands:
+            - export KOWALA_NETWORK="kusd-zygote"
+            - yarn run drone:build
+        when:
+            branch: [develop]
+    upload-kusd-zygote:
+        image: plugins/s3
+        acl: public-read
+        region: "us-east-1"
+        bucket: "wallet.zygote.kowala.io"
+        source: dist/**/*
+        strip_prefix: dist
+        target: /
+        encryption: AES256
+        when:
+            branch: [develop]
