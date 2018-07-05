@@ -13,6 +13,7 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.4
     commands:
+      - make bindings
       - make test
       - make lint
     when:
@@ -36,7 +37,7 @@ pipeline:
       - DOCKER_HOST=tcp://docker:2375
       - DOCKER_PUBLIC_IP=docker
     commands:
-      - make -j 8 dev_docker_images
+      - make dev_docker_images
       - make e2e
     when:
       event: [pull_request]

@@ -18,7 +18,7 @@ else ifeq ($(OS),Darwin)
 	NPROCS := $(shell sysctl -n hw.ncpu)
 endif # $(OS)
 
-kcoin:
+kcoin: bindings
 	cd client; build/env.sh go run build/ci.go install ./cmd/kcoin
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kcoin\" to launch kcoin."
@@ -27,6 +27,11 @@ control:
 	cd client; build/env.sh go run build/ci.go install ./cmd/control
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/control\" to launch control."
+
+abigen:
+	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/abigen\" to launch abigen."
 
 bootnode:
 	cd client; build/env.sh go run build/ci.go install ./cmd/bootnode
@@ -78,11 +83,17 @@ clean:
 # The devtools target installs tools required for 'go generate'.
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
-devtools:
+bindings: devtools
+	cd client/contracts/truffle && npm i
+	cd client/contracts/bindings/consensus; go generate
+	cd client/contracts/bindings/consensus/testfiles; go generate
+	cd client/contracts/bindings/oracle; go generate
+	cd client/contracts/bindings/ownership; go generate
+
+devtools: abigen
 	env GOBIN= go get -u golang.org/x/tools/cmd/stringer
 	env GOBIN= go get -u github.com/jteeuwen/go-bindata/go-bindata
 	env GOBIN= go get -u github.com/fjl/gencodec
-	env GOBIN= go install ./cmd/abigen
 
 # Cross Compilation Targets (xgo)
 
