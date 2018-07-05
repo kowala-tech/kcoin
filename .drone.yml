@@ -13,6 +13,7 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.3
     commands:
+      - make bindings
       - make test
       - make lint
     when:
