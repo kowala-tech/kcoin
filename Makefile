@@ -18,7 +18,7 @@ else ifeq ($(OS),Darwin)
 	NPROCS := $(shell sysctl -n hw.ncpu)
 endif # $(OS)
 
-kcoin: generate-contract-bindings
+kcoin: bindings
 	cd client; build/env.sh go run build/ci.go install ./cmd/kcoin
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kcoin\" to launch kcoin."
@@ -83,7 +83,7 @@ clean:
 # The devtools target installs tools required for 'go generate'.
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
-generate-contract-bindings: devtools
+bindings: devtools
 	cd client/contracts/truffle && npm i
 	cd client/contracts/bindings/consensus; go generate
 	cd client/contracts/bindings/consensus/testfiles; go generate
