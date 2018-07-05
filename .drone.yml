@@ -124,6 +124,7 @@ pipeline:
 
 
   build-artifacts:
+    group: build-artifacts
     image: kowalatech/go:1.0.3
     environment:
       - DOCKER_HOST=tcp://docker:2375
@@ -133,7 +134,29 @@ pipeline:
       event: [push, tag]
       branch: [dev]
 
-  s3:
+  compile-gource-video:
+    group: build-artifacts
+    image: adk486/docker-gource
+    repo: kowalatech/kcoin
+    when:
+      branch: [dev]
+      event: [push]
+
+  upload-gource-mp4-to-s3:
+    group: asset-deployment
+    image: plugins/s3
+    bucket: releases.kowala.io
+    region: us-east-1
+    acl: public-read
+    source: gource-audio.mp4
+    target: /kowala-kcoin-development-history.mp4
+    secrets: [aws_access_key_id, aws_secret_access_key]
+    when:
+      branch: [dev]
+      event: [push]
+
+  upload-binary-assets-to-s3:
+    group: asset-deployment
     image: plugins/s3
     bucket: releases.kowala.io
     region: us-east-1
@@ -149,17 +172,17 @@ pipeline:
   notify-dev:
     group: notify
     image: plugins/slack
-    secrets: [ slack_webhook ] 
+    secrets: [ slack_webhook ]
     channel: ci-notifications
     username: drone
     template: >
         *CI build #{{build.number}}* ({{build.event}} to `{{build.branch}}`{{#if build.pull}}[PR #{{build.pull}}]{{/if}} by @{{build.author}}) *{{#success build.status}}successful{{else}}failed{{/success}}* after {{since build.started}}
 
         _${DRONE_COMMIT_MESSAGE}_
-        
+
         {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}>
     when:
-      status: failure 
+      status: failure
       event: [push, tag, pull_request]
 
 services:
