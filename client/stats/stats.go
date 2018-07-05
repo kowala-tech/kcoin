@@ -17,6 +17,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
 	"github.com/kowala-tech/kcoin/client/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
@@ -58,7 +59,7 @@ type Service struct {
 	server    *p2p.Server      // Peer-to-peer server to retrieve networking infos
 	kcoin     *knode.Kowala    // Full Kowala service if monitoring a full node
 	engine    consensus.Engine // Consensus engine to retrieve variadic block fields
-	oracleMgr                  // oracle manager to retrieve oracle fields
+	oracleMgr oracle.Manager   // oracle manager to retrieve oracle fields
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
@@ -78,15 +79,20 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 	}
 	// Assemble and return the stats service
 	engine := kowalaServ.Engine()
+	oracleMgr, err := oracle.Binding(knode.NewContractBackend(kowalaServ.APIBackend()), kowalaServ.ChainConfig().ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load the network contract %v", err)
+	}
 
 	return &Service{
-		kcoin:  kowalaServ,
-		engine: engine,
-		node:   parts[1],
-		pass:   parts[3],
-		host:   parts[4],
-		pongCh: make(chan struct{}),
-		histCh: make(chan []uint64, 1),
+		kcoin:     kowalaServ,
+		engine:    engine,
+		oracleMgr: oracleMgr,
+		node:      parts[1],
+		pass:      parts[3],
+		host:      parts[4],
+		pongCh:    make(chan struct{}),
+		histCh:    make(chan []uint64, 1),
 	}, nil
 }
 
@@ -462,11 +468,11 @@ type blockStats struct {
 
 // contractsStats is the information to report about individual blocks.
 type contractsStats struct {
-	MinDeposit    *big.Int `json:"minDeposit"`
-	Validators    uint64   `json:"validators"`
-	MaxValidators uint64   `json:"maxValidators"`
-	Oracles       uint64   `json:"oracles"`
-	CurrencyPrice *big.Int `json:"currencyPrice"`
+	MinDeposit     *big.Int `json:"minDeposit"`
+	ValidatorCount *big.Int `json:"validatorCount"`
+	MaxValidators  *big.Int `json:"maxValidators"`
+	OracleCount    *big.Int `json:"oracleCount"`
+	CurrencyPrice  *big.Int `json:"currencyPrice"`
 }
 
 // txStats is the information to report about individual transactions.
@@ -503,7 +509,7 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	return websocket.JSON.Send(conn, report)
 }
 
-// reportContracts reports core contracts stats to the stats server
+// reportContracts reports the core contracts stats to the stats server
 func (s *Service) reportContracts(conn *websocket.Conn) error {
 	// Gather the core contracts details from the block chain
 	details, err := s.assembleContractsStats()
@@ -512,7 +518,7 @@ func (s *Service) reportContracts(conn *websocket.Conn) error {
 	}
 
 	// Assemble the contracts report and send it to the server
-	log.Trace("Sending contracts to kcoinstats")
+	log.Trace("Sending contracts information to kcoinstats")
 
 	stats := map[string]interface{}{
 		"id":        s.node,
@@ -565,20 +571,34 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 // contracts and assembles the contracts stats.
 func (s *Service) assembleContractsStats() (*contractsStats, error) {
 	// Gather the contracts info from the local blockchain
-
-	minDeposit, err := s.kcoin.Consensus().MinimumDeposit()
+	consensus := s.kcoin.Consensus()
+	minDeposit, err := consensus.MinimumDeposit()
+	if err != nil {
+		return nil, err
+	}
+	validatorCount, err := consensus.GetValidatorCount()
+	if err != nil {
+		return nil, err
+	}
+	maxValidators, err := consensus.MaxValidators()
+	if err != nil {
+		return nil, err
+	}
+	oracleCount, err := s.oracleMgr.GetOracleCount()
+	if err != nil {
+		return nil, err
+	}
+	currencyPrice, err := s.oracleMgr.Price()
 	if err != nil {
 		return nil, err
 	}
 
 	return &contractsStats{
-		MinDeposit: minDeposit,
-		/*
-			Validators:,
-			MaxValidators:,
-			Oracles:,
-			Price:,
-		*/
+		MinDeposit:     minDeposit,
+		ValidatorCount: validatorCount,
+		MaxValidators:  maxValidators,
+		OracleCount:    oracleCount,
+		CurrencyPrice:  currencyPrice,
 	}, nil
 }
 
