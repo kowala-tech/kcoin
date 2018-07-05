@@ -7,6 +7,8 @@ contract OracleMgr is Pausable {
     uint public baseDeposit;       
     uint public maxNumOracles;
     uint public freezePeriod;
+    uint public syncFrequency;
+    uint public updatePeriod;
     uint public price;
 
     struct Deposit {

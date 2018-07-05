@@ -8,16 +8,16 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/contracts/token"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
-//go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=/usr/local/include/solidity/ contracts/mgr/ValidatorMgr.sol
-//go:generate abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
-//go:generate solc --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=/usr/local/include/solidity/ contracts/token/MiningToken.sol
-//go:generate abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
+//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
+//go:generate ../../../build/bin/abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
+//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ ../../truffle/contracts/consensus/token/MiningToken.sol
+//go:generate ../../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
 
 const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 
