@@ -1,5 +1,4 @@
 FROM kowalatech/go:1.0.4 as build
-RUN apk update && apk add --update git make gcc musl-dev linux-headers
 
 WORKDIR /go/src/github.com/kowala-tech/kcoin/
 ADD . .
