@@ -121,6 +121,13 @@ e2e: dep
 	go build -a && \
 	./e2e --features ./features
 
+## Wallet app
+
+wallet-app-tests:
+	@cd wallet-app; \
+	yarn install --network-concurrency 1 && \
+	yarn run lint && \
+	yarn run test
 
 ## Dev docker images
 

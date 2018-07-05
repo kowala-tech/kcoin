@@ -40,6 +40,14 @@ pipeline:
       - make e2e
     when:
       event: [pull_request]
+  
+  wallet-app:
+    group: testing
+    image: node:9
+    commands:
+      - make wallet-app-tests
+    when:
+      event: [pull_request]
 
   docker_kusd:
     group: docker-deployment
@@ -130,7 +138,7 @@ pipeline:
       event: [push, tag]
       branch: [dev]
 
-  s3:
+  s3-kcoin-client:
     image: plugins/s3
     bucket: releases.kowala.io
     region: us-east-1
@@ -138,10 +146,32 @@ pipeline:
     source: client/build/bin/kcoin-*.zip
     strip_prefix: client/build/bin/
     target: /
-    secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       event: [push, tag]
       branch: [dev]
+
+  build-wallet-app:
+    image: node:9
+    environment:
+      - KOWALA_NETWORK="kusd-zygote"
+    commands:
+      - cd wallet-app ; yarn run drone:build
+    when:
+      event: [push]
+      branch: [master]
+
+  upload-kusd-zygote:
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "wallet.zygote.kowala.io"
+    source: dist/**/*
+    strip_prefix: dist
+    target: /
+    encryption: AES256
+    when:
+      event: [push]
+      branch: [master]
 
   notify-dev:
     group: notify
