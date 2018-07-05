@@ -1,5 +1,5 @@
 workspace:
-  base: /kowala/workspace
+  base: /go
   path: src/github.com/kowala-tech/kcoin
 
 clone:
@@ -11,7 +11,7 @@ clone:
 pipeline:
   test_kcoin:
     group: testing
-    image: kowalatech/go:1.0.3
+    image: kowalatech/go:1.0.4
     commands:
       - apk update && apk add --update git build-base nodejs python2 curl
       - curl -L https://github.com/ethereum/solidity/releases/download/v0.4.24/solc-static-linux -o /bin/solc && chmod +x /bin/solc
@@ -23,7 +23,7 @@ pipeline:
 
   test_notifications:
     group: testing
-    image: kowalatech/go:1.0.3
+    image: kowalatech/go:1.0.4
     environment:
       - NSQ_ADDR=nsqd:4150
       - REDIS_ADDR=redis:6379
@@ -34,7 +34,7 @@ pipeline:
 
   e2e:
     group: testing
-    image: kowalatech/go:1.0.3
+    image: kowalatech/go:1.0.4
     environment:
       - DOCKER_HOST=tcp://docker:2375
       - DOCKER_PUBLIC_IP=docker
@@ -125,7 +125,7 @@ pipeline:
 
   build-artifacts:
     group: build-artifacts
-    image: kowalatech/go:1.0.3
+    image: kowalatech/go:1.0.4
     environment:
       - DOCKER_HOST=tcp://docker:2375
     commands:

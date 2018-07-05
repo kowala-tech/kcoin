@@ -326,7 +326,7 @@ func doTest(cmdline []string) {
 	gotest := goTool("test", buildFlags(env)...)
 	// Test a single package at a time. CI builders are slow
 	// and some tests run into timeouts under load.
-	gotest.Args = append(gotest.Args, "-p", "1", "-race", "-v", "-cover")
+	gotest.Args = append(gotest.Args, "-p", "1", "-v", "-cover")
 
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)

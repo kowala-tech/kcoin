@@ -1,9 +1,6 @@
-FROM golang:1.10.3-alpine3.7 as builder
-RUN apk update && apk add --update git make build-base musl-dev linux-headers nodejs python2 curl
-RUN curl -L https://github.com/ethereum/solidity/releases/download/v0.4.24/solc-static-linux -o /bin/solc && chmod +x /bin/solc
+FROM kowalatech/go:1.0.4 as builder
 
-WORKDIR /go/src/github.com/kowala-tech/kcoin
-
+WORKDIR /go/src/github.com/kowala-tech/kcoin/
 ADD . .
 
 ARG CI
