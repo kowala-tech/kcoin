@@ -69,7 +69,7 @@ func WalletBackendSpec(nodeSuffix, rpcAddr, notificationsAddr string) (*NodeSpec
 	return spec, nil
 }
 
-func TransactionsPersistanceSpec(nodeSuffix, rpcAddr, redisAddr string) (*NodeSpec, error) {
+func TransactionsPersistanceSpec(nodeSuffix, nsqdAddr, redisAddr string) (*NodeSpec, error) {
 	id := NodeID("transactions-persistance-" + nodeSuffix)
 	spec := &NodeSpec{
 		ID:    id,
@@ -77,7 +77,7 @@ func TransactionsPersistanceSpec(nodeSuffix, rpcAddr, redisAddr string) (*NodeSp
 		Cmd:   []string{},
 		Env: []string{
 			fmt.Sprintf("REDIS_ADDR=%v", redisAddr),
-			fmt.Sprintf("TESTNET_RPC_ADDR=%v", rpcAddr),
+			fmt.Sprintf("NSQ_ADDR=%v", nsqdAddr),
 		},
 		PortMapping: map[int32]int32{},
 	}
@@ -110,6 +110,56 @@ func RedisSpec(nodeSuffix string) (*NodeSpec, error) {
 		Env:   []string{},
 		PortMapping: map[int32]int32{
 			6379: 6379,
+		},
+	}
+	return spec, nil
+}
+
+func TransactionsPublisherSpec(nodeSuffix, nsqdAddr, redisAddr, rpcAddr string) (*NodeSpec, error) {
+	id := NodeID("transactions-publisher-" + nodeSuffix)
+	spec := &NodeSpec{
+		ID:          id,
+		Image:       "kowalatech/transactions_publisher:dev",
+		Cmd:         []string{},
+		Env:         []string{
+			fmt.Sprintf("NSQ_ADDR=%s", nsqdAddr),
+			fmt.Sprintf("REDIS_ADDR=%s", redisAddr),
+			fmt.Sprintf("REDIS_ADDR=%s", redisAddr),
+			fmt.Sprintf("TESTNET_RPC_ADDR=%s", rpcAddr),
+		},
+		PortMapping: map[int32]int32{},
+	}
+	return spec, nil
+}
+
+func NsqlookupdSpec(nodeSuffix string) (*NodeSpec, error) {
+	id := NodeID("nsqlookupd-" + nodeSuffix)
+	spec := &NodeSpec{
+		ID:    id,
+		Image: "nsqio/nsq",
+		Cmd: []string{
+			"/nsqlookupd",
+		},
+		Env: []string{},
+		PortMapping: map[int32]int32{
+			4160: 4160,
+		},
+	}
+	return spec, nil
+}
+
+func NsqdSpec(nodeSuffix, nsqlookupdAddr string) (*NodeSpec, error) {
+	id := NodeID("nsqd-" + nodeSuffix)
+	spec := &NodeSpec{
+		ID:    id,
+		Image: "nsqio/nsq",
+		Cmd: []string{
+			"/nsqd",
+			fmt.Sprintf("--lookupd-tcp-address=%s", nsqlookupdAddr),
+		},
+		Env: []string{},
+		PortMapping: map[int32]int32{
+			4150: 4150,
 		},
 	}
 	return spec, nil

@@ -138,6 +138,9 @@ dev_wallet_backend_docker_image:
 dev_transactions_persistance_docker_image:
 	docker build -t kowalatech/transactions_persistance:dev -f notifications/transactions_db_synchronize.Dockerfile .
 
+dev_transactions_persistance_docker_image:
+	docker build -t kowalatech/transactions_publisher:dev -f notifications/transactions_publisher.Dockerfile .
+
 dev_backend_api_docker_image:
 	docker build -t kowalatech/backend_api:dev -f notifications/api.Dockerfile .
 

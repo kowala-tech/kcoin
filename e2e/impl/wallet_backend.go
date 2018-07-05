@@ -51,7 +51,34 @@ func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 	}
 	redisAddr := fmt.Sprintf("%v:6379", redisIP)
 
-	transactionsPersistanceSpec, err := cluster.TransactionsPersistanceSpec(ctx.globalCtx.nodeSuffix, rpcAddr, redisAddr)
+	nsqlookupdSpec, err := cluster.NsqlookupdSpec(ctx.globalCtx.nodeSuffix)
+	if err != nil {
+		return err
+	}
+	if err := ctx.globalCtx.nodeRunner.Run(nsqlookupdSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+		return err
+	}
+
+	nsqlookupdIP, err := ctx.globalCtx.nodeRunner.IP(nsqlookupdSpec.ID)
+	if err != nil {
+		return err
+	}
+	nsqlookupdAddr := fmt.Sprintf("%v:4160", nsqlookupdIP)
+
+	nsqdSpec, err := cluster.NsqdSpec(ctx.globalCtx.nodeSuffix, nsqlookupdAddr)
+	if err != nil {
+		return nil
+	}
+	if err := ctx.globalCtx.nodeRunner.Run(nsqdSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+		return err
+	}
+	nsqdIP, err := ctx.globalCtx.nodeRunner.IP(nsqdSpec.ID)
+	if err != nil {
+		return err
+	}
+	nsqdAddr := fmt.Sprintf("%v:4150", nsqdIP)
+
+	transactionsPersistanceSpec, err := cluster.TransactionsPersistanceSpec(ctx.globalCtx.nodeSuffix, nsqdAddr, redisAddr)
 	if err != nil {
 		return err
 	}
@@ -71,6 +98,14 @@ func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 		return err
 	}
 	notificationsApiAddr := fmt.Sprintf("%v:%v", notificationsApiIP, "3000")
+
+	txPublisherSpec, err :=  cluster.TransactionsPublisherSpec(ctx.globalCtx.nodeSuffix, nsqdAddr, redisAddr, rpcAddr)
+	if err != nil {
+		return err
+	}
+	if err := ctx.globalCtx.nodeRunner.Run(txPublisherSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+		return err
+	}
 
 	spec, err := cluster.WalletBackendSpec(ctx.globalCtx.nodeSuffix, rpcAddr, notificationsApiAddr)
 	if err != nil {
