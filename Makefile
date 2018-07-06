@@ -60,13 +60,20 @@ ios:
 	@echo "Done building."
 	@echo "Import \"$(GOBIN)/Kusd.framework\" to use the library."
 
-test: all
+test: all mocks
 	cd client; build/env.sh go run build/ci.go test
 
 test_notifications: dep
 	cd notifications && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go test ./... -tags=integration
+
+mocks:
+	go get github.com/vektra/mockery/.../
+	$(GOPATH)/bin/mockery -dir ./client/accounts/ -name Wallet -output ./client/accounts/ -outpkg accounts -inpkg
+	$(GOPATH)/bin/mockery -dir ./client/core/types -name AddressVote -output ./client/core/types/mocks
+	$(GOPATH)/bin/mockery -dir ./client/kcoinclient -name RpcClient -output ./client/kcoinclient/mocks
+	$(GOPATH)/bin/mockery -dir ./notifications/protocolbuffer -name TransactionServiceClient -output ./notifications/protocolbuffer/mocks
 
 lint: all
 	cd client; build/env.sh go run build/ci.go lint

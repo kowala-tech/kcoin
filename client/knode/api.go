@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,7 +16,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
-	"github.com/kowala-tech/kcoin/client/contracts/token"
+	"github.com/kowala-tech/kcoin/client/contracts/consensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
@@ -182,18 +183,18 @@ type TransferArgs struct {
 // PublicTokenAPI exposes a collection of methods related to tokens
 type PublicTokenAPI struct {
 	accountMgr *accounts.Manager
-	token      token.Token
+	consensus  consensus.Consensus
 }
 
-func NewPublicTokenAPI(accountMgr *accounts.Manager, token token.Token) *PublicTokenAPI {
+func NewPublicTokenAPI(accountMgr *accounts.Manager, token consensus.Consensus) *PublicTokenAPI {
 	return &PublicTokenAPI{
 		accountMgr: accountMgr,
-		token:      token,
+		consensus:  token,
 	}
 }
 
 func (api *PublicTokenAPI) GetBalance(target common.Address) (*big.Int, error) {
-	return api.token.BalanceOf(target)
+	return api.consensus.Token().BalanceOf(target)
 }
 
 func (api *PublicTokenAPI) Transfer(args TransferArgs) (common.Hash, error) {
@@ -206,21 +207,24 @@ func (api *PublicTokenAPI) Transfer(args TransferArgs) (common.Hash, error) {
 		args.Value = new(hexutil.Big)
 	}
 
-	return api.token.Transfer(walletAccount, *args.To, (*big.Int)(args.Value), args.Data, args.CustomFallback)
+	return api.consensus.Token().Transfer(walletAccount, *args.To, (*big.Int)(args.Value), args.Data, args.CustomFallback)
 }
 
 func (api *PublicTokenAPI) Mint(args TransferArgs, pass string) (common.Hash, error) {
+	if args.Value == nil {
+		return common.Hash{}, errors.New("a number of tokens should be specified")
+	}
+
+	if args.To == nil {
+		return common.Hash{}, errors.New("a destination address should be specified")
+	}
+
 	walletAccount, err := api.getWallet(args.From)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	if args.Value == nil {
-		args.Value = new(hexutil.Big)
-	}
-
 	account := accounts.Account{Address: args.From}
-
 	wallet, err := api.accountMgr.Find(account)
 	if err != nil {
 		return common.Hash{}, err
@@ -231,7 +235,12 @@ func (api *PublicTokenAPI) Mint(args TransferArgs, pass string) (common.Hash, er
 		return common.Hash{}, err
 	}
 
-	return api.token.Mint(transactOpts, *args.To, (*big.Int)(args.Value))
+	return api.consensus.Mint(toTransact(transactOpts, args), *args.To)
+}
+
+func toTransact(txOpts *accounts.TransactOpts, args TransferArgs) *accounts.TransactOpts {
+	txOpts.Value = args.Value.ToInt()
+	return txOpts
 }
 
 func (api *PublicTokenAPI) getWallet(addr common.Address) (accounts.WalletAccount, error) {

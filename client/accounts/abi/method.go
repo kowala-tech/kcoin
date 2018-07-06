@@ -52,7 +52,12 @@ func (method Method) pack(args ...interface{}) ([]byte, error) {
 	for i, a := range args {
 		input := method.Inputs[i]
 		// pack the input
-		packed, err := input.Type.pack(reflect.ValueOf(a))
+		v := reflect.ValueOf(a)
+		if a == nil || (v.Kind() == reflect.Ptr && v.IsNil()) {
+			return nil, fmt.Errorf("got `nil` argument in `%s`: %v(%d)", method.Name, a, i)
+		}
+
+		packed, err := input.Type.pack(v)
 		if err != nil {
 			return nil, fmt.Errorf("`%s` %v", method.Name, err)
 		}

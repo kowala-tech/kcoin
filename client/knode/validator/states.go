@@ -79,7 +79,7 @@ func (val *validator) notLoggedInState() stateFn {
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
 
-	log.Info("Voter has been accepted in the election")
+	log.Info("Voter has been accepted in the election", "enode", val.walletAccount.Account().Address.String())
 	val.restoreLastCommit()
 
 	return val.newElectionState

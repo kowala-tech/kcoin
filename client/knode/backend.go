@@ -227,7 +227,7 @@ func (s *Kowala) APIs() []rpc.API {
 		}, {
 			Namespace: "mtoken",
 			Version:   "1.0",
-			Service:   NewPublicTokenAPI(s.accountManager, s.consensus.Token()),
+			Service:   NewPublicTokenAPI(s.accountManager, s.consensus),
 			Public:    false,
 		}, {
 			Namespace: "eth",
