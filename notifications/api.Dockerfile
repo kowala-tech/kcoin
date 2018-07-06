@@ -1,12 +1,11 @@
-FROM golang:1.9.2-alpine as builder
-WORKDIR /go/src/github.com/kowala-tech/kcoin
-RUN apk update; apk add --no-cache git curl alpine-sdk
+FROM kowalatech/go:1.0.4 as builder
+WORKDIR /go/src/github.com/kowala-tech/kcoin/
 COPY . .
-RUN make dep && cd notifications && dep ensure --vendor-only
+RUN cd notifications && dep ensure --vendor-only
 RUN go build -a -o app notifications/cmd/api/main.go
 
-FROM alpine:latest  
-RUN apk --no-cache add ca-certificates
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 WORKDIR /root/
 COPY --from=builder /go/src/github.com/kowala-tech/kcoin/app .
 CMD ["./app"] 
