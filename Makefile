@@ -2,7 +2,7 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: kcoin android ios kcoin-cross swarm evm genesis all test clean
+.PHONY: kcoin android ios kcoin-cross evm genesis all test clean
 .PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
 .PHONY: dep e2e
 .PHONY: dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
