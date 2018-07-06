@@ -7,9 +7,9 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/contracts/consensus"
-	"github.com/kowala-tech/kcoin/client/contracts/oracle"
-	"github.com/kowala-tech/kcoin/client/contracts/ownership"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 )
@@ -146,9 +146,12 @@ var OracleMgrContract = &contract{
 
 		managerParams, err := managerABI.Pack(
 			"",
+			args.price.initialPrice,
 			args.baseDeposit,
 			args.maxNumOracles,
 			args.freezePeriod,
+			args.price.syncFrequency,
+			args.price.updatePeriod,
 		)
 		if err != nil {
 			return err

@@ -10,7 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
-	"github.com/kowala-tech/kcoin/client/contracts/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"

@@ -78,6 +78,7 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 		ID:          builder.id,
 		Image:       builder.image,
 		Cmd:         cmd,
+		Env:         []string{},
 		Files:       files,
 		IsReadyFn:   kcoinIsReadyFn(builder.id),
 		PortMapping: portMapping,

@@ -2,6 +2,8 @@ package params
 
 import (
 	"fmt"
+	"strconv"
+	"time"
 )
 
 var (
@@ -34,7 +36,15 @@ func SetGitTagVersion(tag string) {
 }
 
 func SetBuildTime(buildTime string) {
-	BuildTime = buildTime
+	if buildTime == "" {
+		return
+	}
+	ns, err := strconv.ParseInt(buildTime, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	tm := time.Unix(ns/int64(time.Second), ns%int64(time.Second))
+	BuildTime = tm.UTC().Format(time.RFC3339)
 }
 
 func SetCommit(commit string) {
