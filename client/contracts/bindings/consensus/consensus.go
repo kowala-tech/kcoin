@@ -8,6 +8,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
@@ -23,8 +24,6 @@ const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 
 var (
 	DefaultData = []byte("not_zero")
-
-	errNoAddress = errors.New("there isn't an address for the provided chain ID")
 )
 
 var mapValidatorMgrToAddr = map[uint64]common.Address{
@@ -45,6 +44,8 @@ type Consensus interface {
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
 	ValidatorsChecksum() (ValidatorsChecksum, error)
 	Validators() (types.Voters, error)
+	GetValidatorCount() (*big.Int, error)
+	MaxValidators() (*big.Int, error)
 	Deposits(address common.Address) ([]*types.Deposit, error)
 	IsGenesisValidator(address common.Address) (bool, error)
 	IsValidator(address common.Address) (bool, error)
@@ -88,11 +89,11 @@ type consensus struct {
 	chainID     *big.Int
 }
 
-// Instance returnsan instance of the current consensus engine
-func Instance(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
+// Binding returns a binding to the current consensus engine
+func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
 	addr, ok := mapValidatorMgrToAddr[chainID.Uint64()]
 	if !ok {
-		return nil, errNoAddress
+		return nil, bindings.ErrNoAddress
 	}
 
 	manager, err := NewValidatorMgr(addr, contractBackend)
@@ -198,6 +199,14 @@ func (consensus *consensus) IsValidator(address common.Address) (bool, error) {
 
 func (consensus *consensus) MinimumDeposit() (*big.Int, error) {
 	return consensus.manager.GetMinimumDeposit(&bind.CallOpts{})
+}
+
+func (consensus *consensus) GetValidatorCount() (*big.Int, error) {
+	return consensus.manager.GetValidatorCount(&bind.CallOpts{})
+}
+
+func (consensus *consensus) MaxValidators() (*big.Int, error) {
+	return consensus.manager.MaxNumValidators(&bind.CallOpts{})
 }
 
 func (consensus *consensus) Token() token.Token {
