@@ -9,11 +9,15 @@ clone:
     tags: true
 
 pipeline:
+  bindings:
+    image: kowalatech/go:1.0.4
+    commands:
+      - make bindings
+
   test_kcoin:
     group: testing
     image: kowalatech/go:1.0.4
     commands:
-      - make bindings
       - make test
       - make lint
     when:
