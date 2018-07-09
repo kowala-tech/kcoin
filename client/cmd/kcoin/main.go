@@ -27,8 +27,6 @@ const (
 )
 
 var (
-	// Ethereum address of the kcoin release oracle.
-	relOracle = common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
 	// The app that holds all commands and flags.
 	app = utils.NewApp(gitCommit, "the kowala command line interface")
 	// flags that configure the node
@@ -46,7 +44,6 @@ var (
 		utils.DashboardAddrFlag,
 		utils.DashboardPortFlag,
 		utils.DashboardRefreshFlag,
-		utils.DashboardAssetsFlag,
 		utils.TxPoolNoLocalsFlag,
 		utils.TxPoolJournalFlag,
 		utils.TxPoolRejournalFlag,
@@ -60,10 +57,13 @@ var (
 		utils.FastSyncFlag,
 		utils.LightModeFlag,
 		utils.SyncModeFlag,
+		utils.GCModeFlag,
 		utils.LightServFlag,
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
 		utils.CacheFlag,
+		utils.CacheDatabaseFlag,
+		utils.CacheGCFlag,
 		utils.TrieCacheGenFlag,
 		utils.ListenPortFlag,
 		utils.MaxPeersFlag,
@@ -84,6 +84,7 @@ var (
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
+		utils.RPCVirtualHostsFlag,
 		utils.ShipLogzioFlag,
 		utils.KowalaStatsURLFlag,
 		utils.MetricsEnabledFlag,
@@ -109,6 +110,15 @@ var (
 		utils.IPCDisabledFlag,
 		utils.IPCPathFlag,
 	}
+	
+	metricsFlags = []cli.Flag{
+		utils.MetricsEnableInfluxDBFlag,
+		utils.MetricsInfluxDBEndpointFlag,
+		utils.MetricsInfluxDBDatabaseFlag,
+		utils.MetricsInfluxDBUsernameFlag,
+		utils.MetricsInfluxDBPasswordFlag,
+		utils.MetricsInfluxDBHostTagFlag,
+	}
 )
 
 func init() {
@@ -121,6 +131,8 @@ func init() {
 		initCommand,
 		importCommand,
 		exportCommand,
+		importPreimagesCommand,
+		exportPreimagesCommand,
 		copydbCommand,
 		removedbCommand,
 		dumpCommand,
@@ -140,24 +152,40 @@ func init() {
 		// See config.go
 		dumpConfigCommand,
 	}
+	sort.Sort(cli.CommandsByName(app.Commands))
 
 	app.Flags = append(app.Flags, nodeFlags...)
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
+	app.Flags = append(app.Flags, metricsFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
+		// Cap the cache allowance and tune the garbage collector
+		var mem gosigar.Mem
+		if err := mem.Get(); err == nil {
+			allowance := int(mem.Total / 1024 / 1024 / 3)
+			if cache := ctx.GlobalInt(utils.CacheFlag.Name); cache > allowance {
+				log.Warn("Sanitizing cache to Go's GC limits", "provided", cache, "updated", allowance)
+				ctx.GlobalSet(utils.CacheFlag.Name, strconv.Itoa(allowance))
+			}
+		}
+		// Ensure Go's GC ignores the database cache for trigger percentage
+		cache := ctx.GlobalInt(utils.CacheFlag.Name)
+		gogc := math.Max(20, math.Min(100, 100/(float64(cache)/1024)))
+
+		log.Debug("Sanitizing Go's GC trigger", "percent", int(gogc))
+		godebug.SetGCPercent(int(gogc))
+
+		// Start metrics export if enabled
+		utils.SetupMetrics(ctx)
 
 		// Start system runtime metrics collection
-		go metrics.CollectProcessMetrics(
-			3*time.Second,
-			ctx.GlobalString(utils.MetricsPrometheusAddressFlag.Name),
-			ctx.GlobalString(utils.MetricsPrometheusSubsystemFlag.Name),
-		)
+		go metrics.CollectProcessMetrics(3 * time.Second)
 
 		utils.SetupNetwork(ctx)
 		return nil
@@ -217,6 +245,7 @@ func kowala(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // validator.
 func startNode(ctx *cli.Context, stack *node.Node) {
+	debug.Memsize.Add("node", stack
 	setupLogging(ctx)
 
 	// Start up the node itself
@@ -237,14 +266,14 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	stack.AccountManager().Subscribe(events)
 
 	go func() {
-		// Create an chain state reader for self-derivation
+		// Create a chain state reader for self-derivation
 		rpcClient, err := stack.Attach()
 		if err != nil {
 			utils.Fatalf("Failed to attach to self: %v", err)
 		}
 		stateReader := kcoinclient.NewClient(rpcClient)
 
-		// Open and self derive any wallets already attached
+		// Open any wallets already attached
 		for _, wallet := range stack.AccountManager().Wallets() {
 			if err := wallet.Open(""); err != nil {
 				log.Warn("Failed to open wallet", "url", wallet.URL(), "err", err)

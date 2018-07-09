@@ -19,6 +19,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/crypto/ecies"
 	"github.com/kowala-tech/kcoin/client/crypto/sha3"
 	"github.com/kowala-tech/kcoin/client/p2p/discover"
+	"github.com/kowala-tech/kcoin/client/p2p/simulations/pipes"
 	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
@@ -140,14 +141,18 @@ func TestProtocolHandshake(t *testing.T) {
 		node1   = &discover.Node{ID: discover.PubkeyID(&prv1.PublicKey), IP: net.IP{5, 6, 7, 8}, TCP: 44}
 		hs1     = &protoHandshake{Version: 3, ID: node1.ID, Caps: []Cap{{"c", 1}, {"d", 3}}}
 
-		fd0, fd1 = net.Pipe()
-		wg       sync.WaitGroup
+		wg sync.WaitGroup
 	)
+
+	fd0, fd1, err := pipes.TCPPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		defer fd1.Close()
+		defer fd0.Close()
 		rlpx := newRLPX(fd0)
 		remid, err := rlpx.doEncHandshake(prv0, node1)
 		if err != nil {

@@ -7,8 +7,10 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
 	"github.com/kowala-tech/kcoin/client/stats"
@@ -43,7 +45,7 @@ var (
 {{if .cmd.Description}}{{.cmd.Description}}
 {{end}}{{if .cmd.Subcommands}}
 SUBCOMMANDS:
-	{{range .cmd.Subcommands}}{{.cmd.Name}}{{with .cmd.ShortName}}, {{.cmd}}{{end}}{{ "\t" }}{{.cmd.Usage}}
+	{{range .cmd.Subcommands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
 	{{end}}{{end}}{{if .categorizedFlags}}
 {{range $idx, $categorized := .categorizedFlags}}{{$categorized.Name}} OPTIONS:
 {{range $categorized.Flags}}{{"\t"}}{{.}}
@@ -76,7 +78,7 @@ func NewApp(gitCommit, usage string) *cli.App {
 	//app.Authors = nil
 	app.Email = ""
 	app.Version = params.Version
-	if gitCommit != "" {
+	if len(gitCommit) >= 8 {
 		app.Version += "-" + gitCommit[:8]
 	}
 	app.Usage = usage
@@ -103,11 +105,11 @@ var (
 	}
 	NoUSBFlag = cli.BoolFlag{
 		Name:  "nousb",
-		Usage: "Disables monitoring for and managine USB hardware wallets",
+		Usage: "Disables monitoring for and managing USB hardware wallets",
 	}
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=Frontier, 2=Ropsten)",
+		Usage: "Network identifier (integer, 1=MainNet, 2=TestNet)",
 		Value: knode.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
@@ -134,11 +136,11 @@ var (
 	}
 	FastSyncFlag = cli.BoolFlag{
 		Name:  "fast",
-		Usage: "Enable fast syncing through state downloads",
+		Usage: "Enable fast syncing through state downloads (replaced by --syncmode)",
 	}
 	LightModeFlag = cli.BoolFlag{
 		Name:  "light",
-		Usage: "Enable light client mode",
+		Usage: "Enable light client mode (replaced by --syncmode)",
 	}
 	defaultSyncMode = knode.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
@@ -146,7 +148,11 @@ var (
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
 		Value: &defaultSyncMode,
 	}
-
+	GCModeFlag = cli.StringFlag{
+		Name:  "gcmode",
+		Usage: `Blockchain garbage collection mode ("full", "archive")`,
+		Value: "full",
+	}
 	LightServFlag = cli.IntFlag{
 		Name:  "lightserv",
 		Usage: "Maximum percentage of time allowed for serving LES requests (0-90)",
@@ -180,11 +186,6 @@ var (
 		Name:  "dashboard.refresh",
 		Usage: "Dashboard metrics collection refresh rate",
 		Value: dashboard.DefaultConfig.Refresh,
-	}
-	DashboardAssetsFlag = cli.StringFlag{
-		Name:  "dashboard.assets",
-		Usage: "Developer flag to serve the dashboard from the local file system",
-		Value: dashboard.DefaultConfig.Assets,
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
@@ -242,6 +243,16 @@ var (
 		Usage: "Megabytes of memory allocated to internal caching (min 16MB / database forced)",
 		Value: 128,
 	}
+	CacheDatabaseFlag = cli.IntFlag{
+		Name:  "cache.database",
+		Usage: "Percentage of cache memory allowance to use for database io",
+		Value: 75,
+	}
+	CacheGCFlag = cli.IntFlag{
+		Name:  "cache.gc",
+		Usage: "Percentage of cache memory allowance to use for trie pruning",
+		Value: 25,
+	}
 	TrieCacheGenFlag = cli.IntFlag{
 		Name:  "trie-cache-gens",
 		Usage: "Number of trie node generations to keep in memory",
@@ -261,8 +272,8 @@ var (
 
 	TargetGasLimitFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
-		Usage: "Target gas limit sets the artificial target gas floor for the blocks to be proposed",
-		Value: params.GenesisGasLimit.Uint64(),
+		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
+		Value: params.GenesisGasLimit,
 	}
 	CoinbaseFlag = cli.StringFlag{
 		Name:  "coinbase",
@@ -310,20 +321,6 @@ var (
 		Name:  "stats",
 		Usage: "Reporting URL of a stats service (nodename:secret@host:port)",
 	}
-	MetricsEnabledFlag = cli.BoolFlag{
-		Name:  metrics.MetricsEnabledFlag,
-		Usage: "Enable metrics collection and reporting",
-	}
-	MetricsPrometheusAddressFlag = cli.StringFlag{
-		Name:  metrics.MetricsPrometheusAddressFlag,
-		Usage: "Set the address for Prometheus reporting",
-		Value: ":8080",
-	}
-	MetricsPrometheusSubsystemFlag = cli.StringFlag{
-		Name:  metrics.MetricsPrometheusSubsystemFlag,
-		Usage: "Set the subsystem name for Prometheus reporting",
-		Value: "node",
-	}
 	NoCompactionFlag = cli.BoolFlag{
 		Name:  "nocompaction",
 		Usage: "Disables db compaction after import",
@@ -347,6 +344,11 @@ var (
 		Name:  "rpccorsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
 		Value: "",
+	}
+	RPCVirtualHostsFlag = cli.StringFlag{
+		Name:  "rpcvhosts",
+		Usage: "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
+		Value: strings.Join(node.DefaultConfig.HTTPVirtualHosts, ","),
 	}
 	RPCApiFlag = cli.StringFlag{
 		Name:  "rpcapi",
@@ -465,6 +467,55 @@ var (
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
 		Value: knode.DefaultConfig.GPO.Percentile,
 	}
+	
+	MetricsEnabledFlag = cli.BoolFlag{
+		Name:  metrics.MetricsEnabledFlag,
+		Usage: "Enable metrics collection and reporting",
+	}
+	MetricsEnableInfluxDBFlag = cli.BoolFlag{
+		Name:  "metrics.influxdb",
+		Usage: "Enable metrics export/push to an external InfluxDB database",
+	}
+	MetricsInfluxDBEndpointFlag = cli.StringFlag{
+		Name:  "metrics.influxdb.endpoint",
+		Usage: "InfluxDB API endpoint to report metrics to",
+		Value: "http://localhost:8086",
+	}
+	MetricsInfluxDBDatabaseFlag = cli.StringFlag{
+		Name:  "metrics.influxdb.database",
+		Usage: "InfluxDB database name to push reported metrics to",
+		Value: "geth",
+	}
+	MetricsInfluxDBUsernameFlag = cli.StringFlag{
+		Name:  "metrics.influxdb.username",
+		Usage: "Username to authorize access to the database",
+		Value: "test",
+	}
+	MetricsInfluxDBPasswordFlag = cli.StringFlag{
+		Name:  "metrics.influxdb.password",
+		Usage: "Password to authorize access to the database",
+		Value: "test",
+	}
+	// The `host` tag is part of every measurement sent to InfluxDB. Queries on tags are faster in InfluxDB.
+	// It is used so that we can group all nodes and average a measurement across all of them, but also so
+	// that we can select a specific node and inspect its measurements.
+	// https://docs.influxdata.com/influxdb/v1.4/concepts/key_concepts/#tag-key
+	MetricsInfluxDBHostTagFlag = cli.StringFlag{
+		Name:  "metrics.influxdb.host.tag",
+		Usage: "InfluxDB `host` tag attached to all measurements",
+		Value: "localhost",
+	}
+	
+	MetricsPrometheusAddressFlag = cli.StringFlag{
+		Name:  metrics.MetricsPrometheusAddressFlag,
+		Usage: "Set the address for Prometheus reporting",
+		Value: ":8080",
+	}
+	MetricsPrometheusSubsystemFlag = cli.StringFlag{
+		Name:  metrics.MetricsPrometheusSubsystemFlag,
+		Usage: "Set the subsystem name for Prometheus reporting",
+		Value: "node",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -526,9 +577,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.TestnetBootnodes
 	}
 
-	if cfg.BootstrapNodes == nil {
-		cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
-	}
+	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
 	for _, url := range urls {
 		node, err := discover.ParseNode(url)
 		if err != nil {
@@ -558,9 +607,7 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 		return // already set, don't apply defaults.
 	}
 
-	if cfg.BootstrapNodesV5 == nil {
-		cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
-	}
+	cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
 	for _, url := range urls {
 		node, err := discv5.ParseNode(url)
 		if err != nil {
@@ -634,6 +681,9 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(RPCApiFlag.Name) {
 		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(RPCApiFlag.Name))
 	}
+	if ctx.GlobalIsSet(RPCVirtualHostsFlag.Name) {
+		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(RPCVirtualHostsFlag.Name))
+	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
@@ -672,12 +722,14 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 // makeDatabaseHandles raises out the number of allowed file handles per process
 // for kcoin and returns half of the allowance to assign to the database.
 func makeDatabaseHandles() int {
-	if err := raiseFdLimit(2048); err != nil {
-		Fatalf("Failed to raise file descriptor allowance: %v", err)
-	}
-	limit, err := getFdLimit()
+	limit, err := fdlimit.Current()
 	if err != nil {
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
+	}
+	if limit < 2048 {
+		if err := fdlimit.Raise(2048); err != nil {
+			Fatalf("Failed to raise file descriptor allowance: %v", err)
+		}
 	}
 	if limit > 2048 { // cap database file descriptors even if more is available
 		limit = 2048
@@ -697,6 +749,12 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	if err != nil || index < 0 {
 		return accounts.Account{}, fmt.Errorf("invalid account address or index %q", account)
 	}
+	log.Warn("-------------------------------------------------------------------")
+	log.Warn("Referring to accounts by order in the keystore folder is dangerous!")
+	log.Warn("This functionality is deprecated and will be removed in the future!")
+	log.Warn("Please use explicit addresses! (can search via `geth account list`)")
+	log.Warn("-------------------------------------------------------------------")
+
 	accs := ks.Accounts()
 	if len(accs) <= index {
 		return accounts.Account{}, fmt.Errorf("index %d higher than number of accounts %d", index, len(accs))
@@ -858,15 +916,41 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
-func checkExclusive(ctx *cli.Context, flags ...cli.Flag) {
+// checkExclusive verifies that only a single isntance of the provided flags was
+// set by the user. Each flag might optionally be followed by a string type to
+// specialize it further.
+func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	set := make([]string, 0, 1)
-	for _, flag := range flags {
+	for i := 0; i < len(args); i++ {
+		// Make sure the next argument is a flag and skip if not set
+		flag, ok := args[i].(cli.Flag)
+		if !ok {
+			panic(fmt.Sprintf("invalid argument, not cli.Flag type: %T", args[i]))
+		}
+		// Check if next arg extends current and expand its name if so
+		name := flag.GetName()
+
+		if i+1 < len(args) {
+			switch option := args[i+1].(type) {
+			case string:
+				// Extended flag, expand the name and shift the arguments
+				if ctx.GlobalString(flag.GetName()) == option {
+					name += "=" + option
+				}
+				i++
+
+			case cli.Flag:
+			default:
+				panic(fmt.Sprintf("invalid argument, not cli.Flag or string extension: %T", args[i+1]))
+			}
+		}
+		// Mark the flag if it's set
 		if ctx.GlobalIsSet(flag.GetName()) {
-			set = append(set, "--"+flag.GetName())
+			set = append(set, "--"+name)
 		}
 	}
 	if len(set) > 1 {
-		Fatalf("flags %v can't be used at the same time", strings.Join(set, ", "))
+		Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
 	}
 }
 
@@ -898,20 +982,21 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	}
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
-	} else if ctx.GlobalBool(TestnetFlag.Name) {
-		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	}
-
-
-	// Ethereum needs to know maxPeers to calculate the light server peer ratio.
-	// TODO(fjl): ensure Ethereum can get MaxPeers from node.
-	cfg.MaxPeers = ctx.GlobalInt(MaxPeersFlag.Name)
-
-	if ctx.GlobalIsSet(CacheFlag.Name) {
-		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name)
+	
+	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheDatabaseFlag.Name) {
+		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 	}
 	cfg.DatabaseHandles = makeDatabaseHandles()
 
+	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
+		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+	}
+	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
+
+	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
+		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+	}
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
@@ -927,13 +1012,15 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	}
 
 	// Override any default configs for hard coded networks.
-	if ctx.GlobalBool(DevModeFlag.Name) {
+	switch {
+	case ctx.GlobalBool(TestnetFlag.Name):
+		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
+	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.Genesis = core.DevGenesisBlock()
 		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
 			cfg.GasPrice = new(big.Int)
 		}
 	}
-
 	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
 		state.MaxTrieCacheGen = uint16(gen)
@@ -945,7 +1032,6 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 	cfg.Host = ctx.GlobalString(DashboardAddrFlag.Name)
 	cfg.Port = ctx.GlobalInt(DashboardPortFlag.Name)
 	cfg.Refresh = ctx.GlobalDuration(DashboardRefreshFlag.Name)
-	cfg.Assets = ctx.GlobalString(DashboardAssetsFlag.Name)
 }
 
 // RegisterKowalaService adds a Kowala client to the stack.
@@ -963,9 +1049,9 @@ func RegisterKowalaService(stack *node.Node, cfg *knode.Config) {
 }
 
 // RegisterDashboardService adds a dashboard to the stack.
-func RegisterDashboardService(stack *node.Node, cfg *dashboard.Config) {
+func RegisterDashboardService(stack *node.Node, cfg *dashboard.Config, commit string) {
 	stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		return dashboard.New(cfg)
+		return dashboard.New(cfg, commit)
 	})
 }
 
@@ -986,13 +1072,34 @@ func RegisterKowalaStatsService(stack *node.Node, url string) {
 // SetupNetwork configures the system for either the main net or some test network.
 func SetupNetwork(ctx *cli.Context) {
 	// TODO(fjl): move target gas limit into config
-	params.TargetGasLimit = new(big.Int).SetUint64(ctx.GlobalUint64(TargetGasLimitFlag.Name))
+	params.TargetGasLimit = ctx.GlobalUint64(TargetGasLimitFlag.Name)
+}
+
+func SetupMetrics(ctx *cli.Context) {
+	if metrics.Enabled {
+		log.Info("Enabling metrics collection")
+		var (
+			enableExport = ctx.GlobalBool(MetricsEnableInfluxDBFlag.Name)
+			endpoint     = ctx.GlobalString(MetricsInfluxDBEndpointFlag.Name)
+			database     = ctx.GlobalString(MetricsInfluxDBDatabaseFlag.Name)
+			username     = ctx.GlobalString(MetricsInfluxDBUsernameFlag.Name)
+			password     = ctx.GlobalString(MetricsInfluxDBPasswordFlag.Name)
+			hosttag      = ctx.GlobalString(MetricsInfluxDBHostTagFlag.Name)
+		)
+
+		if enableExport {
+			log.Info("Enabling metrics export to InfluxDB")
+			go influxdb.InfluxDBWithTags(metrics.DefaultRegistry, 10*time.Second, endpoint, database, username, password, "geth.", map[string]string{
+				"host": hosttag,
+			})
+		}
+	}
 }
 
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
 func MakeChainDatabase(ctx *cli.Context, stack *node.Node) kcoindb.Database {
 	var (
-		cache   = ctx.GlobalInt(CacheFlag.Name)
+		cache   = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 		handles = makeDatabaseHandles()
 	)
 	name := "chaindata"
@@ -1022,18 +1129,25 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
-	// @TODO(rgeraldes) - review
-	//engine := ethash.NewFaker()
-	//if !ctx.GlobalBool(FakePoWFlag.Name) {
-	//	engine = ethash.New("", 1, 0, "", 1, 0)
-	//}
 	engine := tendermint.New(&params.TendermintConfig{})
 	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)
 	}
+	
+	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
+		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+	}
+	cache := &core.CacheConfig{
+		Disabled:      ctx.GlobalString(GCModeFlag.Name) == "archive",
+		TrieNodeLimit: eth.DefaultConfig.TrieCache,
+		TrieTimeLimit: eth.DefaultConfig.TrieTimeout,
+	}
+	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
+		cache.TrieNodeLimit = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+	}
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
-	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)
+	chain, err = core.NewBlockChain(chainDb, cache, config, engine, vmcfg)
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}

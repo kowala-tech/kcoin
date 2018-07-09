@@ -116,6 +116,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	}
 
 	utils.SetDashboardConfig(ctx, &cfg.Dashboard)
+
 	return stack, cfg
 }
 
@@ -129,8 +130,7 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	utils.RegisterKowalaService(stack, &cfg.Kowala)
 
 	// Add the Stats daemon if requested.
-	statsUrl := cfg.Stats.GetURL()
-	if statsUrl != "" {
+	if cfg.Stats.GetURL() != "" {
 		utils.RegisterKowalaStatsService(stack, statsUrl)
 	}
 
