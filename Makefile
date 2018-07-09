@@ -7,8 +7,10 @@
 .PHONY: dep e2e
 .PHONY: dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
 .PHONY: bindings
+.PHONY: build_docs build_docs_with_docker
 
-GOBIN = $(pwd)/client/build/bin
+PWD   := $(shell pwd)
+GOBIN = $(PWD)/client/build/bin
 GO ?= latest
 
 NPROCS := 1
@@ -131,6 +133,14 @@ e2e: dep
 	go build -a && \
 	./e2e --features ./features
 
+
+## Docs
+BUILD_DOCS := mkdocs build --clean --strict -d site
+build_docs:
+	@cd docs; $(BUILD_DOCS)
+	
+build_docs_with_docker:
+	@docker run --rm -v $(PWD)/docs:/documents kowalatech/mkdocs $(BUILD_DOCS)
 
 ## Dev docker images
 
