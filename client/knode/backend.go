@@ -41,8 +41,9 @@ import (
 type Kowala struct {
 	config      *Config
 	chainConfig *params.ChainConfig
+
 	// Channel for shutting down the service
-	shutdownChan chan struct{} // Channel for shutting down the service
+	shutdownChan chan bool // Channel for shutting down the service
 
 	// Handlers
 	txPool          *core.TxPool
@@ -58,7 +59,7 @@ type Kowala struct {
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
 
-	ApiBackend *KowalaApiBackend
+	APIBackend *KowalaAPIBackend
 
 	validator validator.Validator // consensus validator
 	consensus consensus.Consensus // consensus binding
@@ -66,7 +67,7 @@ type Kowala struct {
 	coinbase  common.Address
 	deposit   *big.Int
 
-	networkId     uint64
+	networkID     uint64
 	netRPCService *kcoinapi.PublicNetAPI
 
 	lock       sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
@@ -82,7 +83,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
-
 	chainDb, err := CreateDB(ctx, config, "chaindata")
 	if err != nil {
 		return nil, err
@@ -100,8 +100,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
 		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
-		shutdownChan:   make(chan struct{}),
-		networkId:      config.NetworkId,
+		shutdownChan:   make(chan bool),
+		networkID:      config.NetworkId,
 		gasPrice:       config.GasPrice,
 		coinbase:       config.Coinbase,
 		deposit:        config.Deposit,
@@ -112,15 +112,16 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	log.Info("Initialising Kowala protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
-		bcVersion := core.GetBlockChainVersion(chainDb)
+		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
 		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
 			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run kcoin upgradedb.\n", bcVersion, core.BlockChainVersion)
 		}
-		core.WriteBlockChainVersion(chainDb, core.BlockChainVersion)
+		rawdb.WriteDatabaseVersion(chainDb, core.BlockChainVersion)
 	}
 
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	kcoin.blockchain, err = core.NewBlockChain(chainDb, kcoin.chainConfig, kcoin.engine, vmConfig)
+	cacheConfig := &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
+	kcoin.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, kcoin.chainConfig, kcoin.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +129,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
 		kcoin.blockchain.SetHead(compat.RewindTo)
-		core.WriteChainConfig(chainDb, genesisHash, chainConfig)
+		rawdb.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	}
 	kcoin.bloomIndexer.Start(kcoin.blockchain)
 
@@ -142,7 +143,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.GasPrice
 	}
-	kcoin.ApiBackend.gpo = gasprice.NewOracle(kcoin.ApiBackend, gpoParams)
+	kcoin.APIBackend.gpo = gasprice.NewOracle(kcoin.APIBackend, gpoParams)
 
 	// consensus manager
 	consensus, err := consensus.Binding(NewContractBackend(kcoin.ApiBackend), chainConfig.ChainID)
@@ -202,7 +203,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the kowala package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Kowala) APIs() []rpc.API {
-	apis := kcoinapi.GetAPIs(s.ApiBackend)
+	apis := kcoinapi.GetAPIs(s.APIBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
@@ -232,7 +233,7 @@ func (s *Kowala) APIs() []rpc.API {
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
+			Service:   filters.NewPublicFilterAPI(s.APIBackend, false),
 			Public:    true,
 		}, {
 			Namespace: "admin",

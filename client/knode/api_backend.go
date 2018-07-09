@@ -9,6 +9,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/math"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
+	"github.com/kowala-tech/kcoin/client/core/rawdb"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/vm"
@@ -20,26 +21,27 @@ import (
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
-// KowalaApiBackend implements kcoinapi.Backend for full nodes
-type KowalaApiBackend struct {
+// KowalaAPIBackend implements kcoinapi.Backend for full nodes
+type KowalaAPIBackend struct {
 	kcoin *Kowala
 	gpo   *gasprice.Oracle
 }
 
-func (b *KowalaApiBackend) ChainConfig() *params.ChainConfig {
+// ChainConfig returns the active chain configuration.
+func (b *KowalaAPIBackend) ChainConfig() *params.ChainConfig {
 	return b.kcoin.chainConfig
 }
 
-func (b *KowalaApiBackend) CurrentBlock() *types.Block {
+func (b *KowalaAPIBackend) CurrentBlock() *types.Block {
 	return b.kcoin.blockchain.CurrentBlock()
 }
 
-func (b *KowalaApiBackend) SetHead(number uint64) {
+func (b *KowalaAPIBackend) SetHead(number uint64) {
 	b.kcoin.protocolManager.downloader.Cancel()
 	b.kcoin.blockchain.SetHead(number)
 }
 
-func (b *KowalaApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
+func (b *KowalaAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the validator
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.kcoin.validator.PendingBlock()
@@ -54,7 +56,7 @@ func (b *KowalaApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.Block
 	return b.kcoin.blockchain.GetHeaderByNumber(uint64(blockNr)), nil
 }
 
-func (b *KowalaApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
+func (b *KowalaAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the validator
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.kcoin.validator.PendingBlock()
@@ -67,13 +69,12 @@ func (b *KowalaApiBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockN
 	return b.kcoin.blockchain.GetBlockByNumber(uint64(blockNr)), nil
 }
 
-func (b *KowalaApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
+func (b *KowalaAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the validator
 	if blockNr == rpc.PendingBlockNumber {
 		block, state := b.kcoin.validator.Pending()
 		return state, block.Header(), nil
 	}
-
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
 	if header == nil || err != nil {
@@ -83,15 +84,34 @@ func (b *KowalaApiBackend) StateAndHeaderByNumber(ctx context.Context, blockNr r
 	return stateDb, header, err
 }
 
-func (b *KowalaApiBackend) GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error) {
-	return b.kcoin.blockchain.GetBlockByHash(blockHash), nil
+func (b *KowalaAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
+	return b.kcoin.blockchain.GetBlockByHash(hash), nil
 }
 
-func (b *KowalaApiBackend) GetReceipts(ctx context.Context, blockHash common.Hash) (types.Receipts, error) {
-	return core.GetBlockReceipts(b.kcoin.chainDb, blockHash, core.GetBlockNumber(b.kcoin.chainDb, blockHash)), nil
+func (b *KowalaAPIBackend) GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error) {
+	if number := rawdb.ReadHeaderNumber(b.kcoin.chainDb, hash); number != nil {
+		return rawdb.ReadReceipts(b.kcoin.chainDb, hash, *number), nil
+	}
+	return nil, nil
 }
 
-func (b *KowalaApiBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
+func (b *KowalaAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
+	number := rawdb.ReadHeaderNumber(b.kcoin.chainDb, hash)
+	if number == nil {
+		return nil, nil
+	}
+	receipts := rawdb.ReadReceipts(b.kcoin.chainDb, hash, *number)
+	if receipts == nil {
+		return nil, nil
+	}
+	logs := make([][]*types.Log, len(receipts))
+	for i, receipt := range receipts {
+		logs[i] = receipt.Logs
+	}
+	return logs, nil
+}
+
+func (b *KowalaAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	state.SetBalance(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
 
@@ -99,31 +119,31 @@ func (b *KowalaApiBackend) GetEVM(ctx context.Context, msg core.Message, state *
 	return vm.NewEVM(context, state, b.kcoin.chainConfig, vmCfg), vmError, nil
 }
 
-func (b *KowalaApiBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
+func (b *KowalaAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
 	return b.kcoin.BlockChain().SubscribeRemovedLogsEvent(ch)
 }
 
-func (b *KowalaApiBackend) SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription {
+func (b *KowalaAPIBackend) SubscribeChainEvent(ch chan<- core.ChainEvent) event.Subscription {
 	return b.kcoin.BlockChain().SubscribeChainEvent(ch)
 }
 
-func (b *KowalaApiBackend) SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription {
+func (b *KowalaAPIBackend) SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription {
 	return b.kcoin.BlockChain().SubscribeChainHeadEvent(ch)
 }
 
-func (b *KowalaApiBackend) SubscribeChainSideEvent(ch chan<- core.ChainSideEvent) event.Subscription {
+func (b *KowalaAPIBackend) SubscribeChainSideEvent(ch chan<- core.ChainSideEvent) event.Subscription {
 	return b.kcoin.BlockChain().SubscribeChainSideEvent(ch)
 }
 
-func (b *KowalaApiBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
+func (b *KowalaAPIBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	return b.kcoin.BlockChain().SubscribeLogsEvent(ch)
 }
 
-func (b *KowalaApiBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
+func (b *KowalaAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
 	return b.kcoin.txPool.AddLocal(signedTx)
 }
 
-func (b *KowalaApiBackend) GetPoolTransactions() (types.Transactions, error) {
+func (b *KowalaAPIBackend) GetPoolTransactions() (types.Transactions, error) {
 	pending, err := b.kcoin.txPool.Pending()
 	if err != nil {
 		return nil, err
@@ -135,56 +155,56 @@ func (b *KowalaApiBackend) GetPoolTransactions() (types.Transactions, error) {
 	return txs, nil
 }
 
-func (b *KowalaApiBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
+func (b *KowalaAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
 	return b.kcoin.txPool.Get(hash)
 }
 
-func (b *KowalaApiBackend) GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error) {
+func (b *KowalaAPIBackend) GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error) {
 	return b.kcoin.txPool.State().GetNonce(addr), nil
 }
 
-func (b *KowalaApiBackend) Stats() (pending int, queued int) {
+func (b *KowalaAPIBackend) Stats() (pending int, queued int) {
 	return b.kcoin.txPool.Stats()
 }
 
-func (b *KowalaApiBackend) TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
+func (b *KowalaAPIBackend) TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
 	return b.kcoin.TxPool().Content()
 }
 
-func (b *KowalaApiBackend) SubscribeTxPreEvent(ch chan<- core.TxPreEvent) event.Subscription {
-	return b.kcoin.TxPool().SubscribeTxPreEvent(ch)
+func (b *KowalaAPIBackend) SubscribeTxPreEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+	return b.kcoin.TxPool().SubscribeNewTxsEvent(ch)
 }
 
-func (b *KowalaApiBackend) Downloader() *downloader.Downloader {
+func (b *KowalaAPIBackend) Downloader() *downloader.Downloader {
 	return b.kcoin.Downloader()
 }
 
-func (b *KowalaApiBackend) ProtocolVersion() int {
+func (b *KowalaAPIBackend) ProtocolVersion() int {
 	return b.kcoin.EthVersion()
 }
 
-func (b *KowalaApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
+func (b *KowalaAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
 
-func (b *KowalaApiBackend) ChainDb() kcoindb.Database {
+func (b *KowalaAPIBackend) ChainDb() kcoindb.Database {
 	return b.kcoin.ChainDb()
 }
 
-func (b *KowalaApiBackend) EventMux() *event.TypeMux {
+func (b *KowalaAPIBackend) EventMux() *event.TypeMux {
 	return b.kcoin.EventMux()
 }
 
-func (b *KowalaApiBackend) AccountManager() *accounts.Manager {
+func (b *KowalaAPIBackend) AccountManager() *accounts.Manager {
 	return b.kcoin.AccountManager()
 }
 
-func (b *KowalaApiBackend) BloomStatus() (uint64, uint64) {
+func (b *KowalaAPIBackend) BloomStatus() (uint64, uint64) {
 	sections, _, _ := b.kcoin.bloomIndexer.Sections()
 	return params.BloomBitsBlocks, sections
 }
 
-func (b *KowalaApiBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+func (b *KowalaAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.kcoin.bloomRequests)
 	}

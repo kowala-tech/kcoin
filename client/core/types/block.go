@@ -2,12 +2,13 @@
 package types
 
 import (
-	"fmt"
+	"encoding/binary"
 	"io"
 	"math/big"
 	"sort"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
@@ -19,7 +20,7 @@ var (
 	EmptyRootHash = DeriveSha(Transactions{})
 )
 
-//go:generate gencodec -type Header -field-override headerMarshalling -out gen_header_json.go
+//go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 //go:generate gencodec -type Commit -out gen_commit_json.go
 
 // Header represents a block header in the Ethereum blockchain.
@@ -33,17 +34,17 @@ type Header struct {
 	LastCommitHash common.Hash    `json:"lastCommit"       gencodec:"required"`
 	Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
 	Number         *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit       *big.Int       `json:"gasLimit"         gencodec:"required"`
-	GasUsed        *big.Int       `json:"gasUsed"          gencodec:"required"`
+	GasLimit       uint64         `json:"gasLimit"         gencodec:"required"`
+	GasUsed        uint64         `json:"gasUsed"          gencodec:"required"`
 	Time           *big.Int       `json:"timestamp"        gencodec:"required"`
 	Extra          []byte         `json:"extraData"        gencodec:"required"`
 }
 
 // field type overrides for gencodec
-type headerMarshalling struct {
+type headerMarshaling struct {
 	Number   *hexutil.Big
-	GasLimit *hexutil.Big
-	GasUsed  *hexutil.Big
+	GasLimit hexutil.Uint64
+	GasUsed  hexutil.Uint64
 	Time     *hexutil.Big
 	Extra    hexutil.Bytes
 	Hash     common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
@@ -72,6 +73,12 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.Time,
 		h.Extra,
 	})
+}
+
+// Size returns the approximate memory used by all internal contents. It is used
+// to approximate and limit the memory consumption of various caches.
+func (h *Header) Size() common.StorageSize {
+	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.Difficulty.BitLen()+h.Number.BitLen()+h.Time.BitLen())/8)
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -194,12 +201,6 @@ func CopyHeader(h *Header) *Header {
 	if cpy.Number = new(big.Int); h.Number != nil {
 		cpy.Number.Set(h.Number)
 	}
-	if cpy.GasLimit = new(big.Int); h.GasLimit != nil {
-		cpy.GasLimit.Set(h.GasLimit)
-	}
-	if cpy.GasUsed = new(big.Int); h.GasUsed != nil {
-		cpy.GasUsed.Set(h.GasUsed)
-	}
 	if len(h.Extra) > 0 {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
@@ -261,8 +262,8 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 func (b *Block) LastCommit() *Commit { return b.lastCommit }
 
 func (b *Block) Number() *big.Int   { return new(big.Int).Set(b.header.Number) }
-func (b *Block) GasLimit() *big.Int { return new(big.Int).Set(b.header.GasLimit) }
-func (b *Block) GasUsed() *big.Int  { return new(big.Int).Set(b.header.GasUsed) }
+func (b *Block) GasLimit() uint64     { return b.header.GasLimit }
+func (b *Block) GasUsed() uint64      { return b.header.GasUsed }
 func (b *Block) Time() *big.Int     { return new(big.Int).Set(b.header.Time) }
 
 func (b *Block) NumberU64() uint64           { return b.header.Number.Uint64() }
@@ -286,6 +287,8 @@ func (b *Block) HashNoNonce() common.Hash {
 	return b.header.HashNoNonce()
 }
 
+// Size returns the true RLP encoded storage size of the block, either by encoding
+// and returning it, or returning a previsouly cached value.
 func (b *Block) Size() common.StorageSize {
 	if size := b.size.Load(); size != nil {
 		return size.(common.StorageSize)
@@ -348,38 +351,6 @@ func (b *Block) AsFragments(size int) (*BlockFragments, error) {
 		return &BlockFragments{}, err
 	}
 	return NewDataSetFromData(rawBlock, size), nil
-}
-
-func (b *Block) String() string {
-	str := fmt.Sprintf(`Block(#%v): Size: %v {
-ValidatorHash: %x
-%v
-Transactions:
-%v
-LastCommit:
-%v
-}
-`, b.Number(), b.Size(), b.header.HashNoNonce(), b.header, b.transactions, b.lastCommit)
-	return str
-}
-
-func (h *Header) String() string {
-	return fmt.Sprintf(`Header(%x):
-[
-	ParentHash:	    %x
-	Coinbase:	    %x
-	Root:		    %x
-	TxSha		    %x
-	ReceiptSha:	    %x
-	ValidatorsHash: %x
-	LastCommitHash: %x
-	Bloom:		    %x
-	Number:		    %v
-	GasLimit:	    %v
-	GasUsed:	    %v
-	Time:		    %v
-	Extra:		    %s
-]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.ValidatorsHash, h.LastCommitHash, h.Bloom, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra)
 }
 
 type Blocks []*Block
