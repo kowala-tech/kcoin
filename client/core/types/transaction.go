@@ -11,7 +11,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/rlp"
-	"github.com/pkg/errors"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -359,7 +358,7 @@ func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transa
 	for from, accTxs := range txs {
 		heads = append(heads, accTxs[0])
 		// Ensure the sender address is from the signer
-		acc, _ := Sender(signer, accTxs[0])
+		acc, _ := TxSender(signer, accTxs[0])
 		txs[acc] = accTxs[1:]
 		if from != acc {
 			delete(txs, from)

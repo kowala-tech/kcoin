@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/crypto/sha3"
+	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/metrics"
 )

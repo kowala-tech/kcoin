@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -75,8 +74,8 @@ type BlockChain struct {
 	cacheConfig *CacheConfig        // Cache configuration for pruning
 
 	db     kcoindb.Database // Low level persistent database to store final content in
-	triegc *prque.Prque   // Priority queue mapping block numbers to tries to gc
-	gcproc time.Duration  // Accumulates canonical block processing for trie dumping
+	triegc *prque.Prque     // Priority queue mapping block numbers to tries to gc
+	gcproc time.Duration    // Accumulates canonical block processing for trie dumping
 
 	hc            *HeaderChain
 	rmLogsFeed    event.Feed
@@ -118,7 +117,7 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator and
 // Processor.
-func NewBlockChain(chainDb kcoindb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+func NewBlockChain(db kcoindb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
 			TrieNodeLimit: 256 * 1024 * 1024,
@@ -227,6 +226,9 @@ func (bc *BlockChain) loadLastState() error {
 			bc.currentFastBlock.Store(block)
 		}
 	}
+
+	// Issue a status log for the user
+	currentFastBlock := bc.CurrentFastBlock()
 
 	log.Info("Loaded most recent local header", "number", currentHeader.Number, "hash", currentHeader.Hash())
 	log.Info("Loaded most recent local full block", "number", currentBlock.Number(), "hash", currentBlock.Hash())
@@ -799,7 +801,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	bc.mu.Lock()
 	head := blockChain[len(blockChain)-1]
 	if blockNumber := head.Number(); blockNumber != nil { // Rewind may have occurred, skip in that case
-		if bc.currentFastBlock.Number().Cmp(blockNumber) < 0 {
+		if bc.CurrentFastBlock().Number().Cmp(blockNumber) < 0 {
 			rawdb.WriteHeadFastBlockHash(bc.db, head.Hash())
 			bc.currentFastBlock.Store(head)
 		}
@@ -838,9 +840,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Make sure no inconsistent state is leaked during insertion
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
-	
+
 	currentBlock := bc.CurrentBlock()
-	
+
 	// Write other block data using a batch.
 	batch := bc.db.NewBatch()
 	rawdb.WriteBlock(batch, block)
@@ -868,7 +870,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 				limit       = common.StorageSize(bc.cacheConfig.TrieNodeLimit) * 1024 * 1024
 			)
 			if nodes > limit || imgs > 4*1024*1024 {
-				triedb.Cap(limit - ethdb.IdealBatchSize)
+				triedb.Cap(limit - kcoindb.IdealBatchSize)
 			}
 			// Find the next state trie we need to commit
 			header := bc.GetHeaderByNumber(current - triesInMemory)
@@ -897,7 +899,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 			}
 		}
 	}
-	
+
 	rawdb.WriteReceipts(batch, block.Hash(), block.NumberU64(), receipts)
 
 	// Reorganise the chain if the parent is not the head block

@@ -7,6 +7,7 @@ import (
 	"errors"
 )
 
+// MarshalJSON marshals as JSON.
 func (c Commit) MarshalJSON() ([]byte, error) {
 	type Commit struct {
 		PreCommits     Votes `json:"votes"    gencodec:"required"`
@@ -18,6 +19,7 @@ func (c Commit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&enc)
 }
 
+// UnmarshalJSON unmarshals from JSON.
 func (c *Commit) UnmarshalJSON(input []byte) error {
 	type Commit struct {
 		PreCommits     *Votes `json:"votes"    gencodec:"required"`

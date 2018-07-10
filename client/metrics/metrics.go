@@ -6,16 +6,14 @@
 package metrics
 
 import (
+	"net/http"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/log"
-	metrics "github.com/rcrowley/go-metrics"
-	"github.com/rcrowley/go-metrics/exp"
-
 	prometheusmetrics "github.com/kowala-tech/go-metrics-prometheus"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -63,7 +61,7 @@ func CollectProcessMetrics(refresh time.Duration, promAddr, promSubSys string) {
 	// Set up Prometheus
 	go func() {
 		prometheusRegistry := prometheus.DefaultGatherer
-		metricsRegistry := metrics.DefaultRegistry
+		metricsRegistry := DefaultRegistry
 		pClient := prometheusmetrics.NewPrometheusProvider(metricsRegistry, "eth", promSubSys, (prometheusRegistry).(*prometheus.Registry), refresh)
 		go pClient.UpdatePrometheusMetrics()
 

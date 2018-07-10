@@ -38,11 +38,11 @@ const (
 	// dropping broadcasts. Similarly to block propagations, there's no point to queue
 	// above some healthy uncle limit, so use that.
 	maxQueuedAnns = 4
-	
+
 	maxKnownVotes     = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
 	maxKnownFragments = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
-	
-	handshakeTimeout  = 5 * time.Second
+
+	handshakeTimeout = 5 * time.Second
 )
 
 // PeerInfo represents a short summary of the Kowala sub-protocol metadata known
@@ -74,7 +74,7 @@ type peer struct {
 	knownBlocks    *set.Set // Set of block hashes known to be known by this peer
 	knownVotes     *set.Set // set of vote hashes known to be known by this peer
 	knownFragments *set.Set // set of fragment hashes known to be known by this peer
-	
+
 	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
 	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
 	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
@@ -82,21 +82,19 @@ type peer struct {
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
-	id := p.ID()
-
 	return &peer{
 		Peer:           p,
 		rw:             rw,
 		version:        version,
-		id:          fmt.Sprintf("%x", p.ID().Bytes()[:8]),
+		id:             fmt.Sprintf("%x", p.ID().Bytes()[:8]),
 		knownTxs:       set.New(),
 		knownBlocks:    set.New(),
 		knownVotes:     set.New(),
 		knownFragments: set.New(),
-		queuedTxs:   make(chan []*types.Transaction, maxQueuedTxs),
-		queuedProps: make(chan *propEvent, maxQueuedProps),
-		queuedAnns:  make(chan *types.Block, maxQueuedAnns),
-		term:        make(chan struct{}),
+		queuedTxs:      make(chan []*types.Transaction, maxQueuedTxs),
+		queuedProps:    make(chan *propEvent, maxQueuedProps),
+		queuedAnns:     make(chan *types.Block, maxQueuedAnns),
+		term:           make(chan struct{}),
 	}
 }
 
@@ -113,10 +111,10 @@ func (p *peer) broadcast() {
 			p.Log().Trace("Broadcast transactions", "count", len(txs))
 
 		case prop := <-p.queuedProps:
-			if err := p.SendNewBlock(prop.block, prop.td); err != nil {
+			if err := p.SendNewBlock(prop.block); err != nil {
 				return
 			}
-			p.Log().Trace("Propagated block", "number", prop.block.Number(), "hash", prop.block.Hash(), "td", prop.td)
+			p.Log().Trace("Propagated block", "number", prop.block.Number(), "hash", prop.block.Hash())
 
 		case block := <-p.queuedAnns:
 			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
@@ -253,7 +251,6 @@ func (p *peer) AsyncSendNewBlockHash(block *types.Block) {
 	}
 }
 
-
 // SendNewBlock propagates an entire block to a remote peer.
 func (p *peer) SendNewBlock(block *types.Block) error {
 	p.knownBlocks.Add(block.Hash())
@@ -262,9 +259,9 @@ func (p *peer) SendNewBlock(block *types.Block) error {
 
 // AsyncSendNewBlock queues an entire block for propagation to a remote peer. If
 // the peer's broadcast queue is full, the event is silently dropped.
-func (p *peer) AsyncSendNewBlock(block *types.Block, td *big.Int) {
+func (p *peer) AsyncSendNewBlock(block *types.Block) {
 	select {
-	case p.queuedProps <- &propEvent{block: block, td: td}:
+	case p.queuedProps <- &propEvent{block: block}:
 		p.knownBlocks.Add(block.Hash())
 	default:
 		p.Log().Debug("Dropping block propagation", "number", block.NumberU64(), "hash", block.Hash())

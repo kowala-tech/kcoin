@@ -2,6 +2,7 @@ package knode
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"

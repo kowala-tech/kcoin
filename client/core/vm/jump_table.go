@@ -904,6 +904,6 @@ func NewAndromedaInstructionSet() [256]operation {
 			gasCost:       constGasFunc(GasFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
-		}
+		},
 	}
 }

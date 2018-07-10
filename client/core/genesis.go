@@ -224,8 +224,8 @@ func (g *Genesis) ToBlock(db kcoindb.Database) *types.Block {
 		Time:       new(big.Int).SetUint64(g.Timestamp),
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
-		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
-		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
+		GasLimit:   g.GasLimit,
+		GasUsed:    g.GasUsed,
 		Coinbase:   g.Coinbase,
 		Root:       root,
 	}

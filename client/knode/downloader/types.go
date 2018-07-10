@@ -11,7 +11,7 @@ type peerDropFn func(id string)
 
 // dataPack is a data message returned by a peer for some query.
 type dataPack interface {
-	PeerId() string
+	PeerID() string
 	Items() int
 	Stats() string
 }
@@ -22,17 +22,18 @@ type headerPack struct {
 	headers []*types.Header
 }
 
-func (p *headerPack) PeerId() string { return p.peerID }
+func (p *headerPack) PeerID() string { return p.peerID }
 func (p *headerPack) Items() int     { return len(p.headers) }
 func (p *headerPack) Stats() string  { return fmt.Sprintf("%d", len(p.headers)) }
 
 // bodyPack is a batch of block bodies returned by a peer.
 type bodyPack struct {
 	peerID       string
+	commits      []*types.Commit
 	transactions [][]*types.Transaction
 }
 
-func (p *bodyPack) PeerId() string { return p.peerId }
+func (p *bodyPack) PeerID() string { return p.peerID }
 func (p *bodyPack) Items() int {
 	// @TODO (rgeraldes) - send commit at a different timing?
 	// It's probably not a good move since the number of empty blocks should be small.
@@ -50,7 +51,7 @@ type receiptPack struct {
 	receipts [][]*types.Receipt
 }
 
-func (p *receiptPack) PeerId() string { return p.peerID }
+func (p *receiptPack) PeerID() string { return p.peerID }
 func (p *receiptPack) Items() int     { return len(p.receipts) }
 func (p *receiptPack) Stats() string  { return fmt.Sprintf("%d", len(p.receipts)) }
 
@@ -60,6 +61,6 @@ type statePack struct {
 	states [][]byte
 }
 
-func (p *statePack) PeerId() string { return p.peerID }
+func (p *statePack) PeerID() string { return p.peerID }
 func (p *statePack) Items() int     { return len(p.states) }
 func (p *statePack) Stats() string  { return fmt.Sprintf("%d", len(p.states)) }

@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
-	kowala "github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/math"
 	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
 	"github.com/kowala-tech/kcoin/client/core"
-	"github.com/kowala-tech/kcoin/client/bloombits"
-	"github.com/kowala-tech/kcoin/client/rawdb"
+	"github.com/kowala-tech/kcoin/client/core/bloombits"
+	"github.com/kowala-tech/kcoin/client/core/rawdb"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/vm"
@@ -37,7 +37,7 @@ var errGasEstimationFailed = errors.New("gas required exceeds allowance or alway
 // the background. Its main purpose is to allow easily testing contract bindings.
 type SimulatedBackend struct {
 	database         kcoindb.Database // In memory database to store our testing data
-	*core.BlockChain                  // Ethereum blockchain to handle the consensus
+	*core.BlockChain                  // Kowala blockchain to handle the consensus
 
 	mu           sync.Mutex
 	pendingBlock *types.Block   // Currently pending block that will be imported on request
@@ -51,14 +51,14 @@ type SimulatedBackend struct {
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
-	database, _ := kcoindb.NewMemDatabase()
+	database := kcoindb.NewMemDatabase()
 	genesis := core.Genesis{Config: params.AllTendermintProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
 	blockchain, _ := core.NewBlockChain(database, nil, genesis.Config, tendermint.NewFaker(), vm.Config{})
 
 	backend := &SimulatedBackend{
 		database:   database,
-		blockchain: blockchain,
+		BlockChain: blockchain,
 		config:     genesis.Config,
 		events:     filters.NewEventSystem(new(event.TypeMux), &filterBackend{database, blockchain}, false),
 	}
@@ -87,8 +87,8 @@ func (b *SimulatedBackend) Rollback() {
 }
 
 func (b *SimulatedBackend) rollback() {
-	blocks, _ := core.GenerateChain(b.config, b.CurrentBlock(), b.database, 1, func(int, *core.BlockGen) {})
-	statedb, _ := b.blockchain.State()
+	blocks, _ := core.GenerateChain(b.config, b.CurrentBlock(), tendermint.NewFaker(), b.database, 1, func(int, *core.BlockGen) {})
+	statedb, _ := b.State()
 
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
@@ -291,13 +291,13 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
 	}
 
-	blocks, _ := core.GenerateChain(b.config, b.CurrentBlock(), b.database, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := core.GenerateChain(b.config, b.CurrentBlock(), tendermint.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
-			block.AddTxWithChain(b.blockchain, tx)
+			block.AddTxWithChain(b.BlockChain, tx)
 		}
-		block.AddTxWithChain(b.blockchain, tx)
+		block.AddTxWithChain(b.BlockChain, tx)
 	})
-	statedb, _ := b.blockchain.State()
+	statedb, _ := b.State()
 
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
@@ -308,7 +308,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 // returning all the results in one batch.
 //
 // TODO(karalabe): Deprecate when the subscription one can return past data too.
-func (b *SimulatedBackend) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
+func (b *SimulatedBackend) FilterLogs(ctx context.Context, query kowala.FilterQuery) ([]types.Log, error) {
 	// Initialize unset filter boundaried to run from genesis to chain head
 	from := int64(0)
 	if query.FromBlock != nil {
@@ -319,7 +319,7 @@ func (b *SimulatedBackend) FilterLogs(ctx context.Context, query ethereum.Filter
 		to = query.ToBlock.Int64()
 	}
 	// Construct and execute the filter
-	filter := filters.New(&filterBackend{b.database, b.blockchain}, from, to, query.Addresses, query.Topics)
+	filter := filters.New(&filterBackend{b.database, b.BlockChain}, from, to, query.Addresses, query.Topics)
 
 	logs, err := filter.Logs(ctx)
 	if err != nil {
@@ -334,7 +334,7 @@ func (b *SimulatedBackend) FilterLogs(ctx context.Context, query ethereum.Filter
 
 // SubscribeFilterLogs creates a background log filtering operation, returning a
 // subscription immediately, which can be used to stream the found events.
-func (b *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error) {
+func (b *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query kowala.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error) {
 	// Subscribe to contract events
 	sink := make(chan []*types.Log)
 
@@ -370,13 +370,13 @@ func (b *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query ethere
 func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	blocks, _ := core.GenerateChain(b.config, b.BlockChain.CurrentBlock(), tendermint.NewFaker() b.database, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := core.GenerateChain(b.config, b.BlockChain.CurrentBlock(), tendermint.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx)
 		}
 		block.OffsetTime(int64(adjustment.Seconds()))
 	})
-	statedb, _ := b.blockchain.State()
+	statedb, _ := b.State()
 
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())

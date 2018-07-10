@@ -1,7 +1,5 @@
 package params
 
-import "math/big"
-
 var (
 	TargetGasLimit = GenesisGasLimit // The artificial target
 )
@@ -11,7 +9,6 @@ const (
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
 	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
 
-	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
 	SloadGas              uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
@@ -43,8 +40,6 @@ const (
 	SuicideRefundGas uint64 = 24000 // Refunded following a suicide operation.
 	MemoryGas        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
 	TxDataNonZeroGas uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
-
-	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
 
 	// Precompiled contract gas prices
 

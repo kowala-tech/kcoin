@@ -70,7 +70,7 @@ var (
 )
 
 var (
-	kcoin = params.Kcoin
+	kcoin = new(big.Int).Exp(big.NewInt(10), big.NewInt(params.Kcoin), nil)
 )
 
 func main() {

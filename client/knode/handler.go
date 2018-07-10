@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -62,8 +61,8 @@ type ProtocolManager struct {
 	SubProtocols []p2p.Protocol
 
 	eventMux             *event.TypeMux
-	txsCh         chan core.NewTxsEvent
-	txsSub        event.Subscription
+	txsCh                chan core.NewTxsEvent
+	txsSub               event.Subscription
 	minedBlockSub        *event.TypeMuxSubscription
 	proposalSub, voteSub *event.TypeMuxSubscription
 
@@ -251,8 +250,13 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	p.Log().Debug("Kowala peer connected", "name", p.Name())
 
 	// Execute the Kowala handshake
-	blockNumber, head, genesis := pm.blockchain.Status()
-	if err := p.Handshake(pm.networkID, blockNumber, head, genesis.Hash()); err != nil {
+	var (
+		genesis     = pm.blockchain.Genesis()
+		head        = pm.blockchain.CurrentHeader()
+		hash        = head.Hash()
+		blockNumber = head.Number
+	)
+	if err := p.Handshake(pm.networkID, blockNumber, hash, genesis.Hash()); err != nil {
 		p.Log().Debug("Kowala handshake failed", "err", err)
 		return err
 	}
@@ -766,10 +770,10 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 // KowalaNodeInfo represents a short summary of the Kowala sub-protocol metadata known
 // about the host peer.
 type KowalaNodeInfo struct {
-	Network uint64 `json:"network"` // Kowala network ID (1=MainNet, 2=Testnet)
-	Genesis    common.Hash `json:"genesis"`    // SHA3 hash of the host's genesis block
-	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules
-	Head       common.Hash `json:"head"`       // SHA3 hash of the host's best owned block
+	Network uint64              `json:"network"` // Kowala network ID (1=MainNet, 2=Testnet)
+	Genesis common.Hash         `json:"genesis"` // SHA3 hash of the host's genesis block
+	Config  *params.ChainConfig `json:"config"`  // Chain configuration for the fork rules
+	Head    common.Hash         `json:"head"`    // SHA3 hash of the host's best owned block
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
@@ -778,7 +782,7 @@ func (pm *ProtocolManager) NodeInfo() *KowalaNodeInfo {
 	return &KowalaNodeInfo{
 		Network: pm.networkID,
 		Genesis: pm.blockchain.Genesis().Hash(),
-		Config:     pm.blockchain.Config(),
+		Config:  pm.blockchain.Config(),
 		Head:    currentBlock.Hash(),
 	}
 }

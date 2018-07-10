@@ -520,7 +520,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 			return err
 		}
 		// If we exceeded the ideal batch size, commit and reset
-		if batch.ValueSize() >= ethdb.IdealBatchSize {
+		if batch.ValueSize() >= kcoindb.IdealBatchSize {
 			if err := batch.Write(); err != nil {
 				log.Error("Failed to write flush list to disk", "err", err)
 				db.lock.RUnlock()
@@ -596,7 +596,7 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 			db.lock.RUnlock()
 			return err
 		}
-		if batch.ValueSize() > ethdb.IdealBatchSize {
+		if batch.ValueSize() > kcoindb.IdealBatchSize {
 			if err := batch.Write(); err != nil {
 				return err
 			}
@@ -646,7 +646,7 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 }
 
 // commit is the private locked version of Commit.
-func (db *Database) commit(hash common.Hash, batch ethdb.Batch) error {
+func (db *Database) commit(hash common.Hash, batch kcoindb.Batch) error {
 	// If the node does not exist, it's a previously committed node
 	node, ok := db.nodes[hash]
 	if !ok {

@@ -811,7 +811,7 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 	for i, tx := range txs {
 		var replace bool
 		if replace, errs[i] = pool.add(tx, local); errs[i] == nil && !replace {
-			from, _ := types.Sender(pool.signer, tx) // already validated
+			from, _ := types.TxSender(pool.signer, tx) // already validated
 			dirty[from] = struct{}{}
 		}
 	}
@@ -835,7 +835,7 @@ func (pool *TxPool) Status(hashes []common.Hash) []TxStatus {
 	status := make([]TxStatus, len(hashes))
 	for i, hash := range hashes {
 		if tx := pool.all.Get(hash); tx != nil {
-			from, _ := types.Sender(pool.signer, tx) // already validated
+			from, _ := types.TxSender(pool.signer, tx) // already validated
 			if pool.pending[from] != nil && pool.pending[from].txs.items[tx.Nonce()] != nil {
 				status[i] = TxStatusPending
 			} else {

@@ -536,8 +536,8 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 
 		case packet := <-d.headerCh:
 			// Discard anything not from the origin peer
-			if packet.PeerId() != p.id {
-				log.Debug("Received headers from incorrect peer", "peer", packet.PeerId())
+			if packet.PeerID() != p.id {
+				log.Debug("Received headers from incorrect peer", "peer", packet.PeerID())
 				break
 			}
 			// Make sure the peer actually gave something valid
@@ -610,8 +610,8 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 
 		case packet := <-d.headerCh:
 			// Discard anything not from the origin peer
-			if packet.PeerId() != p.id {
-				log.Debug("Received headers from incorrect peer", "peer", packet.PeerId())
+			if packet.PeerID() != p.id {
+				log.Debug("Received headers from incorrect peer", "peer", packet.PeerID())
 				break
 			}
 			// Make sure the peer actually gave something valid
@@ -687,8 +687,8 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 
 			case packer := <-d.headerCh:
 				// Discard anything not from the origin peer
-				if packer.PeerId() != p.id {
-					log.Debug("Received headers from incorrect peer", "peer", packer.PeerId())
+				if packer.PeerID() != p.id {
+					log.Debug("Received headers from incorrect peer", "peer", packer.PeerID())
 					break
 				}
 				// Make sure the peer actually gave something valid
@@ -774,8 +774,8 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, pivot uint64) 
 
 		case packet := <-d.headerCh:
 			// Make sure the active peer is giving us the skeleton headers
-			if packet.PeerId() != p.id {
-				log.Debug("Received skeleton from incorrect peer", "peer", packet.PeerId())
+			if packet.PeerID() != p.id {
+				log.Debug("Received skeleton from incorrect peer", "peer", packet.PeerID())
 				break
 			}
 			headerReqTimer.UpdateSince(request)
@@ -992,7 +992,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 		case packet := <-deliveryCh:
 			// If the peer was previously banned and failed to deliver its pack
 			// in a reasonable time frame, ignore its message.
-			if peer := d.peers.Peer(packet.PeerId()); peer != nil {
+			if peer := d.peers.Peer(packet.PeerID()); peer != nil {
 				// Deliver the received chunk of data and check chain validity
 				accepted, err := deliver(packet)
 				if err == errInvalidChain {
@@ -1134,7 +1134,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 // processHeaders takes batches of retrieved headers from an input channel and
 // keeps processing and scheduling them into the header chain and downloader's
 // queue until the stream ends or a failure occurs.
-func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) error {
+func (d *Downloader) processHeaders(origin uint64, pivot uint64, blockNumber *big.Int) error {
 	// Keep a count of uncertain headers to roll back
 	rollback := []*types.Header{}
 	defer func() {
@@ -1473,7 +1473,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 	blocks := make([]*types.Block, len(results))
 	receipts := make([]types.Receipts, len(results))
 	for i, result := range results {
-		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
+		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Commit)
 		receipts[i] = result.Receipts
 	}
 	if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {

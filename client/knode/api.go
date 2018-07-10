@@ -16,9 +16,9 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
 	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/core/rawdb"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
-	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
 	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/params"
@@ -359,7 +359,7 @@ func NewPrivateDebugAPI(config *params.ChainConfig, kcoin *Kowala) *PrivateDebug
 
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
 func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
-	if preimage := rawdb.ReadPreimage(api.eth.ChainDb(), hash); preimage != nil {
+	if preimage := rawdb.ReadPreimage(api.kcoin.ChainDb(), hash); preimage != nil {
 		return preimage, nil
 	}
 	return nil, errors.New("unknown preimage")
@@ -375,7 +375,7 @@ type BadBlockArgs struct {
 // GetBadBlocks returns a list of the last 'bad blocks' that the client has seen on the network
 // and returns them as a JSON list of block-hashes
 func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]*BadBlockArgs, error) {
-	blocks := api.eth.BlockChain().BadBlocks()
+	blocks := api.kcoin.BlockChain().BadBlocks()
 	results := make([]*BadBlockArgs, len(blocks))
 
 	var err error

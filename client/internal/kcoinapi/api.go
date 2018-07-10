@@ -15,7 +15,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/common/math"
-	"github.com/ethereum/go-ethereum/consensus/tendermint"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/rawdb"
 	"github.com/kowala-tech/kcoin/client/core/types"
@@ -338,10 +337,8 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
 
-	var chainID *big.Int
-	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
-		chainID = config.ChainID
-	}
+	chainID := s.b.ChainConfig().ChainID
+
 	return wallet.SignTxWithPassphrase(account, passwd, tx, chainID)
 }
 
@@ -780,7 +777,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	if err != nil {
 		return nil, err
 	}
-	fields["totalDifficulty"] = (*hexutil.Big)(s.b.GetTd(b.Hash()))
+	//fields["totalDifficulty"] = (*hexutil.Big)(s.b.GetTd(b.Hash()))
 	return fields, err
 }
 
@@ -1035,7 +1032,6 @@ type SendTxArgs struct {
 	Gas      *hexutil.Uint64 `json:"gas"`
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	Value    *hexutil.Big    `json:"value"`
-	Data     hexutil.Bytes   `json:"data"`
 	Nonce    *hexutil.Uint64 `json:"nonce"`
 	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
 	// newer name and should be preferred by clients.

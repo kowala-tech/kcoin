@@ -2,7 +2,6 @@
 package types
 
 import (
-	"encoding/binary"
 	"io"
 	"math/big"
 	"sort"
@@ -78,7 +77,7 @@ func (h *Header) HashNoNonce() common.Hash {
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
-	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.Difficulty.BitLen()+h.Number.BitLen()+h.Time.BitLen())/8)
+	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.Number.BitLen()+h.Time.BitLen())/8)
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -261,10 +260,10 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 
 func (b *Block) LastCommit() *Commit { return b.lastCommit }
 
-func (b *Block) Number() *big.Int   { return new(big.Int).Set(b.header.Number) }
-func (b *Block) GasLimit() uint64     { return b.header.GasLimit }
-func (b *Block) GasUsed() uint64      { return b.header.GasUsed }
-func (b *Block) Time() *big.Int     { return new(big.Int).Set(b.header.Time) }
+func (b *Block) Number() *big.Int { return new(big.Int).Set(b.header.Number) }
+func (b *Block) GasLimit() uint64 { return b.header.GasLimit }
+func (b *Block) GasUsed() uint64  { return b.header.GasUsed }
+func (b *Block) Time() *big.Int   { return new(big.Int).Set(b.header.Time) }
 
 func (b *Block) NumberU64() uint64           { return b.header.Number.Uint64() }
 func (b *Block) Bloom() Bloom                { return b.header.Bloom }

@@ -3,15 +3,19 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"runtime"
+	godebug "runtime/debug"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/elastic/gosigar"
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
-	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/console"
 	"github.com/kowala-tech/kcoin/client/internal/debug"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"
@@ -185,7 +189,7 @@ func init() {
 		utils.SetupMetrics(ctx)
 
 		// Start system runtime metrics collection
-		go metrics.CollectProcessMetrics(3 * time.Second)
+		go metrics.CollectProcessMetrics(3 * time.Second, ctx.GlobalString(utils.MetricsPrometheusAddressFlag.Name), ctx.GlobalString(utils.MetricsPrometheusSubsystemFlag.Name))
 
 		utils.SetupNetwork(ctx)
 		return nil
@@ -245,7 +249,7 @@ func kowala(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // validator.
 func startNode(ctx *cli.Context, stack *node.Node) {
-	debug.Memsize.Add("node", stack
+	debug.Memsize.Add("node", stack)
 	setupLogging(ctx)
 
 	// Start up the node itself

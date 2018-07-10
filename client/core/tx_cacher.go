@@ -19,7 +19,7 @@ package core
 import (
 	"runtime"
 
-	"github.com/kowala-tech/kcoin/client/types"
+	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // senderCacher is a concurrent tranaction sender recoverer anc cacher.
@@ -62,7 +62,7 @@ func newTxSenderCacher(threads int) *txSenderCacher {
 func (cacher *txSenderCacher) cache() {
 	for task := range cacher.tasks {
 		for i := 0; i < len(task.txs); i += task.inc {
-			types.Sender(task.signer, task.txs[i])
+			types.TxSender(task.signer, task.txs[i])
 		}
 	}
 }

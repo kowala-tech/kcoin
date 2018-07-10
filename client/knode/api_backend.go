@@ -171,7 +171,7 @@ func (b *KowalaAPIBackend) TxPoolContent() (map[common.Address]types.Transaction
 	return b.kcoin.TxPool().Content()
 }
 
-func (b *KowalaAPIBackend) SubscribeTxPreEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+func (b *KowalaAPIBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return b.kcoin.TxPool().SubscribeNewTxsEvent(ch)
 }
 

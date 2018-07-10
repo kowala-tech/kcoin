@@ -1,13 +1,14 @@
 package core
 
 import (
+	"math/big"
+
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 )
 
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.
 type NewTxsEvent struct{ Txs []*types.Transaction }
-
 
 // NewVoteEvent is posted when a consensus validator votes.
 type NewVoteEvent struct{ Vote *types.Vote }

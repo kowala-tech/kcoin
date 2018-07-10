@@ -29,11 +29,11 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core"
-	"github.com/kowala-tech/kcoin/client/rawdb"
+	"github.com/kowala-tech/kcoin/client/core/rawdb"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/crypto"
-	"github.com/kowala-tech/kcoin/client/kcoindb"	
 	"github.com/kowala-tech/kcoin/client/internal/debug"
+	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/rlp"

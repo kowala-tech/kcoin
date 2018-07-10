@@ -12,7 +12,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
-	"github.com/rcrowley/go-metrics"
+	"github.com/kowala-tech/kcoin/client/metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -372,9 +372,9 @@ func (q *queue) Results(block bool) []*fetchResult {
 			size := result.Header.Size()
 			//@TODO (rgeraldes) - replace with commits
 			/*
-			for _, uncle := range result.Uncles {
-				size += uncle.Size()
-			}
+				for _, uncle := range result.Uncles {
+					size += uncle.Size()
+				}
 			*/
 			for _, receipt := range result.Receipts {
 				size += receipt.Size()

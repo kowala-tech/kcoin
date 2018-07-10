@@ -4,6 +4,7 @@ package knode
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
@@ -14,17 +15,20 @@ import (
 
 var _ = (*configMarshaling)(nil)
 
+// MarshalTOML marshals as TOML.
 func (c Config) MarshalTOML() (interface{}, error) {
 	type Config struct {
 		Genesis                 *core.Genesis `toml:",omitempty"`
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
+		NoPruning               bool
 		LightServ               int  `toml:",omitempty"`
 		LightPeers              int  `toml:",omitempty"`
-		MaxPeers                int  `toml:"-"`
 		SkipBcVersionCheck      bool `toml:"-"`
 		DatabaseHandles         int  `toml:"-"`
 		DatabaseCache           int
+		TrieCache               int
+		TrieTimeout             time.Duration
 		Coinbase                common.Address `toml:",omitempty"`
 		Deposit                 *big.Int       `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
@@ -33,17 +37,20 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		GPO                     gasprice.Config
 		EnablePreimageRecording bool
 		DocRoot                 string `toml:"-"`
+		Currency                string
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
 	enc.NetworkId = c.NetworkId
 	enc.SyncMode = c.SyncMode
+	enc.NoPruning = c.NoPruning
 	enc.LightServ = c.LightServ
 	enc.LightPeers = c.LightPeers
-	enc.MaxPeers = c.MaxPeers
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
 	enc.DatabaseHandles = c.DatabaseHandles
 	enc.DatabaseCache = c.DatabaseCache
+	enc.TrieCache = c.TrieCache
+	enc.TrieTimeout = c.TrieTimeout
 	enc.Coinbase = c.Coinbase
 	enc.Deposit = c.Deposit
 	enc.ExtraData = c.ExtraData
@@ -52,28 +59,33 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.DocRoot = c.DocRoot
+	enc.Currency = c.Currency
 	return &enc, nil
 }
 
+// UnmarshalTOML unmarshals from TOML.
 func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	type Config struct {
 		Genesis                 *core.Genesis `toml:",omitempty"`
 		NetworkId               *uint64
 		SyncMode                *downloader.SyncMode
+		NoPruning               *bool
 		LightServ               *int  `toml:",omitempty"`
 		LightPeers              *int  `toml:",omitempty"`
-		MaxPeers                *int  `toml:"-"`
 		SkipBcVersionCheck      *bool `toml:"-"`
 		DatabaseHandles         *int  `toml:"-"`
 		DatabaseCache           *int
+		TrieCache               *int
+		TrieTimeout             *time.Duration
 		Coinbase                *common.Address `toml:",omitempty"`
 		Deposit                 *big.Int        `toml:",omitempty"`
-		ExtraData               hexutil.Bytes   `toml:",omitempty"`
+		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
 		TxPool                  *core.TxPoolConfig
 		GPO                     *gasprice.Config
 		EnablePreimageRecording *bool
 		DocRoot                 *string `toml:"-"`
+		Currency                *string
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -88,14 +100,14 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.SyncMode != nil {
 		c.SyncMode = *dec.SyncMode
 	}
+	if dec.NoPruning != nil {
+		c.NoPruning = *dec.NoPruning
+	}
 	if dec.LightServ != nil {
 		c.LightServ = *dec.LightServ
 	}
 	if dec.LightPeers != nil {
 		c.LightPeers = *dec.LightPeers
-	}
-	if dec.MaxPeers != nil {
-		c.MaxPeers = *dec.MaxPeers
 	}
 	if dec.SkipBcVersionCheck != nil {
 		c.SkipBcVersionCheck = *dec.SkipBcVersionCheck
@@ -106,6 +118,12 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.DatabaseCache != nil {
 		c.DatabaseCache = *dec.DatabaseCache
 	}
+	if dec.TrieCache != nil {
+		c.TrieCache = *dec.TrieCache
+	}
+	if dec.TrieTimeout != nil {
+		c.TrieTimeout = *dec.TrieTimeout
+	}
 	if dec.Coinbase != nil {
 		c.Coinbase = *dec.Coinbase
 	}
@@ -113,7 +131,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		c.Deposit = dec.Deposit
 	}
 	if dec.ExtraData != nil {
-		c.ExtraData = dec.ExtraData
+		c.ExtraData = *dec.ExtraData
 	}
 	if dec.GasPrice != nil {
 		c.GasPrice = dec.GasPrice
@@ -129,6 +147,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.DocRoot != nil {
 		c.DocRoot = *dec.DocRoot
+	}
+	if dec.Currency != nil {
+		c.Currency = *dec.Currency
 	}
 	return nil
 }

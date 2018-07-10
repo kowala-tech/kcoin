@@ -5,7 +5,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/client"
+	kcoin "github.com/kowala-tech/kcoin/client"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 )
@@ -33,7 +33,7 @@ type ContractCaller interface {
 	CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error)
 	// ContractCall executes an Kowala contract call with the specified data as the
 	// input.
-	CallContract(ctx context.Context, call kowala.CallMsg, blockNumber *big.Int) ([]byte, error)
+	CallContract(ctx context.Context, call kcoin.CallMsg, blockNumber *big.Int) ([]byte, error)
 }
 
 // PendingContractCaller defines methods to perform contract calls on the pending state.
@@ -43,7 +43,7 @@ type PendingContractCaller interface {
 	// PendingCodeAt returns the code of the given account in the pending state.
 	PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error)
 	// PendingCallContract executes an Kowala contract call against the pending state.
-	PendingCallContract(ctx context.Context, call kowala.CallMsg) ([]byte, error)
+	PendingCallContract(ctx context.Context, call kcoin.CallMsg) ([]byte, error)
 }
 
 // ContractTransactor defines the methods needed to allow operating with contract
@@ -63,7 +63,7 @@ type ContractTransactor interface {
 	// There is no guarantee that this is the true gas limit requirement as other
 	// transactions may be added or removed by miners, but it should provide a basis
 	// for setting a reasonable default.
-	EstimateGas(ctx context.Context, call kowala.CallMsg) (gas uint64, err error)
+	EstimateGas(ctx context.Context, call kcoin.CallMsg) (gas uint64, err error)
 	// SendTransaction injects the transaction into the pending pool for execution.
 	SendTransaction(ctx context.Context, tx *types.Transaction) error
 }
@@ -75,11 +75,11 @@ type ContractFilterer interface {
 	// returning all the results in one batch.
 	//
 	// TODO(karalabe): Deprecate when the subscription one can return past data too.
-	FilterLogs(ctx context.Context, query kowala.FilterQuery) ([]types.Log, error)
+	FilterLogs(ctx context.Context, query kcoin.FilterQuery) ([]types.Log, error)
 
 	// SubscribeFilterLogs creates a background log filtering operation, returning
 	// a subscription immediately, which can be used to stream the found events.
-	SubscribeFilterLogs(ctx context.Context, query ethereum.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error)
+	SubscribeFilterLogs(ctx context.Context, query kcoin.FilterQuery, ch chan<- types.Log) (kcoin.Subscription, error)
 }
 
 // DeployBackend wraps the operations needed by WaitMined and WaitDeployed.
