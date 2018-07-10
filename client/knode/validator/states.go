@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
-	"fmt"
 )
 
 // work is the proposer current environment and holds all of the current state information
