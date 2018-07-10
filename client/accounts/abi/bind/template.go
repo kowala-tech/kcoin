@@ -64,6 +64,10 @@ const tmplSourceGo = `
 
 package {{.Package}}
 
+import (
+	kowala "github.com/kowala-tech/kcoin/client"
+)
+
 {{range $contract := .Contracts}}
 	// {{.Type}}ABI is the input ABI used to generate the binding from.
 	const {{.Type}}ABI = "{{.InputABI}}"
@@ -295,7 +299,7 @@ package {{.Package}}
 			event    string              // Event name to use for unpacking event data
 
 			logs chan types.Log        // Log channel receiving the found contract events
-			sub  client.Subscription    // Subscription for errors, completion and termination
+			sub  kowala.Subscription    // Subscription for errors, completion and termination
 			done bool                  // Whether the subscription completed delivering logs
 			fail error                 // Occurred error to stop iteration
 		}
