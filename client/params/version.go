@@ -36,6 +36,9 @@ func SetGitTagVersion(tag string) {
 }
 
 func SetBuildTime(buildTime string) {
+	if buildTime == "" {
+		return
+	}
 	ns, err := strconv.ParseInt(buildTime, 10, 64)
 	if err != nil {
 		panic(err)

@@ -69,12 +69,11 @@ func NewDockerNodeRunner(opts *NewNodeRunnerOpts) (*dockerNodeRunner, error) {
 }
 
 func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int32) error {
-	portSpec := make([]string, 0)
-
 	if err := runner.pullIfNecessary(node.Image); err != nil {
 		return err
 	}
 
+	portSpec := make([]string, 0)
 	for hostPortRaw, containerPortRaw := range node.PortMapping {
 		portSpec = append(portSpec, fmt.Sprintf("%v:%v", hostPortRaw, containerPortRaw))
 	}
@@ -83,21 +82,28 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int32) error 
 	if err != nil {
 		return err
 	}
-	_, err = runner.client.ContainerCreate(context.Background(), &container.Config{
+
+	config := &container.Config{
 		Image:        node.Image,
 		Cmd:          node.Cmd,
+		Env:          node.Env,
 		ExposedPorts: portSet,
-	}, &container.HostConfig{
+	}
+	hostConfig := &container.HostConfig{
 		PortBindings: portMap,
-	}, nil, node.ID.String())
+	}
+
+	_, err = runner.client.ContainerCreate(context.Background(), config, hostConfig, nil, node.ID.String())
 	if err != nil {
 		return err
 	}
 	runner.runningNodes[node.ID] = true
 
-	for filename, contents := range node.Files {
-		if err := runner.copyFile(node.ID, filename, contents); err != nil {
-			return err
+	if node.Files != nil {
+		for filename, contents := range node.Files {
+			if err := runner.copyFile(node.ID, filename, contents); err != nil {
+				return err
+			}
 		}
 	}
 

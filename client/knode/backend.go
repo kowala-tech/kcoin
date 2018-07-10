@@ -14,7 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
-	"github.com/kowala-tech/kcoin/client/contracts/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
 	"github.com/kowala-tech/kcoin/client/core/types"
@@ -145,7 +145,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	kcoin.ApiBackend.gpo = gasprice.NewOracle(kcoin.ApiBackend, gpoParams)
 
 	// consensus manager
-	consensus, err := consensus.Instance(NewContractBackend(kcoin.ApiBackend), chainConfig.ChainID)
+	consensus, err := consensus.Binding(NewContractBackend(kcoin.ApiBackend), chainConfig.ChainID)
 	if err != nil {
 		log.Crit("Failed to load the network contract", "err", err)
 	}
@@ -374,6 +374,9 @@ func (s *Kowala) IsListening() bool                  { return true } // Always l
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkId }
 func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *Kowala) Consensus() consensus.Consensus     { return s.consensus }
+func (s *Kowala) APIBackend() *KowalaApiBackend      { return s.ApiBackend }
+func (s *Kowala) ChainConfig() *params.ChainConfig   { return s.chainConfig }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.

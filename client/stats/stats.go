@@ -17,6 +17,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
 	"github.com/kowala-tech/kcoin/client/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
@@ -55,9 +56,10 @@ type blockChain interface {
 type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
-	server *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	kcoin  *knode.Kowala    // Full Kowala service if monitoring a full node
-	engine consensus.Engine // Consensus engine to retrieve variadic block fields
+	server    *p2p.Server      // Peer-to-peer server to retrieve networking infos
+	kcoin     *knode.Kowala    // Full Kowala service if monitoring a full node
+	engine    consensus.Engine // Consensus engine to retrieve variadic block fields
+	oracleMgr oracle.Manager   // oracle manager to retrieve oracle fields
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
@@ -77,15 +79,20 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 	}
 	// Assemble and return the stats service
 	engine := kowalaServ.Engine()
+	oracleMgr, err := oracle.Binding(knode.NewContractBackend(kowalaServ.APIBackend()), kowalaServ.ChainConfig().ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load the network contract %v", err)
+	}
 
 	return &Service{
-		kcoin:  kowalaServ,
-		engine: engine,
-		node:   parts[1],
-		pass:   parts[3],
-		host:   parts[4],
-		pongCh: make(chan struct{}),
-		histCh: make(chan []uint64, 1),
+		kcoin:     kowalaServ,
+		engine:    engine,
+		oracleMgr: oracleMgr,
+		node:      parts[1],
+		pass:      parts[3],
+		host:      parts[4],
+		pongCh:    make(chan struct{}),
+		histCh:    make(chan []uint64, 1),
 	}, nil
 }
 
@@ -235,6 +242,9 @@ func (s *Service) loop() {
 			case head := <-headCh:
 				if err = s.reportBlock(conn, head); err != nil {
 					log.Warn("Block stats report failed", "err", err)
+				}
+				if err := s.reportContracts(conn); err != nil {
+					log.Warn("State report failed", "err", err)
 				}
 				if err = s.reportPending(conn); err != nil {
 					log.Warn("Post-block transaction stats report failed", "err", err)
@@ -393,6 +403,9 @@ func (s *Service) report(conn *websocket.Conn) error {
 	if err := s.reportBlock(conn, nil); err != nil {
 		return err
 	}
+	if err := s.reportContracts(conn); err != nil {
+		return err
+	}
 	if err := s.reportPending(conn); err != nil {
 		return err
 	}
@@ -445,15 +458,21 @@ type blockStats struct {
 	Hash       common.Hash    `json:"hash"`
 	ParentHash common.Hash    `json:"parentHash"`
 	Timestamp  *big.Int       `json:"timestamp"`
-	Miner      common.Address `json:"miner"`
+	Validator  common.Address `json:"validator"`
 	GasUsed    *big.Int       `json:"gasUsed"`
 	GasLimit   *big.Int       `json:"gasLimit"`
-	Diff       string         `json:"difficulty"`
-	TotalDiff  string         `json:"totalDifficulty"`
 	Txs        []txStats      `json:"transactions"`
 	TxHash     common.Hash    `json:"transactionsRoot"`
 	Root       common.Hash    `json:"stateRoot"`
-	Uncles     uncleStats     `json:"uncles"`
+}
+
+// contractsStats is the information to report about individual blocks.
+type contractsStats struct {
+	MinDeposit     *big.Int `json:"minDeposit"`
+	ValidatorCount *big.Int `json:"validatorCount"`
+	MaxValidators  *big.Int `json:"maxValidators"`
+	OracleCount    *big.Int `json:"oracleCount"`
+	CurrencyPrice  *big.Int `json:"currencyPrice"`
 }
 
 // txStats is the information to report about individual transactions.
@@ -490,6 +509,27 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	return websocket.JSON.Send(conn, report)
 }
 
+// reportContracts reports the core contracts stats to the stats server
+func (s *Service) reportContracts(conn *websocket.Conn) error {
+	// Gather the core contracts details from the block chain
+	details, err := s.assembleContractsStats()
+	if err != nil {
+		return err
+	}
+
+	// Assemble the contracts report and send it to the server
+	log.Trace("Sending contracts information to kcoinstats")
+
+	stats := map[string]interface{}{
+		"id":        s.node,
+		"contracts": details,
+	}
+	report := map[string][]interface{}{
+		"emit": {"contracts", stats},
+	}
+	return websocket.JSON.Send(conn, report)
+}
+
 // assembleBlockStats retrieves any required metadata to report a single block
 // and assembles the block stats. If block is nil, the current head is processed.
 func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
@@ -518,13 +558,48 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		Hash:       header.Hash(),
 		ParentHash: header.ParentHash,
 		Timestamp:  header.Time,
-		Miner:      author,
+		Validator:  author,
 		GasUsed:    new(big.Int).Set(header.GasUsed),
 		GasLimit:   new(big.Int).Set(header.GasLimit),
 		Txs:        txs,
 		TxHash:     header.TxHash,
 		Root:       header.Root,
 	}
+}
+
+// assembleContractsStats retrieves any required metadata to report the core
+// contracts and assembles the contracts stats.
+func (s *Service) assembleContractsStats() (*contractsStats, error) {
+	// Gather the contracts info from the local blockchain
+	consensus := s.kcoin.Consensus()
+	minDeposit, err := consensus.MinimumDeposit()
+	if err != nil {
+		return nil, err
+	}
+	validatorCount, err := consensus.GetValidatorCount()
+	if err != nil {
+		return nil, err
+	}
+	maxValidators, err := consensus.MaxValidators()
+	if err != nil {
+		return nil, err
+	}
+	oracleCount, err := s.oracleMgr.GetOracleCount()
+	if err != nil {
+		return nil, err
+	}
+	currencyPrice, err := s.oracleMgr.Price()
+	if err != nil {
+		return nil, err
+	}
+
+	return &contractsStats{
+		MinDeposit:     minDeposit,
+		ValidatorCount: validatorCount,
+		MaxValidators:  maxValidators,
+		OracleCount:    oracleCount,
+		CurrencyPrice:  currencyPrice,
+	}, nil
 }
 
 // reportHistory retrieves the most recent batch of blocks and reports it to the
@@ -609,7 +684,6 @@ type nodeStats struct {
 	Active   bool `json:"active"`
 	Syncing  bool `json:"syncing"`
 	Mining   bool `json:"mining"`
-	Hashrate int  `json:"hashrate"`
 	Peers    int  `json:"peers"`
 	GasPrice int  `json:"gasPrice"`
 	Uptime   int  `json:"uptime"`

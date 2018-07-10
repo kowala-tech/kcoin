@@ -23,6 +23,7 @@ type FeatureContextOpts struct {
 func FeatureContext(opts *FeatureContextOpts) {
 	context := impl.NewTestContext(chainID)
 	validationCtx := impl.NewValidationContext(context)
+	walletBackendCtx := impl.NewWalletBackendContext(context)
 
 	opts.suite.BeforeFeature(func(ft *gherkin.Feature) {
 		context.Name = getFeatureName(ft.Name)
@@ -47,6 +48,7 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.AfterScenario(func(scenario interface{}, err error) {
 		context.Reset()
 		validationCtx.Reset()
+		walletBackendCtx.Reset()
 	})
 
 	// Creating accounts
@@ -98,6 +100,17 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^my node should not sync with the network$`, context.MyNodeShouldNotSyncWithTheNetwork)
 	opts.suite.Step(`^I start a new node with a different chain ID$`, context.IStartANewNodeWithADifferentChainID)
 	opts.suite.Step(`^I start validator with (\d+) deposit and coinbase A$`, context.IStartValidatorWithDepositAndCoinbaseA)
+
+	// Wallet backend
+	opts.suite.Step(`^the wallet backend node is running$`, walletBackendCtx.TheWalletBackendNodeIsRunning)
+	opts.suite.Step(`^I check the current block height in the wallet backend API$`, walletBackendCtx.ICheckTheCurrentBlockHeightInTheWalletBackendAPI)
+	opts.suite.Step(`^I wait for (\d+) blocks$`, walletBackendCtx.IWaitForBlocks)
+	opts.suite.Step(`^the new block height in the wallet backend API has increased by at least (\d+)$`, walletBackendCtx.TheNewBlockHeightInTheWalletBackendAPIHasIncreasedByAtLeast)
+	opts.suite.Step(`^I transfer (\d+) kcoin from (\w+) to (\w+) using the wallet API$`, walletBackendCtx.ITransferKcoin)
+	opts.suite.Step(`^the transactions of (\w+) in the wallet backend API contains the last transaction$`, walletBackendCtx.TheTransactionsOfAccountShouldContainLastTransaction)
+	opts.suite.Step(`^the balance of (\w+) using the wallet backend should be around (\d+) kcoins$`, walletBackendCtx.TheBalanceIsAround)
+	opts.suite.Step(`^the balance of (\w+) using the wallet backend should be (\d+) kcoins$`, walletBackendCtx.TheBalanceIsExactly)
+
 }
 
 func getFeatureName(feature string) string {

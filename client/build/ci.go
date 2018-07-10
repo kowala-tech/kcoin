@@ -127,14 +127,16 @@ var (
 	stablePackages = []string{
 		"./consensus",
 		"./consensus/tendermint",
-		"./contracts/consensus",
-		"./contracts/oracle",
 		"./knode/validator",
 		"./knode/genesis",
 		"./kcoinclient",
 		"./accounts",
 		"./core/types",
 		"./params",
+		"./contracts/bindings/token",
+		"./contracts/bindings/ownership",
+		"./contracts/bindings/oracle",
+		"./contracts/bindings/consensus",
 		// "../e2e/cluster",
 		// "../e2e/impl",
 	}
@@ -324,7 +326,7 @@ func doTest(cmdline []string) {
 	gotest := goTool("test", buildFlags(env)...)
 	// Test a single package at a time. CI builders are slow
 	// and some tests run into timeouts under load.
-	gotest.Args = append(gotest.Args, "-p", "1", "-race", "-v", "-cover")
+	gotest.Args = append(gotest.Args, "-p", "1", "-v", "-cover")
 
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
