@@ -145,6 +145,7 @@ pipeline:
       event: [push]
     
   build_docs:
+    group: build-artifacts
     image: kowalatech/mkdocs
     commands:
       - make build_docs
