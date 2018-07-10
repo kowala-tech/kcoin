@@ -5,11 +5,11 @@ package params
 const (
 	// BloomBitsBlocks is the number of blocks a single bloom bit section vector
 	// contains.
-	BloomBitsBlocks      uint64 = 4096
+	BloomBitsBlocks uint64 = 4096
 	// MaximumExtraDataSize maximum size extra data may be after Genesis.
-	MaximumExtraDataSize uint64 = 32   
+	MaximumExtraDataSize uint64 = 32
 	MaxCodeSize                 = 24576
 	EpochDuration        uint64 = 30000
 	// HDCoinType hierarchical deterministic wallet coin_type (SLIP-44)
-	HDCoinType                  = 91927009 
+	HDCoinType = 91927009
 )
