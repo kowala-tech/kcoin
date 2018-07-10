@@ -197,10 +197,7 @@ func (api *PublicTokenAPI) GetBalance(target common.Address) (*big.Int, error) {
 }
 
 func (api *PublicTokenAPI) Transfer(args TransferArgs) (common.Hash, error) {
-	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: args.From}
-
-	wallet, err := api.accountMgr.Find(account)
+	walletAccount, err := api.getWallet(args.From)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -209,12 +206,49 @@ func (api *PublicTokenAPI) Transfer(args TransferArgs) (common.Hash, error) {
 		args.Value = new(hexutil.Big)
 	}
 
-	walletAccount, err := accounts.NewWalletAccount(wallet, account)
+	return api.token.Transfer(walletAccount, *args.To, (*big.Int)(args.Value), args.Data, args.CustomFallback)
+}
+
+func (api *PublicTokenAPI) Mint(args TransferArgs, pass string) (common.Hash, error) {
+	walletAccount, err := api.getWallet(args.From)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	return api.token.Transfer(walletAccount, *args.To, (*big.Int)(args.Value), args.Data, args.CustomFallback)
+	if args.Value == nil {
+		args.Value = new(hexutil.Big)
+	}
+
+	account := accounts.Account{Address: args.From}
+
+	wallet, err := api.accountMgr.Find(account)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	transactOpts, err := wallet.NewKeyedTransactor(walletAccount.Account(), pass)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return api.token.Mint(transactOpts, *args.To, (*big.Int)(args.Value))
+}
+
+func (api *PublicTokenAPI) getWallet(addr common.Address) (accounts.WalletAccount, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: addr}
+
+	wallet, err := api.accountMgr.Find(account)
+	if err != nil {
+		return nil, err
+	}
+
+	walletAccount, err := accounts.NewWalletAccount(wallet, account)
+	if err != nil {
+		return nil, err
+	}
+
+	return walletAccount, nil
 }
 
 // PrivateAdminAPI is the collection of Kowala full node-related APIs

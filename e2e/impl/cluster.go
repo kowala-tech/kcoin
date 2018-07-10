@@ -124,13 +124,15 @@ func (ctx *Context) generateAccounts() error {
 	return nil
 }
 
+const AccountPass = "test"
+
 func (ctx *Context) newAccount() (*accounts.Account, error) {
-	acc, err := ctx.AccountsStorage.NewAccount("test")
+	acc, err := ctx.AccountsStorage.NewAccount(AccountPass)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := ctx.AccountsStorage.Unlock(acc, "test"); err != nil {
+	if err := ctx.AccountsStorage.Unlock(acc, AccountPass); err != nil {
 		return nil, err
 	}
 	return &acc, nil
@@ -230,9 +232,9 @@ func (ctx *Context) runRpc() error {
 
 func (ctx *Context) triggerGenesisValidation() error {
 	command := fmt.Sprintf(`
-		personal.unlockAccount(eth.coinbase, "test");
+		personal.unlockAccount(eth.coinbase, "%s");
 		eth.sendTransaction({from:eth.coinbase,to: "%v",value: 1})
-	`, ctx.kusdSeederAccount.Address.Hex())
+	`, AccountPass, ctx.kusdSeederAccount.Address.Hex())
 	_, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand(command))
 	if err != nil {
 		return err
@@ -294,7 +296,7 @@ func (ctx *Context) buildGenesis() error {
 		},
 		Governance: &genesis.GovernanceOpts{
 			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
-			Governors:        []string{"0x259be75d96876f2ada3d202722523e9cd4dd917d"},
+			Governors:        []string{ctx.mtokensSeederAccount.Address.Hex()},
 			NumConfirmations: 1,
 		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{

@@ -15,6 +15,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/e2e/cluster"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type ValidationContext struct {
@@ -249,6 +250,7 @@ func (ctx *ValidationContext) CurrentBlock() (uint64, error) {
 func (ctx *ValidationContext) makeExecFunc(command []string, response ...*cluster.ExecResponse) func() error {
 	return func() error {
 		res, err := ctx.globalCtx.nodeRunner.Exec(ctx.nodeID(), command)
+		fmt.Sprintf("Result of '%v': %s\n", command, spew.Sdump(res))
 		if err != nil {
 			if res != nil {
 				log.Debug(res.StdOut)
@@ -314,4 +316,9 @@ func getTokenBalance(at common.Address) []string {
 func transferTokens(transferArgs knode.TransferArgs) []string {
 	args, _ := json.Marshal(transferArgs)
 	return cluster.KcoinExecCommand(fmt.Sprintf("mtoken.transfer(%s)", string(args)))
+}
+
+func mintTokens(transferArgs knode.TransferArgs, pass string) []string {
+	args, _ := json.Marshal(transferArgs)
+	return cluster.KcoinExecCommand(fmt.Sprintf("mtoken.mint(%s, %q)", string(args), pass))
 }

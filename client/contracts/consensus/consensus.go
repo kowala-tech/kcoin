@@ -73,6 +73,26 @@ func (tkn *mUSD) Transfer(walletAccount accounts.WalletAccount, to common.Addres
 	return tx.Hash(), err
 }
 
+func (tkn *mUSD) Mint(opts *accounts.TransactOpts, to common.Address, value *big.Int) (common.Hash, error) {
+	tx, err := tkn.MiningToken.Mint(toBind(opts), to, value)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return tx.Hash(), err
+}
+
+func toBind(opts *accounts.TransactOpts) *bind.TransactOpts {
+	return &bind.TransactOpts{
+		From:     opts.From,
+		Nonce:    opts.Nonce,
+		Signer:   bind.SignerFn(opts.Signer),
+		Value:    opts.Value,
+		GasPrice: opts.GasPrice,
+		GasLimit: opts.GasLimit,
+		Context:  opts.Context,
+	}
+}
+
 func (tkn *mUSD) BalanceOf(target common.Address) (*big.Int, error) {
 	return tkn.MiningToken.BalanceOf(&bind.CallOpts{}, target)
 }
