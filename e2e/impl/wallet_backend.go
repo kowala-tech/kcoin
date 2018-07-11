@@ -31,6 +31,21 @@ func NewWalletBackendContext(parentCtx *Context) *WalletBackendContext {
 func (ctx *WalletBackendContext) Reset() {
 }
 
+func (ctx *WalletBackendContext) createRedis() (redisAddr string, err error) {
+	redisSpec, err := cluster.RedisSpec(ctx.globalCtx.nodeSuffix)
+	if err != nil {
+		return "", err
+	}
+	if err := ctx.globalCtx.nodeRunner.Run(redisSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+		return "", err
+	}
+	redisIP, err := ctx.globalCtx.nodeRunner.IP(redisSpec.ID)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%v:6379", redisIP), nil
+}
+
 func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 	rpcIP, err := ctx.globalCtx.nodeRunner.IP(ctx.globalCtx.rpcNodeID)
 	if err != nil {
@@ -38,18 +53,10 @@ func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 	}
 	rpcAddr := fmt.Sprintf("http://%v:%v", rpcIP, ctx.globalCtx.rpcPort)
 
-	redisSpec, err := cluster.RedisSpec(ctx.globalCtx.nodeSuffix)
+	redisAddr, err := ctx.createRedis()
 	if err != nil {
 		return err
 	}
-	if err := ctx.globalCtx.nodeRunner.Run(redisSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
-		return err
-	}
-	redisIP, err := ctx.globalCtx.nodeRunner.IP(redisSpec.ID)
-	if err != nil {
-		return err
-	}
-	redisAddr := fmt.Sprintf("%v:6379", redisIP)
 
 	nsqlookupdSpec, err := cluster.NsqlookupdSpec(ctx.globalCtx.nodeSuffix)
 	if err != nil {
