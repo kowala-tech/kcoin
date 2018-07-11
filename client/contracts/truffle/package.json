@@ -23,9 +23,6 @@
   "license": "MIT",
   "homepage": "https://github.com/kowala-tech/kcoin.git#readme",
   "devDependencies": {
-    "chai": "^4.1.2",
-    "chai-as-promised": "^7.1.1",
-    "chai-bignumber": "^2.0.2",
     "eslint": "^4.19.1",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-plugin-import": "^2.11.0",
@@ -35,6 +32,9 @@
   },
   "dependencies": {
     "bluebird": "^3.5.1",
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignumber": "^2.0.2",
     "ethereumjs-abi": "^0.6.5",
     "graceful-fs": "^4.1.11",
     "lodash": "^4.17.10",

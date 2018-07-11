@@ -1,16 +1,19 @@
 /* global artifacts, contract, it, describe, beforeEach, web3, assert */
-/* eslint no-unused-expressions: 0 */
+/* eslint no-unused-expressions: 1 */
+/* eslint consistent-return: 0 */
+/* eslint-disable max-len */
+
 
 const ENS = artifacts.require('ENSRegistry.sol');
 const PublicResolver = artifacts.require('PublicResolver.sol');
 
-const utils = require('./helpers/Utils.js');
+const utils = require('../helpers/Utils.js');
 const namehash = require('eth-ens-namehash');
 
 contract('PublicResolver', (accounts) => {
   let node;
-  let ens,
-    resolver;
+  let ens;
+  let resolver;
 
   beforeEach(async () => {
     node = namehash('eth');

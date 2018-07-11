@@ -1,15 +1,17 @@
 /* global artifacts, contract, it, describe, beforeEach, assert, web3 */
-/* eslint no-unused-expressions: 0 */
+/* eslint no-unused-expressions: 1 */
+/* eslint consistent-return: 0 */
+/* eslint-disable max-len */
 
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
 const ENS = artifacts.require('ENSRegistry.sol');
 
-const utils = require('./helpers/Utils.js');
+const utils = require('../helpers/Utils.js');
 const namehash = require('eth-ens-namehash');
 
 contract('FIFSRegistrar', (accounts) => {
-  let registrar,
-    ens;
+  let registrar;
+  let ens;
 
   beforeEach(async () => {
     ens = await ENS.new();
