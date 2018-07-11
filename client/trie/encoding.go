@@ -37,10 +37,9 @@ func hexToCompact(hex []byte) []byte {
 
 func compactToHex(compact []byte) []byte {
 	base := keybytesToHex(compact)
-	base = base[:len(base)-1]
-	// apply terminator flag
-	if base[0] >= 2 {
-		base = append(base, 16)
+	// delete terminator flag
+	if base[0] < 2 {
+		base = base[:len(base)-1]
 	}
 	// apply odd flag
 	chop := 2 - base[0]&1
@@ -67,7 +66,7 @@ func hexToKeybytes(hex []byte) []byte {
 	if len(hex)&1 != 0 {
 		panic("can't convert hex key of odd length")
 	}
-	key := make([]byte, (len(hex)+1)/2)
+	key := make([]byte, len(hex)/2)
 	decodeNibbles(hex, key)
 	return key
 }

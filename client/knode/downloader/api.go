@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	kowala "github.com/kowala-tech/kcoin/client"
+	kcoin "github.com/kowala-tech/kcoin/client"
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
@@ -35,7 +35,7 @@ func NewPublicDownloaderAPI(d *Downloader, m *event.TypeMux) *PublicDownloaderAP
 	return api
 }
 
-// eventLoop runs an loop until the event mux closes. It will install and uninstall new
+// eventLoop runs a loop until the event mux closes. It will install and uninstall new
 // sync subscriptions and broadcasts sync status updates to the installed sync subscriptions.
 func (api *PublicDownloaderAPI) eventLoop() {
 	var (
@@ -106,7 +106,7 @@ func (api *PublicDownloaderAPI) Syncing(ctx context.Context) (*rpc.Subscription,
 // SyncingResult provides information about the current synchronisation status for this node.
 type SyncingResult struct {
 	Syncing bool                `json:"syncing"`
-	Status  kowala.SyncProgress `json:"status"`
+	Status  kcoin.SyncProgress `json:"status"`
 }
 
 // uninstallSyncSubscriptionRequest uninstalles a syncing subscription in the API event loop.

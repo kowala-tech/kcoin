@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
 	"github.com/kowala-tech/kcoin/client/console"
@@ -96,7 +99,20 @@ func localConsole(ctx *cli.Context) error {
 // console to it.
 func remoteConsole(ctx *cli.Context) error {
 	// Attach to a remotely running kcoin instance and start the JavaScript console
-	client, err := dialRPC(ctx.Args().First())
+	endpoint := ctx.Args().First()
+	if endpoint == "" {
+		path := node.DefaultDataDir()
+		if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
+			path = ctx.GlobalString(utils.DataDirFlag.Name)
+		}
+		if path != "" {
+			if ctx.GlobalBool(utils.TestnetFlag.Name) {
+				path = filepath.Join(path, "testnet")
+			}
+		}
+		endpoint = fmt.Sprintf("%s/kcoin.ipc", path)
+	}
+	client, err := dialRPC(endpoint)
 	if err != nil {
 		utils.Fatalf("Unable to attach to remote kcoin: %v", err)
 	}
@@ -174,7 +190,7 @@ func ephemeralConsole(ctx *cli.Context) error {
 	}
 	// Wait for pending callbacks, but stop for Ctrl-C.
 	abort := make(chan os.Signal, 1)
-	signal.Notify(abort, os.Interrupt)
+	signal.Notify(abort, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		<-abort

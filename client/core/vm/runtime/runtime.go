@@ -24,7 +24,6 @@ type Config struct {
 	GasLimit    uint64
 	GasPrice    *big.Int
 	Value       *big.Int
-	DisableJit  bool // "disable" so it's enabled by default
 	Debug       bool
 	EVMConfig   vm.Config
 
@@ -66,8 +65,7 @@ func setDefaults(cfg *Config) {
 // It returns the EVM's return value, the new state and an error if it failed.
 //
 // Executes sets up a in memory, temporarily, environment for the execution of
-// the given code. It enabled the JIT by default and make sure that it's restored
-// to it's original state afterwards.
+// the given code. It makes sure that it's restored to it's original state afterwards.
 func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	if cfg == nil {
 		cfg = new(Config)
@@ -75,11 +73,10 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db, _ := kcoindb.NewMemDatabase()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(kcoindb.NewMemDatabase()))
 	}
 	var (
-		address = common.StringToAddress("contract")
+		address = common.BytesToAddress([]byte("contract"))
 		vmenv   = NewEnv(cfg)
 		sender  = vm.AccountRef(cfg.Origin)
 	)
@@ -89,7 +86,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 	// Call the code with the given configuration.
 	ret, _, err := vmenv.Call(
 		sender,
-		common.StringToAddress("contract"),
+		common.BytesToAddress([]byte("contract")),
 		input,
 		cfg.GasLimit,
 		cfg.Value,
@@ -106,8 +103,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db, _ := kcoindb.NewMemDatabase()
-		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(db))
+		cfg.State, _ = state.New(common.Hash{}, state.NewDatabase(kcoindb.NewMemDatabase()))
 	}
 	var (
 		vmenv  = NewEnv(cfg)
