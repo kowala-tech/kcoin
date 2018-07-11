@@ -468,11 +468,11 @@ func (ec *Client) PendingCallContract(ctx context.Context, msg kowala.CallMsg) (
 // SuggestGasPrice retrieves the currently suggested gas price to allow a timely
 // execution of a transaction.
 func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	var hex hexutil.Big
+	var hex big.Int
 	if err := ec.c.CallContext(ctx, &hex, "eth_gasPrice"); err != nil {
 		return nil, err
 	}
-	return (*big.Int)(&hex), nil
+	return &hex, nil
 }
 
 // EstimateGas tries to estimate the gas needed to execute a specific transaction based on
