@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/rawdb"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
@@ -187,7 +188,10 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainE
 			if header.ParentHash != prevHash {
 				// Reorg to the common ancestor (might not exist in light sync mode, skip reorg then)
 				// TODO(karalabe, zsfelfoldi): This seems a bit brittle, can we detect this case explicitly?
-				if h := FindCommonAncestor(c.chainDb, prevHeader, header); h != nil {
+
+				// TODO(karalabe): This operation is expensive and might block, causing the event system to
+				// potentially also lock up. We need to do with on a different thread somehow.
+				if h := rawdb.FindCommonAncestor(c.chainDb, prevHeader, header); h != nil {
 					c.newHead(h.Number.Uint64(), true)
 				}
 			}
@@ -214,7 +218,7 @@ func (c *ChainIndexer) newHead(head uint64, reorg bool) {
 		if changed < c.storedSections {
 			c.setValidSections(changed)
 		}
-		// Update the new head number to te finalized section end and notify children
+		// Update the new head number to the finalized section end and notify children
 		head = changed * c.sectionSize
 
 		if head < c.cascadedHead {
@@ -330,11 +334,11 @@ func (c *ChainIndexer) processSection(section uint64, lastHead common.Hash) (com
 	}
 
 	for number := section * c.sectionSize; number < (section+1)*c.sectionSize; number++ {
-		hash := GetCanonicalHash(c.chainDb, number)
+		hash := rawdb.ReadCanonicalHash(c.chainDb, number)
 		if hash == (common.Hash{}) {
 			return common.Hash{}, fmt.Errorf("canonical block #%d unknown", number)
 		}
-		header := GetHeader(c.chainDb, hash, number)
+		header := rawdb.ReadHeader(c.chainDb, hash, number)
 		if header == nil {
 			return common.Hash{}, fmt.Errorf("block #%d [%x…] not found", number, hash[:4])
 		} else if header.ParentHash != lastHead {

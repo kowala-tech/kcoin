@@ -51,7 +51,7 @@ const (
 	discoverExpireConst = time.Minute * 20
 	// known entry selection weight is dropped by a factor of exp(-failDropLn) after
 	// each unsuccessful connection (restored after a successful one)
-	failDropLn = 0.1
+	failDropLn          = 0.1
 	pstatReturnToMeanTC = time.Hour
 	// node address selection weight is dropped by a factor of exp(-addrFailDropLn) after
 	// each unsuccessful connection (restored after a successful one)
@@ -73,7 +73,7 @@ type serverPool struct {
 	db     kcoindb.Database
 	dbKey  []byte
 	server *p2p.Server
-	quit   chan struct{}
+	quit   chan bool
 	wg     *sync.WaitGroup
 	connWg sync.WaitGroup
 
@@ -95,7 +95,7 @@ type serverPool struct {
 }
 
 // newServerPool creates a new serverPool instance
-func newServerPool(db kcoindb.Database, quit chan struct{}, wg *sync.WaitGroup) *serverPool {
+func newServerPool(db kcoindb.Database, quit chan bool, wg *sync.WaitGroup) *serverPool {
 	pool := &serverPool{
 		db:           db,
 		quit:         quit,
@@ -218,7 +218,7 @@ func (pool *serverPool) disconnect(entry *poolEntry) {
 }
 
 const (
-	pseBlockDelay      = iota
+	pseBlockDelay = iota
 	pseResponseTime
 	pseResponseTimeout
 )
@@ -582,7 +582,7 @@ func (e *discoveredEntry) Weight() int64 {
 	if t <= discoverExpireStart {
 		return 1000000000
 	} else {
-		return int64(1000000000 * math.Exp(-float64(t - discoverExpireStart)/float64(discoverExpireConst)))
+		return int64(1000000000 * math.Exp(-float64(t-discoverExpireStart)/float64(discoverExpireConst)))
 	}
 }
 
@@ -642,7 +642,7 @@ func (s *poolStats) init(sum, weight float64) {
 // recalc recalculates recent value return-to-mean and long term average
 func (s *poolStats) recalc() {
 	now := mclock.Now()
-	s.recent = s.avg + (s.recent-s.avg)*math.Exp(-float64(now - s.lastRecalc)/float64(pstatReturnToMeanTC))
+	s.recent = s.avg + (s.recent-s.avg)*math.Exp(-float64(now-s.lastRecalc)/float64(pstatReturnToMeanTC))
 	if s.sum == 0 {
 		s.avg = 0
 	} else {

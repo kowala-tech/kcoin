@@ -41,6 +41,7 @@ func TestHDPathParsing(t *testing.T) {
 		{"128", DerivationPath{0x80000000 + 44, 0x80000000 + 91927009, 0x80000000 + 0, 0, 128}},
 		{"0'", DerivationPath{0x80000000 + 44, 0x80000000 + 91927009, 0x80000000 + 0, 0, 0x80000000 + 0}},
 		{"128'", DerivationPath{0x80000000 + 44, 0x80000000 + 91927009, 0x80000000 + 0, 0, 0x80000000 + 128}},
+		{"2147483648", DerivationPath{0x80000000 + 44, 0x80000000 + 91927009, 0x80000000 + 0, 0, 0x80000000 + 0}},
 
 		// Hexadecimal absolute derivation paths
 		{"m/0x2C'/0x57ab1e1'/0x00'/0x00", DerivationPath{0x80000000 + 44, 0x80000000 + 91927009, 0x80000000 + 0, 0}},

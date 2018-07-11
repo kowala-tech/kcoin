@@ -11,6 +11,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/crypto/sha3"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p/discover"
 )
 
@@ -190,6 +191,7 @@ func TestServerTaskScheduling(t *testing.T) {
 		quit:    make(chan struct{}),
 		ntab:    fakeTable{},
 		running: true,
+		log:     log.New(),
 	}
 	srv.loopWG.Add(1)
 	go func() {
@@ -230,7 +232,12 @@ func TestServerManyTasks(t *testing.T) {
 	}
 
 	var (
-		srv        = &Server{quit: make(chan struct{}), ntab: fakeTable{}, running: true}
+		srv = &Server{
+			quit:    make(chan struct{}),
+			ntab:    fakeTable{},
+			running: true,
+			log:     log.New(),
+		}
 		done       = make(chan *testTask)
 		start, end = 0, 0
 	)
