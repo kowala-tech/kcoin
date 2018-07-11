@@ -43,3 +43,6 @@ godog.test
 
 /client/contracts/bindings/ownership/build/
 /client/contracts/bindings/ownership/gen_multisig.go
+
+# Docs
+docs/site
