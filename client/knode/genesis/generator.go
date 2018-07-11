@@ -28,11 +28,7 @@ type generator struct {
 }
 
 func NewGenerator() *generator {
-	db, err := kcoindb.NewMemDatabase()
-	if err != nil {
-		panic(err)
-	}
-	stateDB, err := state.New(common.Hash{}, state.NewDatabase(db))
+	stateDB, err := state.New(common.Hash{}, state.NewDatabase(kcoindb.NewMemDatabase()))
 	if err != nil {
 		panic(err)
 	}

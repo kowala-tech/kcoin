@@ -11,29 +11,29 @@ type peerDropFn func(id string)
 
 // dataPack is a data message returned by a peer for some query.
 type dataPack interface {
-	PeerId() string
+	PeerID() string
 	Items() int
 	Stats() string
 }
 
 // headerPack is a batch of block headers returned by a peer.
 type headerPack struct {
-	peerId  string
+	peerID  string
 	headers []*types.Header
 }
 
-func (p *headerPack) PeerId() string { return p.peerId }
+func (p *headerPack) PeerID() string { return p.peerID }
 func (p *headerPack) Items() int     { return len(p.headers) }
 func (p *headerPack) Stats() string  { return fmt.Sprintf("%d", len(p.headers)) }
 
 // bodyPack is a batch of block bodies returned by a peer.
 type bodyPack struct {
-	peerId       string
+	peerID       string
 	commits      []*types.Commit
 	transactions [][]*types.Transaction
 }
 
-func (p *bodyPack) PeerId() string { return p.peerId }
+func (p *bodyPack) PeerID() string { return p.peerID }
 func (p *bodyPack) Items() int {
 	// @TODO (rgeraldes) - send commit at a different timing?
 	// It's probably not a good move since the number of empty blocks should be small.
@@ -47,20 +47,20 @@ func (p *bodyPack) Stats() string { return fmt.Sprintf("%d", len(p.transactions)
 
 // receiptPack is a batch of receipts returned by a peer.
 type receiptPack struct {
-	peerId   string
+	peerID   string
 	receipts [][]*types.Receipt
 }
 
-func (p *receiptPack) PeerId() string { return p.peerId }
+func (p *receiptPack) PeerID() string { return p.peerID }
 func (p *receiptPack) Items() int     { return len(p.receipts) }
 func (p *receiptPack) Stats() string  { return fmt.Sprintf("%d", len(p.receipts)) }
 
 // statePack is a batch of states returned by a peer.
 type statePack struct {
-	peerId string
+	peerID string
 	states [][]byte
 }
 
-func (p *statePack) PeerId() string { return p.peerId }
+func (p *statePack) PeerID() string { return p.peerID }
 func (p *statePack) Items() int     { return len(p.states) }
 func (p *statePack) Stats() string  { return fmt.Sprintf("%d", len(p.states)) }
