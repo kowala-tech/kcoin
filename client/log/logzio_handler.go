@@ -14,7 +14,7 @@ func NewLogzioHandler(token string) (*logzioHandler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &logzioHandler{sender, JsonFormat()}, nil
+	return &logzioHandler{sender, JSONFormat()}, nil
 }
 
 func (l *logzioHandler) Log(r *Record) error {

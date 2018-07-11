@@ -107,7 +107,7 @@ func toBind(opts *accounts.TransactOpts) *bind.TransactOpts {
 		Signer:   bind.SignerFn(opts.Signer),
 		Value:    opts.Value,
 		GasPrice: opts.GasPrice,
-		GasLimit: opts.GasLimit,
+		GasLimit: opts.GasLimit.Uint64(),
 		Context:  opts.Context,
 	}
 }

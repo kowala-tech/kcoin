@@ -67,9 +67,7 @@ func toCallArgs(msg kowala.CallMsg) kcoinapi.CallArgs {
 		To:   msg.To,
 		From: msg.From,
 		Data: msg.Data,
-	}
-	if msg.Gas != nil {
-		args.Gas = hexutil.Big(*msg.Gas)
+		Gas:  hexutil.Uint64(msg.Gas),
 	}
 	if msg.GasPrice != nil {
 		args.GasPrice = hexutil.Big(*msg.GasPrice)
@@ -108,9 +106,13 @@ func (b *ContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error)
 // the backend blockchain. There is no guarantee that this is the true gas limit
 // requirement as other transactions may be added or removed by validators, but it
 // should provide a basis for setting a reasonable default.
-func (b *ContractBackend) EstimateGas(ctx context.Context, msg kowala.CallMsg) (*big.Int, error) {
+func (b *ContractBackend) EstimateGas(ctx context.Context, msg kowala.CallMsg) (uint64, error) {
 	out, err := b.bcapi.EstimateGas(ctx, toCallArgs(msg))
-	return out.ToInt(), err
+	if err != nil {
+		return 0, err
+	}
+
+	return hexutil.MustDecodeUint64(out.String()), nil
 }
 
 // SendTransaction implements bind.ContractTransactor injects the transaction
@@ -119,4 +121,12 @@ func (b *ContractBackend) SendTransaction(ctx context.Context, tx *types.Transac
 	raw, _ := rlp.EncodeToBytes(tx)
 	_, err := b.txapi.SendRawTransaction(ctx, raw)
 	return err
+}
+
+func (b *ContractBackend) FilterLogs(ctx context.Context, query kowala.FilterQuery) ([]types.Log, error) {
+	return nil, nil
+}
+
+func (b *ContractBackend) SubscribeFilterLogs(ctx context.Context, query kowala.FilterQuery, ch chan<- types.Log) (kowala.Subscription, error) {
+	return nil, nil
 }

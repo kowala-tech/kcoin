@@ -149,7 +149,7 @@ func (k *kcoin) wrapBlock(block *types.Block) *Block {
 			Amount:      tx.Value().Int64(),
 			Hash:        tx.Hash().String(),
 			Timestamp:   block.Time().Int64(),
-			GasUsed:     block.GasUsed().Int64(),
+			GasUsed:     int64(block.GasUsed()),
 			GasPrice:    tx.GasPrice().Int64(),
 			BlockHeight: block.Number().Int64(),
 		}

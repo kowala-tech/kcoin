@@ -1,8 +1,6 @@
 package runtime
 
 import (
-	"math/big"
-
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm"
@@ -18,7 +16,7 @@ func NewEnv(cfg *Config) *vm.EVM {
 		Coinbase:    cfg.Coinbase,
 		BlockNumber: cfg.BlockNumber,
 		Time:        cfg.Time,
-		GasLimit:    new(big.Int).SetUint64(cfg.GasLimit),
+		GasLimit:    cfg.GasLimit,
 		GasPrice:    cfg.GasPrice,
 	}
 
