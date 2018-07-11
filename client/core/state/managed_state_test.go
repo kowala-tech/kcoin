@@ -10,8 +10,7 @@ import (
 var addr = common.BytesToAddress([]byte("test"))
 
 func create() (*ManagedState, *account) {
-	db, _ := kcoindb.NewMemDatabase()
-	statedb, _ := New(common.Hash{}, NewDatabase(db))
+	statedb, _ := New(common.Hash{}, NewDatabase(kcoindb.NewMemDatabase()))
 	ms := ManageState(statedb)
 	ms.StateDB.SetNonce(addr, 100)
 	ms.accounts[addr] = newAccount(ms.StateDB.getStateObject(addr))

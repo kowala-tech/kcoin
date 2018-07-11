@@ -27,6 +27,12 @@
 			"revisionTime": "2017-02-15T19:58:14Z"
 		},
 		{
+			"checksumSHA1": "st4vb0GmDeoKbsfxdpNZ2MPl76M=",
+			"path": "github.com/StackExchange/wmi",
+			"revision": "cdffdb33acae0e14efff2628f9bae377b597840e",
+			"revisionTime": "2018-04-12T20:51:11Z"
+		},
+		{
 			"checksumSHA1": "USkefO0g1U9mr+8hagv3fpSkrxg=",
 			"path": "github.com/aristanetworks/goarista/monotime",
 			"revision": "ea17b1a17847fb6e4c0a91de0b674704693469b0",
@@ -75,10 +81,42 @@
 			"revisionTime": "2018-06-25T18:44:42Z"
 		},
 		{
+			"path": "github.com/dougEfresh/logzio-go",
+			"revision": ""
+		},
+		{
+			"path": "github.com/dougEfresh/logzio-go/test",
+			"revision": ""
+		},
+		{
+			"checksumSHA1": "jElNoLEe7m/iaoF1vYIHyNaS2SE=",
+			"path": "github.com/elastic/gosigar",
+			"revision": "37f05ff46ffa7a825d1b24cf2b62d4a4c1a9d2e8",
+			"revisionTime": "2018-03-30T10:04:40Z"
+		},
+		{
+			"checksumSHA1": "qDsgp2kAeI9nhj565HUScaUyjU4=",
+			"path": "github.com/elastic/gosigar/sys/windows",
+			"revision": "37f05ff46ffa7a825d1b24cf2b62d4a4c1a9d2e8",
+			"revisionTime": "2018-03-30T10:04:40Z"
+		},
+		{
 			"checksumSHA1": "7oFpbmDfGobwKsFLIf6wMUvVoKw=",
 			"path": "github.com/fatih/color",
 			"revision": "5ec5d9d3c2cf82e9688b34e9bc27a94d616a7193",
 			"revisionTime": "2017-02-09T08:00:14Z"
+		},
+		{
+			"checksumSHA1": "15n85vfsLYGw69q85Y5kcteAgzs=",
+			"path": "github.com/fjl/memsize",
+			"revision": "f6d5545993d68e9e42df43eb57958f898dea3623",
+			"revisionTime": "2018-04-27T08:36:37Z"
+		},
+		{
+			"checksumSHA1": "Z13QAYTqeW4cTiglkc2F05gWLu4=",
+			"path": "github.com/fjl/memsize/memsizeui",
+			"revision": "ca190fb6ffbc076ff49197b7168a760f30182d2e",
+			"revisionTime": "2018-04-18T12:24:29Z"
 		},
 		{
 			"checksumSHA1": "7NP1qUMF8Kx1y0zANxx0e+oq9Oo=",
@@ -91,6 +129,18 @@
 			"path": "github.com/gizak/termui",
 			"revision": "991cd3d3809135dc24daf6188dc6edcaf3d7d2d9",
 			"revisionTime": "2017-01-17T22:23:42Z"
+		},
+		{
+			"checksumSHA1": "Kqv7bA4oJG0nPwQvGWDwGGaKONo=",
+			"path": "github.com/go-ole/go-ole",
+			"revision": "7a0fa49edf48165190530c675167e2f319a05268",
+			"revisionTime": "2018-06-25T08:58:08Z"
+		},
+		{
+			"checksumSHA1": "PArleDBtadu2qO4hJwHR8a3IOTA=",
+			"path": "github.com/go-ole/go-ole/oleutil",
+			"revision": "7a0fa49edf48165190530c675167e2f319a05268",
+			"revisionTime": "2018-06-25T08:58:08Z"
 		},
 		{
 			"checksumSHA1": "KZ3QD2QgUS4RcoKiA3mn5pSlJxQ=",
@@ -273,6 +323,24 @@
 			"revisionTime": "2014-10-17T20:07:13Z"
 		},
 		{
+			"checksumSHA1": "Op+vCwiOTLgCMDFrTO98Hwum6hg=",
+			"path": "github.com/influxdata/influxdb/client",
+			"revision": "a55dd0f50edd14c9c798d3564189eb4f53914309",
+			"revisionTime": "2017-10-09T17:24:46Z"
+		},
+		{
+			"checksumSHA1": "8bMEm2PdAkKaqpLFilmT9MC1j1c=",
+			"path": "github.com/influxdata/influxdb/models",
+			"revision": "bed425313b399096d5a35b0c65c6a9e4270474f5",
+			"revisionTime": "2018-07-10T05:05:31Z"
+		},
+		{
+			"checksumSHA1": "Z0Bb5PWa5WL/j5Dm2KJCLGn1l7U=",
+			"path": "github.com/influxdata/influxdb/pkg/escape",
+			"revision": "bed425313b399096d5a35b0c65c6a9e4270474f5",
+			"revisionTime": "2018-07-10T05:05:31Z"
+		},
+		{
 			"checksumSHA1": "vTGKMIfiMwz43y5bsgx9PrL+AVw=",
 			"path": "github.com/jackpal/go-nat-pmp",
 			"revision": "1fa385a6f45828c83361136b45b1a21a12139493",
@@ -350,6 +418,10 @@
 			"path": "github.com/mitchellh/mapstructure",
 			"revision": "00c29f56e2386353d58c599509e8dc3801b0d716",
 			"revisionTime": "2018-02-20T23:01:11Z"
+		},
+		{
+			"path": "github.com/naoina/go-stringutil",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "2gmvVTDCks8cPhpmyDlvm0sbrXE=",
@@ -488,6 +560,18 @@
 			"path": "github.com/rcrowley/go-metrics",
 			"revision": "8732c616f52954686704c8645fe1a9d59e9df7c1",
 			"revisionTime": "2018-01-25T23:19:41Z"
+		},
+		{
+			"path": "github.com/rcrowley/go-metrics/cmd/metrics-bench",
+			"revision": ""
+		},
+		{
+			"path": "github.com/rcrowley/go-metrics/cmd/metrics-example",
+			"revision": ""
+		},
+		{
+			"path": "github.com/rcrowley/go-metrics/cmd/never-read",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "q/d9nXRQYKEJ/EWn+5y6jL8rPGs=",
@@ -814,6 +898,12 @@
 			"revisionTime": "2018-06-25T06:32:13Z"
 		},
 		{
+			"checksumSHA1": "P8Y8GFwxybTfltfh8Q0lHqlEYIM=",
+			"path": "golang.org/x/sys/windows",
+			"revision": "1b2967e3c290b7c545b3db0deeda16e9be4f98a2",
+			"revisionTime": "2018-07-06T09:56:39Z"
+		},
+		{
 			"checksumSHA1": "Mr4ur60bgQJnQFfJY0dGtwWwMPE=",
 			"path": "golang.org/x/text/encoding",
 			"revision": "5cec4b58c438bd98288aeb248bab2c1840713d21",
@@ -956,6 +1046,12 @@
 			"path": "gopkg.in/natefinch/npipe.v2",
 			"revision": "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
 			"revisionTime": "2016-06-21T03:49:01Z"
+		},
+		{
+			"checksumSHA1": "vndxs5Tv09/8S+Dr2PBAiM557lI=",
+			"path": "gopkg.in/olebedev/go-duktape.v3",
+			"revision": "abf0ba0be5d5d36b1f9266463cc320b9a5ab224e",
+			"revisionTime": "2018-03-02T12:15:09Z"
 		},
 		{
 			"checksumSHA1": "4BwmmgQUhWtizsR2soXND0nqZ1I=",

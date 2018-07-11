@@ -15,7 +15,7 @@ import (
 
 const (
 	timeFormat     = "2006-01-02T15:04:05-0700"
-	termTimeFormat = "01-02|15:04:05"
+	termTimeFormat = "01-02|15:04:05.000"
 	floatFormat    = 'f'
 	termMsgJust    = 40
 )
@@ -166,11 +166,6 @@ func logfmt(buf *bytes.Buffer, ctx []interface{}, color int, term bool) {
 		k, ok := ctx[i].(string)
 		v := formatLogfmtValue(ctx[i+1], term)
 		if !ok {
-			//  ignore empty errors
-			if k == "" {
-				buf.WriteByte('\n')
-				return
-			}
 			k, v = errorKey, formatLogfmtValue(k, term)
 		}
 
@@ -201,16 +196,16 @@ func logfmt(buf *bytes.Buffer, ctx []interface{}, color int, term bool) {
 	buf.WriteByte('\n')
 }
 
-// JsonFormat formats log records as JSON objects separated by newlines.
-// It is the equivalent of JsonFormatEx(false, true).
-func JsonFormat() Format {
-	return JsonFormatEx(false, true)
+// JSONFormat formats log records as JSON objects separated by newlines.
+// It is the equivalent of JSONFormatEx(false, true).
+func JSONFormat() Format {
+	return JSONFormatEx(false, true)
 }
 
-// JsonFormatEx formats log records as JSON objects. If pretty is true,
+// JSONFormatEx formats log records as JSON objects. If pretty is true,
 // records will be pretty-printed. If lineSeparated is true, records
 // will be logged with a new line between each record.
-func JsonFormatEx(pretty, lineSeparated bool) Format {
+func JSONFormatEx(pretty, lineSeparated bool) Format {
 	jsonMarshal := json.Marshal
 	if pretty {
 		jsonMarshal = func(v interface{}) ([]byte, error) {
@@ -228,13 +223,9 @@ func JsonFormatEx(pretty, lineSeparated bool) Format {
 		for i := 0; i < len(r.Ctx); i += 2 {
 			k, ok := r.Ctx[i].(string)
 			if !ok {
-				//  ignore empty errors
-				if k == "" {
-					return []byte{'\n'}
-				}
 				props[errorKey] = fmt.Sprintf("%+v is not a string key", r.Ctx[i])
 			}
-			props[k] = formatJsonValue(r.Ctx[i+1])
+			props[k] = formatJSONValue(r.Ctx[i+1])
 		}
 
 		b, err := jsonMarshal(props)
@@ -279,7 +270,7 @@ func formatShared(value interface{}) (result interface{}) {
 	}
 }
 
-func formatJsonValue(value interface{}) interface{} {
+func formatJSONValue(value interface{}) interface{} {
 	value = formatShared(value)
 	switch value.(type) {
 	case int, int8, int16, int32, int64, float32, float64, uint, uint8, uint16, uint32, uint64, string:

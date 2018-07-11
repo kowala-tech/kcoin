@@ -13,6 +13,7 @@ import (
 
 var _ = (*votedataMarshalling)(nil)
 
+// MarshalJSON marshals as JSON.
 func (v votedata) MarshalJSON() ([]byte, error) {
 	type votedata struct {
 		BlockHash   common.Hash    `json:"blockHash"    gencodec:"required"`
@@ -34,6 +35,7 @@ func (v votedata) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&enc)
 }
 
+// UnmarshalJSON unmarshals from JSON.
 func (v *votedata) UnmarshalJSON(input []byte) error {
 	type votedata struct {
 		BlockHash   *common.Hash    `json:"blockHash"    gencodec:"required"`

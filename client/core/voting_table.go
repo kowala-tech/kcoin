@@ -38,7 +38,7 @@ func NewVotingTable(voteType types.VoteType, voters types.Voters, majority Quoru
 
 func (table *votingTable) Add(vote types.AddressVote) error {
 	if !table.isVoter(vote.Address()) {
-		return fmt.Errorf("voter address not found in voting table: %#x", vote.Address().Hash().Str())
+		return fmt.Errorf("voter address not found in voting table: %#x", vote.Address().Hash())
 	}
 
 	if table.isDuplicate(vote.Vote()) {
