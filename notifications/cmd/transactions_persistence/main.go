@@ -1,15 +1,15 @@
 package main
 
 import (
+	"github.com/sirupsen/logrus"
 	"os"
-		"github.com/sirupsen/logrus"
 
 	"github.com/go-redis/redis"
 	"github.com/yourheropaul/inj"
 
-		"github.com/kowala-tech/kcoin/notifications/core"
+	"github.com/kowala-tech/kcoin/notifications/core"
 	"github.com/kowala-tech/kcoin/notifications/environment"
-		"github.com/kowala-tech/kcoin/notifications/persistence"
+	"github.com/kowala-tech/kcoin/notifications/persistence"
 	"github.com/kowala-tech/kcoin/notifications/pubsub"
 	"os/signal"
 	"syscall"
