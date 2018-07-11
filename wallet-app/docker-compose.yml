@@ -1,0 +1,24 @@
+version: '2'
+
+services:
+  kowala-app-web:
+    image: kowala-app-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    volumes:
+      - ./:/app
+    entrypoint: "tail -f /dev/null"
+
+  kowala-app-web-tests:
+    image: kowala-app-web-tests
+    depends_on:
+        - kowala-app-web
+    build:
+        context: .
+        dockerfile: Dockerfile.cucumber
+    volumes:
+        - "./:/app"
+    entrypoint: "tail -f /dev/null"

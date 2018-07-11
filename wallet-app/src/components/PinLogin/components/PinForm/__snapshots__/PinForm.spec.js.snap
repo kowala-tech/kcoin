@@ -1,0 +1,17 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`PinForm it should match the snapshot 1`] = `
+<PinForm
+  classes={
+    Object {
+      "input": "PinForm-input-2",
+      "pinDigit": "PinForm-pinDigit-3",
+      "root": "PinForm-root-1",
+    }
+  }
+  error={false}
+  loading={false}
+  onSubmit={[MockFunction]}
+  username="test-user"
+/>
+`;

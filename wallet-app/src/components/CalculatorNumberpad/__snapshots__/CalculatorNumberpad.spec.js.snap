@@ -1,0 +1,18 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`CalculatorNumberpad it should match the snapshot 1`] = `
+<CalculatorNumberpad
+  classes={
+    Object {
+      "digitKey": "CalculatorNumberpad-digitKey-5",
+      "digitKeys": "CalculatorNumberpad-digitKeys-4",
+      "inputKeys": "CalculatorNumberpad-inputKeys-3",
+      "keypad": "CalculatorNumberpad-keypad-2",
+      "operatorKey": "CalculatorNumberpad-operatorKey-7",
+      "operatorKeys": "CalculatorNumberpad-operatorKeys-6",
+      "root": "CalculatorNumberpad-root-1",
+    }
+  }
+  handleChange={[MockFunction]}
+/>
+`;
