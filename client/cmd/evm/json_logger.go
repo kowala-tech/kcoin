@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"io"
+	"math/big"
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
@@ -31,8 +32,14 @@ type JSONLogger struct {
 	cfg     *vm.LogConfig
 }
 
+// NewJSONLogger creates a new EVM tracer that prints execution steps as JSON objects
+// into the provided stream.
 func NewJSONLogger(cfg *vm.LogConfig, writer io.Writer) *JSONLogger {
 	return &JSONLogger{json.NewEncoder(writer), cfg}
+}
+
+func (l *JSONLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
+	return nil
 }
 
 // CaptureState outputs state information on the logger.
@@ -54,6 +61,11 @@ func (l *JSONLogger) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cos
 		log.Stack = stack.Data()
 	}
 	return l.encoder.Encode(log)
+}
+
+// CaptureFault outputs state information on the logger.
+func (l *JSONLogger) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+	return nil
 }
 
 // CaptureEnd is triggered at end of execution.

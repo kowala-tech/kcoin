@@ -131,7 +131,7 @@ func TestCompression(t *testing.T) {
 	in = hexutil.MustDecode("0xdf7070533534333636313639343638373532313536346c1bc33339343837313070706336343035336336346c65fefb3930393233383838ac2f65fefb")
 	out = hexutil.MustDecode("0xdf7070533534333636313639343638373532313536346c1bc33339343837313070706336343035336336346c65fefb3930393233383838ac2f65fefb")
 
-	if data := CompressBytes(in); !bytes.Equal(data, in) {
+	if data := CompressBytes(in); !bytes.Equal(data, out) {
 		t.Errorf("encoding mismatch for dense data: have %x, want %x", data, out)
 	}
 	if data, err := DecompressBytes(out, len(in)); err != nil || !bytes.Equal(data, in) {
