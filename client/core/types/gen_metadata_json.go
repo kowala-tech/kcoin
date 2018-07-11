@@ -12,6 +12,7 @@ import (
 
 var _ = (*MetadataMarshalling)(nil)
 
+// MarshalJSON marshals as JSON.
 func (m Metadata) MarshalJSON() ([]byte, error) {
 	type Metadata struct {
 		NChunks hexutil.Uint64 `json:"nchunks" gencodec:"required"`
@@ -23,6 +24,7 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&enc)
 }
 
+// UnmarshalJSON unmarshals from JSON.
 func (m *Metadata) UnmarshalJSON(input []byte) error {
 	type Metadata struct {
 		NChunks *hexutil.Uint64 `json:"nchunks" gencodec:"required"`

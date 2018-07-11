@@ -34,7 +34,7 @@ const (
 	// history request.
 	historyUpdateRange = 50
 
-	// txChanSize is the size of channel listening to TxPreEvent.
+	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
@@ -42,9 +42,9 @@ const (
 )
 
 type txPool interface {
-	// SubscribeTxPreEvent should return an event subscription of
-	// TxPreEvent and send events to the given channel.
-	SubscribeTxPreEvent(chan<- core.TxPreEvent) event.Subscription
+	// SubscribeNewTxsEvent should return an event subscription of
+	// NewTxsEvent and send events to the given channel.
+	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 }
 
 type blockChain interface {
@@ -133,8 +133,8 @@ func (s *Service) loop() {
 	headSub := blockchain.SubscribeChainHeadEvent(chainHeadCh)
 	defer headSub.Unsubscribe()
 
-	txEventCh := make(chan core.TxPreEvent, txChanSize)
-	txSub := txpool.SubscribeTxPreEvent(txEventCh)
+	txEventCh := make(chan core.NewTxsEvent, txChanSize)
+	txSub := txpool.SubscribeNewTxsEvent(txEventCh)
 	defer txSub.Unsubscribe()
 
 	// Start a goroutine that exhausts the subsciptions to avoid events piling up
@@ -176,7 +176,6 @@ func (s *Service) loop() {
 			}
 		}
 		close(quitCh)
-		return
 	}()
 	// Loop reporting until termination
 	for {
@@ -346,7 +345,7 @@ type nodeInfo struct {
 
 // authMsg is the authentication infos needed to login to a monitoring server.
 type authMsg struct {
-	Id     string   `json:"id"`
+	ID     string   `json:"id"`
 	Info   nodeInfo `json:"info"`
 	Secret string   `json:"secret"`
 }
@@ -361,7 +360,7 @@ func (s *Service) login(conn *websocket.Conn) error {
 	protocol := fmt.Sprintf("kcoin/%d", knode.ProtocolVersions[0])
 
 	auth := &authMsg{
-		Id: s.node,
+		ID: s.node,
 		Info: nodeInfo{
 			Name:     s.node,
 			Node:     infos.Name,
@@ -453,8 +452,8 @@ type blockStats struct {
 	ParentHash     common.Hash    `json:"parentHash"`
 	Timestamp      *big.Int       `json:"timestamp"`
 	Validator      common.Address `json:"validator"`
-	GasUsed        *big.Int       `json:"gasUsed"`
-	GasLimit       *big.Int       `json:"gasLimit"`
+	GasUsed        uint64         `json:"gasUsed"`
+	GasLimit       uint64         `json:"gasLimit"`
 	Txs            []txStats      `json:"transactions"`
 	TxHash         common.Hash    `json:"transactionsRoot"`
 	Root           common.Hash    `json:"stateRoot"`
@@ -561,8 +560,8 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 		ParentHash:     header.ParentHash,
 		Timestamp:      header.Time,
 		Validator:      author,
-		GasUsed:        new(big.Int).Set(header.GasUsed),
-		GasLimit:       new(big.Int).Set(header.GasLimit),
+		GasUsed:        header.GasUsed,
+		GasLimit:       header.GasLimit,
 		Txs:            txs,
 		TxHash:         header.TxHash,
 		Root:           header.Root,
@@ -660,12 +659,12 @@ func (s *Service) reportPending(conn *websocket.Conn) error {
 
 // nodeStats is the information to report about the local node.
 type nodeStats struct {
-	Active   bool `json:"active"`
-	Syncing  bool `json:"syncing"`
-	Mining   bool `json:"mining"`
-	Peers    int  `json:"peers"`
-	GasPrice int  `json:"gasPrice"`
-	Uptime   int  `json:"uptime"`
+	Active     bool `json:"active"`
+	Syncing    bool `json:"syncing"`
+	Validating bool `json:"validating"`
+	Peers      int  `json:"peers"`
+	GasPrice   int  `json:"gasPrice"`
+	Uptime     int  `json:"uptime"`
 }
 
 // reportPending retrieves various stats about the node at the networking and
@@ -683,7 +682,7 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	sync := s.kcoin.Downloader().Progress()
 	syncing = s.kcoin.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
 
-	price, _ := s.kcoin.ApiBackend.SuggestPrice(context.Background())
+	price, _ := s.kcoin.APIBackend().SuggestPrice(context.Background())
 	gasprice = int(price.Uint64())
 
 	// Assemble the node stats and send it to the server
@@ -692,12 +691,12 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	stats := map[string]interface{}{
 		"id": s.node,
 		"stats": &nodeStats{
-			Active:   true,
-			Mining:   validating,
-			Peers:    s.server.PeerCount(),
-			GasPrice: gasprice,
-			Syncing:  syncing,
-			Uptime:   100,
+			Active:     true,
+			Validating: validating,
+			Peers:      s.server.PeerCount(),
+			GasPrice:   gasprice,
+			Syncing:    syncing,
+			Uptime:     100,
 		},
 	}
 	report := map[string][]interface{}{

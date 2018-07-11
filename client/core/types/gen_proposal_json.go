@@ -13,6 +13,7 @@ import (
 
 var _ = (*proposaldataMarshalling)(nil)
 
+// MarshalJSON marshals as JSON.
 func (p proposaldata) MarshalJSON() ([]byte, error) {
 	type proposaldata struct {
 		BlockNumber   *hexutil.Big   `json:"blockNumber"   gencodec:"required"`
@@ -36,6 +37,7 @@ func (p proposaldata) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&enc)
 }
 
+// UnmarshalJSON unmarshals from JSON.
 func (p *proposaldata) UnmarshalJSON(input []byte) error {
 	type proposaldata struct {
 		BlockNumber   *hexutil.Big    `json:"blockNumber"   gencodec:"required"`

@@ -54,3 +54,6 @@ godog.test
 /netstats/config/nodes.js
 /netstats/ws_secret.json
 /netstats/stats.json
+
+# docs
+docs/site

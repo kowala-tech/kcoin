@@ -64,6 +64,5 @@ func jsonEncodeGenesisConfig(config Options, t *testing.T) bytes.Buffer {
 }
 
 func getHashFromGenesisBlock(genesis *core.Genesis) common.Hash {
-	b, _ := genesis.ToBlock()
-	return b.Hash()
+	return genesis.ToBlock(nil).Hash()
 }
