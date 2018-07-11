@@ -172,7 +172,6 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 			return nil, fmt.Errorf("failed to suggest gas price: %v", err)
 		}
 	}
-
 	gasLimit := opts.GasLimit
 	if gasLimit == nil {
 		// Gas estimation cannot succeed without code for method invocations

@@ -59,7 +59,7 @@ func (table *votingTable) isDuplicate(vote *types.Vote) bool {
 	voteHash := vote.Hash()
 	for _, tableVote := range table.votes {
 		if tableVote.Hash() == voteHash {
-			log.Error(fmt.Sprintf("a duplicate vote error: %s", vote.String()))
+			log.Error(fmt.Sprintf("a duplicate vote in voting table %v. Error: %s", table.voteType, vote.String()))
 			return true
 		}
 	}

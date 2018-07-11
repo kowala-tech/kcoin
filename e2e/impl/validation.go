@@ -172,7 +172,6 @@ func (ctx *ValidationContext) ITransferMTokens(mTokens int64, from, to string) e
 	return ctx.sendTokensAndWait(fromAccount, toAccount, mTokens)
 }
 
-//fixme: make it work
 func (ctx *ValidationContext) MintMTokens(m, n int64, mTokens int64, to string) error {
 	return godog.ErrPending
 

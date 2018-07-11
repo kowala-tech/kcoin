@@ -289,7 +289,7 @@ func (ctx *Context) buildGenesis() error {
 			MiningToken: &genesis.MiningTokenOpts{
 				Name:     "mUSD",
 				Symbol:   "mUSD",
-				Cap:      1000,
+				Cap:      100000,
 				Decimals: 18,
 				Holders:  ctx.getMTokenHolders(baseDeposit, genesisValidatorAddr),
 			},
@@ -297,7 +297,7 @@ func (ctx *Context) buildGenesis() error {
 		Governance: &genesis.GovernanceOpts{
 			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 			Governors:        ctx.getGovernors(),
-			NumConfirmations: 2,
+			NumConfirmations: 1,
 		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{
 			MaxNumOracles: 10,
