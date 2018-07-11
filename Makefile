@@ -2,13 +2,15 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: kcoin android ios kcoin-cross swarm evm genesis all test clean
+.PHONY: kcoin android ios kcoin-cross evm genesis all test clean
 .PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
 .PHONY: dep e2e
 .PHONY: dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
 .PHONY: bindings
+.PHONY: build_docs build_docs_with_docker
 
-GOBIN = $(pwd)/client/build/bin
+PWD   := $(shell pwd)
+GOBIN = $(PWD)/client/build/bin
 GO ?= latest
 
 NPROCS := 1
@@ -138,6 +140,14 @@ wallet-app-tests:
 	yarn install --network-concurrency 1 && \
 	yarn run lint && \
 	yarn run test
+
+## Docs
+BUILD_DOCS := mkdocs build --clean --strict -d site
+build_docs:
+	@cd docs; $(BUILD_DOCS)
+	
+build_docs_with_docker:
+	@docker run --rm -v $(PWD)/docs:/documents kowalatech/mkdocs $(BUILD_DOCS)
 
 ## Dev docker images
 
