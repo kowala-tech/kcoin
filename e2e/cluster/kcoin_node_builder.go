@@ -54,7 +54,7 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 		cmd = append(cmd, "--rpcaddr", "0.0.0.0")
 		cmd = append(cmd, "--rpccorsdomain", `"*"`)
 		cmd = append(cmd, "--rpcport", fmt.Sprintf("%v", *builder.rpcPort))
-		cmd = append(cmd, "--rpcvhosts", `"*"`)
+		cmd = append(cmd, "--rpcvhosts=*")
 		portMapping[*builder.rpcPort] = *builder.rpcPort
 	}
 	if builder.coinbase != "" {
