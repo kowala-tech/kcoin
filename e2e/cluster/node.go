@@ -124,7 +124,6 @@ func TransactionsPublisherSpec(nodeSuffix, nsqdAddr, redisAddr, rpcAddr string) 
 		Env:         []string{
 			fmt.Sprintf("NSQ_ADDR=%s", nsqdAddr),
 			fmt.Sprintf("REDIS_ADDR=%s", redisAddr),
-			fmt.Sprintf("REDIS_ADDR=%s", redisAddr),
 			fmt.Sprintf("TESTNET_RPC_ADDR=%s", rpcAddr),
 		},
 		PortMapping: map[int32]int32{},
