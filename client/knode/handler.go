@@ -350,7 +350,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				}
 			} else {
 				origin = pm.blockchain.GetHeaderByNumber(query.Origin.Number)
-				fmt.Println("=== headers GOT origin. CASE 3", i, pm.blockchain.CurrentHeader().Number.Int64(), query.Origin.Number, origin == nil)
+				fmt.Println("=== headers GOT origin. CASE 3.1", i, pm.blockchain.CurrentHeader().Number.Int64(), query.Origin.Number, origin == nil)
+				fmt.Println("=== headers GOT origin. CASE 3.2", i, pm.blockchain.CurrentBlock().Header().Hash(), pm.blockchain.CurrentBlock().Header().HashNoNonce(), spew.Sdump(pm.blockchain.CurrentBlock()), spew.Sdump(pm.blockchain.CurrentBlock().Header()))
+				fmt.Println("=== headers GOT origin. CASE 3.3", i, spew.Sdump(pm.blockchain.CurrentBlock()), spew.Sdump(pm.blockchain.CurrentBlock().Header()))
 			}
 			if origin == nil {
 				fmt.Println("=== headers origin nil", pm.blockchain.CurrentHeader().Number.Int64(), i)
