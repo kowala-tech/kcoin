@@ -132,6 +132,18 @@ pipeline:
       branch: [dev, master]
       event: [push, tag]
 
+  docker_netstats:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    pull: true
+    repo: kowalatech/netstats
+    dockerfile: netstats/Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
 
   build-artifacts:
     group: build-artifacts
