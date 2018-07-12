@@ -53,6 +53,9 @@ func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
 		ctx.makeExecFunc(validatorStartCommand(kcoin)),
 		func() error {
 			pending, err := ctx.globalCtx.client.PendingTransactionCount(context.Background())
+			if err != nil {
+				return err
+			}
 			if pending != 0 {
 				return errors.New("there are some pending transactions")
 			}
