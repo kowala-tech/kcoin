@@ -43,3 +43,16 @@ godog.test
 
 /client/contracts/bindings/ownership/build/
 /client/contracts/bindings/ownership/gen_multisig.go
+
+# Wallet app
+wallet-app/dist/
+wallet-app/src/store/__snapshots__/
+wallet-app/coverage/
+wallet-app/.started
+wallet-app/.yarn_cache/*
+!wallet-app/.yarn_cache/.gitkeep
+wallet-app/node_modules/
+wallet-app/yarn-error.log
+
+# Docs
+docs/site

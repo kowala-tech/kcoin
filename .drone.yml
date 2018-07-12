@@ -45,6 +45,14 @@ pipeline:
       - make e2e
     when:
       event: [pull_request]
+  
+  wallet-app:
+    group: testing
+    image: node:9
+    commands:
+      - make wallet-app-tests
+    when:
+      event: [pull_request]
 
   docker_kusd:
     group: docker-deployment
@@ -143,6 +151,15 @@ pipeline:
     when:
       branch: [dev]
       event: [push]
+    
+  build_docs:
+    group: build-artifacts
+    image: kowalatech/mkdocs
+    commands:
+      - make build_docs
+    when:
+      event: [push,tag]
+      branch: [master,dev]
 
   upload-gource-mp4-to-s3:
     group: asset-deployment
@@ -152,7 +169,6 @@ pipeline:
     acl: public-read
     source: gource-audio.mp4
     target: /kowala-kcoin-development-history.mp4
-    secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       branch: [dev]
       event: [push]
@@ -166,11 +182,63 @@ pipeline:
     source: client/build/bin/kcoin-*.zip
     strip_prefix: client/build/bin/
     target: /
-    secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       event: [push, tag]
       branch: [dev]
 
+  build-wallet-app:
+    image: node:9
+    environment:
+      - KOWALA_NETWORK="kusd-zygote"
+    commands:
+      - cd wallet-app ; yarn run drone:build
+    when:
+      event: [push]
+      branch: [master]
+
+  upload-kusd-zygote:
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "wallet.zygote.kowala.io"
+    source: dist/**/*
+    strip_prefix: dist
+    target: /
+    encryption: AES256
+    when:
+      event: [push]
+      branch: [master]
+
+  upload-dev-docs-to-s3:
+    group: asset-deployment
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "docs.kowala.io"
+    source: docs/site/**/*
+    strip_prefix: docs/site
+    target: /
+    encryption: AES256
+    secrets: [aws_access_key_id, aws_secret_access_key]
+    when:
+      event: [push]
+      branch: [dev]
+
+  upload-prod-docs-to-s3:
+    group: asset-deployment
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "docs.kowala.tech"
+    source: docs/site/**/*
+    strip_prefix: docs/site
+    target: /
+    encryption: AES256
+    secrets: [aws_access_key_id, aws_secret_access_key]
+    when:
+      event: [push,tag]
+      branch: [master]
+  
   notify-dev:
     group: notify
     image: plugins/slack

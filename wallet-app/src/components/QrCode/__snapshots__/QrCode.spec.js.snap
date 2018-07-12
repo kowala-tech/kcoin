@@ -1,0 +1,8 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`QrCode it should match the snapshot 1`] = `
+<QrCode
+  classes={Object {}}
+  text="this is text"
+/>
+`;

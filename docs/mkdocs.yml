@@ -1,0 +1,54 @@
+site_name: kCoin documentation
+dev_addr: 0.0.0.0:8000
+theme:
+  name: material
+  custom_dir: theme_custom
+  favicon: 'assets/images/favicon.ico'
+  logo: 'assets/images/logo.png'
+extra:
+  social:
+    - type: 'github'
+      link: 'https://github.com/kowala-tech'
+    - type: 'twitter'
+      link: 'https://twitter.com/KowalaTech'
+    - type: 'youtube'
+      link: 'https://www.youtube.com/channel/UCDuyhBaLx16iEGwqIt9hHHQ/'
+    - type: 'telegram'
+      link: 'https://t.co/MpSK3z1aWw'
+    - type: 'facebook'
+      link: 'https://www.facebook.com/kowalatech/'
+    - type: 'reddit'
+      link: 'https://www.reddit.com/user/kowalatech'
+site_url: https://docs.kowala.tech
+repo_url: https://github.com/kowala-tech/kcoin
+repo_name: kowala-tech/kcoin
+extra_css:
+    - assets/stylesheets/style.css
+pages:
+  - 'Home': 'index.md'
+  - Project:
+    - 'Overview': 'project/overview.md'
+    - 'Roadmap': 'project/roadmap.md'
+  - Getting Started:
+    - 'Overview': 'getting-started/index.md'
+    - 'Join the Test Network' : 'getting-started/testnet.md'
+    - 'Validator Registry': 'getting-started/consensus.md'
+  - Glossary: 'glossary/index.md'
+  - Consensus: 
+    - 'Overview': 'consensus/index.md'
+    - 'Kowala Protocol': 'consensus/kowala.md'
+    - 'Proof-of-Stake Pitfalls': 'consensus/pitfalls.md'
+    - 'Network Safety': 'consensus/safety.md'
+    - 'Algorithm': 'consensus/algorithm.md'
+  - Oracle:
+    - 'Overview': 'oracle/index.md'
+  - Advanced:
+    - Core Types: 
+      - 'Block':  'advanced/types/block.md'
+      - 'Transaction': 'advanced/types/tx.md'
+      - 'Account': 'advanced/types/account.md'
+  - Contributing:
+    - 'Projects': 'contributing/projects.md'
+  - About:
+    - 'Support': 'about/support.md'
+copyright: If you wish to improve the documentation, please <a href="https://github.com/kowala-tech/kcoin/issues/new"><i class="fa fa-github"></i> open an issue</a> and <a href="https://github.com/kowala-tech/kcoin/compare"><i class="fa fa-github"></i> send a pull request</a>.<br> Docs v0.0.1. Kowala SEZC 2018.
