@@ -252,8 +252,15 @@ func (arguments Arguments) Pack(args ...interface{}) ([]byte, error) {
 	var ret []byte
 	for i, a := range args {
 		input := abiArgs[i]
+
+		// to be sure that all args are not 'nil' and reflect won't panic
+		v := reflect.ValueOf(a)
+		if a == nil || (v.Kind() == reflect.Ptr && v.IsNil()) {
+			return nil, fmt.Errorf("got `nil` argument: %v(%d)", a, i)
+		}
+
 		// pack the input
-		packed, err := input.Type.pack(reflect.ValueOf(a))
+		packed, err := input.Type.pack(v)
 		if err != nil {
 			return nil, err
 		}
