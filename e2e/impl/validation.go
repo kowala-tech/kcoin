@@ -152,7 +152,7 @@ func (ctx *ValidationContext) checkTokenBalance(account accounts.Account, expect
 	}
 
 	if currentDeposit.Cmp(expectedWei) != 0 {
-		return fmt.Errorf("account %s have %v, expected %v", account.Address.String(), currentDeposit, expectedWei)
+		return fmt.Errorf("account %s have %v mTokens, expected %v", account.Address.String(), currentDeposit, expectedWei)
 	}
 
 	return nil
