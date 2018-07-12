@@ -238,7 +238,21 @@ pipeline:
     when:
       event: [push,tag]
       branch: [master]
-  
+
+  upload-e2e-logs:
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "kcoin-e2e"
+    source: e2e/logs/*
+    strip_prefix: e2e/logs
+    target: /logs/${DRONE_BUILD_NUMBER}
+    encryption: AES256
+    secrets: [aws_access_key_id, aws_secret_access_key]
+    when:
+      status: failure
+      event: [pull_request]
+
   notify-dev:
     group: notify
     image: plugins/slack
