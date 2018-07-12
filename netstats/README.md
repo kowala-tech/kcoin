@@ -1,47 +1,40 @@
-kUSD Network Stats
-============
+# kCoin Network Stats
 
-This is a visual interface for tracking kUSD network status. It uses WebSockets to receive stats from running nodes and output them through an angular interface. It is the front-end implementation for Kowala's implementation of [eth-net-intelligence-api](https://github.com/kowala-tech/eth-net-intelligence-api).
+This is a visual interface for tracking kCoin network status. It uses WebSockets to receive stats from running nodes and output them through an angular interface. 
 
 ## Prerequisite
 * node
-* yarn
+* npm or yarn
+* grunt-cli
 
-## Installation
-Make sure you have node.js and yarn installed.
+## Build the application
 
-Clone the repository and install the dependencies
-
-```bash
-git clone https://github.com/kowala-tech/kUSD-netstats
-cd kUSD-netstats
-yarn install
-sudo yarn install -g grunt-cli
-```
-
-##Build the resources
-NetStats features two versions: the full version and the lite version. In order to build the static files you have to run grunt tasks which will generate dist or dist-lite directories containing the js and css files, fonts and images.
-
-
-To build the full version run
 ```bash
 grunt
 ```
 
-To build the lite version run
+## Run
+
+You'll need to set the `WS_SECRET` environment variable. This will be required for all clients sending stats.
+
 ```bash
-grunt lite
+npm start
 ```
 
-If you want to build both versions run
-```bash
-grunt all
-```
-
-##Run
+or, for yarm users:
 
 ```bash
 yarn start
 ```
 
-see the interface at http://localhost:3000
+If you have `make` installed, you can also run
+
+```bash
+make
+```
+
+to start the server with a `WS_SECRET` of `abc123` (see Makefile).
+
+## Interacting with the server once it's running
+
+See the interface at http://localhost:3000.
