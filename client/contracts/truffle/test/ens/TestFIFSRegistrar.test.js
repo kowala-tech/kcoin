@@ -1,4 +1,4 @@
-/* global artifacts, contract, it, describe, beforeEach, assert, web3 */
+/* global artifacts, contract, it, describe, beforeEach, web3 */
 /* eslint no-unused-expressions: 1 */
 /* eslint consistent-return: 0 */
 /* eslint-disable max-len */
@@ -6,7 +6,7 @@
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
 const ENS = artifacts.require('ENSRegistry.sol');
 
-const utils = require('../helpers/Utils.js');
+const { EVMError } = require('../helpers/testUtils.js');
 const namehash = require('eth-ens-namehash');
 
 contract('FIFSRegistrar', (accounts) => {
@@ -21,9 +21,15 @@ contract('FIFSRegistrar', (accounts) => {
   });
 
   it('should allow registration of names', async () => {
+    // when
     await registrar.register(web3.sha3('eth'), accounts[0], { from: accounts[0] });
-    assert.equal(await ens.owner(0), registrar.address);
-    assert.equal(await ens.owner(namehash('eth')), accounts[0]);
+
+    // then
+    const ensOwner = await ens.owner(0);
+    const ensSubnodeOwner = await ens.owner(namehash('eth'));
+
+    await ensOwner.should.be.equal(registrar.address);
+    await ensSubnodeOwner.should.be.equal(accounts[0]);
   });
 
   describe('transferring names', async () => {
@@ -32,18 +38,20 @@ contract('FIFSRegistrar', (accounts) => {
     });
 
     it('should allow transferring name to your own', async () => {
+      // when
       await registrar.register(web3.sha3('eth'), accounts[1], { from: accounts[0] });
-      assert.equal(await ens.owner(namehash('eth')), accounts[1]);
+
+      // then
+      const ensSubnodeOwner = await ens.owner(namehash('eth'));
+      await ensSubnodeOwner.should.be.equal(accounts[1]);
     });
 
     it('forbids transferring the name you do not own', async () => {
-      try {
-        await registrar.register(web3.sha3('eth'), accounts[1], { from: accounts[1] });
-      } catch (error) {
-        return utils.ensureException(error);
-      }
+      // when
+      const transfer = registrar.register(web3.sha3('eth'), accounts[1], { from: accounts[1] });
 
-      assert.fail('transfer did not fail');
+      // then
+      await transfer.should.be.rejectedWith(EVMError('revert'));
     });
   });
 });

@@ -1,14 +1,11 @@
-/* global artifacts, contract, it, beforeEach, web3, assert */
+/* global artifacts, contract, it, beforeEach, web3 */
 /* eslint no-unused-expressions: 0 */
 /* eslint consistent-return: 0 */
 /* eslint-disable max-len */
 
 const ENS = artifacts.require('ENSRegistry.sol');
 
-const {
-  EVMError,
-} = require('../helpers/testUtils.js');
-const utils = require('../helpers/Utils.js');
+const { EVMError } = require('../helpers/testUtils.js');
 const namehash = require('eth-ens-namehash');
 
 contract('ENS', (accounts) => {
