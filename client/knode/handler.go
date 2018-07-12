@@ -23,6 +23,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/p2p/discover"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rlp"
+	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -281,6 +282,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// main loop. handle incoming messages.
 	for {
 		if err := pm.handleMsg(p); err != nil {
+			fmt.Println("Kowala message handling failed", "err", err)
 			p.Log().Debug("Kowala message handling failed", "err", err)
 			return err
 		}
@@ -293,6 +295,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	// Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
+		fmt.Println("=== headers debug ProtocolManager.handleMsg", p.blockNumber.Int64(), p.String())
 		return err
 	}
 	if msg.Size > ProtocolMaxMsgSize {
@@ -310,9 +313,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	case msg.Code == GetBlockHeadersMsg:
 		// Decode the complex header query
 		var query getBlockHeadersData
+		fmt.Println("=== headers debug msg", msg.String())
 		if err := msg.Decode(&query); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
+		fmt.Println("=== headers debug msg decoded", spew.Sdump(query))
 		hashMode := query.Origin.Hash != (common.Hash{})
 		first := true
 		maxNonCanonical := uint64(100)
@@ -323,23 +328,32 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			headers []*types.Header
 			unknown bool
 		)
+
+		var i int = -1
+		fmt.Println("=== headers debug", i, pm.blockchain.CurrentHeader().Number.Int64(), unknown, len(headers), query.Amount, bytes, softResponseLimit, downloader.MaxHeaderFetch)
+		// Retrieve the next header satisfying the query
 		for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < downloader.MaxHeaderFetch {
-			// Retrieve the next header satisfying the query
+			i++
+			fmt.Println("=== headers debug", i, pm.blockchain.CurrentHeader().Number.Int64(), unknown, len(headers), query.Amount, bytes, softResponseLimit, downloader.MaxHeaderFetch)
 			var origin *types.Header
 			if hashMode {
 				if first {
 					first = false
 					origin = pm.blockchain.GetHeaderByHash(query.Origin.Hash)
 					if origin != nil {
+						fmt.Println("=== headers GOT origin. CASE 1", i, pm.blockchain.CurrentHeader().Number.Int64())
 						query.Origin.Number = origin.Number.Uint64()
 					}
 				} else {
 					origin = pm.blockchain.GetHeader(query.Origin.Hash, query.Origin.Number)
+					fmt.Println("=== headers GOT origin. CASE 2", i, pm.blockchain.CurrentHeader().Number.Int64(), query.Origin.Number, origin == nil)
 				}
 			} else {
 				origin = pm.blockchain.GetHeaderByNumber(query.Origin.Number)
+				fmt.Println("=== headers GOT origin. CASE 3", i, pm.blockchain.CurrentHeader().Number.Int64(), query.Origin.Number, origin == nil)
 			}
 			if origin == nil {
+				fmt.Println("=== headers origin nil", pm.blockchain.CurrentHeader().Number.Int64(), i)
 				break
 			}
 			headers = append(headers, origin)
@@ -391,6 +405,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				// Number based traversal towards the leaf block
 				query.Origin.Number += query.Skip + 1
 			}
+		}
+		if len(headers) == 0 {
+			fmt.Println("=== headers trying to send empty headers", i)
 		}
 		return p.SendBlockHeaders(headers)
 

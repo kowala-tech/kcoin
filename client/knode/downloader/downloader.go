@@ -1623,12 +1623,12 @@ func (d *Downloader) requestTTL() time.Duration {
 }
 
 func getHeader(headers []*types.Header, peerID string, logger func(msg string, ctx ...interface{})) (*types.Header, error) {
-	if len(headers) == 0 {
+	/*if len(headers) == 0 {
 		// we do have empty headers (blocks without any TXs)
 		// it's different from Ethereum consensus.
 		logger("Received empty headers from peer", "peer", peerID)
 		return nil, errEmptyHeader
-	}
+	}*/
 
 	if len(headers) != 1 {
 		logger("Multiple headers for single request", "headers", len(headers))
