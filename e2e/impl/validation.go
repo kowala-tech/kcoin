@@ -173,8 +173,6 @@ func (ctx *ValidationContext) ITransferMTokens(mTokens int64, from, to string) e
 }
 
 func (ctx *ValidationContext) MintMTokens(m, n int64, mTokens int64, to string) error {
-	return godog.ErrPending
-
 	toAccount, ok := ctx.globalCtx.accounts[to]
 	if !ok {
 		return fmt.Errorf("can't get account for %q", to)
