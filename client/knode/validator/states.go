@@ -130,7 +130,7 @@ func (val *validator) newProposalState() stateFn {
 		log.Info("Proposing a new block")
 		val.propose()
 	} else {
-		log.Info("Waiting for the proposal", proposer.Address())
+		log.Info("Waiting for the proposal", "addr", proposer.Address())
 		val.waitForProposal()
 	}
 	return val.preVoteState
