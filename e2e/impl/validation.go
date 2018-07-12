@@ -76,7 +76,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.globalCtx.bootnode).
-		WithLogLevel(3).
+		WithLogLevel(6).
 		WithID(ctx.nodeID().String()).
 		WithSyncMode("full").
 		WithNetworkId(ctx.globalCtx.chainID.String()).
