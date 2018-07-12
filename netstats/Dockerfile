@@ -3,7 +3,7 @@ FROM node:8-alpine
 RUN apk add --update git
 
 WORKDIR /kusd-netstats
-ADD . .
+ADD netstats/ .
 
 RUN npm install
 RUN npm install -g grunt-cli
