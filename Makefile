@@ -5,7 +5,7 @@
 .PHONY: kcoin android ios kcoin-cross evm genesis all test clean
 .PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
 .PHONY: dep e2e
-.PHONY: dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
+.PHONY: dev_explorer_docker_image dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
 .PHONY: bindings
 .PHONY: build_docs build_docs_with_docker
 
@@ -151,7 +151,7 @@ build_docs_with_docker:
 
 ## Dev docker images
 
-dev_docker_images: dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
+dev_docker_images: dev_explorer_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
 
 dev_kusd_docker_image:
 	docker build -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
@@ -167,6 +167,10 @@ dev_transactions_persistance_docker_image:
 
 dev_backend_api_docker_image:
 	docker build -t kowalatech/backend_api:dev -f notifications/api.Dockerfile .
+
+dev_explorer_docker_image:
+	docker build -t kowalatech/kexplorer -f explorer/web.Dockerfile .
+	docker build -t kowalatech/kexplorersync -f explorer/sync.Dockerfile .
 
 # Tools
 
