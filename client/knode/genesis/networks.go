@@ -132,6 +132,10 @@ var Networks = map[string]map[string]Options{
 					Address: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
 					Balance: 1000000,
 				},
+				{
+					Address: "0x89b44e4d3c81ede05d0f5de8d1a68f754d73d997",
+					Balance: 1000000,
+				},
 			},
 		},
 	},
