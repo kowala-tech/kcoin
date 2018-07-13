@@ -104,6 +104,7 @@ go-generate:
 	go generate ./client/core/types/
 	go generate ./client/core/vm/
 	go generate ./client/internal/jsre/deps/
+	go generate ./client/knode/
 
 # Cross Compilation Targets (xgo)
 
