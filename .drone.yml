@@ -9,6 +9,11 @@ clone:
     tags: true
 
 pipeline:
+  go-generate:
+    image: kowalatech/go:1.0.4
+    commands:
+    - make go-generate
+
   bindings:
     image: kowalatech/go:1.0.4
     commands:
