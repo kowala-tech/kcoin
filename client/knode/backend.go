@@ -9,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
@@ -64,6 +66,7 @@ type Kowala struct {
 
 	validator validator.Validator // consensus validator
 	consensus consensus.Consensus // consensus binding
+	oracleMgr oracle.Manager      // oracle manager binding
 	gasPrice  *big.Int
 	coinbase  common.Address
 	deposit   *big.Int
@@ -100,7 +103,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
 		gasPrice:       config.GasPrice,
@@ -111,6 +113,18 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 
 	log.Info("Initialising Kowala protocol", "versions", ProtocolVersions, "network", config.NetworkId)
+
+	kcoin.apiBackend = &KowalaAPIBackend{kcoin, nil}
+
+	// oracle manager
+	oracleMgr, err := oracle.Binding(NewContractBackend(kcoin.apiBackend), chainConfig.ChainID)
+	if err != nil {
+		log.Crit("Failed to load the network contract", "err", err)
+	}
+	kcoin.oracleMgr = oracleMgr
+
+	// consensus engine
+	kcoin.engine = CreateConsensusEngine(ctx, kcoin.config, kcoin.chainConfig, kcoin.chainDb, kcoin.oracleMgr)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
@@ -139,7 +153,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kcoin.txPool = core.NewTxPool(config.TxPool, kcoin.chainConfig, kcoin.blockchain)
 
-	kcoin.apiBackend = &KowalaAPIBackend{kcoin, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.GasPrice
@@ -195,9 +208,9 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kcoindb.Da
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Kowala service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database) engine.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database, oracleMgr oracle.Manager) engine.Engine {
 	// @TODO (rgeraldes) - complete with tendermint config if necessary, set rewarded to true
-	engine := tendermint.New(&params.TendermintConfig{})
+	engine := tendermint.New(&params.TendermintConfig{}, oracleMgr)
 	return engine
 }
 

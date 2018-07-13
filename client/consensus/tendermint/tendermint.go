@@ -12,31 +12,39 @@ import (
 )
 
 var (
-	AndromedaBlockReward *big.Int = new(big.Int).SetUint64(115740741e+5)
+	initialBlockReward = new(big.Int).Mul(new(big.Int).SetUint64(42), big.NewInt(params.Kcoin))
 )
+
+type PriceProvider interface {
+	Price() (*big.Int, error)
+}
 
 type Tendermint struct {
 	config   *params.TendermintConfig // Consensus engine configuration parameters
+	provider PriceProvider
 	fakeMode bool
 }
 
-func New(config *params.TendermintConfig) *Tendermint {
-	return &Tendermint{config: config}
+func New(config *params.TendermintConfig, provider PriceProvider) *Tendermint {
+	return &Tendermint{
+		config:   config,
+		provider: provider,
+	}
 }
 
 func NewFaker() *Tendermint {
 	return &Tendermint{fakeMode: true}
 }
 
-func (tendermint *Tendermint) Author(header *types.Header) (common.Address, error) {
+func (tm *Tendermint) Author(header *types.Header) (common.Address, error) {
 	return header.Coinbase, nil
 }
 
-func (tendermint *Tendermint) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
+func (tm *Tendermint) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	return nil
 }
 
-func (tendermint *Tendermint) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (tm *Tendermint) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	// @TODO (rgeraldes) - temporary work around
 	abort, results := make(chan struct{}), make(chan error, len(headers))
 	for i := 0; i < len(headers); i++ {
@@ -45,16 +53,16 @@ func (tendermint *Tendermint) VerifyHeaders(chain consensus.ChainReader, headers
 	return abort, results
 }
 
-func (tendermint *Tendermint) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
+func (tm *Tendermint) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
 	return nil
 }
 
-func (tendermint *Tendermint) Prepare(chain consensus.ChainReader, header *types.Header) error {
+func (tm *Tendermint) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	return nil
 }
 
-func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
-	if err := AccumulateRewards(state, header); err != nil {
+func (tm *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
+	if err := tm.accumulateRewards(state, header); err != nil {
 		return nil, err
 	}
 
@@ -65,8 +73,8 @@ func (tendermint *Tendermint) Finalize(chain consensus.ChainReader, header *type
 	return types.NewBlock(header, txs, receipts, commit), nil
 }
 
-func AccumulateRewards(state *state.StateDB, header *types.Header) error {
-	blockReward := AndromedaBlockReward
+func (tm *Tendermint) accumulateRewards(state *state.StateDB, header *types.Header) error {
+	blockReward := tm.mintedAmount(header.Number)
 
 	// accumulate the rewards for the validator
 	reward := new(big.Int).Set(blockReward)
@@ -137,10 +145,18 @@ func AccumulateRewards(state *state.StateDB, header *types.Header) error {
 	return nil
 }
 
-func (tendermint *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+func (tm *Tendermint) mintedAmount(blockNumber *big.Int) *big.Int {
+	if blockNumber.Cmp(common.Big0) == 0 {
+		return initialBlockReward
+	}
+
+	return common.Big0
+}
+
+func (tm *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	return nil, nil
 }
 
-func (tendermint *Tendermint) APIs(chain consensus.ChainReader) []rpc.API {
+func (tm *Tendermint) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
 }
