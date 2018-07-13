@@ -98,6 +98,8 @@ client/build/bin/abigen:
 
 go-generate:
 	go generate ./client/accounts/usbwallet/internal/trezor/
+	go generate ./client/cmd/control/
+	go generate ./client/cmd/faucet/
 
 # Cross Compilation Targets (xgo)
 
