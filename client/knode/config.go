@@ -2,6 +2,7 @@ package knode
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
@@ -19,12 +20,14 @@ var DefaultConfig = Config{
 	NetworkId:     params.MainnetChainConfig.ChainID.Uint64(),
 	LightPeers:    20,
 	DatabaseCache: 128,
+	TrieCache:     256,
+	TrieTimeout:   60 * time.Minute,
 	GasPrice:      big.NewInt(1),
 
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
-		Blocks:     10,
-		Percentile: 50,
+		Blocks:     20,
+		Percentile: 60,
 	},
 	Currency: KUSD,
 }
@@ -39,16 +42,18 @@ type Config struct {
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
 	SyncMode  downloader.SyncMode
+	NoPruning bool
 
 	// Light client options
 	LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
 	LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
-	MaxPeers   int `toml:"-"`          // Maximum number of global peers
 
 	// Database options
 	SkipBcVersionCheck bool `toml:"-"`
 	DatabaseHandles    int  `toml:"-"`
 	DatabaseCache      int
+	TrieCache          int
+	TrieTimeout        time.Duration
 
 	// consensus validation-related options
 	Coinbase  common.Address `toml:",omitempty"`

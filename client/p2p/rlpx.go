@@ -105,10 +105,6 @@ func (t *rlpx) close(err error) {
 	t.fd.Close()
 }
 
-// doEncHandshake runs the protocol handshake using authenticated
-// messages. the protocol handshake is the first authenticated message
-// and also verifies whether the encryption handshake 'worked' and the
-// remote side actually provided the right public key.
 func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err error) {
 	// Writing our handshake happens concurrently, we prefer
 	// returning the handshake read error. If the remote side
@@ -516,9 +512,9 @@ func importPublicKey(pubKey []byte) (*ecies.PublicKey, error) {
 		return nil, fmt.Errorf("invalid public key length %v (expect 64/65)", len(pubKey))
 	}
 	// TODO: fewer pointless conversions
-	pub := crypto.ToECDSAPub(pubKey65)
-	if pub.X == nil {
-		return nil, fmt.Errorf("invalid public key")
+	pub, err := crypto.UnmarshalPubkey(pubKey65)
+	if err != nil {
+		return nil, err
 	}
 	return ecies.ImportECDSAPublic(pub), nil
 }

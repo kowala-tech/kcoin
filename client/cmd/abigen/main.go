@@ -13,11 +13,11 @@ import (
 )
 
 var (
-	abiFlag = flag.String("abi", "", "Path to the Ethereum contract ABI json to bind")
-	binFlag = flag.String("bin", "", "Path to the Ethereum contract bytecode (generate deploy method)")
+	abiFlag = flag.String("abi", "", "Path to the Kowala contract ABI json to bind, - for STDIN")
+	binFlag = flag.String("bin", "", "Path to the Kowala contract bytecode (generate deploy method)")
 	typFlag = flag.String("type", "", "Struct name for the binding (default = package name)")
 
-	solFlag  = flag.String("sol", "", "Path to the Ethereum contract Solidity source to build and bind")
+	solFlag  = flag.String("sol", "", "Path to the Kowala contract Solidity source to build and bind")
 	solcFlag = flag.String("solc", "solc", "Solidity compiler to use if source builds are requested")
 	excFlag  = flag.String("exc", "", "Comma separated types to exclude from binding")
 
@@ -59,16 +59,27 @@ func main() {
 		bins  []string
 		types []string
 	)
-	if *solFlag != "" {
+	if *solFlag != "" || *abiFlag == "-" {
 		// Generate the list of types to exclude from binding
 		exclude := make(map[string]bool)
 		for _, kind := range strings.Split(*excFlag, ",") {
 			exclude[strings.ToLower(kind)] = true
 		}
-		contracts, err := compiler.CompileSolidity(*solcFlag, *solFlag)
-		if err != nil {
-			fmt.Printf("Failed to build Solidity contract: %v\n", err)
-			os.Exit(-1)
+
+		var contracts map[string]*compiler.Contract
+		var err error
+		if *solFlag != "" {
+			contracts, err = compiler.CompileSolidity(*solcFlag, *solFlag)
+			if err != nil {
+				fmt.Printf("Failed to build Solidity contract: %v\n", err)
+				os.Exit(-1)
+			}
+		} else {
+			contracts, err = contractsFromStdin()
+			if err != nil {
+				fmt.Printf("Failed to read input ABIs from STDIN: %v\n", err)
+				os.Exit(-1)
+			}
 		}
 		// Gather all non-excluded contract for binding
 		for name, contract := range contracts {
@@ -121,4 +132,13 @@ func main() {
 		fmt.Printf("Failed to write ABI binding: %v\n", err)
 		os.Exit(-1)
 	}
+}
+
+func contractsFromStdin() (map[string]*compiler.Contract, error) {
+	bytes, err := ioutil.ReadAll(os.Stdin)
+	if err != nil {
+		return nil, err
+	}
+
+	return compiler.ParseCombinedJSON(bytes, "", "", "", "")
 }

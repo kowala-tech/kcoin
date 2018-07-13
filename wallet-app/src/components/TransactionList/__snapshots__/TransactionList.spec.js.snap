@@ -1,0 +1,28 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`TransactionList it should match the snapshot 1`] = `
+<TransactionList
+  classes={
+    Object {
+      "avatar": "TransactionList-avatar-4",
+      "card": "TransactionList-card-1",
+      "list": "TransactionList-list-3",
+      "stickyHeader": "TransactionList-stickyHeader-2",
+    }
+  }
+  loading={false}
+  toggleTransactionDetailsDialogFn={[MockFunction]}
+  transactions={
+    Array [
+      Object {
+        "fees": 0.01,
+        "from": null,
+        "id": "0x6c90256274c87ed74783d1d049304110377005b016af3661c24a71321cf0c0ec",
+        "nativeAmount": 1000000000000000000,
+        "timestamp": "2018-01-01T00:00:00.000Z",
+        "to": "32Be343B94f860124dC4fEe278FDCBD38C102D88",
+      },
+    ]
+  }
+/>
+`;

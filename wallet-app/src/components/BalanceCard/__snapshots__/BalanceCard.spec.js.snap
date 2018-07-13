@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`BalanceCard it should match the snapshot 1`] = `
+<BalanceCard
+  balance="43.23438"
+  classes={
+    Object {
+      "balance": "BalanceCard-balance-3",
+      "balanceLabel": "BalanceCard-balanceLabel-4",
+      "root": "BalanceCard-root-1",
+      "text": "BalanceCard-text-2",
+    }
+  }
+/>
+`;

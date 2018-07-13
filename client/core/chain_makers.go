@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
+	"github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/vm"
@@ -13,20 +13,15 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
-// So we can deterministically seed different blockchains
-var (
-	canonicalSeed = 1
-	forkSeed      = 2
-)
-
 // BlockGen creates blocks for testing.
 // See GenerateChain for a detailed explanation.
 type BlockGen struct {
-	i       int
-	parent  *types.Block
-	chain   []*types.Block
-	header  *types.Header
-	statedb *state.StateDB
+	i           int
+	parent      *types.Block
+	chain       []*types.Block
+	chainReader consensus.ChainReader
+	header      *types.Header
+	statedb     *state.StateDB
 
 	gasPool    *GasPool
 	txs        []*types.Transaction
@@ -34,6 +29,7 @@ type BlockGen struct {
 	lastCommit *types.Commit
 
 	config *params.ChainConfig
+	engine consensus.Engine
 }
 
 // SetCoinbase sets the coinbase of the generated block.
@@ -63,11 +59,23 @@ func (b *BlockGen) SetExtra(data []byte) {
 // added. Notably, contract code relying on the BLOCKHASH instruction
 // will panic during execution.
 func (b *BlockGen) AddTx(tx *types.Transaction) {
+	b.AddTxWithChain(nil, tx)
+}
+
+// AddTxWithChain adds a transaction to the generated block. If no coinbase has
+// been set, the block's coinbase is set to the zero address.
+//
+// AddTxWithChain panics if the transaction cannot be executed. In addition to
+// the protocol-imposed limitations (gas limit, etc.), there are some
+// further limitations on the content of transactions that can be
+// added. If contract code relies on the BLOCKHASH instruction,
+// the block in chain will be returned.
+func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
 	if b.gasPool == nil {
 		b.SetCoinbase(common.Address{})
 	}
 	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
-	receipt, _, err := ApplyTransaction(b.config, nil, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed, vm.Config{})
+	receipt, _, err := ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, &b.header.GasUsed, vm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -135,35 +143,45 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 // Blocks created by GenerateChain do not contain valid proof of work
 // values. Inserting them into BlockChain requires use of FakePow or
 // a similar non-validating proof of work implementation.
-func GenerateChain(config *params.ChainConfig, parent *types.Block, db kcoindb.Database, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
+func GenerateChain(config *params.ChainConfig, parent *types.Block, engine consensus.Engine, db kcoindb.Database, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
 	if config == nil {
 		config = params.TestChainConfig
 	}
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
-	genblock := func(i int, h *types.Header, statedb *state.StateDB) (*types.Block, types.Receipts) {
-		b := &BlockGen{parent: parent, i: i, chain: blocks, header: h, statedb: statedb, config: config}
+	genblock := func(i int, parent *types.Block, statedb *state.StateDB) (*types.Block, types.Receipts) {
+		// TODO(karalabe): This is needed for clique, which depends on multiple blocks.
+		// It's nonetheless ugly to spin up a blockchain here. Get rid of this somehow.
+		blockchain, _ := NewBlockChain(db, nil, config, engine, vm.Config{})
+		defer blockchain.Stop()
+
+		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: statedb, config: config, engine: engine}
+		b.header = makeHeader(b.chainReader, parent, statedb, b.engine)
 
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)
 		}
 
-		// @TODO(rgeraldes) - review/add signers
-		tendermint.AccumulateRewards(statedb, h)
-		root, err := statedb.CommitTo(db, true)
-		if err != nil {
-			panic(fmt.Sprintf("state write error: %v", err))
+		if b.engine != nil {
+			block, _ := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.lastCommit, b.receipts)
+			// Write state changes to db
+			root, err := statedb.Commit(true)
+			if err != nil {
+				panic(fmt.Sprintf("state write error: %v", err))
+			}
+			if err := statedb.Database().TrieDB().Commit(root, false); err != nil {
+				panic(fmt.Sprintf("trie write error: %v", err))
+			}
+			return block, b.receipts
 		}
-		h.Root = root
-		return types.NewBlock(h, b.txs, b.receipts, b.lastCommit), b.receipts
+		return nil, nil
 	}
 	for i := 0; i < n; i++ {
 		statedb, err := state.New(parent.Root(), state.NewDatabase(db))
 		if err != nil {
 			panic(err)
 		}
-		header := makeHeader(config, parent, statedb)
-		block, receipt := genblock(i, header, statedb)
+		block, receipt := genblock(i, parent, statedb)
 		blocks[i] = block
 		receipts[i] = receipt
 		parent = block
@@ -171,7 +189,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db kcoindb.D
 	return blocks, receipts
 }
 
-func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.StateDB) *types.Header {
+func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine) *types.Header {
 	var time *big.Int
 	if parent.Time() == nil {
 		time = big.NewInt(10)
@@ -183,51 +201,15 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 		Root:       state.IntermediateRoot(true),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
-
-		// @TODO (review) - rgeraldes
-		/*
-			Difficulty: ethash.CalcDifficulty(config, time.Uint64(), &types.Header{
-				Number:     parent.Number(),
-				Time:       new(big.Int).Sub(time, big.NewInt(10)),
-				Difficulty: parent.Difficulty(),
-			}),
-		*/
-		GasLimit: CalcGasLimit(parent),
-		GasUsed:  new(big.Int),
-		Number:   new(big.Int).Add(parent.Number(), common.Big1),
-		Time:     time,
+		GasLimit:   CalcGasLimit(parent),
+		Number:     new(big.Int).Add(parent.Number(), common.Big1),
+		Time:       time,
 	}
-}
-
-// newCanonical creates a chain database, and injects a deterministic canonical
-// chain. Depending on the full flag, if creates either a full block chain or a
-// header only chain.
-func newCanonical(n int, full bool) (kcoindb.Database, *BlockChain, error) {
-	// Initialize a fresh chain with only a genesis block
-	gspec := new(Genesis)
-	db, _ := kcoindb.NewMemDatabase()
-	genesis := gspec.MustCommit(db)
-
-	blockchain, _ := NewBlockChain(db, params.AllTendermintProtocolChanges, tendermint.NewFaker(), vm.Config{})
-	// Create and inject the requested chain
-	if n == 0 {
-		return db, blockchain, nil
-	}
-	if full {
-		// Full block-chain requested
-		blocks := makeBlockChain(genesis, n, db, canonicalSeed)
-		_, err := blockchain.InsertChain(blocks)
-		return db, blockchain, err
-	}
-	// Header-only chain requested
-	headers := makeHeaderChain(genesis.Header(), n, db, canonicalSeed)
-	_, err := blockchain.InsertHeaderChain(headers, 1)
-	return db, blockchain, err
 }
 
 // makeHeaderChain creates a deterministic chain of headers rooted at parent.
-func makeHeaderChain(parent *types.Header, n int, db kcoindb.Database, seed int) []*types.Header {
-	blocks := makeBlockChain(types.NewBlockWithHeader(parent), n, db, seed)
+func makeHeaderChain(parent *types.Header, n int, engine consensus.Engine, db kcoindb.Database, seed int) []*types.Header {
+	blocks := makeBlockChain(types.NewBlockWithHeader(parent), n, engine, db, seed)
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
 		headers[i] = block.Header()
@@ -236,8 +218,8 @@ func makeHeaderChain(parent *types.Header, n int, db kcoindb.Database, seed int)
 }
 
 // makeBlockChain creates a deterministic chain of blocks rooted at parent.
-func makeBlockChain(parent *types.Block, n int, db kcoindb.Database, seed int) []*types.Block {
-	blocks, _ := GenerateChain(params.TestChainConfig, parent, db, n, func(i int, b *BlockGen) {
+func makeBlockChain(parent *types.Block, n int, engine consensus.Engine, db kcoindb.Database, seed int) []*types.Block {
+	blocks, _ := GenerateChain(params.TestChainConfig, parent, engine, db, n, func(i int, b *BlockGen) {
 		b.SetCoinbase(common.Address{0: byte(seed), 19: byte(i)})
 	})
 	return blocks

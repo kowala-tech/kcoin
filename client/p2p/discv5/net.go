@@ -265,7 +265,7 @@ func (net *Network) lookup(target common.Hash, stopOnMatch bool) []*Node {
 	return result.entries
 }
 
-func (net *Network) RegisterTopic(topic Topic, stop <-chan struct{}) {
+func (net *Network) RegisterTopic(topic Topic, stop <-chan bool) {
 	select {
 	case net.topicRegisterReq <- topicRegisterReq{true, topic}:
 	case <-net.closed:
