@@ -156,12 +156,25 @@ pipeline:
       branch: [dev, master]
       event: [push, tag]
 
-  docker_explorer:
+  docker_explorer_web:
     group: docker-deployment
     image: kowalatech/drone-docker
     pull: true
     repo: kowalatech/kexplorer
-    dockerfile: explorer/Dockerfile
+    dockerfile: explorer/web.Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_explorer_sync:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    pull: true
+    repo: kowalatech/kexplorersync
+    dockerfile: explorer/sync.Dockerfile
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
