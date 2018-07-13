@@ -97,7 +97,6 @@ client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
 go-generate: moq go-bindata stringer gencodec
-	go generate ./client/accounts/usbwallet/internal/trezor/
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
 	go generate ./client/core/

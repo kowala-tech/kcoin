@@ -10,7 +10,7 @@ clone:
 
 pipeline:
   go-generate:
-    image: kowalatech/go:1.0.4
+    image: kowalatech/go:1.0.6
     commands:
     - make go-generate
 
