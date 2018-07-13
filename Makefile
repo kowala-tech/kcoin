@@ -96,6 +96,9 @@ client/contracts/truffle/node_modules:
 client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
+go-generate:
+	go generate ./client/accounts/usbwallet/internal/trezor/
+
 # Cross Compilation Targets (xgo)
 
 kcoin-cross: kcoin-cross-build kcoin-cross-compress kcoin-cross-rename
