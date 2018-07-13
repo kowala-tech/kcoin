@@ -151,7 +151,7 @@ build_docs_with_docker:
 
 ## Dev docker images
 
-dev_docker_images: dev_explorer_docker_imag dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_transactions_publisher_docker_image dev_backend_api_docker_image
+dev_docker_images: dev_explorer_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_transactions_publisher_docker_image dev_backend_api_docker_image
 
 dev_kusd_docker_image:
 	docker build -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
