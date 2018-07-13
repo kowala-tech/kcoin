@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ConfirmationDialog it should match the snapshot 1`] = `
+<WithStyles(WithTheme(WithWidth(WithMobileDialog)))
+  acceptButton={
+    <WithStyles(Button)
+      autoFocus={true}
+      color="secondary"
+      onClick={[MockFunction]}
+      variant="raised"
+    >
+      Yes, discard changes
+    </WithStyles(Button)>
+  }
+  content="Do you want to discard all changes?"
+  handleClose={[MockFunction]}
+  open={true}
+  rejectButton={
+    <WithStyles(Button)
+      onClick={[MockFunction]}
+    >
+      No, keep editing
+    </WithStyles(Button)>
+  }
+  title="Discard all changes?"
+/>
+`;

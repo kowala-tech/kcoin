@@ -34,7 +34,7 @@ const (
 	// history request.
 	historyUpdateRange = 50
 
-	// txChanSize is the size of channel listening to TxPreEvent.
+	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
@@ -42,9 +42,9 @@ const (
 )
 
 type txPool interface {
-	// SubscribeTxPreEvent should return an event subscription of
-	// TxPreEvent and send events to the given channel.
-	SubscribeTxPreEvent(chan<- core.TxPreEvent) event.Subscription
+	// SubscribeNewTxsEvent should return an event subscription of
+	// NewTxsEvent and send events to the given channel.
+	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 }
 
 type blockChain interface {
@@ -133,8 +133,8 @@ func (s *Service) loop() {
 	headSub := blockchain.SubscribeChainHeadEvent(chainHeadCh)
 	defer headSub.Unsubscribe()
 
-	txEventCh := make(chan core.TxPreEvent, txChanSize)
-	txSub := txpool.SubscribeTxPreEvent(txEventCh)
+	txEventCh := make(chan core.NewTxsEvent, txChanSize)
+	txSub := txpool.SubscribeNewTxsEvent(txEventCh)
 	defer txSub.Unsubscribe()
 
 	// Start a goroutine that exhausts the subsciptions to avoid events piling up
@@ -176,7 +176,6 @@ func (s *Service) loop() {
 			}
 		}
 		close(quitCh)
-		return
 	}()
 	// Loop reporting until termination
 	for {
@@ -242,9 +241,6 @@ func (s *Service) loop() {
 			case head := <-headCh:
 				if err = s.reportBlock(conn, head); err != nil {
 					log.Warn("Block stats report failed", "err", err)
-				}
-				if err := s.reportContracts(conn); err != nil {
-					log.Warn("State report failed", "err", err)
 				}
 				if err = s.reportPending(conn); err != nil {
 					log.Warn("Post-block transaction stats report failed", "err", err)
@@ -349,7 +345,7 @@ type nodeInfo struct {
 
 // authMsg is the authentication infos needed to login to a monitoring server.
 type authMsg struct {
-	Id     string   `json:"id"`
+	ID     string   `json:"id"`
 	Info   nodeInfo `json:"info"`
 	Secret string   `json:"secret"`
 }
@@ -364,7 +360,7 @@ func (s *Service) login(conn *websocket.Conn) error {
 	protocol := fmt.Sprintf("kcoin/%d", knode.ProtocolVersions[0])
 
 	auth := &authMsg{
-		Id: s.node,
+		ID: s.node,
 		Info: nodeInfo{
 			Name:     s.node,
 			Node:     infos.Name,
@@ -401,9 +397,6 @@ func (s *Service) report(conn *websocket.Conn) error {
 		return err
 	}
 	if err := s.reportBlock(conn, nil); err != nil {
-		return err
-	}
-	if err := s.reportContracts(conn); err != nil {
 		return err
 	}
 	if err := s.reportPending(conn); err != nil {
@@ -454,25 +447,23 @@ func (s *Service) reportLatency(conn *websocket.Conn) error {
 
 // blockStats is the information to report about individual blocks.
 type blockStats struct {
-	Number     *big.Int       `json:"number"`
-	Hash       common.Hash    `json:"hash"`
-	ParentHash common.Hash    `json:"parentHash"`
-	Timestamp  *big.Int       `json:"timestamp"`
-	Validator  common.Address `json:"validator"`
-	GasUsed    *big.Int       `json:"gasUsed"`
-	GasLimit   *big.Int       `json:"gasLimit"`
-	Txs        []txStats      `json:"transactions"`
-	TxHash     common.Hash    `json:"transactionsRoot"`
-	Root       common.Hash    `json:"stateRoot"`
-}
-
-// contractsStats is the information to report about individual blocks.
-type contractsStats struct {
-	MinDeposit     *big.Int `json:"minDeposit"`
-	ValidatorCount *big.Int `json:"validatorCount"`
-	MaxValidators  *big.Int `json:"maxValidators"`
-	OracleCount    *big.Int `json:"oracleCount"`
-	CurrencyPrice  *big.Int `json:"currencyPrice"`
+	Number         *big.Int       `json:"number"`
+	Hash           common.Hash    `json:"hash"`
+	ParentHash     common.Hash    `json:"parentHash"`
+	Timestamp      *big.Int       `json:"timestamp"`
+	Validator      common.Address `json:"validator"`
+	GasUsed        uint64         `json:"gasUsed"`
+	GasLimit       uint64         `json:"gasLimit"`
+	Txs            []txStats      `json:"transactions"`
+	TxHash         common.Hash    `json:"transactionsRoot"`
+	Root           common.Hash    `json:"stateRoot"`
+	MinDeposit     *big.Int       `json:"minDeposit"`
+	ValidatorCount *big.Int       `json:"validatorCount"`
+	MaxValidators  *big.Int       `json:"maxValidators"`
+	OracleCount    *big.Int       `json:"oracleCount"`
+	CurrencyPrice  *big.Int       `json:"currencyPrice"`
+	MintedReward   *big.Int       `json:"mintedReward"`
+	StabilityFee   *big.Int       `json:"stabilityFee"`
 }
 
 // txStats is the information to report about individual transactions.
@@ -494,7 +485,11 @@ func (s uncleStats) MarshalJSON() ([]byte, error) {
 // reportBlock retrieves the current chain head and repors it to the stats server.
 func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	// Gather the block details from the header or block chain
-	details := s.assembleBlockStats(block)
+	details, err := s.assembleBlockStats(block)
+
+	if err != nil {
+		return err
+	}
 
 	// Assemble the block report and send it to the server
 	log.Trace("Sending new block to kcoinstats", "number", details.Number, "hash", details.Hash)
@@ -509,30 +504,9 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	return websocket.JSON.Send(conn, report)
 }
 
-// reportContracts reports the core contracts stats to the stats server
-func (s *Service) reportContracts(conn *websocket.Conn) error {
-	// Gather the core contracts details from the block chain
-	details, err := s.assembleContractsStats()
-	if err != nil {
-		return err
-	}
-
-	// Assemble the contracts report and send it to the server
-	log.Trace("Sending contracts information to kcoinstats")
-
-	stats := map[string]interface{}{
-		"id":        s.node,
-		"contracts": details,
-	}
-	report := map[string][]interface{}{
-		"emit": {"contracts", stats},
-	}
-	return websocket.JSON.Send(conn, report)
-}
-
 // assembleBlockStats retrieves any required metadata to report a single block
 // and assembles the block stats. If block is nil, the current head is processed.
-func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
+func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 	// Gather the block infos from the local blockchain
 	var (
 		header *types.Header
@@ -553,47 +527,44 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 	// Assemble and return the block stats
 	author, _ := s.engine.Author(header)
 
-	return &blockStats{
-		Number:     header.Number,
-		Hash:       header.Hash(),
-		ParentHash: header.ParentHash,
-		Timestamp:  header.Time,
-		Validator:  author,
-		GasUsed:    new(big.Int).Set(header.GasUsed),
-		GasLimit:   new(big.Int).Set(header.GasLimit),
-		Txs:        txs,
-		TxHash:     header.TxHash,
-		Root:       header.Root,
-	}
-}
-
-// assembleContractsStats retrieves any required metadata to report the core
-// contracts and assembles the contracts stats.
-func (s *Service) assembleContractsStats() (*contractsStats, error) {
 	// Gather the contracts info from the local blockchain
 	consensus := s.kcoin.Consensus()
 	minDeposit, err := consensus.MinimumDeposit()
 	if err != nil {
 		return nil, err
 	}
+
 	validatorCount, err := consensus.GetValidatorCount()
 	if err != nil {
 		return nil, err
 	}
+
 	maxValidators, err := consensus.MaxValidators()
 	if err != nil {
 		return nil, err
 	}
+
 	oracleCount, err := s.oracleMgr.GetOracleCount()
 	if err != nil {
 		return nil, err
 	}
+
 	currencyPrice, err := s.oracleMgr.Price()
 	if err != nil {
 		return nil, err
 	}
 
-	return &contractsStats{
+	return &blockStats{
+		Number:         header.Number,
+		Hash:           header.Hash(),
+		ParentHash:     header.ParentHash,
+		Timestamp:      header.Time,
+		Validator:      author,
+		GasUsed:        header.GasUsed,
+		GasLimit:       header.GasLimit,
+		Txs:            txs,
+		TxHash:         header.TxHash,
+		Root:           header.Root,
 		MinDeposit:     minDeposit,
 		ValidatorCount: validatorCount,
 		MaxValidators:  maxValidators,
@@ -630,7 +601,14 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 
 		// If we do have the block, add to the history and continue
 		if block != nil {
-			history[len(history)-1-i] = s.assembleBlockStats(block)
+
+			stats, err := s.assembleBlockStats(block)
+
+			if err != nil {
+				return err
+			}
+
+			history[len(history)-1-i] = stats
 			continue
 		}
 		// Ran out of blocks, cut the report short and send
@@ -681,12 +659,12 @@ func (s *Service) reportPending(conn *websocket.Conn) error {
 
 // nodeStats is the information to report about the local node.
 type nodeStats struct {
-	Active   bool `json:"active"`
-	Syncing  bool `json:"syncing"`
-	Mining   bool `json:"mining"`
-	Peers    int  `json:"peers"`
-	GasPrice int  `json:"gasPrice"`
-	Uptime   int  `json:"uptime"`
+	Active     bool `json:"active"`
+	Syncing    bool `json:"syncing"`
+	Validating bool `json:"validating"`
+	Peers      int  `json:"peers"`
+	GasPrice   int  `json:"gasPrice"`
+	Uptime     int  `json:"uptime"`
 }
 
 // reportPending retrieves various stats about the node at the networking and
@@ -704,7 +682,7 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	sync := s.kcoin.Downloader().Progress()
 	syncing = s.kcoin.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
 
-	price, _ := s.kcoin.ApiBackend.SuggestPrice(context.Background())
+	price, _ := s.kcoin.APIBackend().SuggestPrice(context.Background())
 	gasprice = int(price.Uint64())
 
 	// Assemble the node stats and send it to the server
@@ -713,12 +691,12 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	stats := map[string]interface{}{
 		"id": s.node,
 		"stats": &nodeStats{
-			Active:   true,
-			Mining:   validating,
-			Peers:    s.server.PeerCount(),
-			GasPrice: gasprice,
-			Syncing:  syncing,
-			Uptime:   100,
+			Active:     true,
+			Validating: validating,
+			Peers:      s.server.PeerCount(),
+			GasPrice:   gasprice,
+			Syncing:    syncing,
+			Uptime:     100,
 		},
 	}
 	report := map[string][]interface{}{

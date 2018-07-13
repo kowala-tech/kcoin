@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Progress it should match the snapshot 1`] = `
+<Progress
+  classes={
+    Object {
+      "root": "Progress-root-1",
+    }
+  }
+/>
+`;

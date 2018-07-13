@@ -26,7 +26,7 @@ func TestFrom(t *testing.T) {
 		0,
 		common.HexToAddress("0xecf8f87f810ecf450940c9f60066b4a7a501d6a7"),
 		big.NewInt(10),
-		big.NewInt(10),
+		10,
 		big.NewInt(1),
 		nil,
 	)

@@ -1,0 +1,39 @@
+<!-- BEGIN PAGE CONTENT-->
+<div class="row">
+  <div class="col-md-12 portlet light">
+      <div class="portlet-body">
+
+        <table class="col-md-6 table table-hover">
+          <tr ><td width="25%">Number</td><td><a ng-show="block.number > 0 && blockNum == block.number" href="/block/{{block.number - 1}}">&laquo;</a> {{block.number | number}} <a ng-show="blockNum == block.number" href="/block/{{block.number + 1}}">&raquo;</a></td></tr>
+          <tr ><td width="25%">Time</td>
+                <td>{{block.datetime | date:'yyyy-MM-dd HH:mm:ss Z' }} ({{block.timestamp | timeDuration}} ago)</td>
+          </tr>
+          <tr ><td width="25%">Hash</td><td>{{block.hash}}</td></tr>
+          <tr ><td width="25%">parentHash</td><td><a href="/block/{{block.number - 1}}">{{block.parentHash}}</td></tr>
+          <tr ><td width="25%">Validator</td><td><a href="/addr/{{block.miner}}">{{block.miner}}</td></tr>
+          <tr ><td width="25%">Gas Limit</td><td>{{block.gasLimit | number}}</td></tr>
+          <tr ><td width="25%">Gas Used</td><td>{{block.gasUsed | number}}</td></tr>
+          <tr ><td width="25%">Extra Data</td><td>{{block.extraData}}</td></tr>
+        </table>
+    </div>
+    <!--TODO: calculate block reward -->
+
+  </div>
+    <!-- Begin: Transaction Datatable -->
+  <div class="portlet light portlet-datatable col-md-12" ng-if="block.transactions.length > 0">
+     <div class="portlet-body">
+    <table class="table table-condensed">
+        <thead ng-show="block.transactions.length > 0">
+            <tr>
+                <th> Transactions </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="t in block.transactions">
+                <td> <a href="/tx/{{t}}">{{t}}</a> </td>
+            </tr>
+        </tbody>
+    </table>
+      </div>
+    </div><!-- End: portlet -->
+</div>

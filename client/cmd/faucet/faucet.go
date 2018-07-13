@@ -55,15 +55,12 @@ var (
 	statsFlag     = flag.String("kcoinstats", "", "kcoinStats network monitoring auth string")
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
-	payoutFlag  = flag.Int("faucet.amount", 1, "Number of mUSDs to pay out per user request")
+	payoutFlag  = flag.Int("faucet.amount", 1, "Number of kUSDs to pay out per user request")
 	minutesFlag = flag.Int("faucet.minutes", 1440, "Number of minutes to wait between funding rounds")
 	tiersFlag   = flag.Int("faucet.tiers", 3, "Number of funding tiers to enable (x3 time, x2.5 funds)")
 
 	accJSONFlag = flag.String("account.json", "", "Key json file to fund user requests with")
 	accPassFlag = flag.String("account.pass", "", "Decryption password to access faucet funds")
-
-	githubUser  = flag.String("github.user", "", "GitHub user to authenticate with for Gist access")
-	githubToken = flag.String("github.token", "", "GitHub personal token to access Gists with")
 
 	captchaToken  = flag.String("captcha.token", "", "Recaptcha site key to authenticate client side")
 	captchaSecret = flag.String("captcha.secret", "", "Recaptcha secret key to authenticate server side")
@@ -73,7 +70,7 @@ var (
 )
 
 var (
-	kcoin = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	kcoin = new(big.Int).Exp(big.NewInt(10), big.NewInt(params.Kcoin), nil)
 )
 
 func main() {
@@ -108,9 +105,12 @@ func main() {
 		}
 	}
 	// Load up and render the faucet website
-	tmpl := MustAsset("faucet.html")
+	tmpl, err := Asset("faucet.html")
+	if err != nil {
+		log.Crit("Failed to load the faucet template", "err", err)
+	}
 	website := new(bytes.Buffer)
-	err := template.Must(template.New("").Parse(string(tmpl))).Execute(website, map[string]interface{}{
+	err = template.Must(template.New("").Parse(string(tmpl))).Execute(website, map[string]interface{}{
 		"Network":   *netnameFlag,
 		"Amounts":   amounts,
 		"Periods":   periods,
@@ -450,7 +450,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 				continue
 			}
 		}
-		// Retrieve the Ethereum address to fund, the requesting user and a profile picture
+		// Retrieve the Kowala address to fund, the requesting user and a profile picture
 		var (
 			username string
 			avatar   string
@@ -495,7 +495,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 			amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
 			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
 
-			tx := types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, big.NewInt(21000), f.price, nil)
+			tx := types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, 21000, f.price, nil)
 			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainID)
 			if err != nil {
 				f.lock.Unlock()
@@ -568,18 +568,26 @@ func (f *faucet) loop() {
 	}
 	defer sub.Unsubscribe()
 
-	f.setNonceAndPrice()
+	// Start a goroutine to update the state from head notifications in the background
+	update := make(chan *types.Header)
 
-	for {
-		select {
-		case head := <-heads:
+	go func() {
+		for head := range update {
 			// New chain head arrived, query the current stats and stream to clients
 			var (
 				balance *big.Int
+				nonce   uint64
+				price   *big.Int
 				err     error
 			)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			balance, err = f.client.BalanceAt(ctx, f.account.Address, head.Number)
+			if err == nil {
+				nonce, err = f.client.NonceAt(ctx, f.account.Address, nil)
+				if err == nil {
+					price, err = f.client.SuggestGasPrice(ctx)
+				}
+			}
 			cancel()
 
 			// If querying the data failed, try for the next block
@@ -587,13 +595,13 @@ func (f *faucet) loop() {
 				log.Warn("Failed to update faucet state", "block", head.Number, "hash", head.Hash(), "err", err)
 				continue
 			} else {
-				f.setNonceAndPrice()
-				log.Info("Updated faucet state", "block", head.Number, "hash", head.Hash(), "balance", balance)
+				log.Info("Updated faucet state", "block", head.Number, "hash", head.Hash(), "balance", balance, "nonce", nonce, "price", price)
 			}
 			// Faucet state retrieved, update locally and send to clients
 			balance = new(big.Int).Div(balance, kcoin)
 
 			f.lock.Lock()
+			f.price, f.nonce = price, nonce
 			for len(f.reqs) > 0 && f.reqs[0].Tx.Nonce() < f.nonce {
 				f.reqs = f.reqs[1:]
 			}
@@ -617,6 +625,17 @@ func (f *faucet) loop() {
 				}
 			}
 			f.lock.RUnlock()
+		}
+	}()
+	// Wait for various events and assing to the appropriate background threads
+	for {
+		select {
+		case head := <-heads:
+			// New head arrived, send if for state update if there's none running
+			select {
+			case update <- head:
+			default:
+			}
 
 		case <-f.update:
 			// Pending requests updated, stream to clients
@@ -654,59 +673,6 @@ func sendSuccess(conn *websocket.Conn, msg string) error {
 	return send(conn, map[string]string{"success": msg}, time.Second)
 }
 
-// authGitHub tries to authenticate a faucet request using GitHub gists, returning
-// the username, avatar URL and Kowala address to fund on success.
-func authGitHub(url string) (string, string, common.Address, error) {
-	// Retrieve the gist from the GitHub Gist APIs
-	parts := strings.Split(url, "/")
-	req, _ := http.NewRequest("GET", "https://api.github.com/gists/"+parts[len(parts)-1], nil)
-	if *githubUser != "" {
-		req.SetBasicAuth(*githubUser, *githubToken)
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", "", common.Address{}, err
-	}
-	var gist struct {
-		Owner struct {
-			Login string `json:"login"`
-		} `json:"owner"`
-		Files map[string]struct {
-			Content string `json:"content"`
-		} `json:"files"`
-	}
-	err = json.NewDecoder(res.Body).Decode(&gist)
-	res.Body.Close()
-	if err != nil {
-		return "", "", common.Address{}, err
-	}
-	if gist.Owner.Login == "" {
-		return "", "", common.Address{}, errors.New("Anonymous Gists not allowed")
-	}
-	// Iterate over all the files and look for Kowala addresses
-	var address common.Address
-	for _, file := range gist.Files {
-		content := strings.TrimSpace(file.Content)
-		if len(content) == 2+common.AddressLength*2 {
-			address = common.HexToAddress(content)
-		}
-	}
-	if address == (common.Address{}) {
-		return "", "", common.Address{}, errors.New("No Ethereum address found to fund")
-	}
-	// Validate the user's existence since the API is unhelpful here
-	if res, err = http.Head("https://github.com/" + gist.Owner.Login); err != nil {
-		return "", "", common.Address{}, err
-	}
-	res.Body.Close()
-
-	if res.StatusCode != 200 {
-		return "", "", common.Address{}, errors.New("Invalid user... boom!")
-	}
-	// Everything passed validation, return the gathered infos
-	return gist.Owner.Login + "@github", fmt.Sprintf("https://github.com/%s.png?size=64", gist.Owner.Login), address, nil
-}
-
 // authTwitter tries to authenticate a faucet request using Twitter posts, returning
 // the username, avatar URL and Kowala address to fund on success.
 func authTwitter(url string) (string, string, common.Address, error) {
@@ -715,8 +681,6 @@ func authTwitter(url string) (string, string, common.Address, error) {
 	if len(parts) < 4 || parts[len(parts)-2] != "status" {
 		return "", "", common.Address{}, errors.New("Invalid Twitter status URL")
 	}
-	username := parts[len(parts)-3]
-
 	// Twitter's API isn't really friendly with direct links. Still, we don't
 	// want to do ask read permissions from users, so just load the public posts and
 	// scrape it for the Kowala address and profile URL.
@@ -725,6 +689,13 @@ func authTwitter(url string) (string, string, common.Address, error) {
 		return "", "", common.Address{}, err
 	}
 	defer res.Body.Close()
+
+	// Resolve the username from the final redirect, no intermediate junk
+	parts = strings.Split(res.Request.URL.String(), "/")
+	if len(parts) < 4 || parts[len(parts)-2] != "status" {
+		return "", "", common.Address{}, errors.New("Invalid Twitter status URL")
+	}
+	username := parts[len(parts)-3]
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {

@@ -8,7 +8,9 @@
 /build/bin/
 *.mp4
 *.ppm
+*.swp
 .DS_Store
+.node-xmlhttprequest-*
 
 # used by the Makefile
 /client/build/_workspace/
@@ -23,13 +25,13 @@ godog.test
 /client/dashboard/assets/stats.json
 /client/dashboard/assets/public/bundle.js
 
-#truffle and npm
+# truffle and npm
 /client/contracts/truffle/node_modules/
 /client/contracts/truffle/coverage/
 /client/contracts/truffle/build/contracts
 /client/contracts/truffle/coverage.json
 
-#go bindings
+# go bindings
 /client/contracts/bindings/consensus/build/
 /client/contracts/bindings/consensus/gen_manager.go
 /client/contracts/bindings/consensus/gen_mtoken.go
@@ -43,3 +45,25 @@ godog.test
 
 /client/contracts/bindings/ownership/build/
 /client/contracts/bindings/ownership/gen_multisig.go
+
+# netstats
+/netstats/node_modules
+/netstats/dist
+/netstats/dist-lite
+/netstats/npm-debug.log
+/netstats/config/nodes.js
+/netstats/ws_secret.json
+/netstats/stats.json
+
+# Wallet app
+wallet-app/dist/
+wallet-app/src/store/__snapshots__/
+wallet-app/coverage/
+wallet-app/.started
+wallet-app/.yarn_cache/*
+!wallet-app/.yarn_cache/.gitkeep
+wallet-app/node_modules/
+wallet-app/yarn-error.log
+
+# Docs
+docs/site

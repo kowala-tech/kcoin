@@ -12,6 +12,7 @@ import (
 
 var _ = (*chunkMarshalling)(nil)
 
+// MarshalJSON marshals as JSON.
 func (c Chunk) MarshalJSON() ([]byte, error) {
 	type Chunk struct {
 		Index hexutil.Uint64 `json:"index"  gencodec:"required"`
@@ -25,6 +26,7 @@ func (c Chunk) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&enc)
 }
 
+// UnmarshalJSON unmarshals from JSON.
 func (c *Chunk) UnmarshalJSON(input []byte) error {
 	type Chunk struct {
 		Index *hexutil.Uint64 `json:"index"  gencodec:"required"`

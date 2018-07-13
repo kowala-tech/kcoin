@@ -1,0 +1,21 @@
+version: '2'
+services:
+  kexplorer:
+    container_name: kexplorer
+    image: kowalatech/kexplorer:latest
+    environment:
+      MONGO_URI: mongodb://kdatabase/blockDB
+    ports:
+      - "3000:3000"
+
+  kexplorersync:
+    container_name: kexplorersync
+    image: kowalatech/kexplorersync:latest
+    environment:
+      MONGO_URI: mongodb://kdatabase/blockDB
+
+  kdatabase:
+    container_name: kdatabase
+    image: library/mongo
+    ports:
+      - "27017:27017"

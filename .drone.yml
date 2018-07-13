@@ -9,11 +9,15 @@ clone:
     tags: true
 
 pipeline:
+  bindings:
+    image: kowalatech/go:1.0.4
+    commands:
+      - make bindings
+
   test_kcoin:
     group: testing
     image: kowalatech/go:1.0.4
     commands:
-      - make bindings
       - make test
       - make lint
     when:
@@ -41,6 +45,25 @@ pipeline:
       - make e2e
     when:
       event: [pull_request]
+  
+  wallet-app:
+    group: testing
+    image: node:9
+    commands:
+      - make wallet-app-tests
+    when:
+      event: [pull_request]
+
+  docker_build:
+    group: build-artifacts
+    image: kowalatech/go:1.0.4
+    environment:
+      - DOCKER_HOST=tcp://docker:2375
+      - DOCKER_PUBLIC_IP=docker
+    commands:
+      - make dev_docker_images
+    when:
+      event: [push]
 
   docker_kusd:
     group: docker-deployment
@@ -120,6 +143,44 @@ pipeline:
       branch: [dev, master]
       event: [push, tag]
 
+  docker_netstats:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    pull: true
+    repo: kowalatech/netstats
+    dockerfile: netstats/Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_explorer_web:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    pull: true
+    repo: kowalatech/kexplorer
+    dockerfile: explorer/web.Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_explorer_sync:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    pull: true
+    repo: kowalatech/kexplorersync
+    dockerfile: explorer/sync.Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
 
   build-artifacts:
     group: build-artifacts
@@ -139,6 +200,15 @@ pipeline:
     when:
       branch: [dev]
       event: [push]
+    
+  build_docs:
+    group: build-artifacts
+    image: kowalatech/mkdocs
+    commands:
+      - make build_docs
+    when:
+      event: [push,tag]
+      branch: [master,dev]
 
   upload-gource-mp4-to-s3:
     group: asset-deployment
@@ -148,7 +218,6 @@ pipeline:
     acl: public-read
     source: gource-audio.mp4
     target: /kowala-kcoin-development-history.mp4
-    secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       branch: [dev]
       event: [push]
@@ -162,10 +231,73 @@ pipeline:
     source: client/build/bin/kcoin-*.zip
     strip_prefix: client/build/bin/
     target: /
-    secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       event: [push, tag]
       branch: [dev]
+
+  build-wallet-app:
+    image: node:9
+    environment:
+      - KOWALA_NETWORK="kusd-zygote"
+    commands:
+      - cd wallet-app ; yarn run drone:build
+    when:
+      event: [push]
+      branch: [master]
+
+  upload-kusd-zygote:
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "wallet.zygote.kowala.io"
+    source: dist/**/*
+    strip_prefix: dist
+    target: /
+    encryption: AES256
+    when:
+      event: [push]
+      branch: [master]
+
+  upload-dev-docs-to-s3:
+    group: asset-deployment
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "docs.kowala.io"
+    source: docs/site/**/*
+    strip_prefix: docs/site
+    target: /
+    encryption: AES256
+    when:
+      event: [push]
+      branch: [dev]
+
+  upload-prod-docs-to-s3:
+    group: asset-deployment
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "docs.kowala.tech"
+    source: docs/site/**/*
+    strip_prefix: docs/site
+    target: /
+    encryption: AES256
+    when:
+      event: [push,tag]
+      branch: [master]
+
+  upload-e2e-logs:
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "kcoin-e2e"
+    source: e2e/logs/*
+    strip_prefix: e2e/logs
+    target: /logs/${DRONE_BUILD_NUMBER}
+    encryption: AES256
+    when:
+      status: failure
+      event: [pull_request]
 
   notify-dev:
     group: notify

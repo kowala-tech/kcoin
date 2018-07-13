@@ -170,7 +170,7 @@ contract ValidatorMgr is Pausable {
         return (deposit.amount, deposit.availableAt);
     }
 
-    function _registerValidator() public whenNotPaused onlyNewCandidate onlyWithMinDeposit {
+    function _registerValidator() private whenNotPaused onlyNewCandidate onlyWithMinDeposit {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
         }

@@ -2,12 +2,15 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: kcoin android ios kcoin-cross swarm evm genesis all test clean
+.PHONY: kcoin android ios kcoin-cross evm genesis all test clean
 .PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
 .PHONY: dep e2e
-.PHONY: dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
+.PHONY: dev_explorer_docker_image dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
+.PHONY: bindings
+.PHONY: build_docs build_docs_with_docker
 
-GOBIN = $(pwd)/client/build/bin
+PWD   := $(shell pwd)
+GOBIN = $(PWD)/client/build/bin
 GO ?= latest
 
 NPROCS := 1
@@ -27,11 +30,6 @@ control:
 	cd client; build/env.sh go run build/ci.go install ./cmd/control
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/control\" to launch control."
-
-abigen:
-	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/abigen\" to launch abigen."
 
 bootnode: bindings
 	cd client; build/env.sh go run build/ci.go install ./cmd/bootnode
@@ -79,21 +77,24 @@ lint: all
 
 clean:
 	rm -fr client/build/_workspace/pkg/ $(GOBIN)/*
+	rm -rf client/build/bin/abigen
+	rm -rf client/contracts/truffle/node_modules
 
-# The devtools target installs tools required for 'go generate'.
-# You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
-bindings: devtools
+# Bindings tools
+
+# FILES is the list of binding files that would be created when generating the bindings
+FILES=$(shell egrep -ir "go:generate" client/contracts/bindings | grep abigen | sed -E 's/^client\/contracts\/bindings\/(.*)\/.*\.go.*-out\ \.?\/?(.*)/client\/contracts\/bindings\/\1\/\2/' )
+$(FILES):
+	$(MAKE) -j 5 stringer go-bindata gencodec client/build/bin/abigen client/contracts/truffle/node_modules
+	go generate ./client/contracts/bindings/...
+bindings: | $(FILES)
+
+client/contracts/truffle/node_modules:
 	cd client/contracts/truffle && npm i
-	cd client/contracts/bindings/consensus; go generate
-	cd client/contracts/bindings/consensus/testfiles; go generate
-	cd client/contracts/bindings/oracle; go generate
-	cd client/contracts/bindings/ownership; go generate
 
-devtools: abigen
-	env GOBIN= go get -u golang.org/x/tools/cmd/stringer
-	env GOBIN= go get -u github.com/jteeuwen/go-bindata/go-bindata
-	env GOBIN= go get -u github.com/fjl/gencodec
+client/build/bin/abigen:
+	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
 # Cross Compilation Targets (xgo)
 
@@ -132,10 +133,25 @@ e2e: dep
 	go build -a && \
 	./e2e --features ./features
 
+## Wallet app
+
+wallet-app-tests:
+	@cd wallet-app; \
+	yarn install --network-concurrency 1 && \
+	yarn run lint && \
+	yarn run test
+
+## Docs
+BUILD_DOCS := mkdocs build --clean --strict -d site
+build_docs:
+	@cd docs; $(BUILD_DOCS)
+	
+build_docs_with_docker:
+	@docker run --rm -v $(PWD)/docs:/documents kowalatech/mkdocs $(BUILD_DOCS)
 
 ## Dev docker images
 
-dev_docker_images: dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
+dev_docker_images: dev_explorer_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
 
 dev_kusd_docker_image:
 	docker build -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
@@ -152,6 +168,10 @@ dev_transactions_persistance_docker_image:
 dev_backend_api_docker_image:
 	docker build -t kowalatech/backend_api:dev -f notifications/api.Dockerfile .
 
+dev_explorer_docker_image:
+	docker build -t kowalatech/kexplorer -f explorer/web.Dockerfile .
+	docker build -t kowalatech/kexplorersync -f explorer/sync.Dockerfile .
+
 # Tools
 
 DEP_BIN := $(shell command -v dep 2> /dev/null)
@@ -159,4 +179,25 @@ dep:
 ifndef DEP_BIN
 	@echo "Installing dep..."
 	@go get github.com/golang/dep/cmd/dep
+endif
+
+STRINGER_BIN := $(shell command -v stringer 2> /dev/null)
+stringer:
+ifndef STRINGER_BIN
+	@echo "Installing stringer..."
+	@go get golang.org/x/tools/cmd/stringer
+endif
+
+GO_BINDATA_BIN := $(shell command -v go-bindata 2> /dev/null)
+go-bindata:
+ifndef GO_BINDATA_BIN
+	@echo "Installing go-bindata..."
+	@go get github.com/jteeuwen/go-bindata/go-bindata
+endif
+
+GENCODEC_BIN := $(shell command -v gencodec 2> /dev/null)
+gencodec:
+ifndef GENCODEC_BIN
+	@echo "Installing gencodec..."
+	@go get github.com/fjl/gencodec
 endif
