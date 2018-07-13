@@ -96,7 +96,7 @@ client/contracts/truffle/node_modules:
 client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
-go-generate: moq
+go-generate: moq go-bindata stringer gencodec
 	go generate ./client/accounts/usbwallet/internal/trezor/
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
@@ -145,7 +145,7 @@ endif
 
 ## E2E tests
 
-e2e: dep protoc
+e2e: dep
 	cd e2e && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go build -a && \
@@ -225,12 +225,4 @@ moq:
 ifndef MOQ_BIN
 	@echo "Installing moq..."
 	@go get github.com/matryer/moq
-endif
-
-PROTOC_BIN := $(shell command -v protoc 2> /dev/null)
-protoc:
-ifndef PROTOC_BIN
-	@echo "Installing protoc..."
-	@go get google.golang.org/grpc
-	@go get github.com/golang/protobuf/protoc-gen-go
 endif
