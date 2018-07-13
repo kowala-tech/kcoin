@@ -101,6 +101,9 @@ go-generate:
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
 	go generate ./client/core/
+	go generate ./client/core/types/
+	go generate ./client/core/vm/
+	go generate ./client/internal/jsre/deps/
 
 # Cross Compilation Targets (xgo)
 
