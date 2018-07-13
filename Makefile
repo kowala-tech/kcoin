@@ -96,7 +96,7 @@ client/contracts/truffle/node_modules:
 client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
-go-generate:
+go-generate: moq
 	go generate ./client/accounts/usbwallet/internal/trezor/
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
@@ -105,6 +105,9 @@ go-generate:
 	go generate ./client/core/vm/
 	go generate ./client/internal/jsre/deps/
 	go generate ./client/knode/
+	go generate ./client/knode/tracers/internal/tracers/
+	go generate ./client/p2p/discv5/
+	go generate ./notifications/blockchain/
 
 # Cross Compilation Targets (xgo)
 
@@ -210,4 +213,11 @@ gencodec:
 ifndef GENCODEC_BIN
 	@echo "Installing gencodec..."
 	@go get github.com/fjl/gencodec
+endif
+
+MOQ_BIN := $(shell command -v moq 2> /dev/null)
+moq:
+ifndef MOQ_BIN
+	@echo "Installing moq..."
+	@go get github.com/matryer/moq
 endif
