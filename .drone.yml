@@ -173,7 +173,7 @@ pipeline:
     group: docker-deployment
     image: kowalatech/drone-docker
     pull: true
-    repo: kowalatech/kexplorer
+    repo: kowalatech/kexplorersync
     dockerfile: explorer/sync.Dockerfile
     secrets: [ docker_username, docker_password ]
     privileged: true
