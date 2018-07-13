@@ -108,6 +108,11 @@ go-generate: moq
 	go generate ./client/knode/tracers/internal/tracers/
 	go generate ./client/p2p/discv5/
 	go generate ./notifications/blockchain/
+	go generate ./notifications/environment/
+	go generate ./notifications/keyvalue/
+	go generate ./notifications/notifier/
+	go generate ./notifications/protocolbuffer/
+	go generate ./wallet-backend/protocolbuffer/
 
 # Cross Compilation Targets (xgo)
 
@@ -140,7 +145,7 @@ endif
 
 ## E2E tests
 
-e2e: dep
+e2e: dep protoc
 	cd e2e && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go build -a && \
@@ -220,4 +225,12 @@ moq:
 ifndef MOQ_BIN
 	@echo "Installing moq..."
 	@go get github.com/matryer/moq
+endif
+
+PROTOC_BIN := $(shell command -v protoc 2> /dev/null)
+protoc:
+ifndef PROTOC_BIN
+	@echo "Installing protoc..."
+	@go get google.golang.org/grpc
+	@go get github.com/golang/protobuf/protoc-gen-go
 endif
