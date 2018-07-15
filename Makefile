@@ -96,7 +96,7 @@ client/contracts/truffle/node_modules:
 client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
-go-generate: moq go-bindata stringer gencodec
+go-generate: moq go-bindata stringer gencodec mockery
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
 	go generate ./client/core/
@@ -224,4 +224,11 @@ moq:
 ifndef MOQ_BIN
 	@echo "Installing moq..."
 	@go get github.com/matryer/moq
+endif
+
+MOCKERY_BIN := $(shell command -v mockery 2> /dev/null)
+mockery:
+ifndef MOCKERY_BIN
+	@echo "Installing mockery..."
+	@go get github.com/vektra/mockery/.../
 endif
