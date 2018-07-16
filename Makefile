@@ -96,7 +96,7 @@ client/contracts/truffle/node_modules:
 client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
-go-generate: moq go-bindata stringer gencodec mockery
+go-generate: moq go-bindata stringer gencodec mockery ensure-notifications
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
 	go generate ./client/core/
@@ -112,6 +112,11 @@ go-generate: moq go-bindata stringer gencodec mockery
 	go generate ./notifications/notifier/
 	go generate ./notifications/protocolbuffer/
 	go generate ./wallet-backend/protocolbuffer/
+
+ensure-notifications: dep
+	cd notifications && \
+	$(GOPATH)/bin/dep ensure --vendor-only && \
+	cd ..
 
 # Cross Compilation Targets (xgo)
 
