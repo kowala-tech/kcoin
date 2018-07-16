@@ -60,6 +60,8 @@
     "secure-random": "^1.1.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.0.0-beta.53",
+    "@babel/node": "^7.0.0-beta.53",
     "@babel/runtime": "^7.0.0-beta.49",
     "@storybook/addon-actions": "^3.3.10",
     "@storybook/addon-links": "^3.3.10",
