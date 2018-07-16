@@ -11,24 +11,26 @@ import (
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
-var (
-	initialBlockReward = new(big.Int).Mul(new(big.Int).SetUint64(42), big.NewInt(params.Kcoin))
-)
-
 type PriceProvider interface {
 	Price() (*big.Int, error)
+}
+
+type Currency interface {
+	Supply(pendingState bool) (*big.Int, error)
 }
 
 type Tendermint struct {
 	config   *params.TendermintConfig // Consensus engine configuration parameters
 	provider PriceProvider
+	kcoin    Currency
 	fakeMode bool
 }
 
-func New(config *params.TendermintConfig, provider PriceProvider) *Tendermint {
+func New(config *params.TendermintConfig, provider PriceProvider, currency Currency) *Tendermint {
 	return &Tendermint{
 		config:   config,
 		provider: provider,
+		kcoin:    currency,
 	}
 }
 
@@ -145,12 +147,18 @@ func (tm *Tendermint) accumulateRewards(state *state.StateDB, header *types.Head
 	return nil
 }
 
+func (tm *Tendermint) availableCoinSupply(pendingState bool) {
+
+}
+
 func (tm *Tendermint) mintedAmount(blockNumber *big.Int) *big.Int {
 	if blockNumber.Cmp(common.Big0) == 0 {
 		return initialBlockReward
 	}
 
-	return common.Big0
+	previousAmount := tm.mintedAmount(new(big.Int).Sub(blockNumber, common.Big1))
+
+	return common.Big1
 }
 
 func (tm *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
@@ -159,4 +167,9 @@ func (tm *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop
 
 func (tm *Tendermint) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
+}
+
+func (tm *Tendermint) fund(state *state.StateDB, addr common.Address, amount *big.Int) {
+	state.AddBalance(add, amount)
+	//state.SetState()
 }
