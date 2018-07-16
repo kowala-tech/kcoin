@@ -11,6 +11,7 @@ contract ValidatorMgr is Pausable {
     uint public freezePeriod;
     bytes32 public validatorsChecksum;
     address public miningTokenAddr;
+    uint public reward;
 
     struct Deposit {
         uint amount;
