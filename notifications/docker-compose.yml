@@ -35,25 +35,28 @@ services:
     transactions_publisher:
         image: kowalatech/transactions-publisher:latest
         build: 
-            context: .
-            dockerfile: ./transactions_publisher.Dockerfile
+            context: ..
+            dockerfile: ./notifications/transactions_publisher.Dockerfile
         depends_on:
             - redis
             - nsqd
         environment: 
             - NSQ_ADDR=nsqd:4150
             - REDIS_ADDR=redis:6379
-            - TESTNET_RPC_ADDR=http://testnet-eth.kowala.io:18545
+            - TESTNET_RPC_ADDR=http://rpcnode.zygote.kowala.tech:30503
 
-    transactions_db_synchronize:
+    transactions_persistance:
         build:
-            context: .
-            dockerfile: ./transactions_db_synchronize.Dockerfile
+            context: ..
+            dockerfile: ./notifications/transactions_db_synchronize.Dockerfile
         depends_on:
             - redis
+            - nsqd
+            - transactions_publisher
+            - api
         environment:
             - REDIS_ADDR=redis:6379
-            - TESTNET_RPC_ADDR=http://rpcnode.kowala.io:30503
+            - NSQ_ADDR=nsqd:4150
 
     emailer:
         image: kowalatech/emailer:latest

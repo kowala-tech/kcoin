@@ -14,38 +14,8 @@
 [[projects]]
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
-  revision = "7da180ee92d8bd8bb8c37fc560e673e6557c392f"
-  version = "v0.4.7"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/aristanetworks/goarista"
-  packages = ["monotime"]
-  revision = "59944ff78bc1de686b0aba1444dfd380f48f03d4"
-
-[[projects]]
-  name = "github.com/beeker1121/goque"
-  packages = ["."]
-  revision = "e1e63ca63c14b41209e160f54c8e7669564eacc4"
-  version = "v2.0.1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/beorn7/perks"
-  packages = ["quantile"]
-  revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/btcsuite/btcd"
-  packages = ["btcec"]
-  revision = "86fed781132ac890ee03e906e4ecd5d6fa180c64"
-
-[[projects]]
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
+  revision = "67921128fb397dd80339870d2193d6b1e6856fd4"
+  version = "v0.4.8"
 
 [[projects]]
   name = "github.com/docker/distribution"
@@ -97,180 +67,10 @@
   version = "v0.3.3"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/dougEfresh/logzio-go"
-  packages = ["."]
-  revision = "37b24151b96353781053493f296835dcf8de7057"
-
-[[projects]]
-  name = "github.com/go-stack/stack"
-  packages = ["."]
-  revision = "259ab82a6cad3992b4e21ff5cac294ccb06474bc"
-  version = "v1.7.0"
-
-[[projects]]
-  name = "github.com/golang/protobuf"
-  packages = ["proto"]
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/golang/snappy"
-  packages = ["."]
-  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/hashicorp/golang-lru"
-  packages = [
-    ".",
-    "simplelru"
-  ]
-  revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/kowala-tech/go-metrics-prometheus"
-  packages = ["."]
-  revision = "28a76e7211bcfe41f875413b8466832c077393a3"
-
-[[projects]]
-  name = "github.com/matttproud/golang_protobuf_extensions"
-  packages = ["pbutil"]
-  revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
-  version = "v1.0.1"
-
-[[projects]]
-  name = "github.com/pborman/uuid"
-  packages = ["."]
-  revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
-  version = "v1.1"
-
-[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
-
-[[projects]]
-  name = "github.com/pmezard/go-difflib"
-  packages = ["difflib"]
-  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
-  version = "v1.0.0"
-
-[[projects]]
-  name = "github.com/prometheus/client_golang"
-  packages = [
-    "prometheus",
-    "prometheus/promhttp"
-  ]
-  revision = "c5b7fccd204277076155f10851dad72b76a49317"
-  version = "v0.8.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/prometheus/client_model"
-  packages = ["go"]
-  revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/prometheus/common"
-  packages = [
-    "expfmt",
-    "internal/bitbucket.org/ww/goautoneg",
-    "model"
-  ]
-  revision = "7600349dcfe1abd18d72d3a1770870d9800a7801"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/prometheus/procfs"
-  packages = [
-    ".",
-    "internal/util",
-    "nfs",
-    "xfs"
-  ]
-  revision = "7d6f385de8bea29190f15ba9931442a0eaef9af7"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/rcrowley/go-metrics"
-  packages = [
-    ".",
-    "exp"
-  ]
-  revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/ricochet2200/go-disk-usage"
-  packages = ["du"]
-  revision = "f0d1b743428fc09792f93233d9412f89f88fa2ab"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/rjeczalik/notify"
-  packages = ["."]
-  revision = "d152f3ce359a5464dc41e84a8919fc67e55bbbf0"
-
-[[projects]]
-  name = "github.com/rs/cors"
-  packages = ["."]
-  revision = "ca016a06a5753f8ba03029c0aa5e54afb1bf713f"
-  version = "v1.4.0"
-
-[[projects]]
-  name = "github.com/stretchr/objx"
-  packages = ["."]
-  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
-  version = "v0.1.1"
-
-[[projects]]
-  name = "github.com/stretchr/testify"
-  packages = [
-    "assert",
-    "mock"
-  ]
-  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
-  version = "v1.2.2"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/syndtr/goleveldb"
-  packages = [
-    "leveldb",
-    "leveldb/cache",
-    "leveldb/comparer",
-    "leveldb/errors",
-    "leveldb/filter",
-    "leveldb/iterator",
-    "leveldb/journal",
-    "leveldb/memdb",
-    "leveldb/opt",
-    "leveldb/storage",
-    "leveldb/table",
-    "leveldb/util"
-  ]
-  revision = "e2150783cd35f5b607daca48afd8c57ec54cc995"
-
-[[projects]]
-  name = "go.uber.org/atomic"
-  packages = ["."]
-  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
-  version = "v1.3.2"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/crypto"
-  packages = [
-    "pbkdf2",
-    "ripemd160",
-    "scrypt"
-  ]
-  revision = "027cca12c2d63e3d62b670d901e8a2c95854feec"
 
 [[projects]]
   branch = "master"
@@ -279,51 +79,19 @@
     "context",
     "context/ctxhttp",
     "internal/socks",
-    "proxy",
-    "websocket"
+    "proxy"
   ]
-  revision = "db08ff08e8622530d9ed3a0e8ac279f6d4c02196"
+  revision = "ed29d75add3d7c4bf7ca65aac0c6df3d1420216f"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = [
-    "unix",
-    "windows"
-  ]
-  revision = "6c888cc515d3ed83fc103cf1d84468aad274b0a7"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/tools"
-  packages = [
-    "go/ast/astutil",
-    "imports",
-    "internal/fastwalk"
-  ]
-  revision = "c06a8d8ed11aae27b08c1c109a509ada9de81240"
-
-[[projects]]
-  name = "gopkg.in/fatih/set.v0"
-  packages = ["."]
-  revision = "57907de300222151a123d29255ed17f5ed43fad3"
-  version = "v0.1.0"
-
-[[projects]]
-  branch = "v2"
-  name = "gopkg.in/karalabe/cookiejar.v2"
-  packages = ["collections/prque"]
-  revision = "8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57"
-
-[[projects]]
-  branch = "v2"
-  name = "gopkg.in/natefinch/npipe.v2"
-  packages = ["."]
-  revision = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6"
+  packages = ["windows"]
+  revision = "151529c776cdc58ddbe7963ba9af779f3577b419"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8e7dd1fe540357ccf7d7c827fa56bd321321e692c957bd1c5bd5ca9a9c1278b2"
+  inputs-digest = "bdff18139900d2b4649fe47f7dedf6755953f9860973aa03c8c8d838d0a31cc7"
   solver-name = "gps-cdcl"
   solver-version = 1
