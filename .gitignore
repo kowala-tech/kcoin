@@ -46,6 +46,9 @@ godog.test
 /client/contracts/bindings/ownership/build/
 /client/contracts/bindings/ownership/gen_multisig.go
 
+#drone
+nsqd.*
+
 # netstats
 /netstats/node_modules
 /netstats/dist
