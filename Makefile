@@ -5,7 +5,7 @@
 .PHONY: kcoin android ios kcoin-cross evm genesis all test clean
 .PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
 .PHONY: dep e2e
-.PHONY: dev_explorer_docker_image dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
+.PHONY: dev_explorer_docker_image dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_faucet_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image 
 .PHONY: bindings
 .PHONY: build_docs build_docs_with_docker
 
@@ -145,13 +145,13 @@ wallet-app-tests:
 BUILD_DOCS := mkdocs build --clean --strict -d site
 build_docs:
 	@cd docs; $(BUILD_DOCS)
-	
+
 build_docs_with_docker:
 	@docker run --rm -v $(PWD)/docs:/documents kowalatech/mkdocs $(BUILD_DOCS)
 
 ## Dev docker images
 
-dev_docker_images: dev_explorer_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image
+dev_docker_images: dev_explorer_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_faucet_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_transactions_publisher_docker_image dev_backend_api_docker_image
 
 dev_kusd_docker_image:
 	docker build -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
@@ -159,11 +159,17 @@ dev_kusd_docker_image:
 dev_bootnode_docker_image:
 	docker build -t kowalatech/bootnode:dev -f client/release/bootnode.Dockerfile .
 
+dev_faucet_docker_image:
+	docker build -t kowalatech/faucet:dev -f client/release/faucet.Dockerfile .
+
 dev_wallet_backend_docker_image:
 	docker build -t kowalatech/wallet_backend:dev -f wallet-backend/Dockerfile .
 
 dev_transactions_persistance_docker_image:
 	docker build -t kowalatech/transactions_persistance:dev -f notifications/transactions_db_synchronize.Dockerfile .
+
+dev_transactions_publisher_docker_image:
+	docker build -t kowalatech/transactions_publisher:dev -f notifications/transactions_publisher.Dockerfile .
 
 dev_backend_api_docker_image:
 	docker build -t kowalatech/backend_api:dev -f notifications/api.Dockerfile .
