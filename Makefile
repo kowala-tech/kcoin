@@ -97,6 +97,7 @@ client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
 go-generate: moq go-bindata stringer gencodec mockery ensure-notifications
+	go get -u github.com/golang/protobuf/protoc-gen-go
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
 	go generate ./client/core/
