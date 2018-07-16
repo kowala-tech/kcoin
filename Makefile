@@ -97,22 +97,22 @@ client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
 go-generate: moq go-bindata stringer gencodec mockery ensure-notifications ensure-wallet-backend
-#	go get -u github.com/golang/protobuf/protoc-gen-go
-#	go generate ./client/cmd/control/
-#	go generate ./client/cmd/faucet/
-#	go generate ./client/core/
-#	go generate ./client/core/types/
-#	go generate ./client/core/vm/
-#	go generate ./client/internal/jsre/deps/
-#	go generate ./client/knode/
-#	go generate ./client/knode/tracers/internal/tracers/
-#	go generate ./client/p2p/discv5/
-#	go generate ./notifications/blockchain/
-#	go generate ./notifications/environment/
-#	go generate ./notifications/keyvalue/
-#	go generate ./notifications/notifier/
-#	go generate ./notifications/protocolbuffer/
-#	go generate ./wallet-backend/protocolbuffer/
+	go get -u github.com/golang/protobuf/protoc-gen-go
+	go generate ./client/cmd/control/
+	go generate ./client/cmd/faucet/
+	go generate ./client/core/
+	go generate ./client/core/types/
+	go generate ./client/core/vm/
+	go generate ./client/internal/jsre/deps/
+	go generate ./client/knode/
+	go generate ./client/knode/tracers/internal/tracers/
+	go generate ./client/p2p/discv5/
+	go generate ./notifications/blockchain/
+	go generate ./notifications/environment/
+	go generate ./notifications/keyvalue/
+	go generate ./notifications/notifier/
+	go generate ./notifications/protocolbuffer/
+	go generate ./wallet-backend/protocolbuffer/
 	git diff-index --quiet HEAD && echo OK || (echo "There are uncommited go generate files." && exit 1)
 
 ensure-notifications: dep
