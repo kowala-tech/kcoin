@@ -223,7 +223,7 @@ GO_BINDATA_BIN := $(shell command -v go-bindata 2> /dev/null)
 go-bindata:
 ifndef GO_BINDATA_BIN
 	@echo "Installing go-bindata..."
-	@go get github.com/kevinburke/go-bindata
+	@go get -u github.com/kevinburke/go-bindata/...
 endif
 
 GENCODEC_BIN := $(shell command -v gencodec 2> /dev/null)
