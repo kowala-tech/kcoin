@@ -45,7 +45,7 @@ pipeline:
       - make e2e
     when:
       event: [pull_request]
-  
+
   wallet-app:
     group: testing
     image: node:9
@@ -181,6 +181,18 @@ pipeline:
     when:
       branch: [dev, master]
       event: [push, tag]
+  docker_notifications_tx_publisher:
+    group: docker-deployment
+    image: kowalatech/drone-docker
+    pull: true
+    repo: kowalatech/transactions_publisher
+    dockerfile: notifications/transactions_publisher.Dockerfile
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
 
   build-artifacts:
     group: build-artifacts
@@ -200,7 +212,7 @@ pipeline:
     when:
       branch: [dev]
       event: [push]
-    
+
   build_docs:
     group: build-artifacts
     image: kowalatech/mkdocs
