@@ -113,10 +113,7 @@ go-generate: moq go-bindata stringer gencodec mockery ensure-notifications ensur
 	go generate ./notifications/notifier/
 	go generate ./notifications/protocolbuffer/
 	go generate ./wallet-backend/protocolbuffer/
-	if [[ `git status --porcelain` ]]; then \
-		echo "There are uncommited go generate files." \
-		exit 1 \
-	fi
+	git diff-index --quiet HEAD || (echo "There are uncommited go generate files." && exit 1)
 
 ensure-notifications: dep
 	cd notifications && \
