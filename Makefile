@@ -96,7 +96,7 @@ client/contracts/truffle/node_modules:
 client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
-go-generate: moq go-bindata stringer gencodec mockery ensure-notifications
+go-generate: moq go-bindata stringer gencodec mockery ensure-notifications ensure-wallet-backend
 	go get -u github.com/golang/protobuf/protoc-gen-go
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
@@ -116,6 +116,11 @@ go-generate: moq go-bindata stringer gencodec mockery ensure-notifications
 
 ensure-notifications: dep
 	cd notifications && \
+	$(GOPATH)/bin/dep ensure --vendor-only && \
+	cd ..
+
+ensure-wallet-backend: dep
+	cd wallet-backend && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	cd ..
 
