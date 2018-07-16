@@ -18,6 +18,7 @@ pipeline:
     image: kowalatech/go:1.0.8
     commands:
     - make go-generate
+    - make assert-no-generate
 
   test_kcoin:
     group: testing
