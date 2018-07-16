@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -102,6 +103,44 @@ func NotificationsApiSpec(nodeSuffix, redisAddr string) (*NodeSpec, error) {
 	return spec, nil
 }
 
+func FaucetSpec(nodeSuffix, bootnodes string, genesisContent, accountContent []byte, accountPassword string, port int32) (*NodeSpec, error) {
+	id := NodeID("faucet-" + nodeSuffix)
+	spec := &NodeSpec{
+		ID:    id,
+		Image: "kowalatech/faucet:dev",
+		Files: map[string][]byte{
+			"/faucet/genesis.json": genesisContent,
+			"/faucet/account":      accountContent,
+			"/faucet/password.txt": []byte(accountPassword),
+		},
+		Cmd: []string{
+			"--bootnodes", bootnodes,
+			"--testnet",
+			"--verbosity", "6",
+			"--kcoinport", "22334",
+			"--genesis", "/faucet/genesis.json",
+			"--account.json", "/faucet/account",
+			"--account.pass", "/faucet/password.txt",
+		},
+		Env: []string{},
+		PortMapping: map[int32]int32{
+			8080: port,
+		},
+	}
+	spec.IsReadyFn = func(runner NodeRunner) error {
+		ip := runner.HostIP()
+		resp, err := http.Get(fmt.Sprintf("http://%v:%v/", ip, port))
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != 200 {
+			return errors.New("the faucet didn't return 200 on the root url")
+		}
+		return nil
+	}
+	return spec, nil
+}
+
 func RedisSpec(nodeSuffix string) (*NodeSpec, error) {
 	id := NodeID("redis-" + nodeSuffix)
 	spec := &NodeSpec{
@@ -119,10 +158,10 @@ func RedisSpec(nodeSuffix string) (*NodeSpec, error) {
 func TransactionsPublisherSpec(nodeSuffix, nsqdAddr, redisAddr, rpcAddr string) (*NodeSpec, error) {
 	id := NodeID("transactions-publisher-" + nodeSuffix)
 	spec := &NodeSpec{
-		ID:          id,
-		Image:       "kowalatech/transactions_publisher:dev",
-		Cmd:         []string{},
-		Env:         []string{
+		ID:    id,
+		Image: "kowalatech/transactions_publisher:dev",
+		Cmd:   []string{},
+		Env: []string{
 			fmt.Sprintf("NSQ_ADDR=%s", nsqdAddr),
 			fmt.Sprintf("REDIS_ADDR=%s", redisAddr),
 			fmt.Sprintf("TESTNET_RPC_ADDR=%s", rpcAddr),
