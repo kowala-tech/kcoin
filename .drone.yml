@@ -19,6 +19,8 @@ pipeline:
     commands:
     - make go_generate
     - make assert_no_generate
+    when:
+      event: [push]
 
   test_kcoin:
     group: testing
