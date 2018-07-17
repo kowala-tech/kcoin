@@ -7,6 +7,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/bitutil"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
+	"github.com/kowala-tech/kcoin/client/core/rawdb"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/params"
@@ -44,8 +45,8 @@ func (kcoin *Kowala) startBloomHandlers() {
 					task := <-request
 					task.Bitsets = make([][]byte, len(task.Sections))
 					for i, section := range task.Sections {
-						head := core.GetCanonicalHash(kcoin.chainDb, (section+1)*params.BloomBitsBlocks-1)
-						if compVector, err := core.GetBloomBits(kcoin.chainDb, task.Bit, section, head); err == nil {
+						head := rawdb.ReadCanonicalHash(kcoin.chainDb, (section+1)*params.BloomBitsBlocks-1)
+						if compVector, err := rawdb.ReadBloomBits(kcoin.chainDb, task.Bit, section, head); err == nil {
 							if blob, err := bitutil.DecompressBytes(compVector, int(params.BloomBitsBlocks)/8); err == nil {
 								task.Bitsets[i] = blob
 							} else {
@@ -91,7 +92,7 @@ func NewBloomIndexer(db kcoindb.Database, size uint64) *core.ChainIndexer {
 		db:   db,
 		size: size,
 	}
-	table := kcoindb.NewTable(db, string(core.BloomBitsIndexPrefix))
+	table := kcoindb.NewTable(db, string(rawdb.BloomBitsIndexPrefix))
 
 	return core.NewChainIndexer(db, table, backend, size, bloomConfirms, bloomThrottling, "bloombits")
 }
@@ -121,7 +122,7 @@ func (b *BloomIndexer) Commit() error {
 		if err != nil {
 			return err
 		}
-		core.WriteBloomBits(batch, uint(i), b.section, b.head, bitutil.CompressBytes(bits))
+		rawdb.WriteBloomBits(batch, uint(i), b.section, b.head, bitutil.CompressBytes(bits))
 	}
 	return batch.Write()
 }

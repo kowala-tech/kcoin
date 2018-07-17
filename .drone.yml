@@ -9,11 +9,15 @@ clone:
     tags: true
 
 pipeline:
+  bindings:
+    image: kowalatech/go:1.0.4
+    commands:
+      - make bindings
+
   test_kcoin:
     group: testing
     image: kowalatech/go:1.0.4
     commands:
-      - make bindings
       - make test
       - make lint
     when:
@@ -37,56 +41,74 @@ pipeline:
       - DOCKER_HOST=tcp://docker:2375
       - DOCKER_PUBLIC_IP=docker
     commands:
-      - make dev_docker_images
+      - make -j 4 dev_docker_images
       - make e2e
     when:
       event: [pull_request]
 
+  wallet_app:
+    group: testing
+    image: node:9
+    commands:
+      - make wallet_app_tests
+    when:
+      event: [pull_request]
+
+  docker_build:
+    image: kowalatech/go:1.0.4
+    environment:
+      - DOCKER_HOST=tcp://docker:2375
+      - DOCKER_PUBLIC_IP=docker
+    commands:
+      - make -j 4 dev_docker_images
+    when:
+      event: [push]
+
   docker_kusd:
-    group: docker-deployment
+    group: docker_deployment
     image: kowalatech/drone-docker
-    pull: true
     repo: kowalatech/kusd
+    dockerfile: client/release/kcoin.Dockerfile
+    pull: true
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: client/release/kcoin.Dockerfile
     when:
       branch: [dev, master]
       event: [push, tag]
 
   docker_bootnode:
-    group: docker-deployment
+    group: docker_deployment
     image: kowalatech/drone-docker
-    pull: true
     repo: kowalatech/bootnode
+    dockerfile: client/release/bootnode.Dockerfile
+    pull: true
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: client/release/bootnode.Dockerfile
     when:
       branch: [dev, master]
       event: [push, tag]
 
   docker_faucet:
-    group: docker-deployment
+    group: docker_deployment
     image: kowalatech/drone-docker
-    pull: true
     repo: kowalatech/faucet
+    dockerfile: client/release/faucet.Dockerfile
+    pull: true
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
-    dockerfile: client/release/faucet.Dockerfile
     when:
       branch: [dev, master]
       event: [push, tag]
 
   docker_notifications_api:
-    group: docker-deployment
+    group: docker_deployment
     image: kowalatech/drone-docker
-    pull: true
     repo: kowalatech/backend_api
     dockerfile: notifications/api.Dockerfile
+    pull: true
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
@@ -95,11 +117,11 @@ pipeline:
       event: [push, tag]
 
   docker_notifications_emailer:
-    group: docker-deployment
+    group: docker_deployment
     image: kowalatech/drone-docker
-    pull: true
     repo: kowalatech/emailer
     dockerfile: notifications/emailer.Dockerfile
+    pull: true
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
@@ -108,11 +130,11 @@ pipeline:
       event: [push, tag]
 
   docker_notifications_db_sync:
-    group: docker-deployment
+    group: docker_deployment
     image: kowalatech/drone-docker
-    pull: true
     repo: kowalatech/transactions_persistance
     dockerfile: notifications/transactions_db_synchronize.Dockerfile
+    pull: true
     secrets: [ docker_username, docker_password ]
     privileged: true
     auto_tag: true
@@ -120,54 +142,181 @@ pipeline:
       branch: [dev, master]
       event: [push, tag]
 
+  docker_netstats:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/netstats
+    dockerfile: netstats/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
 
-  build-artifacts:
-    group: build-artifacts
+  docker_explorer_web:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/kexplorer
+    dockerfile: explorer/web.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_explorer_sync:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/kexplorersync
+    dockerfile: explorer/sync.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_notifications_tx_publisher:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/transactions_publisher
+    dockerfile: notifications/transactions_publisher.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  build_artifacts:
+    group: build_artifacts
     image: kowalatech/go:1.0.4
     environment:
       - DOCKER_HOST=tcp://docker:2375
     commands:
-      - make kcoin-cross
+      - make kcoin_cross
     when:
       event: [push, tag]
       branch: [dev]
 
-  compile-gource-video:
-    group: build-artifacts
+  compile_gource_video:
+    group: build_artifacts
     image: adk486/docker-gource
     repo: kowalatech/kcoin
     when:
       branch: [dev]
       event: [push]
 
-  upload-gource-mp4-to-s3:
-    group: asset-deployment
+  build_docs:
+    group: build_artifacts
+    image: kowalatech/mkdocs
+    commands:
+      - make build_docs
+    when:
+      event: [push,tag]
+      branch: [master,dev]
+
+  build_wallet_app:
+    group: build_artifacts
+    image: node:9
+    environment:
+      - KOWALA_NETWORK="kusd-zygote"
+    commands:
+      - cd wallet-app ; yarn run drone:build
+    when:
+      event: [push]
+      branch: [master]
+
+  upload_gource_mp4_to_s3:
+    group: asset_deployment
     image: plugins/s3
-    bucket: releases.kowala.io
     region: us-east-1
     acl: public-read
+    encryption: AES256
+    bucket: releases.kowala.io
     source: gource-audio.mp4
     target: /kowala-kcoin-development-history.mp4
-    secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       branch: [dev]
       event: [push]
 
-  upload-binary-assets-to-s3:
-    group: asset-deployment
+  upload_binary_assets_to_s3:
+    group: asset_deployment
     image: plugins/s3
-    bucket: releases.kowala.io
     region: us-east-1
     acl: public-read
+    encryption: AES256
+    bucket: releases.kowala.io
     source: client/build/bin/kcoin-*.zip
     strip_prefix: client/build/bin/
     target: /
-    secrets: [aws_access_key_id, aws_secret_access_key]
     when:
       event: [push, tag]
       branch: [dev]
 
-  notify-dev:
+  upload_kusd_zygote:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: "wallet.zygote.kowala.io"
+    source: dist/**/*
+    strip_prefix: dist
+    target: /
+    when:
+      event: [push]
+      branch: [master]
+
+  upload_dev_docs_to_s3:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: "docs.kowala.io"
+    source: docs/site/**/*
+    strip_prefix: docs/site
+    target: /
+    when:
+      event: [push]
+      branch: [dev]
+
+  upload_prod_docs_to_s3:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: "docs.kowala.tech"
+    source: docs/site/**/*
+    strip_prefix: docs/site
+    target: /
+    when:
+      event: [push,tag]
+      branch: [master]
+
+  upload_e2e_logs:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: private
+    encryption: AES256
+    bucket: "kcoin-e2e"
+    source: e2e/logs/*
+    strip_prefix: e2e/logs
+    target: /logs/${DRONE_BUILD_NUMBER}
+    when:
+      status: failure
+      event: [pull_request]
+
+  notify_dev:
     group: notify
     image: plugins/slack
     secrets: [ slack_webhook ]

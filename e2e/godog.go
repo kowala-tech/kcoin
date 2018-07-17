@@ -24,6 +24,7 @@ func FeatureContext(opts *FeatureContextOpts) {
 	context := impl.NewTestContext(chainID)
 	validationCtx := impl.NewValidationContext(context)
 	walletBackendCtx := impl.NewWalletBackendContext(context)
+	faucetCtx := impl.NewFaucetContext(context)
 
 	opts.suite.BeforeFeature(func(ft *gherkin.Feature) {
 		context.Name = getFeatureName(ft.Name)
@@ -49,6 +50,7 @@ func FeatureContext(opts *FeatureContextOpts) {
 		context.Reset()
 		validationCtx.Reset()
 		walletBackendCtx.Reset()
+		faucetCtx.Reset()
 	})
 
 	// Creating accounts
@@ -110,6 +112,10 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^the balance of (\w+) using the wallet backend should be around (\d+) kcoins$`, walletBackendCtx.TheBalanceIsAround)
 	opts.suite.Step(`^the balance of (\w+) using the wallet backend should be (\d+) kcoins$`, walletBackendCtx.TheBalanceIsExactly)
 
+	// Faucet
+	opts.suite.Step(`^the faucet node is running using the account (\w+) and password '(\w+)'$`, faucetCtx.TheFaucetNodeIsRunning)
+	opts.suite.Step(`^I fetch (.+) on the faucet$`, faucetCtx.IFetchOnTheFaucet)
+	opts.suite.Step(`^the status code is (\d+)$`, faucetCtx.TheStatusCodeIs)
 }
 
 func getFeatureName(feature string) string {

@@ -1,0 +1,32 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Modal it should match the snapshot 1`] = `
+<WithTheme(WithWidth(WithMobileDialog))
+  acceptButton={
+    <WithStyles(Button)
+      onClick={[MockFunction]}
+    >
+      Yes
+    </WithStyles(Button)>
+  }
+  classes={
+    Object {
+      "content": "WithTheme-WithWidth-WithMobileDialog---content-1",
+      "contentText": "WithTheme-WithWidth-WithMobileDialog---contentText-2",
+      "flex": "WithTheme-WithWidth-WithMobileDialog---flex-3",
+      "menuButton": "WithTheme-WithWidth-WithMobileDialog---menuButton-4",
+    }
+  }
+  content="Modal content."
+  handleClose={[MockFunction]}
+  open={true}
+  rejectButton={
+    <WithStyles(Button)
+      onClick={[MockFunction]}
+    >
+      No
+    </WithStyles(Button)>
+  }
+  title="Modal Title"
+/>
+`;

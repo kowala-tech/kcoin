@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -51,6 +52,14 @@ func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
 	return ctx.waiter.Do(
 		ctx.makeExecFunc(validatorStartCommand(kcoin)),
 		func() error {
+			pending, err := ctx.globalCtx.client.PendingTransactionCount(context.Background())
+			if err != nil {
+				return err
+			}
+			if pending != 0 {
+				return errors.New("there are some pending transactions")
+			}
+
 			res := &cluster.ExecResponse{}
 			if err := ctx.execCommand(isValidatingCommand(), res); err != nil {
 				return err
@@ -76,7 +85,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.globalCtx.bootnode).
-		WithLogLevel(3).
+		WithLogLevel(6).
 		WithID(ctx.nodeID().String()).
 		WithSyncMode("full").
 		WithNetworkId(ctx.globalCtx.chainID.String()).

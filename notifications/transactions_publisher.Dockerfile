@@ -4,7 +4,7 @@ COPY . .
 RUN cd notifications && dep ensure --vendor-only
 RUN go build -a -o app notifications/cmd/transactions_publisher/main.go
 
-FROM alpine:3.7  
+FROM alpine:3.7
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /go/src/github.com/kowala-tech/kcoin/app .

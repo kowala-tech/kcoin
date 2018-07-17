@@ -17,7 +17,7 @@ type (
 var errGasUintOverflow = errors.New("gas uint64 overflow")
 
 type operation struct {
-	// op is the operation function
+	// execute is the operation function
 	execute executionFunc
 	// gasCost is the gas function and returns the gas required for execution
 	gasCost gasFunc
@@ -886,6 +886,24 @@ func NewAndromedaInstructionSet() [256]operation {
 			valid:         true,
 			reverts:       true,
 			returns:       true,
+		},
+		SHL: {
+			execute:       opSHL,
+			gasCost:       constGasFunc(GasFastestStep),
+			validateStack: makeStackFunc(2, 1),
+			valid:         true,
+		},
+		SHR: {
+			execute:       opSHR,
+			gasCost:       constGasFunc(GasFastestStep),
+			validateStack: makeStackFunc(2, 1),
+			valid:         true,
+		},
+		SAR: {
+			execute:       opSAR,
+			gasCost:       constGasFunc(GasFastestStep),
+			validateStack: makeStackFunc(2, 1),
+			valid:         true,
 		},
 	}
 }

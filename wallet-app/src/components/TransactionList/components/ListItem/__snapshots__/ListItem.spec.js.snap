@@ -1,0 +1,16 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ListItem it should match the snapshot 1`] = `
+<TransactionListItem
+  amount={12.8544321}
+  classes={
+    Object {
+      "amount": "TransactionListItem-amount-2",
+      "avatar": "TransactionListItem-avatar-1",
+    }
+  }
+  index={0}
+  timestamp={1514764800}
+  toggleTransactionDetailsDialogFn={[MockFunction]}
+/>
+`;
