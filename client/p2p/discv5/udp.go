@@ -273,6 +273,10 @@ func (t *udp) sendNeighbours(remote *Node, results []*Node) {
 	// to stay below the 1280 byte limit.
 	p := neighbors{Expiration: uint64(time.Now().Add(expiration).Unix())}
 	for i, result := range results {
+		if result.ID == remote.ID {
+			//skip remote node itself
+			continue
+		}
 		p.Nodes = append(p.Nodes, nodeToRPC(result))
 		if len(p.Nodes) == maxNeighbors || i == len(results)-1 {
 			t.sendPacket(remote.ID, remote.addr(), byte(neighborsPacket), p)
