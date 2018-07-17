@@ -3,24 +3,24 @@
 /* eslint consistent-return: 0 */
 /* eslint-disable max-len */
 
-const NS = artifacts.require('NSRegistry.sol');
+const KNS = artifacts.require('KNSRegistry.sol');
 const { EVMError } = require('../helpers/testUtils.js');
 const namehash = require('eth-ens-namehash');
 
-contract('NS', (accounts) => {
-  let ns;
+contract('KNS', (accounts) => {
+  let kns;
   const owner = '0x0000000000000000000000000000000000001234';
   const node = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
   beforeEach(async () => {
-    ns = await NS.new();
+    kns = await KNS.new();
   });
 
   it('should allow ownership transfers', async () => {
     // when
-    const result = await ns.setOwner(0, '0x1234', { from: accounts[0] });
+    const result = await kns.setOwner(0, '0x1234', { from: accounts[0] });
     const { args } = result.logs[0];
-    const nsOwner = await ns.owner(0);
+    const nsOwner = await kns.owner(0);
 
     // then
     await nsOwner.should.be.equal(owner);
@@ -31,7 +31,7 @@ contract('NS', (accounts) => {
 
   it('should prohibit transfers by non-owners', async () => {
     // when
-    const transferByNonOwner = ns.setOwner(1, '0x1234', { from: accounts[0] });
+    const transferByNonOwner = kns.setOwner(1, '0x1234', { from: accounts[0] });
 
     // then
     await transferByNonOwner.should.be.rejectedWith(EVMError('revert'));
@@ -39,9 +39,9 @@ contract('NS', (accounts) => {
 
   it('should allow setting resolvers', async () => {
     // when
-    const result = await ns.setResolver(0, '0x1234', { from: accounts[0] });
+    const result = await kns.setResolver(0, '0x1234', { from: accounts[0] });
     const { args } = result.logs[0];
-    const resolver = await ns.resolver(0);
+    const resolver = await kns.resolver(0);
 
     // then
     await resolver.should.be.equal(owner);
@@ -52,7 +52,7 @@ contract('NS', (accounts) => {
 
   it('should prevent setting resolvers by non-owners', async () => {
     // then
-    const resolverByNonOwner = ns.setResolver(1, '0x1234', { from: accounts[0] });
+    const resolverByNonOwner = kns.setResolver(1, '0x1234', { from: accounts[0] });
 
     // then
     await resolverByNonOwner.should.be.rejectedWith(EVMError('revert'));
@@ -60,9 +60,9 @@ contract('NS', (accounts) => {
 
   it('should allow setting the TTL', async () => {
     // when
-    const result = await ns.setTTL(0, 3600, { from: accounts[0] });
+    const result = await kns.setTTL(0, 3600, { from: accounts[0] });
     const { args } = result.logs[0];
-    const ttl = await ns.ttl(0);
+    const ttl = await kns.ttl(0);
 
     // then
     await ttl.should.be.bignumber.equal(3600);
@@ -73,7 +73,7 @@ contract('NS', (accounts) => {
 
   it('should prevent setting the TTL by non-owners', async () => {
     // when
-    const ttlByNonOwner = ns.setTTL(1, 3600, { from: accounts[0] });
+    const ttlByNonOwner = kns.setTTL(1, 3600, { from: accounts[0] });
 
     // then
     await ttlByNonOwner.should.be.rejectedWith(EVMError('revert'));
@@ -81,9 +81,9 @@ contract('NS', (accounts) => {
 
   it('should allow the creation of subnodes', async () => {
     // when
-    const result = await ns.setSubnodeOwner(0, web3.sha3('eth'), accounts[1], { from: accounts[0] });
+    const result = await kns.setSubnodeOwner(0, web3.sha3('eth'), accounts[1], { from: accounts[0] });
     const { args } = result.logs[0];
-    const nsSubnodeOwner = await ns.owner(namehash('eth'));
+    const nsSubnodeOwner = await kns.owner(namehash('eth'));
 
     // then
     await nsSubnodeOwner.should.be.equal(accounts[1]);
@@ -95,7 +95,7 @@ contract('NS', (accounts) => {
 
   it('should prohibit subnode creation by non-owners', async () => {
     // when
-    const subnodeByNonOwner = ns.setSubnodeOwner(0, web3.sha3('eth'), accounts[1], { from: accounts[1] });
+    const subnodeByNonOwner = kns.setSubnodeOwner(0, web3.sha3('eth'), accounts[1], { from: accounts[1] });
 
     // then
     subnodeByNonOwner.should.be.rejectedWith(EVMError('revert'));

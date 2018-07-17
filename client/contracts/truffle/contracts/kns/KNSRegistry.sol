@@ -1,11 +1,11 @@
 pragma solidity 0.4.24;
 
-import "./NS.sol";
+import "./KNS.sol";
 
 /**
- * The NS registry contract.
+ * The KNS registry contract.
  */
-contract NSRegistry is NS {
+contract KNSRegistry is KNS {
     struct Record {
         address owner;
         address resolver;
@@ -21,7 +21,7 @@ contract NSRegistry is NS {
     }
 
     /**
-     * @dev Constructs a new NS registrar.
+     * @dev Constructs a new KNS registrar.
      */
     constructor() public {
         records[0x0].owner = msg.sender;

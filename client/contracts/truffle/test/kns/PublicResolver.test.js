@@ -4,7 +4,7 @@
 /* eslint-disable max-len */
 
 
-const NS = artifacts.require('NSRegistry.sol');
+const KNS = artifacts.require('KNSRegistry.sol');
 const PublicResolver = artifacts.require('PublicResolver.sol');
 
 const { EVMError } = require('../helpers/testUtils.js');
@@ -13,14 +13,14 @@ const namehash = require('eth-ens-namehash');
 
 contract('PublicResolver', (accounts) => {
   let node;
-  let ns;
+  let kns;
   let resolver;
 
   beforeEach(async () => {
     node = namehash('eth');
-    ns = await NS.new();
-    resolver = await PublicResolver.new(ns.address);
-    await ns.setSubnodeOwner(0, web3.sha3('eth'), accounts[0], { from: accounts[0] });
+    kns = await KNS.new();
+    resolver = await PublicResolver.new(kns.address);
+    await kns.setSubnodeOwner(0, web3.sha3('eth'), accounts[0], { from: accounts[0] });
   });
 
   describe('fallback function', async () => {

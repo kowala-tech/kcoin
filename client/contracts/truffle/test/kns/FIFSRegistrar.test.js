@@ -4,20 +4,20 @@
 /* eslint-disable max-len */
 
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
-const NS = artifacts.require('NSRegistry.sol');
+const KNS = artifacts.require('KNSRegistry.sol');
 
 const { EVMError } = require('../helpers/testUtils.js');
 const namehash = require('eth-ens-namehash');
 
 contract('FIFSRegistrar', (accounts) => {
   let registrar;
-  let ns;
+  let kns;
 
   beforeEach(async () => {
-    ns = await NS.new();
-    registrar = await FIFSRegistrar.new(ns.address, 0);
+    kns = await KNS.new();
+    registrar = await FIFSRegistrar.new(kns.address, 0);
 
-    await ns.setOwner(0, registrar.address, { from: accounts[0] });
+    await kns.setOwner(0, registrar.address, { from: accounts[0] });
   });
 
   it('should allow registration of names', async () => {
@@ -25,8 +25,8 @@ contract('FIFSRegistrar', (accounts) => {
     await registrar.register(web3.sha3('eth'), accounts[0], { from: accounts[0] });
 
     // then
-    const nsOwner = await ns.owner(0);
-    const nsSubnodeOwner = await ns.owner(namehash('eth'));
+    const nsOwner = await kns.owner(0);
+    const nsSubnodeOwner = await kns.owner(namehash('eth'));
 
     await nsOwner.should.be.equal(registrar.address);
     await nsSubnodeOwner.should.be.equal(accounts[0]);
@@ -42,7 +42,7 @@ contract('FIFSRegistrar', (accounts) => {
       await registrar.register(web3.sha3('eth'), accounts[1], { from: accounts[0] });
 
       // then
-      const nsSubnodeOwner = await ns.owner(namehash('eth'));
+      const nsSubnodeOwner = await kns.owner(namehash('eth'));
       await nsSubnodeOwner.should.be.equal(accounts[1]);
     });
 
