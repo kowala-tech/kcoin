@@ -8,6 +8,7 @@
   },
   "scripts": {
     "solium": "solium -d contracts/",
+    "solium2": "solium",
     "coverage": "solidity-coverage",
     "lint": "solium --dir contracts && eslint migrations/ test/",
     "eslint": "eslint migrations/ test/",

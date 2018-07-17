@@ -1,27 +1,27 @@
 pragma solidity 0.4.24;
 
-import "./ENS.sol";
+import "./NS.sol";
 
 /**
  * A registrar that allocates subdomains to the first person to claim them.
  */
 contract FIFSRegistrar {
-    ENS ens;
+    NS ns;
     bytes32 rootNode;
 
     modifier only_owner(bytes32 subnode) {
-        address currentOwner = ens.owner(keccak256(rootNode, subnode));
+        address currentOwner = ns.owner(keccak256(rootNode, subnode));
         require(currentOwner == 0 || currentOwner == msg.sender);
         _;
     }
 
     /**
      * Constructor.
-     * @param ensAddr The address of the ENS registry.
+     * @param nsAddr The address of the NS registry.
      * @param node The node that this registrar administers.
      */
-    constructor(ENS ensAddr, bytes32 node) public {
-        ens = ensAddr;
+    constructor(NS nsAddr, bytes32 node) public {
+        ns = nsAddr;
         rootNode = node;
     }
 
@@ -31,6 +31,6 @@ contract FIFSRegistrar {
      * @param owner The address of the new owner.
      */
     function register(bytes32 subnode, address owner) public only_owner(subnode) {
-        ens.setSubnodeOwner(rootNode, subnode, owner);
+        ns.setSubnodeOwner(rootNode, subnode, owner);
     }
 }

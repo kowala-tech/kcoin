@@ -4,20 +4,20 @@
 /* eslint-disable max-len */
 
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
-const ENS = artifacts.require('ENSRegistry.sol');
+const NS = artifacts.require('NSRegistry.sol');
 
 const { EVMError } = require('../helpers/testUtils.js');
 const namehash = require('eth-ens-namehash');
 
 contract('FIFSRegistrar', (accounts) => {
   let registrar;
-  let ens;
+  let ns;
 
   beforeEach(async () => {
-    ens = await ENS.new();
-    registrar = await FIFSRegistrar.new(ens.address, 0);
+    ns = await NS.new();
+    registrar = await FIFSRegistrar.new(ns.address, 0);
 
-    await ens.setOwner(0, registrar.address, { from: accounts[0] });
+    await ns.setOwner(0, registrar.address, { from: accounts[0] });
   });
 
   it('should allow registration of names', async () => {
@@ -25,11 +25,11 @@ contract('FIFSRegistrar', (accounts) => {
     await registrar.register(web3.sha3('eth'), accounts[0], { from: accounts[0] });
 
     // then
-    const ensOwner = await ens.owner(0);
-    const ensSubnodeOwner = await ens.owner(namehash('eth'));
+    const nsOwner = await ns.owner(0);
+    const nsSubnodeOwner = await ns.owner(namehash('eth'));
 
-    await ensOwner.should.be.equal(registrar.address);
-    await ensSubnodeOwner.should.be.equal(accounts[0]);
+    await nsOwner.should.be.equal(registrar.address);
+    await nsSubnodeOwner.should.be.equal(accounts[0]);
   });
 
   describe('transferring names', async () => {
@@ -42,8 +42,8 @@ contract('FIFSRegistrar', (accounts) => {
       await registrar.register(web3.sha3('eth'), accounts[1], { from: accounts[0] });
 
       // then
-      const ensSubnodeOwner = await ens.owner(namehash('eth'));
-      await ensSubnodeOwner.should.be.equal(accounts[1]);
+      const nsSubnodeOwner = await ns.owner(namehash('eth'));
+      await nsSubnodeOwner.should.be.equal(accounts[1]);
     });
 
     it('forbids transferring the name you do not own', async () => {

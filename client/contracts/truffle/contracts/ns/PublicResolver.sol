@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "./ENS.sol";
+import "./NS.sol";
 
 /**
  * A simple resolver anyone can use; only allows the owner of a node to set its
@@ -40,26 +40,26 @@ contract PublicResolver {
         bytes multihash;
     }
 
-    ENS ens;
+    NS ns;
 
     mapping (bytes32 => Record) records;
 
     modifier only_owner(bytes32 node) {
-        require(ens.owner(node) == msg.sender);
+        require(ns.owner(node) == msg.sender);
         _;
     }
 
     /**
      * Constructor.
-     * @param ensAddr The ENS registrar contract.
+     * @param nsAddr The NS registrar contract.
      */
-    constructor(ENS ensAddr) public {
-        ens = ensAddr;
+    constructor(NS nsAddr) public {
+        ns = nsAddr;
     }
 
     /**
-     * Sets the address associated with an ENS node.
-     * May only be called by the owner of that node in the ENS registry.
+     * Sets the address associated with an NS node.
+     * May only be called by the owner of that node in the NS registry.
      * @param node The node to update.
      * @param addr The address to set.
      */
@@ -69,8 +69,8 @@ contract PublicResolver {
     }
 
     /**
-     * Sets the content hash associated with an ENS node.
-     * May only be called by the owner of that node in the ENS registry.
+     * Sets the content hash associated with an NS node.
+     * May only be called by the owner of that node in the NS registry.
      * Note that this resource type is not standardized, and will likely change
      * in future to a resource type based on multihash.
      * @param node The node to update.
@@ -82,8 +82,8 @@ contract PublicResolver {
     }
 
     /**
-     * Sets the multihash associated with an ENS node.
-     * May only be called by the owner of that node in the ENS registry.
+     * Sets the multihash associated with an NS node.
+     * May only be called by the owner of that node in the NS registry.
      * @param node The node to update.
      * @param hash The multihash to set
      */
@@ -93,8 +93,8 @@ contract PublicResolver {
     }
     
     /**
-     * Sets the name associated with an ENS node, for reverse records.
-     * May only be called by the owner of that node in the ENS registry.
+     * Sets the name associated with an NS node, for reverse records.
+     * May only be called by the owner of that node in the NS registry.
      * @param node The node to update.
      * @param name The name to set.
      */
@@ -104,7 +104,7 @@ contract PublicResolver {
     }
 
     /**
-     * Sets the ABI associated with an ENS node.
+     * Sets the ABI associated with an NS node.
      * Nodes may have one ABI of each content type. To remove an ABI, set it to
      * the empty string.
      * @param node The node to update.
@@ -120,8 +120,8 @@ contract PublicResolver {
     }
     
     /**
-     * Sets the SECP256k1 public key associated with an ENS node.
-     * @param node The ENS node to query
+     * Sets the SECP256k1 public key associated with an NS node.
+     * @param node The NS node to query
      * @param x the X coordinate of the curve point for the public key.
      * @param y the Y coordinate of the curve point for the public key.
      */
@@ -131,8 +131,8 @@ contract PublicResolver {
     }
 
     /**
-     * Sets the text data associated with an ENS node and key.
-     * May only be called by the owner of that node in the ENS registry.
+     * Sets the text data associated with an NS node and key.
+     * May only be called by the owner of that node in the NS registry.
      * @param node The node to update.
      * @param key The key to set.
      * @param value The text data value to set.
@@ -143,8 +143,8 @@ contract PublicResolver {
     }
 
     /**
-     * Returns the text data associated with an ENS node and key.
-     * @param node The ENS node to query.
+     * Returns the text data associated with an NS node and key.
+     * @param node The NS node to query.
      * @param key The text data key to query.
      * @return The associated text data.
      */
@@ -153,9 +153,9 @@ contract PublicResolver {
     }
 
     /**
-     * Returns the SECP256k1 public key associated with an ENS node.
+     * Returns the SECP256k1 public key associated with an NS node.
      * Defined in EIP 619.
-     * @param node The ENS node to query
+     * @param node The NS node to query
      * @return x, y the X and Y coordinates of the curve point for the public key.
      */
     function pubkey(bytes32 node) public view returns (bytes32 x, bytes32 y) {
@@ -163,9 +163,9 @@ contract PublicResolver {
     }
 
     /**
-     * Returns the ABI associated with an ENS node.
+     * Returns the ABI associated with an NS node.
      * Defined in EIP205.
-     * @param node The ENS node to query
+     * @param node The NS node to query
      * @param contentTypes A bitwise OR of the ABI formats accepted by the caller.
      * @return contentType The content type of the return value
      * @return data The ABI data
@@ -182,9 +182,9 @@ contract PublicResolver {
     }
 
     /**
-     * Returns the name associated with an ENS node, for reverse records.
+     * Returns the name associated with an NS node, for reverse records.
      * Defined in EIP181.
-     * @param node The ENS node to query.
+     * @param node The NS node to query.
      * @return The associated name.
      */
     function name(bytes32 node) public view returns (string) {
@@ -192,10 +192,10 @@ contract PublicResolver {
     }
 
     /**
-     * Returns the content hash associated with an ENS node.
+     * Returns the content hash associated with an NS node.
      * Note that this resource type is not standardized, and will likely change
      * in future to a resource type based on multihash.
-     * @param node The ENS node to query.
+     * @param node The NS node to query.
      * @return The associated content hash.
      */
     function content(bytes32 node) public view returns (bytes32) {
@@ -203,8 +203,8 @@ contract PublicResolver {
     }
 
     /**
-     * Returns the multihash associated with an ENS node.
-     * @param node The ENS node to query.
+     * Returns the multihash associated with an NS node.
+     * @param node The NS node to query.
      * @return The associated multihash.
      */
     function multihash(bytes32 node) public view returns (bytes) {
@@ -212,8 +212,8 @@ contract PublicResolver {
     }
 
     /**
-     * Returns the address associated with an ENS node.
-     * @param node The ENS node to query.
+     * Returns the address associated with an NS node.
+     * @param node The NS node to query.
      * @return The associated address.
      */
     function addr(bytes32 node) public view returns (address) {
@@ -226,6 +226,7 @@ contract PublicResolver {
      * @return True if the contract implements the requested interface.
      */
     function supportsInterface(bytes4 interfaceID) public pure returns (bool) {
+        /* solium-disable-next-line */
         return interfaceID == ADDR_INTERFACE_ID ||
         interfaceID == CONTENT_INTERFACE_ID ||
         interfaceID == NAME_INTERFACE_ID ||

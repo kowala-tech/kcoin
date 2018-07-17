@@ -1,11 +1,11 @@
 pragma solidity 0.4.24;
 
-import "./ENS.sol";
+import "./NS.sol";
 
 /**
- * The ENS registry contract.
+ * The NS registry contract.
  */
-contract ENSRegistry is ENS {
+contract NSRegistry is NS {
     struct Record {
         address owner;
         address resolver;
@@ -21,7 +21,7 @@ contract ENSRegistry is ENS {
     }
 
     /**
-     * @dev Constructs a new ENS registrar.
+     * @dev Constructs a new NS registrar.
      */
     constructor() public {
         records[0x0].owner = msg.sender;
