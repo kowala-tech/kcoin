@@ -4,7 +4,6 @@
 /* eslint-disable max-len */
 
 const ENS = artifacts.require('ENSRegistry.sol');
-
 const { EVMError } = require('../helpers/testUtils.js');
 const namehash = require('eth-ens-namehash');
 

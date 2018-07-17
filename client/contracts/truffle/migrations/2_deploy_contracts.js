@@ -4,7 +4,6 @@
 const ENS = artifacts.require('./ens/ENSRegistry.sol');
 const FIFSRegistrar = artifacts.require('./ens/FIFSRegistrar.sol');
 const PublicResolver = artifacts.require('./ens/PublicResolver.sol');
-
 const namehash = require('../node_modules/eth-ens-namehash');
 
 module.exports = (deployer) => {
