@@ -70,7 +70,7 @@ var (
 )
 
 var (
-	kcoin = new(big.Int).Exp(big.NewInt(10), big.NewInt(params.Kcoin), nil)
+	kcoin = big.NewInt(params.Kcoin)
 )
 
 func main() {
@@ -542,19 +542,6 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		default:
 		}
 	}
-}
-
-func (f *faucet) setNonceAndPrice() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	nonce, _ := f.client.NonceAt(ctx, f.account.Address, nil)
-	price, _ := f.client.SuggestGasPrice(ctx)
-
-	f.lock.Lock()
-	defer f.lock.Unlock()
-	f.price, f.nonce = price, nonce
-	log.Info("Updated faucet price and nonce", "nonce", f.nonce, "price", f.price)
 }
 
 // loop keeps waiting for interesting events and pushes them out to connected

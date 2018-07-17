@@ -5,6 +5,7 @@ import (
 	"github.com/kowala-tech/kcoin/notifications/protocolbuffer"
 )
 
+//TransactionRepository is a repository that persist transactions.
 type TransactionRepository interface {
 	Save(tx *protocolbuffer.Transaction) error
 	GetTxByHash(hash common.Hash) (*protocolbuffer.Transaction, error)
