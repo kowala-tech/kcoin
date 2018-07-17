@@ -151,22 +151,8 @@ var blockIter = function(web3, firstBlock, lastBlock, config) {
     }
 }
 
-var config = {};
+var config = require('../config');
 
-try {
-    var configContents = fs.readFileSync('config.json');
-    config = JSON.parse(configContents);
-}
-catch (error) {
-    if (error.code === 'ENOENT') {
-        console.log('No config file found. Using default configuration (will ' +
-            'download all blocks starting from latest)');
-    }
-    else {
-        throw error;
-        process.exit(1);
-    }
-}
 // set the default geth port if it's not provided
 if (!('gethPort' in config) || (typeof config.gethPort) !== 'number') {
     config.gethPort = 8545; // default

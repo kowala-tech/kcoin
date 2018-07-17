@@ -23,7 +23,12 @@ docker pull kowalatech/kusd
 With docker installed, it's time to fire up the the terminal. To download the mining client, start it, generate a wallet and connect to the testnet, run:
 
 ```
-docker run --rm -it kowalatech/kusd
+docker run --rm -it kowalatech/kusd --testnet --new-account console
+```
+
+Or if you already have an account:
+```
+docker run --rm -it kowalatech/kusd --testnet console
 ```
 
 Note that this command will create a disposable version of the mining client — all accounts will be deleted as soon as you terminate the process. If want to persist the state, you can leave off the --rm flag.
