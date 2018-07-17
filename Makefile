@@ -92,8 +92,7 @@ client/contracts/truffle/node_modules:
 client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
-go-generate: moq go-bindata stringer gencodec mockery ensure-notifications ensure-wallet-backend
-	go get -u github.com/golang/protobuf/protoc-gen-go
+go_generate: moq go-bindata stringer gencodec mockery ensure_notifications ensure_wallet_backend protoc-gen-go
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
 	go generate ./client/core/
@@ -114,12 +113,12 @@ assert-no-generate:
 	git status
 	if ! git diff-index --quiet HEAD; then echo "There are uncommited go generate files."; exit 1; fi
 
-ensure-notifications: dep
+ensure_notifications: dep
 	cd notifications && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	cd ..
 
-ensure-wallet-backend: dep
+ensure_wallet_backend: dep
 	cd wallet-backend && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	cd ..
@@ -272,4 +271,11 @@ mockery:
 ifndef MOCKERY_BIN
 	@echo "Installing mockery..."
 	@go get github.com/vektra/mockery/.../
+endif
+
+PROTOC_GEN_BIN := $(shell command -v protoc-gen-go 2> /dev/null)
+protoc-gen-go:
+ifndef PROTOC_GEN_BIN
+	@echo "Installing protoc-gen-go..."
+	@go get -u github.com/golang/protobuf/protoc-gen-go
 endif
