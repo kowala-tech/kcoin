@@ -109,7 +109,7 @@ go_generate: moq go-bindata stringer gencodec mockery ensure_notifications ensur
 	go generate ./notifications/protocolbuffer/
 	go generate ./wallet-backend/protocolbuffer/
 
-assert-no-generate:
+assert_no_generate:
 	git status
 	if ! git diff-index --quiet HEAD; then echo "There are uncommited go generate files."; exit 1; fi
 
