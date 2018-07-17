@@ -1,16 +1,16 @@
 ## NS Explained
-NS is the Ethereum Name Service, a distributed, open, and extensible naming system based on the Ethereum blockchain.
+NS is the Kowala Name Service, a distributed, open, and extensible naming system based on the Kowala blockchain.
 
-NS can be used to resolve Ethereum addresses, from human-readable form like “kowala.tech” into machine-readable identifiers, including Ethereum addresses.
+NS can be used to resolve Kowala addresses, from human-readable form like “kowala.tech” into machine-readable identifiers, including Kowala addresses.
 
-NS is very similar to DNS, the Internet’s Domain Name Service, but has significantly different architecture, due to the capabilities and constraints provided by the Ethereum blockchain. Like DNS, NS operates on a system of dot-separated hierarchial names called domains, with the owner of a domain having full control over the distribution of subdomains.
+NS is very similar to DNS, the Internet’s Domain Name Service, but has significantly different architecture, due to the capabilities and constraints provided by the Kowala blockchain. Like DNS, NS operates on a system of dot-separated hierarchial names called domains, with the owner of a domain having full control over the distribution of subdomains.
 
 First component of the NS is **registry**. The registry is a central directory of NS where all of the NS domains are kept.
 Every name in NS can be found by looking it up in the NS registry, and it’s the only component you need the address for.
 
 **Registrars** are the second component of NS, and are responsible for allocating new names to users. Registrars don’t have any special permissions — they just use their ability to tell the registry to create subdomains.
 
-**Resolvers** are contracts that can tell you the resource associated with a name — such as an Ethereum address.
+**Resolvers** are contracts that can tell you the resource associated with a name — such as an Kowala address.
 
 
 ## Namehash
