@@ -626,3 +626,12 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	log.Debug("Trie cache stats after commit", "misses", trie.CacheMisses(), "unloads", trie.CacheUnloads())
 	return root, err
 }
+
+// Mint adds amount to the account associated with addr.
+func (s *StateDB) Mint(addr common.Address, amount *big.Int) {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.AddBalance(amount)
+		s.SetState(addr, common.BytesToHash([]byte{0}), common.BytesToHash([]byte{0}))
+	}
+}

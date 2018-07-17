@@ -9,17 +9,22 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
+//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/currency/Currency.sol
+//go:generate ../../../build/bin/abigen -abi build/Currency.abi -bin build/Currency.bin -pkg currency -type Currency -out ./gen_currency.go
+
 var mapCurrencyToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
 }
 
-type Kcoin interface {
-	Supply(pending bool) (*big.Int, error)
+type Currency interface {
+	PrevSupply() (*big.Int, error)
+	PrevMintedAmount() (*big.Int, error)
+	Address() common.Hash
 }
 
-type kcoin struct {
-	addr     common.Address
-	currency Currency
+type currency struct {
+	addr common.Address
+	Currency
 }
 
 // Binding returns a binding to the current currency contract
@@ -36,7 +41,7 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (Currency, 
 
 	return nil, &currency{
 		addr:     addr,
-		currency: curr,
+		Currency: curr,
 	}
 }
 
@@ -44,6 +49,10 @@ func (curr *currency) Address() common.Address {
 	return curr.addr
 }
 
-func (curr *currency) Supply() (*big.Int, error) {
+func (curr *currency) PrevSupply() (*big.Int, error) {
+
+}
+
+func (curr *currency) PrevMintedAmount() (*big.Int, error) {
 
 }

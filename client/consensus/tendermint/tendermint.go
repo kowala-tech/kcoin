@@ -11,26 +11,34 @@ import (
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
+var (
+	oracleEpoch = new(big.Int) = SetUint64(900)
+	oracleDeductionFraction = new(big.Int).SetUint64(4)
+)
+
 type PriceProvider interface {
-	Price() (*big.Int, error)
+	Price(pendingState bool) (*big.Int, error)
 }
 
 type Currency interface {
-	Supply(pendingState bool) (*big.Int, error)
+	PrevSupply() (*big.Int, error)
+	PrevMintedAmount() (*big.Int, error)
+	Address() common.Hash
 }
 
 type Tendermint struct {
+	PriceProvider
+	Currency
+
 	config   *params.TendermintConfig // Consensus engine configuration parameters
-	provider PriceProvider
-	kcoin    Currency
 	fakeMode bool
 }
 
-func New(config *params.TendermintConfig, provider PriceProvider, currency Currency) *Tendermint {
+func New(config *params.TendermintConfig, priceProvider PriceProvider, currency Currency) *Tendermint {
 	return &Tendermint{
-		config:   config,
-		provider: provider,
-		kcoin:    currency,
+		PriceProvider: priceProvider,
+		Currency:      currency,
+		config:        config,
 	}
 }
 
@@ -76,11 +84,47 @@ func (tm *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header
 }
 
 func (tm *Tendermint) accumulateRewards(state *state.StateDB, header *types.Header) error {
-	blockReward := tm.mintedAmount(header.Number)
+	currentPrice, err := tm.Price(true)
+	if err != nil {
+		return err
+	}
+	prevPrice, err := tm.Price(false)
+	if err != nil {
+		return err
+	}
+	prevSupply, err := tm.PrevSupply()
+	if err != nil {
+		return err
+	}
+	prevMintedAmount, err := tm.PrevMintedAmount()
+	if err != nil {
+		return err
+	}
 
-	// accumulate the rewards for the validator
-	reward := new(big.Int).Set(blockReward)
-	state.AddBalance(header.Coinbase, reward)
+	mintedAmount := mintedAmount(header.Number, currentPrice, prevPrice, prevSupply, prevMintedAmount)
+
+	oracleDeduction := new(big.Int).Div(new(big.Int).Mul(oracleDeductionFraction, mintedAmount), new(big.Int).SetUint64(100))
+	state.AddBalance(common.BytesToAddress([]byte{0}), oracleDeduction)
+
+	mintedReward := new(big.Int).Sub(mintedReward, oracleDeduction)
+	reward := new(big.Int).Set(mintedReward)
+	mint(state, header.Coinbase, reward)
+
+	// reward oracles every 900 blocks
+	// @TODO (What if timeouts?)
+	if new(big.Int).DivMod(header.Number, oracleEpoch) == 0 {
+		// check the list of submissions
+		oracleReward := common.Min(baseOracleReward, oracleFundBalance)
+		baseOracleReward := common.Big1
+		// @TODO (rgeraldes) - use a core account
+		oracleFundBalance := state.GetBalance(common.BytesToAddress([]byte{0}))
+
+		// divide reward by all the participants
+
+		// reward each one?
+
+		// clean state back to empty
+	}
 
 	/*
 		// @TODO (hrosa): what to do with transactions fees ?
@@ -147,20 +191,6 @@ func (tm *Tendermint) accumulateRewards(state *state.StateDB, header *types.Head
 	return nil
 }
 
-func (tm *Tendermint) availableCoinSupply(pendingState bool) {
-
-}
-
-func (tm *Tendermint) mintedAmount(blockNumber *big.Int) *big.Int {
-	if blockNumber.Cmp(common.Big0) == 0 {
-		return initialBlockReward
-	}
-
-	previousAmount := tm.mintedAmount(new(big.Int).Sub(blockNumber, common.Big1))
-
-	return common.Big1
-}
-
 func (tm *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	return nil, nil
 }
@@ -169,7 +199,6 @@ func (tm *Tendermint) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
 }
 
-func (tm *Tendermint) fund(state *state.StateDB, addr common.Address, amount *big.Int) {
-	state.AddBalance(add, amount)
-	//state.SetState()
+func mint(state *state.StateDB, addr common.Address, amount *big.Int) {
+	state.Mint(addr, amount)
 }
