@@ -1,5 +1,5 @@
 {
-    "nodeAddr":     "rpcnode.zygote.kowala.tech",
+    "nodeAddr":     "rpcnode.kowala.tech",
     "gethPort":     30503,
     "startBlock":   0,
     "endBlock":     "latest",

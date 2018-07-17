@@ -2,83 +2,78 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: kcoin android ios kcoin-cross evm genesis all test clean
-.PHONY: kcoin-cross kcoin-cross-compress kcoin-cross-build  kcoin-cross-rename
-.PHONY: dep e2e
-.PHONY: dev_explorer_docker_image dev_docker_images dev_kusd_docker_image dev_bootnode_docker_image dev_faucet_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_backend_api_docker_image 
-.PHONY: bindings
-.PHONY: build_docs build_docs_with_docker
-
 PWD   := $(shell pwd)
 GOBIN = $(PWD)/client/build/bin
-GO ?= latest
 
-NPROCS := 1
-OS := $(shell uname)
-ifeq ($(OS),Linux)
-	NPROCS := $(shell grep -c ^processor /proc/cpuinfo)
-else ifeq ($(OS),Darwin)
-	NPROCS := $(shell sysctl -n hw.ncpu)
-endif # $(OS)
-
+.PHONY: kcoin
 kcoin: bindings
 	cd client; build/env.sh go run build/ci.go install ./cmd/kcoin
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kcoin\" to launch kcoin."
 
+.PHONY: control
 control:
 	cd client; build/env.sh go run build/ci.go install ./cmd/control
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/control\" to launch control."
 
+.PHONY: bootnode
 bootnode: bindings
 	cd client; build/env.sh go run build/ci.go install ./cmd/bootnode
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
 
+.PHONY: faucet
 faucet: bindings
 	cd client; build/env.sh go run build/ci.go install ./cmd/faucet
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/faucet\" to launch faucet."
 
+.PHONY: evm
 evm:
 	cd client; build/env.sh go run build/ci.go install ./cmd/evm
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/evm\" to start the evm."
 
+.PHONY: genesis
 genesis:
 	cd client; build/env.sh go run build/ci.go install ./cmd/genesis
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/genesis\" to generate genesis files."
 
+.PHONY: all
 all:
 	cd client; build/env.sh go run build/ci.go install
 
+.PHONY: android
 android:
 	cd client; build/env.sh go run build/ci.go aar --local
 	@echo "Done building."
 	@echo "Import \"$(GOBIN)/kcoin.aar\" to use the library."
 
+.PHONY: ios
 ios:
 	cd client; build/env.sh go run build/ci.go xcode --local
 	@echo "Done building."
 	@echo "Import \"$(GOBIN)/Kusd.framework\" to use the library."
 
+.PHONY: test
 test: all
 	cd client; build/env.sh go run build/ci.go test
 
+.PHONY: test_notifications
 test_notifications: dep
 	cd notifications && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go test ./... -tags=integration
 
+.PHONY: lint
 lint: all
 	cd client; build/env.sh go run build/ci.go lint
 
+.PHONY: clean
 clean:
-	rm -fr client/build/_workspace/pkg/ $(GOBIN)/*
-	rm -rf client/build/bin/abigen
-	rm -rf client/contracts/truffle/node_modules
+	rm -fr client/build/_workspace/pkg/ $(GOBIN)/* client/build/bin/abigen client/contracts/truffle/node_modules
 
 
 # Bindings tools
@@ -88,6 +83,7 @@ FILES=$(shell egrep -ir "go:generate" client/contracts/bindings | grep abigen | 
 $(FILES):
 	$(MAKE) -j 5 stringer go-bindata gencodec client/build/bin/abigen client/contracts/truffle/node_modules
 	go generate ./client/contracts/bindings/...
+.PHONY: bindings
 bindings: | $(FILES)
 
 client/contracts/truffle/node_modules:
@@ -98,17 +94,21 @@ client/build/bin/abigen:
 
 # Cross Compilation Targets (xgo)
 
-kcoin-cross: kcoin-cross-build kcoin-cross-compress kcoin-cross-rename
+.PHONY: kcoin_cross
+kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename
 	@echo "Full cross compilation done."
 
-kcoin-cross-build: bindings
-	cd client; build/env.sh go run build/ci.go xgo -- --go=$(GO) --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
+.PHONY: kcoin_cross_build
+kcoin_cross_build: bindings
+	cd client; build/env.sh go run build/ci.go xgo -- --go=latest --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
 	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-osx-10.6-amd64
 
-kcoin-cross-compress:
+.PHONY: kcoin_cross_compress
+kcoin_cross_compress:
 	cd client/build/bin; for f in kcoin*; do zip $$f.zip $$f; rm $$f; done; cd -
 
-kcoin-cross-rename:
+.PHONY: kcoin_cross_rename
+kcoin_cross_rename:
 ifdef DRONE_TAG
 	cd client/build/bin && for f in kcoin-*; do \
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
@@ -127,6 +127,7 @@ endif
 
 ## E2E tests
 
+.PHONY: e2e
 e2e: dep
 	cd e2e && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
@@ -135,7 +136,8 @@ e2e: dep
 
 ## Wallet app
 
-wallet-app-tests:
+.PHONY: wallet_app_tests
+wallet_app_tests:
 	@cd wallet-app; \
 	yarn install --network-concurrency 1 && \
 	yarn run lint && \
@@ -143,43 +145,58 @@ wallet-app-tests:
 
 ## Docs
 BUILD_DOCS := mkdocs build --clean --strict -d site
+.PHONY: build_docs
 build_docs:
 	@cd docs; $(BUILD_DOCS)
 
+.PHONY: build_docs_with_docker
 build_docs_with_docker:
 	@docker run --rm -v $(PWD)/docs:/documents kowalatech/mkdocs $(BUILD_DOCS)
 
 ## Dev docker images
 
-dev_docker_images: dev_explorer_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_faucet_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_transactions_publisher_docker_image dev_backend_api_docker_image
+.PHONY: dev_docker_images
+dev_docker_images: dev_explorer_docker_image dev_explorer_sync_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_faucet_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_transactions_publisher_docker_image dev_backend_api_docker_image
 
+.PHONY: dev_kusd_docker_image
 dev_kusd_docker_image:
 	docker build -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
 
+.PHONY: dev_bootnode_docker_image
 dev_bootnode_docker_image:
 	docker build -t kowalatech/bootnode:dev -f client/release/bootnode.Dockerfile .
 
+.PHONY: dev_faucet_docker_image
 dev_faucet_docker_image:
 	docker build -t kowalatech/faucet:dev -f client/release/faucet.Dockerfile .
 
+.PHONY: dev_wallet_backend_docker_image
 dev_wallet_backend_docker_image:
 	docker build -t kowalatech/wallet_backend:dev -f wallet-backend/Dockerfile .
 
+.PHONY: dev_transactions_persistance_docker_image
 dev_transactions_persistance_docker_image:
 	docker build -t kowalatech/transactions_persistance:dev -f notifications/transactions_db_synchronize.Dockerfile .
 
+.PHONY: dev_transactions_publisher_docker_image
 dev_transactions_publisher_docker_image:
 	docker build -t kowalatech/transactions_publisher:dev -f notifications/transactions_publisher.Dockerfile .
 
+.PHONY: dev_backend_api_docker_image
 dev_backend_api_docker_image:
 	docker build -t kowalatech/backend_api:dev -f notifications/api.Dockerfile .
 
+.PHONY: dev_explorer_docker_image
 dev_explorer_docker_image:
 	docker build -t kowalatech/kexplorer -f explorer/web.Dockerfile .
+
+.PHONY: dev_explorer_sync_docker_image
+dev_explorer_sync_docker_image:
 	docker build -t kowalatech/kexplorersync -f explorer/sync.Dockerfile .
 
 # Tools
 
+.PHONY: dep
 DEP_BIN := $(shell command -v dep 2> /dev/null)
 dep:
 ifndef DEP_BIN
@@ -187,6 +204,7 @@ ifndef DEP_BIN
 	@go get github.com/golang/dep/cmd/dep
 endif
 
+.PHONY: stringer
 STRINGER_BIN := $(shell command -v stringer 2> /dev/null)
 stringer:
 ifndef STRINGER_BIN
@@ -194,6 +212,7 @@ ifndef STRINGER_BIN
 	@go get golang.org/x/tools/cmd/stringer
 endif
 
+.PHONY: go-bindata
 GO_BINDATA_BIN := $(shell command -v go-bindata 2> /dev/null)
 go-bindata:
 ifndef GO_BINDATA_BIN
@@ -201,6 +220,7 @@ ifndef GO_BINDATA_BIN
 	@go get github.com/jteeuwen/go-bindata/go-bindata
 endif
 
+.PHONY: gencodec
 GENCODEC_BIN := $(shell command -v gencodec 2> /dev/null)
 gencodec:
 ifndef GENCODEC_BIN

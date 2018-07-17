@@ -6,20 +6,9 @@ var filters = require('./filters');
 var https = require('https');
 var async = require('async');
 
-var etherUnits = require(__lib + "etherUnits.js")
+var etherUnits = require(__lib + "etherUnits.js");
 
-var config = {};
-try {
-  config = require('../config.json');
-} catch(e) {
-  if (e.code == 'MODULE_NOT_FOUND') {
-    console.log('No config file found. Using default configuration... (tools/config.json)');
-    config = require('../tools/config.json');
-  } else {
-    throw e;
-    process.exit(1);
-  }
-}
+var config = require('../config');
 
 module.exports = function(req, res) {
 
