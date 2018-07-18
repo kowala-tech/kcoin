@@ -726,7 +726,7 @@ func (net *Network) internNodeFromDB(dbn *Node) *Node {
 }
 
 func (net *Network) internNodeFromNeighbours(sender *net.UDPAddr, rn rpcNode) (n *Node, err error) {
-	if rn.ID == net.tab.self.ID {
+	if net.IsSelf(rn) {
 		return nil, errors.New("is self")
 	}
 	if rn.UDP <= lowPort {
@@ -757,6 +757,10 @@ func (net *Network) internNodeFromNeighbours(sender *net.UDPAddr, rn rpcNode) (n
 		}
 	}
 	return n, err
+}
+
+func (net *Network) IsSelf(rn rpcNode) bool {
+	return rn.ID == net.tab.self.ID
 }
 
 // nodeNetGuts is embedded in Node and contains fields.
