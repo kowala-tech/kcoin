@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "../../consensus/ValidatorMgr.sol";
+import "../consensus/mgr/ValidatorMgr.sol";
 
 contract OracleMgr is Pausable {
 
@@ -11,7 +11,7 @@ contract OracleMgr is Pausable {
     uint public syncFrequency;
     uint public updatePeriod;
     uint public price;
-    ValidatorMgr validatorMgr = ValidatorMgr("0x80eDa603028fe504B57D14d947c8087c1798D800");
+    ValidatorMgr validatorMgr;
     bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
     struct Deposit {
@@ -47,7 +47,7 @@ contract OracleMgr is Pausable {
     }
 
     modifier onlySuperNode {
-        require(validatorMgr.call(sig, msg.sender));
+        require(validatorMgr.isSuperNode(msg.sender));
         _;
     }
 
@@ -62,7 +62,8 @@ contract OracleMgr is Pausable {
         uint _maxNumOracles,
         uint _freezePeriod,
         uint _syncFrequency,
-        uint _updatePeriod) 
+        uint _updatePeriod,
+        address _validatorMgrAddr) 
     public {
         require(_initialPrice > 0);
         require(_maxNumOracles > 0);
@@ -79,6 +80,7 @@ contract OracleMgr is Pausable {
         freezePeriod = _freezePeriod * 1 days;
         syncFrequency = _syncFrequency;
         updatePeriod = _updatePeriod;
+        validatorMgr = ValidatorMgr(_validatorMgrAddr);
     }
 
     function isOracle(address identity) public view returns (bool isIndeed) {
