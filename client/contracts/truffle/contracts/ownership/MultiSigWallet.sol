@@ -75,7 +75,7 @@ contract MultiSigWallet {
 
     /// @dev Fallback function allows to deposit kUSD.
     function() payable public {
-        if (msg.value > 0) emit Deposit(msg.sender, msg.value);
+        if (msg.value > 0) Deposit(msg.sender, msg.value);
     }
 
     /*
@@ -88,7 +88,7 @@ contract MultiSigWallet {
         public
         validRequirement(_owners.length, _required)
     {
-        for (uint i=0; i<_owners.length; i++) {
+        for (uint i = 0; i<_owners.length; i++) {
             require(!isOwner[_owners[i]] && _owners[i] != 0);
             isOwner[_owners[i]] = true;
         }
@@ -107,7 +107,7 @@ contract MultiSigWallet {
     {
         isOwner[owner] = true;
         owners.push(owner);
-        emit OwnerAddition(owner);
+        OwnerAddition(owner);
     }
 
     /// @dev Allows to remove an owner. Transaction has to be sent by wallet.
@@ -118,7 +118,7 @@ contract MultiSigWallet {
         ownerExists(owner)
     {
         isOwner[owner] = false;
-        for (uint i=0; i<owners.length - 1; i++)
+        for (uint i = 0; i<owners.length - 1; i++)
             if (owners[i] == owner) {
                 owners[i] = owners[owners.length - 1];
                 break;
@@ -126,7 +126,7 @@ contract MultiSigWallet {
         owners.length -= 1;
         if (required > owners.length)
             changeRequirement(owners.length);
-        emit OwnerRemoval(owner);
+        OwnerRemoval(owner);
     }
 
     /// @dev Allows to replace an owner with a new owner. Transaction has to be sent by wallet.
@@ -138,15 +138,15 @@ contract MultiSigWallet {
         ownerExists(owner)
         ownerDoesNotExist(newOwner)
     {
-        for (uint i=0; i<owners.length; i++)
+        for (uint i = 0; i<owners.length; i++)
             if (owners[i] == owner) {
                 owners[i] = newOwner;
                 break;
             }
         isOwner[owner] = false;
         isOwner[newOwner] = true;
-        emit OwnerRemoval(owner);
-        emit OwnerAddition(newOwner);
+        OwnerRemoval(owner);
+        OwnerAddition(newOwner);
     }
 
     /// @dev Allows to change the number of required confirmations. Transaction has to be sent by wallet.
@@ -157,7 +157,7 @@ contract MultiSigWallet {
         validRequirement(owners.length, _required)
     {
         required = _required;
-        emit RequirementChange(_required);
+        RequirementChange(_required);
     }
 
     /// @dev Allows an owner to submit and confirm a transaction.
@@ -182,7 +182,7 @@ contract MultiSigWallet {
         notConfirmed(transactionId, msg.sender)
     {
         confirmations[transactionId][msg.sender] = true;
-        emit Confirmation(msg.sender, transactionId);
+        Confirmation(msg.sender, transactionId);
         executeTransaction(transactionId);
     }
 
@@ -195,7 +195,7 @@ contract MultiSigWallet {
         notExecuted(transactionId)
     {
         confirmations[transactionId][msg.sender] = false;
-        emit Revocation(msg.sender, transactionId);
+        Revocation(msg.sender, transactionId);
     }
 
     /// @dev Allows anyone to execute a confirmed transaction.
@@ -210,9 +210,9 @@ contract MultiSigWallet {
             Transaction storage txn = transactions[transactionId];
             txn.executed = true;
             if (external_call(txn.destination, txn.value, txn.data.length, txn.data))
-                emit Execution(transactionId);
+                Execution(transactionId);
             else {
-                emit ExecutionFailure(transactionId);
+                ExecutionFailure(transactionId);
                 txn.executed = false;
             }
         }
@@ -222,6 +222,7 @@ contract MultiSigWallet {
     // of the Solidity's code generator to produce a loop that copies tx.data into memory.
     function external_call(address destination, uint value, uint dataLength, bytes data) private returns (bool) {
         bool result;
+        /* solium-disable-next-line security/no-inline-assembly */
         assembly {
             let x := mload(0x40)   // "Allocate" memory for output (0x40 is where "free memory" pointer is stored by convention)
             let d := add(data, 32) // First 32 bytes are the padded length of data, so exclude that
@@ -249,7 +250,7 @@ contract MultiSigWallet {
         returns (bool)
     {
         uint count = 0;
-        for (uint i=0; i<owners.length; i++) {
+        for (uint i = 0; i<owners.length; i++) {
             if (confirmations[transactionId][owners[i]])
                 count += 1;
             if (count == required)
@@ -278,7 +279,7 @@ contract MultiSigWallet {
             executed: false
         });
         transactionCount += 1;
-        emit Submission(transactionId);
+        Submission(transactionId);
     }
 
     /*
@@ -292,7 +293,7 @@ contract MultiSigWallet {
         view
         returns (uint count)
     {
-        for (uint i=0; i<owners.length; i++)
+        for (uint i = 0; i<owners.length; i++)
             if (confirmations[transactionId][owners[i]]) count += 1;
     }
 
@@ -305,7 +306,7 @@ contract MultiSigWallet {
         view
         returns (uint count)
     {
-        for (uint i=0; i<transactionCount; i++)
+        for (uint i = 0; i<transactionCount; i++)
             if (pending && !transactions[i].executed || executed && transactions[i].executed) count += 1;
     }
 
@@ -330,13 +331,13 @@ contract MultiSigWallet {
         address[] memory confirmationsTemp = new address[](owners.length);
         uint count = 0;
         uint i;
-        for (i=0; i<owners.length; i++)
+        for (i = 0; i<owners.length; i++)
             if (confirmations[transactionId][owners[i]]) {
                 confirmationsTemp[count] = owners[i];
                 count += 1;
             }
         _confirmations = new address[](count);
-        for (i=0; i<count; i++)
+        for (i = 0; i<count; i++)
             _confirmations[i] = confirmationsTemp[i];
     }
 
@@ -354,7 +355,7 @@ contract MultiSigWallet {
         uint[] memory transactionIdsTemp = new uint[](transactionCount);
         uint count = 0;
         uint i;
-        for (i=0; i<transactionCount; i++)
+        for (i = 0; i<transactionCount; i++)
             if (   pending && !transactions[i].executed
                 || executed && transactions[i].executed)
             {
@@ -362,7 +363,7 @@ contract MultiSigWallet {
                 count += 1;
             }
         _transactionIds = new uint[](to - from);
-        for (i=from; i<to; i++)
+        for (i = from; i<to; i++)
             _transactionIds[i - from] = transactionIdsTemp[i];
     }
 }
