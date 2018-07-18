@@ -46,6 +46,7 @@ func getDefaultOpts() genesis.Options {
 			MaxNumValidators: 10,
 			FreezePeriod:     30,
 			BaseDeposit:      baseDeposit,
+			SuperNodeAmount:  10,
 			Validators: []genesis.Validator{{
 				Address: tokenHolder.Address,
 				Deposit: tokenHolder.NumTokens,
