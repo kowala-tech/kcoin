@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
+import "../../consensus/ValidatorMgr.sol";
 
 contract OracleMgr is Pausable {
 
@@ -10,6 +11,8 @@ contract OracleMgr is Pausable {
     uint public syncFrequency;
     uint public updatePeriod;
     uint public price;
+    ValidatorMgr validatorMgr = ValidatorMgr("0x80eDa603028fe504B57D14d947c8087c1798D800");
+    bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
     struct Deposit {
         uint amount;
@@ -40,6 +43,11 @@ contract OracleMgr is Pausable {
 
     modifier onlyNewCandidate {
         require(!isOracle(msg.sender));
+        _;
+    }
+
+    modifier onlySuperNode {
+        require(validatorMgr.call(sig, msg.sender));
         _;
     }
 
@@ -149,7 +157,7 @@ contract OracleMgr is Pausable {
     }
 
     // registerOracle registers a new candidate as oracle
-    function registerOracle() public payable whenNotPaused onlyNewCandidate onlyWithMinDeposit {
+    function registerOracle() public payable whenNotPaused onlyNewCandidate onlySuperNode onlyWithMinDeposit {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
         }
