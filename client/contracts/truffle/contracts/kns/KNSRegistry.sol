@@ -1,7 +1,6 @@
 pragma solidity 0.4.24;
 
 import "./KNS.sol";
-
 /**
  * The KNS registry contract.
  */
