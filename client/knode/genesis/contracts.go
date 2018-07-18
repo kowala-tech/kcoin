@@ -186,6 +186,7 @@ var ValidatorMgrContract = &contract{
 			args.maxNumValidators,
 			args.freezePeriod,
 			args.miningTokenAddr,
+			args.superNodeAmount,
 		)
 		if err != nil {
 			return err

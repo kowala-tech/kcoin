@@ -69,6 +69,7 @@ type ConsensusOpts struct {
 	MaxNumValidators uint64
 	FreezePeriod     uint64
 	BaseDeposit      uint64
+	SuperNodeAmount  uint64
 	Validators       []Validator
 	MiningToken      *MiningTokenOpts
 }
@@ -111,6 +112,7 @@ type validValidatorMgrOpts struct {
 	maxNumValidators *big.Int
 	freezePeriod     *big.Int
 	baseDeposit      *big.Int
+	superNodeAmount  *big.Int
 	validators       []*validValidator
 	miningTokenAddr  common.Address
 	owner            common.Address
@@ -201,6 +203,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	maxNumValidators := new(big.Int).SetUint64(options.Consensus.MaxNumValidators)
 	consensusBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.BaseDeposit), big.NewInt(params.Kcoin))
 	consensusFreezePeriod := new(big.Int).SetUint64(options.Consensus.FreezePeriod)
+	superNodeAmount := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.SuperNodeAmount), big.NewInt(params.Kcoin))
 
 	validators := make([]*validValidator, 0, len(options.Consensus.Validators))
 	for _, validator := range options.Consensus.Validators {
@@ -258,6 +261,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			maxNumValidators: maxNumValidators,
 			freezePeriod:     consensusFreezePeriod,
 			baseDeposit:      consensusBaseDeposit,
+			superNodeAmount:  superNodeAmount,
 			validators:       validators,
 		},
 		oracleMgr: &validOracleMgrOpts{
