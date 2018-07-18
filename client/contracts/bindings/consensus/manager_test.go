@@ -34,9 +34,10 @@ var (
 
 func getDefaultOpts() genesis.Options {
 	baseDeposit := uint64(20)
+	superNodeAmount := uint64(6000000)
 	tokenHolder := genesis.TokenHolder{
 		Address:   getAddress(validator).Hex(),
-		NumTokens: baseDeposit,
+		NumTokens: superNodeAmount,
 	}
 
 	opts := genesis.Options{
@@ -46,7 +47,7 @@ func getDefaultOpts() genesis.Options {
 			MaxNumValidators: 10,
 			FreezePeriod:     30,
 			BaseDeposit:      baseDeposit,
-			SuperNodeAmount:  10,
+			SuperNodeAmount:  superNodeAmount,
 			Validators: []genesis.Validator{{
 				Address: tokenHolder.Address,
 				Deposit: tokenHolder.NumTokens,
@@ -54,9 +55,9 @@ func getDefaultOpts() genesis.Options {
 			MiningToken: &genesis.MiningTokenOpts{
 				Name:     "mUSD",
 				Symbol:   "mUSD",
-				Cap:      1000,
+				Cap:      20000000,
 				Decimals: 18,
-				Holders:  []genesis.TokenHolder{tokenHolder, {Address: getAddress(user).Hex(), NumTokens: baseDeposit * 3}},
+				Holders:  []genesis.TokenHolder{tokenHolder, {Address: getAddress(user).Hex(), NumTokens: 10000000}},
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
@@ -169,9 +170,10 @@ func (suite *ValidatorMgrSuite) TestDeploy() {
 	baseDeposit := new(big.Int).SetUint64(100)
 	maxNumValidators := new(big.Int).SetUint64(100)
 	freezePeriod := new(big.Int).SetUint64(100)
+	superNodeAmount := new(big.Int).SetUint64(100)
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, mgr, err := consensus.DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr)
+	_, _, mgr, err := consensus.DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr, superNodeAmount)
 	req.NoError(err)
 	req.NotNil(mgr)
 
@@ -210,9 +212,10 @@ func (suite *ValidatorMgrSuite) TestDeploy_MaxNumValidatorsEqualZero() {
 	baseDeposit := new(big.Int).SetUint64(100)
 	maxNumValidators := common.Big0
 	freezePeriod := new(big.Int).SetUint64(100)
+	superNodeAmount := new(big.Int).SetUint64(100)
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, _, err := consensus.DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr)
+	_, _, _, err := consensus.DeployValidatorMgr(transactOpts, backend, baseDeposit, maxNumValidators, freezePeriod, tokenAddr, superNodeAmount)
 	req.Error(err, "maximum number of validators cannot be zero")
 }
 
@@ -312,6 +315,49 @@ func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 	}
 }
 
+func (suite *ValidatorMgrSuite) TestIsSuperNode() {
+	req := suite.Require()
+
+	numTokens := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin))
+	req.NoError(suite.registerValidator(user, numTokens))
+
+	suite.backend.Commit()
+
+	// generate a random user
+	randomUser, err := crypto.GenerateKey()
+	req.NoError(err)
+	req.NotNil(randomUser)
+
+	testCases := []struct {
+		name   string
+		input  common.Address
+		output bool
+	}{
+		{
+			name:   "super node - genesis validator",
+			input:  getAddress(validator),
+			output: true,
+		},
+		{
+			name:   "validator, not super node",
+			input:  getAddress(user),
+			output: false,
+		},
+		{
+			name:   "not validator - random user",
+			input:  getAddress(randomUser),
+			output: false,
+		},
+	}
+	for _, tc := range testCases {
+		suite.T().Run(fmt.Sprintf("name: %s, address %s", tc.name, tc.input.Hex()), func(t *testing.T) {
+			isSuperNode, err := suite.validatorMgr.IsSuperNode(&bind.CallOpts{}, tc.input)
+			req.NoError(err)
+			req.Equal(tc.output, isSuperNode)
+		})
+	}
+}
+
 func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_NotFull() {
 	req := suite.Require()
 
@@ -327,7 +373,7 @@ func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
 	storedMinDeposit, err := suite.validatorMgr.GetMinimumDeposit(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedMinDeposit)
-	req.Equal(new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin)), common.Big1), storedMinDeposit)
+	req.Equal(new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.Validators[0].Deposit), new(big.Int).SetUint64(params.Kcoin)), common.Big1), storedMinDeposit)
 }
 
 func (suite *ValidatorMgrSuite) TestRegisterValidator_WhenPaused() {
@@ -361,7 +407,7 @@ func (suite *ValidatorMgrSuite) TestRegister_NotFull_GreaterThan() {
 	req.NoError(err)
 	req.NotNil(initialValidatorCount)
 
-	deposit := new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.BaseDeposit), new(big.Int).SetUint64(params.Kcoin)), common.Big1)
+	deposit := new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.Validators[0].Deposit), new(big.Int).SetUint64(params.Kcoin)), common.Big1)
 	req.NoError(suite.registerValidator(user, deposit))
 
 	suite.backend.Commit()
@@ -401,7 +447,7 @@ func (suite *ValidatorMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
 	storedValidator := suite.getHighestBidder()
 	req.NotZero(storedValidator)
 	req.Equal(getAddress(validator), storedValidator.Code)
-	req.Equal(deposit, storedValidator.Deposit)
+	req.Equal(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.Consensus.Validators[0].Deposit), big.NewInt(params.Kcoin)), storedValidator.Deposit)
 
 	storedDeposit := suite.getCurrentDeposit(user)
 	req.NotZero(storedDeposit)
