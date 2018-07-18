@@ -125,11 +125,12 @@ type validPriceOpts struct {
 }
 
 type validOracleMgrOpts struct {
-	maxNumOracles *big.Int
-	freezePeriod  *big.Int
-	baseDeposit   *big.Int
-	price         validPriceOpts
-	owner         common.Address
+	maxNumOracles    *big.Int
+	freezePeriod     *big.Int
+	baseDeposit      *big.Int
+	price            validPriceOpts
+	validatorMgrAddr common.Address
+	owner            common.Address
 }
 
 type validTokenHolder struct {
@@ -219,7 +220,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// data feed system
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
-	oracleBaseDeposit := new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit)
+	oracleBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
 	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
 
 	initialPrice := new(big.Int)
