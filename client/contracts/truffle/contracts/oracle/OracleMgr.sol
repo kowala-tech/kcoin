@@ -157,7 +157,7 @@ contract OracleMgr is Pausable {
     }
 
     // registerOracle registers a new candidate as oracle
-    function registerOracle() public payable whenNotPaused onlyNewCandidate onlySuperNode onlyWithMinDeposit {
+    function registerOracle() public payable whenNotPaused onlyNewCandidate onlyWithMinDeposit onlySuperNode {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
         }
