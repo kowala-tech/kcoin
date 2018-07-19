@@ -1,4 +1,4 @@
-package oracle
+package oracle_test
 
 import (
 	"context"
@@ -64,7 +64,7 @@ func getDefaultOpts() genesis.Options {
 				Symbol:   "mUSD",
 				Cap:      20000000,
 				Decimals: 18,
-				Holders:  []genesis.TokenHolder{tokenHolder, genesis.TokenHolder{getAddress(superNode).Hex(), superNodeAmount}},
+				Holders:  []genesis.TokenHolder{tokenHolder, genesis.TokenHolder{Address: getAddress(superNode).Hex(), NumTokens: superNodeAmount}},
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
@@ -110,7 +110,7 @@ type OracleMgrSuite struct {
 	backend   *backends.SimulatedBackend
 	opts      genesis.Options
 	multiSig  *ownership.MultiSigWallet
-	oracleMgr *OracleMgr
+	oracleMgr *oracle.OracleMgr
 }
 
 func TestOracleMgrSuite(t *testing.T) {
@@ -151,7 +151,7 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 	suite.multiSig = multiSig
 
 	// OracleMgr instance
-	oracleMgr, err := NewOracleMgr(oracleMgrAddr, backend)
+	oracleMgr, err := oracle.NewOracleMgr(oracleMgrAddr, backend)
 	req.NoError(err)
 	req.NotNil(oracleMgr)
 	suite.oracleMgr = oracleMgr
@@ -175,7 +175,7 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr() {
 	updatePeriod := new(big.Int).SetUint64(5)
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, mgr, err := DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
+	_, _, mgr, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.NoError(err)
 	req.NotNil(mgr)
 
@@ -230,7 +230,7 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_MaxNumOraclesEqualZero() {
 	updatePeriod := new(big.Int).SetUint64(5)
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, _, err := DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
+	_, _, _, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.Error(err, "maximum number of oracles cannot be zero")
 }
 
@@ -252,7 +252,7 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_InitialPriceEqualsZero() {
 	updatePeriod := new(big.Int).SetUint64(5)
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, _, err := DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
+	_, _, _, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.Error(err, "initial price cannot be zero")
 }
 
@@ -274,7 +274,7 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_SyncEnabled_UpdatePeriodEqualsZ
 	updatePeriod := common.Big0
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, _, err := DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
+	_, _, _, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.Error(err, "update period cannot be zero if sync is enabled")
 }
 
@@ -296,7 +296,7 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_SyncEnabled_UpdatePeriodGreater
 	updatePeriod := new(big.Int).Add(syncFrequency, common.Big1)
 
 	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, _, err := DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
+	_, _, _, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.Error(err, "update period cannot be greater that sync frequency if sync is enabled")
 }
 
