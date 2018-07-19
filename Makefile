@@ -91,7 +91,7 @@ clear_bindings:
 	egrep -ir "go:generate" client/contracts/bindings | grep abigen | sed -E 's/^client\/contracts\/bindings\/(.*)\/.*\.go.*-out\ \.?\/?(.*)/client\/contracts\/bindings\/\1\/\2/' | xargs -n 1 rm
 
 client/contracts/truffle/node_modules:
-	cd client/contracts/truffle && npm i
+	cd client/contracts/truffle && npm ci
 
 client/build/bin/abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
