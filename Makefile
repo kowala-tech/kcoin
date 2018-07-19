@@ -6,7 +6,7 @@ PWD   := $(shell pwd)
 GOBIN = $(PWD)/client/build/bin
 
 .PHONY: kcoin
-kcoin: bindings
+kcoin:
 	cd client; build/env.sh go run build/ci.go install ./cmd/kcoin
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kcoin\" to launch kcoin."
@@ -18,13 +18,13 @@ control:
 	@echo "Run \"$(GOBIN)/control\" to launch control."
 
 .PHONY: bootnode
-bootnode: bindings
+bootnode:
 	cd client; build/env.sh go run build/ci.go install ./cmd/bootnode
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
 
 .PHONY: faucet
-faucet: bindings
+faucet:
 	cd client; build/env.sh go run build/ci.go install ./cmd/faucet
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/faucet\" to launch faucet."
@@ -134,7 +134,7 @@ kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename
 	@echo "Full cross compilation done."
 
 .PHONY: kcoin_cross_build
-kcoin_cross_build: bindings
+kcoin_cross_build:
 	cd client; build/env.sh go run build/ci.go xgo -- --go=latest --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
 	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-osx-10.6-amd64
 
