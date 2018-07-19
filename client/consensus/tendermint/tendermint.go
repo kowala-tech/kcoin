@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	systemVariables = common.BytesToAddress([]byte{9})
-
+	systemVariables         = common.BytesToAddress([]byte{9})
 	oracleFund              = common.BytesToAddress([]byte{10})
 	oracleDeductionFraction = new(big.Int).SetUint64(4)
 	andromedaOracleReward   = common.Big1
@@ -108,13 +107,13 @@ func (tm *Tendermint) distributeRewards(state *state.StateDB, header *types.Head
 		if err != nil {
 			return err
 		}
-		oracleReward := new(big.Int).Div(common.Min(andromedaOracleReward, state.GetBalance(oracleFund)), new(big.Int).SetUint64(len(submissions)))
+		oracleReward := new(big.Int).Div(common.Min(andromedaOracleReward, state.GetBalance(oracleFund)), new(big.Int).SetUint64(uint64(len(submissions))))
 		for _, author := range submissions {
 			transfer(state, oracleFund, author, oracleReward)
 		}
 
-		// clean submissions state
-
+		// clean submissions array and set each on of hasSubmittedPrice to false
+		//state.SetState()
 	}
 
 	return nil

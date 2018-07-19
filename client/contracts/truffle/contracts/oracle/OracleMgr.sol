@@ -12,7 +12,6 @@ contract OracleMgr is Pausable {
     uint public updatePeriod;
     uint public price;
     ValidatorMgr validatorMgr;
-    bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
     struct Deposit {
         uint amount;
@@ -22,6 +21,7 @@ contract OracleMgr is Pausable {
     struct Oracle {
         uint index;
         bool isOracle;
+        bool hasSubmittedPrice;
         Deposit[] deposits; 
     }
     
@@ -31,8 +31,15 @@ contract OracleMgr is Pausable {
     // the smallest deposit.
     address[] private oraclePool;
 
+    address[] private submissions;
+
     modifier onlyWithMinDeposit {
         require(msg.value >= getMinimumDeposit());
+        _;
+    }
+
+    modifier onlyOnce {
+        require(!oracleRegistry[msg.sender].hasSubmittedPrice);
         _;
     }
 
@@ -137,6 +144,14 @@ contract OracleMgr is Pausable {
         deposit = oracle.deposits[oracle.deposits.length - 1].amount;
     }
 
+    function getSubmissionsCount() public view returns (uint count) {
+        return submissions.length;
+    }
+
+    function getSubmissionAtIndex(uint index) public view returns (address identity) {
+        return submissions[index];
+    }
+
     // getMinimumDeposit returns the base deposit if there are positions available or
     // the current smallest deposit required if there aren't positions available.
     function getMinimumDeposit() public view returns (uint deposit) {
@@ -206,7 +221,9 @@ contract OracleMgr is Pausable {
         }
     }
 
-    function addPrice(uint _price) public whenNotPaused onlyOracle onlyValidPrice(_price) {
+    function addPrice(uint _price) public whenNotPaused onlyOracle onlyOnce onlyValidPrice(_price) {
         price = _price;
+        oracleRegistry[msg.sender].hasSubmittedPrice = true;
+        submissions.push(msg.sender);
     }
 }

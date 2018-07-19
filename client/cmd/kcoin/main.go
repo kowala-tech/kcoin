@@ -114,7 +114,7 @@ var (
 		utils.IPCDisabledFlag,
 		utils.IPCPathFlag,
 	}
-	
+
 	metricsFlags = []cli.Flag{
 		utils.MetricsEnableInfluxDBFlag,
 		utils.MetricsInfluxDBEndpointFlag,
@@ -133,13 +133,15 @@ func init() {
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
-		importCommand,
-		exportCommand,
-		importPreimagesCommand,
-		exportPreimagesCommand,
-		copydbCommand,
-		removedbCommand,
-		dumpCommand,
+		/*
+			importCommand,
+			exportCommand,
+			importPreimagesCommand,
+			exportPreimagesCommand,
+			copydbCommand,
+			removedbCommand,
+			dumpCommand,
+		*/
 		// See monitorcmd.go:
 		monitorCommand,
 		// See accountcmd.go:
@@ -189,7 +191,7 @@ func init() {
 		utils.SetupMetrics(ctx)
 
 		// Start system runtime metrics collection
-		go metrics.CollectProcessMetrics(3 * time.Second, ctx.GlobalString(utils.MetricsPrometheusAddressFlag.Name), ctx.GlobalString(utils.MetricsPrometheusSubsystemFlag.Name))
+		go metrics.CollectProcessMetrics(3*time.Second, ctx.GlobalString(utils.MetricsPrometheusAddressFlag.Name), ctx.GlobalString(utils.MetricsPrometheusSubsystemFlag.Name))
 
 		utils.SetupNetwork(ctx)
 		return nil

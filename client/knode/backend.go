@@ -10,15 +10,15 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
-
 	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
 	"github.com/kowala-tech/kcoin/client/core/rawdb"
@@ -43,12 +43,12 @@ import (
 // @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
 
 var (
-	errContractUnknown = errors.New("Contract unknown")
+	errContractUnknown   = errors.New("Contract unknown")
 	errDuplicateContract = errors.New("Duplicate contract")
 )
 
 // Binding constructor creates a new contract binding
-type BindingConstructor (contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error)
+type BindingConstructor func(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error)
 
 // Kowala implements the Kowala full node service.
 type Kowala struct {
@@ -76,8 +76,8 @@ type Kowala struct {
 
 	validator validator.Validator // consensus validator
 
-	bindingFuncs []BindingConstructor	   // binding constructors
-	contracts     map[reflect.Type]Binding // current bindings
+	bindingFuncs []BindingConstructor              // binding constructors
+	contracts    map[reflect.Type]bindings.Binding // current bindings
 
 	consensus consensus.Consensus // consensus binding
 	oracleMgr oracle.Manager      // oracle manager binding
@@ -124,7 +124,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		deposit:        config.Deposit,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
-		bindingFuncs:   []BindingConstructor{oracle.Binding, consensus.Binding, currency.Binding, stability.Binding},
+		bindingFuncs:   []BindingConstructor{oracle.Binding, consensus.Binding},
 	}
 
 	log.Info("Initialising Kowala protocol", "versions", ProtocolVersions, "network", config.NetworkId)
@@ -139,19 +139,14 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		}
 		kind := reflect.TypeOf(contract)
 		if _, exists := kcoin.contracts[kind]; exists {
-			return nil, errDuplicateContract)
+			return nil, errDuplicateContract
 		}
 		kcoin.contracts[kind] = contract
 	}
 
 	var oracleMgr oracle.Manager
 	if err := kcoin.Contract(&oracleMgr); err != nil {
-		return err
-	}
-
-	var stabilityMgr stability.Manager
-	if err := kcoin.Contract(&stabilityMgr); err != nil {
-		return err
+		return nil, err
 	}
 
 	// consensus engine
