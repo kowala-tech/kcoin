@@ -152,6 +152,7 @@ var OracleMgrContract = &contract{
 			args.freezePeriod,
 			args.price.syncFrequency,
 			args.price.updatePeriod,
+			args.validatorMgrAddr,
 		)
 		if err != nil {
 			return err
@@ -186,6 +187,7 @@ var ValidatorMgrContract = &contract{
 			args.maxNumValidators,
 			args.freezePeriod,
 			args.miningTokenAddr,
+			args.superNodeAmount,
 		)
 		if err != nil {
 			return err
@@ -199,6 +201,8 @@ var ValidatorMgrContract = &contract{
 		}
 		contract.code = contractCode
 		contract.address = contractAddr
+
+		opts.oracleMgr.validatorMgrAddr = contractAddr
 
 		return nil
 	},
