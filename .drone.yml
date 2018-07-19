@@ -26,8 +26,11 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.8
     commands:
+      # test_genesis should run before test
+      - make test_genesis
       - make test
       - make lint
+    secrets: [ slack_app_webhook ]
     when:
       event: [pull_request]
 

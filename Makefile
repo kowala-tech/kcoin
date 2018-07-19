@@ -61,6 +61,10 @@ ios:
 test: all
 	cd client; build/env.sh go run build/ci.go test
 
+.PHONY: test_genesis
+test_genesis: all
+	cd client/knode/genesis && go test . || curl -X POST -H 'Content-type: application/json' --data '{"attachments":[{"actions":[{"type":"button","text":"Build link","url":"${DRONE_BUILD_LINK}"}],"title":"Build failure","pretext":"Some days, you just cant get rid of a bomb!","text":"*Network config has changed!* Regenerate golden files, this will also require a network restart.","mrkdwn_in":["text","pretext","title"],"color":"#ff0000"}]}' ${SLACK_APP_WEBHOOK}
+
 .PHONY: test_notifications
 test_notifications: dep
 	cd notifications && \
@@ -74,7 +78,6 @@ lint: all
 .PHONY: clean
 clean:
 	rm -fr client/build/_workspace/pkg/ $(GOBIN)/* client/build/bin/abigen client/contracts/truffle/node_modules
-
 
 # Bindings tools
 
