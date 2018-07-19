@@ -11,7 +11,7 @@ contract ValidatorMgr is Pausable {
     uint public freezePeriod;
     bytes32 public validatorsChecksum;
     address public miningTokenAddr;
-    uint public reward;
+    uint public superNodeAmount;
 
     struct Deposit {
         uint amount;
@@ -60,13 +60,14 @@ contract ValidatorMgr is Pausable {
         _;
     }
 
-    function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _miningTokenAddr) public {
+    function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _miningTokenAddr, uint _superNodeAmount) public {
         require(_maxNumValidators >= 1);
 
         baseDeposit = _baseDeposit;
         maxNumValidators = _maxNumValidators;
         freezePeriod = _freezePeriod * 1 days;
         miningTokenAddr = _miningTokenAddr;
+        superNodeAmount = _superNodeAmount;
     }
 
     function isGenesisValidator(address code) public view returns (bool isIndeed) {
@@ -75,6 +76,13 @@ contract ValidatorMgr is Pausable {
 
     function isValidator(address code) public view returns (bool isIndeed) {
         return validatorRegistry[code].isValidator;
+    }
+
+    function isSuperNode(address code) public view returns (bool isIndeed) {
+        if (!isValidator(code)) return false;
+
+        Deposit[] deposits = validatorRegistry[code].deposits;
+        return deposits[deposits.length - 1].amount >= superNodeAmount;
     }
 
     function getValidatorCount() public view returns (uint count) {
@@ -204,8 +212,8 @@ contract ValidatorMgr is Pausable {
         Deposit[] deposits = validatorRegistry[msg.sender].deposits;
         for (; i < deposits.length && deposits[i].availableAt != 0; i++) {
             if (now < deposits[i].availableAt) {
-                // @NOTE (rgeraldes) - no need to iterate further since the 
-                // release date (if is different than 0) of the following deposits
+                // no need to iterate further since the release date
+                // (if is different than 0) of the following deposits
                 // will always be past than the current one.
                 break;
             }

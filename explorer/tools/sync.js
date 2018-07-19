@@ -284,25 +284,9 @@ var checkBlockDBExistsThenWrite = function(config, patchData, flush) {
     }
   });
 };
-/**
-  Start config for node connection and sync
-**/
-var config = {};
-//Look for config.json file if not
-try {
-    var configContents = fs.readFileSync('config.json');
-    config = JSON.parse(configContents);
-    console.log('config.json found.');
-}
-catch (error) {
-  if (error.code === 'ENOENT') {
-      console.log('No config file found.');
-  }
-  else {
-      throw error;
-      process.exit(1);
-  }
-}
+
+var config = require('../config-loader');
+
 // set the default NODE address to localhost if it's not provided
 if (!('nodeAddr' in config) || !(config.nodeAddr)) {
   config.nodeAddr = 'localhost'; // default
