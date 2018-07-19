@@ -64,7 +64,7 @@ func getDefaultOpts() genesis.Options {
 				Symbol:   "mUSD",
 				Cap:      20000000,
 				Decimals: 18,
-				Holders:  []genesis.TokenHolder{tokenHolder, genesis.TokenHolder{Address: getAddress(superNode).Hex(), NumTokens: superNodeAmount}},
+				Holders:  []genesis.TokenHolder{tokenHolder, {Address: getAddress(superNode).Hex(), NumTokens: superNodeAmount}},
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
