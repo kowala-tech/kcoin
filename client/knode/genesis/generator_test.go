@@ -2,8 +2,8 @@ package genesis
 
 import (
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestGenerateIsDeterministic(t *testing.T) {
