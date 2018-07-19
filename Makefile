@@ -82,7 +82,7 @@ clean:
 # Bindings tools
 
 # FILES is the list of binding files that would be created when generating the bindings
-bindings: clear_bindings
+bindings:
 	$(MAKE) -j 5 stringer go-bindata gencodec client/build/bin/abigen client/contracts/truffle/node_modules
 	go generate ./client/contracts/bindings/...
 .PHONY: bindings
