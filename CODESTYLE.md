@@ -4,38 +4,47 @@ This guide covers Kowala programming style from aesthetic issues to conventions 
 
 ## Test
 
-All PR should be accompanied by unit tests
+All PRs should be accompanied by unit tests and end-to-end test.
 
 ### Tools
 
 ### Unit tests
 
-We use 
+We use :
 
-[Testify]([https://github.com/stretchr/testify) "A toolkit with common assertions and mocks that plays nicely with the standard library"
+[Testify]([https://github.com/stretchr/testify) "A toolkit with common assertions and mocks that plays nicely with the standard library".
 
 [Mockery](https://github.com/vektra/mockery) "A mock code autogenerator for golang"
 
-Mocks should go into a subpackage of the interface that implements
-to generate a Mock for a interface run:
+Mocks should go into a subpackage of the interface that it implements.
+
+To generate a Mock for a interface run:
+
+```
+mockery -name AddressVote
+```
+
+And to use the mock: 
 
 ```go
-mockery -name InterfaceName
+addressVote := &mocks.AddressVote{}
+addressVote.On("Vote").Return("yes")
+addressVote.On("Address").Return("home")
 ```
 
 ### Test fixtures
 
-We use Golden Files trick, to keep our test fixtures up to date
+We use Go idiomatic [Golden Files](https://medium.com/soon-london/testing-with-golden-files-in-go-7fccc71c43d3), to keep our test fixtures up to date.
 
-All files should have a suffix `.golden` and update flag for tests should be `--update`
+All files should have a suffix `.golden` and update flag for tests should be `--update`.
 
 example:
 
 ```go
 var update = flag.Bool("update", false, "update .golden files")
 func TestSomething(t *testing.T) {
-  actual := doSomething()
-  golden := filepath.Join("testdata", tc.Name+"".golden"")
+  actual := functionUnderTest()
+  golden := filepath.Join("testfiles", tc.Name+".golden")
   if *update {
     ioutil.WriteFile(golden, actual, 0644)
   }
@@ -64,9 +73,9 @@ Don't do this
 email := NewEMail()
 email.SetTo("kcoin@kowala.tech")
 ``` 
-the developer might not me aware that it has to set de TO before using EMail
+the developer might not me aware that it has to set de TO before using EMail.
 
-If you require and IP why not
+If you require and IP why not:
 
 ```go
 email := NewMailer("kcoin@kowala.tech")
@@ -79,13 +88,13 @@ email := NewMailer("kcoin@kowala.tech")
 
 Consider using struct of values, optional params or a builder.
 
-Don't do this
+Don't do this:
 
 ```go
 postLetter(firstName string, lastName string, street string, city string, postcode string, flatNumber int)
 ```
 
-why not
+why not:
 
 ```go
 postLetter(personName PersonName, address Address)
@@ -95,7 +104,7 @@ postLetter(personName PersonName, address Address)
 
 Write code for humans first, try to express the intent with function and variable names.
 
-From 
+From:
 ```go
 currentBlock := val.chain.CurrentBlock()
 if currentBlock.Number().Cmp(big.NewInt(0)) == 0 {
@@ -103,7 +112,7 @@ if currentBlock.Number().Cmp(big.NewInt(0)) == 0 {
 }
 ```
 
-To 
+To:
 ```go
 currentBlock := val.chain.CurrentBlock()
 if isFirstBlock(currentBlock) {
@@ -133,34 +142,34 @@ func ReadFull(r Reader, buf []byte) (n int, err error) {
 
 ### Interfaces
 
-To ease testing consider using interfaces  
+New concepts should always be expressed in interfaces first.
 
 ## Formatting
 
 
 ### Style
 
-Style is easiest due to go gofmt. We follow gofmt style so make sure you gofmt your files first
+Style is easiest due to go gofmt. We follow gofmt style so make sure you gofmt your files first.
 
 `gofmt -s -w file.go`
 
 
 ### Column limit: 100
 
-Line length should be limited to 100, CI should fail if above that level
+Line length should be limited to 100, this is not enforced by CI at the moment.
 
 
 ### File size lines: 300
 
-File size should have a soft limit of 300 lines, hard limit being 500 lines, but these should be rare  
+File size should have a soft limit of 300 lines, hard limit being 500 lines, but these should be rare.  
 
 ### Error messages
 
-As per go standard error messages should start with lower case
+As per go standard error messages should start with lower case.
 
 [Errors](https://github.com/golang/go/wiki/Errors)
 
-User types should be used when you might expect the caller to do type assertion on type error example
+User types should be used when you might expect the caller to do type assertion on type error example.
 
 ```go
 var ErrNotFound = errors.New("not found")
@@ -185,7 +194,7 @@ Commented code will have no meaning to other developers, will go out of date rea
 
 http://www.informit.com/articles/article.aspx?p=1334908
 
-Don't do this
+Don't do this:
 
 ```go
 func logNotEmpty(message String) {
@@ -201,8 +210,8 @@ func logNotEmpty(message String) {
 
 ### Comments
 
-Prioritize good code over comments, code should be self explanatory
+Prioritize good code over comments, code should be self explanatory.
 
-Consider refactor if you need to explain what the code does in a comment block
+Consider refactor if you need to explain what the code does in a comment block.
 
-Only exception is package documentation and library usage examples
+Only exception is package documentation and library usage examples.
