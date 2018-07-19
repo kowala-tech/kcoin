@@ -82,12 +82,13 @@ clean:
 # Bindings tools
 
 # FILES is the list of binding files that would be created when generating the bindings
-FILES=$(shell egrep -ir "go:generate" client/contracts/bindings | grep abigen | sed -E 's/^client\/contracts\/bindings\/(.*)\/.*\.go.*-out\ \.?\/?(.*)/client\/contracts\/bindings\/\1\/\2/' )
-$(FILES):
+bindings: clear_bindings
 	$(MAKE) -j 5 stringer go-bindata gencodec client/build/bin/abigen client/contracts/truffle/node_modules
 	go generate ./client/contracts/bindings/...
 .PHONY: bindings
-bindings: | $(FILES)
+
+clear_bindings:
+	egrep -ir "go:generate" client/contracts/bindings | grep abigen | sed -E 's/^client\/contracts\/bindings\/(.*)\/.*\.go.*-out\ \.?\/?(.*)/client\/contracts\/bindings\/\1\/\2/' | xargs -n 1 rm
 
 client/contracts/truffle/node_modules:
 	cd client/contracts/truffle && npm i
