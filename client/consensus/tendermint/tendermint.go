@@ -12,32 +12,31 @@ import (
 )
 
 var (
-	oracleEpoch = new(big.Int) = SetUint64(900)
+	systemVariables = common.BytesToAddress([]byte{9})
+
+	oracleFund              = common.BytesToAddress([]byte{10})
 	oracleDeductionFraction = new(big.Int).SetUint64(4)
+	andromedaOracleReward   = common.Big1
+
+	// Some weird constants to avoid constant memory allocs for them.
+	big100 = new(big.Int).SetUint64(100)
 )
 
 type PriceProvider interface {
-	Price(pendingState bool) (*big.Int, error)
-}
-
-type Currency interface {
-	PrevSupply() (*big.Int, error)
-	PrevMintedAmount() (*big.Int, error)
-	Address() common.Hash
+	CurrentPrice() (*big.Int, error)
+	PreviousPrice() (*big.Int, error)
+	Submissions() ([]common.Address, error)
 }
 
 type Tendermint struct {
-	PriceProvider
-	Currency
-
-	config   *params.TendermintConfig // Consensus engine configuration parameters
-	fakeMode bool
+	priceProvider PriceProvider
+	config        *params.TendermintConfig // Consensus engine configuration parameters
+	fakeMode      bool
 }
 
-func New(config *params.TendermintConfig, priceProvider PriceProvider, currency Currency) *Tendermint {
+func New(config *params.TendermintConfig, priceProvider PriceProvider) *Tendermint {
 	return &Tendermint{
-		PriceProvider: priceProvider,
-		Currency:      currency,
+		priceProvider: priceProvider,
 		config:        config,
 	}
 }
@@ -72,7 +71,7 @@ func (tm *Tendermint) Prepare(chain consensus.ChainReader, header *types.Header)
 }
 
 func (tm *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
-	if err := tm.accumulateRewards(state, header); err != nil {
+	if err := tm.distributeRewards(state, header); err != nil {
 		return nil, err
 	}
 
@@ -83,110 +82,40 @@ func (tm *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header
 	return types.NewBlock(header, txs, receipts, commit), nil
 }
 
-func (tm *Tendermint) accumulateRewards(state *state.StateDB, header *types.Header) error {
-	currentPrice, err := tm.Price(true)
-	if err != nil {
-		return err
-	}
-	prevPrice, err := tm.Price(false)
-	if err != nil {
-		return err
-	}
-	prevSupply, err := tm.PrevSupply()
-	if err != nil {
-		return err
-	}
-	prevMintedAmount, err := tm.PrevMintedAmount()
+func (tm *Tendermint) distributeRewards(state *state.StateDB, header *types.Header) error {
+	currentPrice, err := tm.priceProvider.CurrentPrice()
 	if err != nil {
 		return err
 	}
 
-	mintedAmount := mintedAmount(header.Number, currentPrice, prevPrice, prevSupply, prevMintedAmount)
-
-	oracleDeduction := new(big.Int).Div(new(big.Int).Mul(oracleDeductionFraction, mintedAmount), new(big.Int).SetUint64(100))
-	state.AddBalance(common.BytesToAddress([]byte{0}), oracleDeduction)
-
-	mintedReward := new(big.Int).Sub(mintedReward, oracleDeduction)
-	reward := new(big.Int).Set(mintedReward)
-	mint(state, header.Coinbase, reward)
-
-	// reward oracles every 900 blocks
-	// @TODO (What if timeouts?)
-	if new(big.Int).DivMod(header.Number, oracleEpoch) == 0 {
-		// check the list of submissions
-		oracleReward := common.Min(baseOracleReward, oracleFundBalance)
-		baseOracleReward := common.Big1
-		// @TODO (rgeraldes) - use a core account
-		oracleFundBalance := state.GetBalance(common.BytesToAddress([]byte{0}))
-
-		// divide reward by all the participants
-
-		// reward each one?
-
-		// clean state back to empty
+	prevPrice, err := tm.priceProvider.PreviousPrice()
+	if err != nil {
+		return err
 	}
 
-	/*
-		// @TODO (hrosa): what to do with transactions fees ?
-		contracts, err := network.GetContracts(state)
+	prevSupply := state.GetState(systemVariables, common.BytesToHash([]byte{0}))
+	prevMintedAmount := state.GetState(systemVariables, common.BytesToHash([]byte{1}))
+
+	mintedAmount := mintedAmount(header.Number, currentPrice, prevPrice, prevSupply.Big(), prevMintedAmount.Big())
+	oracleDeduction := new(big.Int).Div(new(big.Int).Mul(oracleDeductionFraction, mintedAmount), big100)
+	state.AddBalance(oracleFund, oracleDeduction)
+
+	mintedReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
+	state.Mint(header.Coinbase, mintedReward)
+
+	if _, mod := new(big.Int).DivMod(header.Number, params.OracleEpochDuration, new(big.Int)); mod.Cmp(common.Big0) == 0 {
+		submissions, err := tm.priceProvider.Submissions()
 		if err != nil {
 			return err
 		}
-		// get mToken contract data
-		mt, err := contracts.GetMToken(state)
-		if err != nil {
-			return err
+		oracleReward := new(big.Int).Div(common.Min(andromedaOracleReward, state.GetBalance(oracleFund)), new(big.Int).SetUint64(len(submissions)))
+		for _, author := range submissions {
+			transfer(state, oracleFund, author, oracleReward)
 		}
-		// gather how many tokens each address holds
-		addrsTokens := make(map[common.Address]int64, len(addrs))
-		var totalTokens int64
-		for _, a := range addrs {
-			b, err := mt.BalanceOf(a)
-			if err != nil {
-				return err
-			}
-			bi := b.Int64()
-			totalTokens += bi
-			addrsTokens[a] = bi
-		}
-		// @TODO (hrosa): remove. on the mainnet, tokens already exist
-		if totalTokens == 0 {
-			return nil
-		}
-		// calculate the block reward.
-		reward, err := CalculateBlockReward(header.Number, state)
-		if err != nil {
-			return err
-		}
-		coins, coinsRem := new(big.Int).DivMod(reward, big.NewInt(1000000000000000000), new(big.Int))
-		coinsRemStr := coinsRem.String()
-		fmt.Printf(">>>> reward(%s): %s.%s\n", header.Number, coins.String(), strings.Repeat("0", len(coinsRemStr))+coinsRemStr)
-		// calculate the reward per token.
-		rewardPerToken, remReward := new(big.Int).DivMod(
-			reward,
-			big.NewInt(totalTokens),
-			new(big.Int),
-		)
-		// distribute rewards
-		for _, a := range addrs {
-			bal, err := mt.BalanceOf(a)
-			if err != nil {
-				return err
-			}
-			bal.Mul(bal, rewardPerToken)
-			state.AddBalance(a, bal)
-		}
-		reward.Sub(reward, remReward)
-		// update network stats
-		networkInfo, err := contracts.GetNetworkContract(state)
-		if err != nil {
-			return err
-		}
-		// @TODO (hrosa): should be using a state writer
-		reward.Sub(reward, remReward)
-		w := common.BytesToHash(networkInfo.TotalSupplyWei.Add(networkInfo.TotalSupplyWei, reward).Bytes())
-		state.SetState(contracts.Network, common.BytesToHash([]byte{0}), w)
-	*/
+
+		// clean submissions state
+
+	}
 
 	return nil
 }
@@ -197,8 +126,4 @@ func (tm *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop
 
 func (tm *Tendermint) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
-}
-
-func mint(state *state.StateDB, addr common.Address, amount *big.Int) {
-	state.Mint(addr, amount)
 }

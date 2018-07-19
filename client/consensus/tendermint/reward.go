@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -14,6 +15,9 @@ var (
 	lowSupplyMetric          = new(big.Int).Mul(new(big.Int).SetUint64(1000000), big.NewInt(params.Kcoin))
 	stabilizedPrice          = new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
 	maxUnderNormalConditions = new(big.Int).SetUint64(1e12)
+
+	// Some weird constants to avoid constant memory allocs for them.
+	big10000 = new(big.Int).SetUint64(10000)
 )
 
 func mintedAmount(blockNumber, currentPrice, prevPrice, prevSupply, prevMintedAmount *big.Int) *big.Int {
@@ -33,7 +37,7 @@ func mintedAmount(blockNumber, currentPrice, prevPrice, prevSupply, prevMintedAm
 
 func cap(blockNumber, prevSupply *big.Int) *big.Int {
 	if (blockNumber.Cmp(common.Big1) > 0) && !hasLowSupply(prevSupply) {
-		return new(big.Int).Div(prevSupply, new(big.Int).SetUint64(10000))
+		return new(big.Int).Div(prevSupply, big10000)
 	}
 	return initialCap
 }
@@ -43,4 +47,9 @@ func hasLowSupply(supply *big.Int) bool {
 		return true
 	}
 	return false
+}
+
+func transfer(state *state.StateDB, sender, recipient common.Address, amount *big.Int) {
+	state.SubBalance(sender, amount)
+	state.AddBalance(recipient, amount)
 }

@@ -1,5 +1,9 @@
 package params
 
+import (
+	"math/big"
+)
+
 var (
 	TargetGasLimit = GenesisGasLimit // The artificial target
 )
@@ -64,4 +68,8 @@ const (
 	PreCommitDuration      uint64 = 200
 	PreCommitDeltaDuration uint64 = 25
 	BlockTime              uint64 = 1000
+)
+
+var (
+	OracleEpochDuration = new(big.Int).SetUint64(900)
 )
