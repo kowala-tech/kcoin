@@ -10,13 +10,23 @@ clone:
 
 pipeline:
   bindings:
-    image: kowalatech/go:1.0.4
+    image: kowalatech/go:1.0.9
     commands:
+      - make clear_bindings
       - make bindings
+      - make assert_no_generate
+
+  go-generate:
+    image: kowalatech/go:1.0.9
+    commands:
+    - make go_generate
+    - make assert_no_generate
+    when:
+      event: [push]
 
   test_kcoin:
     group: testing
-    image: kowalatech/go:1.0.4
+    image: kowalatech/go:1.0.9
     commands:
       # test_genesis should run before test
       - make test_genesis
@@ -28,7 +38,7 @@ pipeline:
 
   test_notifications:
     group: testing
-    image: kowalatech/go:1.0.4
+    image: kowalatech/go:1.0.9
     environment:
       - NSQ_ADDR=nsqd:4150
       - REDIS_ADDR=redis:6379
@@ -39,7 +49,7 @@ pipeline:
 
   e2e:
     group: testing
-    image: kowalatech/go:1.0.4
+    image: kowalatech/go:1.0.9
     environment:
       - DOCKER_HOST=tcp://docker:2375
       - DOCKER_PUBLIC_IP=docker
@@ -58,7 +68,7 @@ pipeline:
       event: [pull_request]
 
   docker_build:
-    image: kowalatech/go:1.0.4
+    image: kowalatech/go:1.0.9
     environment:
       - DOCKER_HOST=tcp://docker:2375
       - DOCKER_PUBLIC_IP=docker
@@ -199,7 +209,7 @@ pipeline:
 
   build_artifacts:
     group: build_artifacts
-    image: kowalatech/go:1.0.4
+    image: kowalatech/go:1.0.9
     environment:
       - DOCKER_HOST=tcp://docker:2375
     commands:
