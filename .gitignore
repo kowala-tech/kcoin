@@ -20,11 +20,6 @@
 /test/e2e/logs
 godog.test
 
-# dashboard
-/client/dashboard/assets/node_modules
-/client/dashboard/assets/stats.json
-/client/dashboard/assets/public/bundle.js
-
 # truffle and npm
 /client/contracts/truffle/node_modules/
 /client/contracts/truffle/coverage/
