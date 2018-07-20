@@ -96,6 +96,7 @@ bindings_node_modules:
 
 .PHONY: go_generate
 go_generate: moq go-bindata stringer gencodec mockery ensure_notifications ensure_wallet_backend protoc-gen-go
+	npm install yarn -g
 	go generate ./...
 
 .PHONY: assert_no_generate
