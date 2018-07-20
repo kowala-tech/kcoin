@@ -96,21 +96,7 @@ bindings_node_modules:
 
 .PHONY: go_generate
 go_generate: moq go-bindata stringer gencodec mockery ensure_notifications ensure_wallet_backend protoc-gen-go
-	go generate ./client/cmd/control/
-	go generate ./client/cmd/faucet/
-	go generate ./client/core/
-	go generate ./client/core/types/
-	go generate ./client/core/vm/
-	go generate ./client/internal/jsre/deps/
-	go generate ./client/knode/
-	go generate ./client/knode/tracers/internal/tracers/
-	go generate ./client/p2p/discv5/
-	go generate ./notifications/blockchain/
-	go generate ./notifications/environment/
-	go generate ./notifications/keyvalue/
-	go generate ./notifications/notifier/
-	go generate ./notifications/protocolbuffer/
-	go generate ./wallet-backend/protocolbuffer/
+	go generate ./...
 
 .PHONY: assert_no_generate
 assert_no_generate:
