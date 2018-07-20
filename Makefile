@@ -57,6 +57,10 @@ ios:
 	@echo "Done building."
 	@echo "Import \"$(GOBIN)/Kusd.framework\" to use the library."
 
+.PHONY: abigen
+abigen:
+	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
+
 .PHONY: test
 test: all
 	cd client; build/env.sh go run build/ci.go test
@@ -81,21 +85,16 @@ clean:
 
 # Bindings tools
 
-# FILES is the list of binding files that would be created when generating the bindings
-bindings:
-	$(MAKE) -j 5 stringer go-bindata gencodec client/build/bin/abigen client/contracts/truffle/node_modules
-	go generate ./client/contracts/bindings/...
 .PHONY: bindings
+bindings:
+	$(MAKE) -j 5 stringer go-bindata gencodec abigen bindings_node_modules
+	go generate ./client/contracts/bindings/...
 
-clear_bindings:
-	egrep -ir "go:generate" client/contracts/bindings | grep abigen | sed -E 's/^client\/contracts\/bindings\/(.*)\/.*\.go.*-out\ \.?\/?(.*)/client\/contracts\/bindings\/\1\/\2/' | xargs -n 1 rm
-
-client/contracts/truffle/node_modules:
+.PHONY: bindings_node_modules
+bindings_node_modules:
 	cd client/contracts/truffle && npm ci
 
-client/build/bin/abigen:
-	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
-
+.PHONY: go_generate
 go_generate: moq go-bindata stringer gencodec mockery ensure_notifications ensure_wallet_backend protoc-gen-go
 	go generate ./client/cmd/control/
 	go generate ./client/cmd/faucet/
@@ -113,15 +112,18 @@ go_generate: moq go-bindata stringer gencodec mockery ensure_notifications ensur
 	go generate ./notifications/protocolbuffer/
 	go generate ./wallet-backend/protocolbuffer/
 
+.PHONY: assert_no_generate
 assert_no_generate:
 	git status
 	if ! git diff-index --quiet HEAD; then echo "There are uncommited go generate files."; exit 1; fi
 
+.PHONY: ensure_notifications
 ensure_notifications: dep
 	cd notifications && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	cd ..
 
+.PHONY: ensure_wallet_backend
 ensure_wallet_backend: dep
 	cd wallet-backend && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
