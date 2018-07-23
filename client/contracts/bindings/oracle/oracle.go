@@ -16,13 +16,21 @@ var mapOracleMgrToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
 }
 
+// Manager represents an oracle manager
 type Manager interface {
-	Price() (*big.Int, error)
+	CurrentPrice() (*big.Int, error)
+	PreviousPrice() (*big.Int, error)
+	Submissions() ([]common.Address, error)
 	GetOracleCount() (*big.Int, error)
 }
 
+type manager struct {
+	*OracleMgr
+	addr common.Address
+}
+
 // Binding returns a binding to the current oracle mgr
-func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgrSession, error) {
+func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
 	addr, ok := mapOracleMgrToAddr[chainID.Uint64()]
 	if !ok {
 		return nil, bindings.ErrNoAddress
@@ -33,8 +41,24 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgr
 		return nil, err
 	}
 
-	return &OracleMgrSession{
-		Contract: mgr,
-		CallOpts: bind.CallOpts{},
+	return &manager{
+		OracleMgr: mgr,
+		addr:      addr,
 	}, nil
+}
+
+func (mgr *manager) CurrentPrice() (*big.Int, error) {
+	return mgr.Price(&bind.CallOpts{Pending: true})
+}
+
+func (mgr *manager) PreviousPrice() (*big.Int, error) {
+	return mgr.Price(&bind.CallOpts{Pending: false})
+}
+
+func (mgr *manager) Address() common.Address {
+	return mgr.addr
+}
+
+func (mgr *manager) Submisisons() ([]common.Address, error) {
+	return nil, nil
 }

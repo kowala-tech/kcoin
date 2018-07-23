@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
 	"github.com/kowala-tech/kcoin/client/stats"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
@@ -20,7 +19,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/fdlimit"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
-	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode"
@@ -1090,6 +1088,7 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	return genesis
 }
 
+/*
 // MakeChain creates a chain manager from set command line flags.
 func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb kcoindb.Database) {
 	var err error
@@ -1119,6 +1118,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	}
 	return chain, chainDb
 }
+*/
 
 // MakeConsolePreloads retrieves the absolute paths for the console JavaScript
 // scripts to preload before starting.

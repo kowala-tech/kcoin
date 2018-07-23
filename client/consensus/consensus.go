@@ -5,31 +5,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
-	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
-
-// ChainReader defines a small collection of methods needed to access the local
-// blockchain during header and/or uncle verification.
-type ChainReader interface {
-	// Config retrieves the blockchain's chain configuration.
-	Config() *params.ChainConfig
-
-	// CurrentHeader retrieves the current header from the local chain.
-	CurrentHeader() *types.Header
-
-	// GetHeader retrieves a block header from the database by hash and number.
-	GetHeader(hash common.Hash, number uint64) *types.Header
-
-	// GetHeaderByNumber retrieves a block header from the database by number.
-	GetHeaderByNumber(number uint64) *types.Header
-
-	// GetHeaderByHash retrieves a block header from the database by its hash.
-	GetHeaderByHash(hash common.Hash) *types.Header
-
-	// GetBlock retrieves a block from the database by hash and number.
-	GetBlock(hash common.Hash, number uint64) *types.Block
-}
 
 // Engine is an algorithm agnostic consensus engine.
 type Engine interface {
@@ -69,12 +46,4 @@ type Engine interface {
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API
-}
-
-// PoW is a consensus engine based on proof-of-work.
-type PoW interface {
-	Engine
-
-	// Hashrate returns the current mining hashrate of a PoW consensus engine.
-	Hashrate() float64
 }
