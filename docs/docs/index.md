@@ -19,4 +19,6 @@ the latest news and updates. You're also welcome to join us in our
 [Telegram](https://t.co/MpSK3z1aWw) or [Gitter
 channel](https://gitter.im/kowala-tech/Lobby).
 
+#### [Download KClient](/getting-started/download)
+
 </br></br>
