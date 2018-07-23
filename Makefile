@@ -6,7 +6,7 @@ PWD   := $(shell pwd)
 GOBIN = $(PWD)/client/build/bin
 
 .PHONY: kcoin
-kcoin: bindings
+kcoin:
 	cd client; build/env.sh go run build/ci.go install ./cmd/kcoin
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kcoin\" to launch kcoin."
@@ -18,13 +18,13 @@ control:
 	@echo "Run \"$(GOBIN)/control\" to launch control."
 
 .PHONY: bootnode
-bootnode: bindings
+bootnode:
 	cd client; build/env.sh go run build/ci.go install ./cmd/bootnode
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/bootnode\" to launch bootnode."
 
 .PHONY: faucet
-faucet: bindings
+faucet:
 	cd client; build/env.sh go run build/ci.go install ./cmd/faucet
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/faucet\" to launch faucet."
@@ -57,6 +57,10 @@ ios:
 	@echo "Done building."
 	@echo "Import \"$(GOBIN)/Kusd.framework\" to use the library."
 
+.PHONY: abigen
+abigen:
+	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
+
 .PHONY: test
 test: all
 	cd client; build/env.sh go run build/ci.go test
@@ -81,19 +85,49 @@ clean:
 
 # Bindings tools
 
-# FILES is the list of binding files that would be created when generating the bindings
-FILES=$(shell egrep -ir "go:generate" client/contracts/bindings | grep abigen | sed -E 's/^client\/contracts\/bindings\/(.*)\/.*\.go.*-out\ \.?\/?(.*)/client\/contracts\/bindings\/\1\/\2/' )
-$(FILES):
-	$(MAKE) -j 5 stringer go-bindata gencodec client/build/bin/abigen client/contracts/truffle/node_modules
-	go generate ./client/contracts/bindings/...
 .PHONY: bindings
-bindings: | $(FILES)
+bindings:
+	$(MAKE) -j 5 stringer go-bindata gencodec abigen bindings_node_modules
+	go generate ./client/contracts/bindings/...
 
-client/contracts/truffle/node_modules:
-	cd client/contracts/truffle && npm i
+.PHONY: bindings_node_modules
+bindings_node_modules:
+	cd client/contracts/truffle && npm ci
 
-client/build/bin/abigen:
-	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
+.PHONY: go_generate
+go_generate: moq go-bindata stringer gencodec mockery ensure_notifications ensure_wallet_backend protoc-gen-go
+	go generate ./client/cmd/control/
+	go generate ./client/cmd/faucet/
+	go generate ./client/core/
+	go generate ./client/core/types/
+	go generate ./client/core/vm/
+	go generate ./client/internal/jsre/deps/
+	go generate ./client/knode/
+	go generate ./client/knode/tracers/internal/tracers/
+	go generate ./client/p2p/discv5/
+	go generate ./notifications/blockchain/
+	go generate ./notifications/environment/
+	go generate ./notifications/keyvalue/
+	go generate ./notifications/notifier/
+	go generate ./notifications/protocolbuffer/
+	go generate ./wallet-backend/protocolbuffer/
+
+.PHONY: assert_no_generate
+assert_no_generate:
+	git status
+	if ! git diff-index --quiet HEAD; then echo "There are uncommited go generate files."; exit 1; fi
+
+.PHONY: ensure_notifications
+ensure_notifications: dep
+	cd notifications && \
+	$(GOPATH)/bin/dep ensure --vendor-only && \
+	cd ..
+
+.PHONY: ensure_wallet_backend
+ensure_wallet_backend: dep
+	cd wallet-backend && \
+	$(GOPATH)/bin/dep ensure --vendor-only && \
+	cd ..
 
 # Cross Compilation Targets (xgo)
 
@@ -102,7 +136,7 @@ kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename
 	@echo "Full cross compilation done."
 
 .PHONY: kcoin_cross_build
-kcoin_cross_build: bindings
+kcoin_cross_build:
 	cd client; build/env.sh go run build/ci.go xgo -- --go=latest --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
 	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-osx-10.6-amd64
 
@@ -220,7 +254,7 @@ GO_BINDATA_BIN := $(shell command -v go-bindata 2> /dev/null)
 go-bindata:
 ifndef GO_BINDATA_BIN
 	@echo "Installing go-bindata..."
-	@go get github.com/jteeuwen/go-bindata/go-bindata
+	@go get -u github.com/kevinburke/go-bindata/...
 endif
 
 .PHONY: gencodec
@@ -229,4 +263,25 @@ gencodec:
 ifndef GENCODEC_BIN
 	@echo "Installing gencodec..."
 	@go get github.com/fjl/gencodec
+endif
+
+MOQ_BIN := $(shell command -v moq 2> /dev/null)
+moq:
+ifndef MOQ_BIN
+	@echo "Installing moq..."
+	@go get github.com/matryer/moq
+endif
+
+MOCKERY_BIN := $(shell command -v mockery 2> /dev/null)
+mockery:
+ifndef MOCKERY_BIN
+	@echo "Installing mockery..."
+	@go get github.com/vektra/mockery/.../
+endif
+
+PROTOC_GEN_BIN := $(shell command -v protoc-gen-go 2> /dev/null)
+protoc-gen-go:
+ifndef PROTOC_GEN_BIN
+	@echo "Installing protoc-gen-go..."
+	@go get -u github.com/golang/protobuf/protoc-gen-go
 endif

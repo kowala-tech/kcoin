@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
-	"github.com/kowala-tech/kcoin/client/dashboard"
 	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/params"
@@ -57,10 +56,9 @@ var tomlSettings = toml.Config{
 }
 
 type kcoinConfig struct {
-	Kowala    knode.Config
-	Node      node.Config
-	Stats     stats.Config
-	Dashboard dashboard.Config
+	Kowala knode.Config
+	Node   node.Config
+	Stats  stats.Config
 }
 
 func loadConfig(file string, cfg *kcoinConfig) error {
@@ -91,9 +89,8 @@ func defaultNodeConfig() node.Config {
 func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	// Load defaults.
 	cfg := kcoinConfig{
-		Kowala:    knode.DefaultConfig,
-		Node:      defaultNodeConfig(),
-		Dashboard: dashboard.DefaultConfig,
+		Kowala: knode.DefaultConfig,
+		Node:   defaultNodeConfig(),
 	}
 
 	// Load config file.
@@ -114,8 +111,6 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	if ctx.GlobalIsSet(utils.KowalaStatsURLFlag.Name) {
 		cfg.Stats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
 	}
-
-	utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 
 	return stack, cfg
 }
