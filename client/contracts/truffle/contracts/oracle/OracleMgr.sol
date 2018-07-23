@@ -10,7 +10,7 @@ contract OracleMgr is Pausable {
     uint public freezePeriod;
     uint public syncFrequency;
     uint public updatePeriod;
-    uint public price;
+    uint public averagePrice;
     ValidatorMgr validatorMgr;
 
     struct Deposit {

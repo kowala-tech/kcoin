@@ -11,32 +11,18 @@ import (
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
-var (
-	systemVariables         = common.BytesToAddress([]byte{9})
-	oracleFund              = common.BytesToAddress([]byte{10})
-	oracleDeductionFraction = new(big.Int).SetUint64(4)
-	andromedaOracleReward   = common.Big1
-
-	// Some weird constants to avoid constant memory allocs for them.
-	big100 = new(big.Int).SetUint64(100)
-)
-
-type PriceProvider interface {
-	CurrentPrice() (*big.Int, error)
-	PreviousPrice() (*big.Int, error)
-	Submissions() ([]common.Address, error)
-}
-
 type Tendermint struct {
-	priceProvider PriceProvider
-	config        *params.TendermintConfig // Consensus engine configuration parameters
-	fakeMode      bool
+	system    System
+	oracleMgr OracleMgr
+	config    *params.TendermintConfig // Consensus engine configuration parameters
+	fakeMode  bool
 }
 
-func New(config *params.TendermintConfig, priceProvider PriceProvider) *Tendermint {
+func New(config *params.TendermintConfig, mgr OracleMgr, system System) *Tendermint {
 	return &Tendermint{
-		priceProvider: priceProvider,
-		config:        config,
+		oracleMgr: mgr,
+		system:    system,
+		config:    config,
 	}
 }
 
@@ -74,49 +60,11 @@ func (tm *Tendermint) Finalize(chain consensus.ChainReader, header *types.Header
 		return nil, err
 	}
 
-	// Accumulate any block and uncle rewards and commit the final state root
+	// Accumulate any block and oracle rewards and commit the final state root
 	header.Root = state.IntermediateRoot(true)
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, receipts, commit), nil
-}
-
-func (tm *Tendermint) distributeRewards(state *state.StateDB, header *types.Header) error {
-	currentPrice, err := tm.priceProvider.CurrentPrice()
-	if err != nil {
-		return err
-	}
-
-	prevPrice, err := tm.priceProvider.PreviousPrice()
-	if err != nil {
-		return err
-	}
-
-	prevSupply := state.GetState(systemVariables, common.BytesToHash([]byte{0}))
-	prevMintedAmount := state.GetState(systemVariables, common.BytesToHash([]byte{1}))
-
-	mintedAmount := mintedAmount(header.Number, currentPrice, prevPrice, prevSupply.Big(), prevMintedAmount.Big())
-	oracleDeduction := new(big.Int).Div(new(big.Int).Mul(oracleDeductionFraction, mintedAmount), big100)
-	state.AddBalance(oracleFund, oracleDeduction)
-
-	mintedReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
-	state.Mint(header.Coinbase, mintedReward)
-
-	if _, mod := new(big.Int).DivMod(header.Number, params.OracleEpochDuration, new(big.Int)); mod.Cmp(common.Big0) == 0 {
-		submissions, err := tm.priceProvider.Submissions()
-		if err != nil {
-			return err
-		}
-		oracleReward := new(big.Int).Div(common.Min(andromedaOracleReward, state.GetBalance(oracleFund)), new(big.Int).SetUint64(uint64(len(submissions))))
-		for _, author := range submissions {
-			transfer(state, oracleFund, author, oracleReward)
-		}
-
-		// clean submissions array and set each on of hasSubmittedPrice to false
-		//state.SetState()
-	}
-
-	return nil
 }
 
 func (tm *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
@@ -125,4 +73,60 @@ func (tm *Tendermint) Seal(chain consensus.ChainReader, block *types.Block, stop
 
 func (tm *Tendermint) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
+}
+
+func (tm *Tendermint) distributeRewards(state *state.StateDB, header *types.Header) error {
+	mintedAmount, err := tm.system.MintedAmount()
+	if err != nil {
+		return err
+	}
+
+	// oracle fund
+	oracleDeduction, err := tm.system.OracleDeduction(mintedAmount)
+	if err != nil {
+		return err
+	}
+	state.AddBalance(tm.system.Address(), oracleDeduction)
+
+	// mining rewards
+	mintedReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
+	state.Mint(header.Coinbase, mintedReward)
+
+	// system updates and oracle rewards
+	if isEpochEnding(header.Number) {
+		// oracle rewards
+		submissions, err := tm.oracleMgr.Submissions()
+		if err != nil {
+			return err
+		}
+		oracleReward, err := tm.system.OracleReward(mintedAmount)
+		if err != nil {
+			return err
+		}
+		rewardPerOracle := new(big.Int).Div(oracleReward, new(big.Int).SetUint64(uint64(len(submissions))))
+		for _, author := range submissions {
+			transfer(state, tm.system.Address(), author, rewardPerOracle)
+		}
+
+		// update system price with the oracle's average price
+
+		// update average price of the oracle manager to 0
+
+		// clean submissions array and set each on of hasSubmittedPrice to false
+
+	}
+
+	// update prevMintedAmount
+
+	return nil
+}
+
+func isEpochEnding(blockNumber *big.Int) bool {
+	_, mod := new(big.Int).DivMod(blockNumber, params.OracleEpochDuration, new(big.Int))
+	return mod.Cmp(common.Big0) == 0
+}
+
+func transfer(state *state.StateDB, sender, recipient common.Address, amount *big.Int) {
+	state.SubBalance(sender, amount)
+	state.AddBalance(recipient, amount)
 }
