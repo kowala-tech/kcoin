@@ -11,13 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
-	"github.com/kowala-tech/kcoin/client/stats"
-
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/fdlimit"
+	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/vm"
@@ -36,6 +34,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/p2p/nat"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/stats"
 
 	"gopkg.in/urfave/cli.v1"
 )
@@ -1095,7 +1094,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
-	engine := tendermint.New(&params.TendermintConfig{})
+	engine := konsensus.New(&params.KonsensusConfig{})
 	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)
