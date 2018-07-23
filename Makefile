@@ -95,39 +95,27 @@ bindings_node_modules:
 	cd client/contracts/truffle && npm ci
 
 .PHONY: go_generate
-go_generate: moq go-bindata stringer gencodec mockery ensure_notifications ensure_wallet_backend protoc-gen-go
-	go generate ./client/cmd/control/
-	go generate ./client/cmd/faucet/
-	go generate ./client/core/
-	go generate ./client/core/types/
-	go generate ./client/core/vm/
-	go generate ./client/internal/jsre/deps/
-	go generate ./client/knode/
-	go generate ./client/knode/tracers/internal/tracers/
-	go generate ./client/p2p/discv5/
-	go generate ./notifications/blockchain/
-	go generate ./notifications/environment/
-	go generate ./notifications/keyvalue/
-	go generate ./notifications/notifier/
-	go generate ./notifications/protocolbuffer/
-	go generate ./wallet-backend/protocolbuffer/
+go_generate: notifications_dep wallet_backend_dep bindings_node_modules abigen  moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec 
+	go generate ./...
 
-.PHONY: assert_no_generate
-assert_no_generate:
+.PHONY: docker_go_generate
+docker_go_generate:
+	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.11 make go_generate
+
+.PHONY: assert_no_changes
+assert_no_changes:
 	git status
-	if ! git diff-index --quiet HEAD; then echo "There are uncommited go generate files."; exit 1; fi
+	@if ! git diff-index --quiet HEAD; then echo "There are uncommited go generate files.\nRun `make docker_go_generate` to regenerate all of them."; exit 1; fi
 
-.PHONY: ensure_notifications
-ensure_notifications: dep
+.PHONY: notifications_dep
+notifications_dep: dep
 	cd notifications && \
-	$(GOPATH)/bin/dep ensure --vendor-only && \
-	cd ..
+	$(GOPATH)/bin/dep ensure --vendor-only
 
-.PHONY: ensure_wallet_backend
-ensure_wallet_backend: dep
+.PHONY: wallet_backend_dep
+wallet_backend_dep: dep
 	cd wallet-backend && \
-	$(GOPATH)/bin/dep ensure --vendor-only && \
-	cd ..
+	$(GOPATH)/bin/dep ensure --vendor-only
 
 # Cross Compilation Targets (xgo)
 
@@ -283,5 +271,5 @@ PROTOC_GEN_BIN := $(shell command -v protoc-gen-go 2> /dev/null)
 protoc-gen-go:
 ifndef PROTOC_GEN_BIN
 	@echo "Installing protoc-gen-go..."
-	@go get -u github.com/golang/protobuf/protoc-gen-go
+	@go get github.com/golang/protobuf/protoc-gen-go
 endif
