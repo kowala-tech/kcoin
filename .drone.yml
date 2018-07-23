@@ -228,15 +228,28 @@ pipeline:
       event: [push,tag]
       branch: [master,dev]
 
-  build_wallet_app:
+  build_wallet_app_dev:
     group: build_artifacts
     image: node:9
     environment:
       - KOWALA_NETWORK="kusd-zygote"
     commands:
-      - cd wallet-app ; yarn run drone:build
+      - cd wallet-app
+      - make build
     when:
-      event: [push]
+      event: [push,tag,wallet]
+      branch: [dev]
+
+  build_wallet_app_production:
+    group: build_artifacts
+    image: node:9
+    environment:
+      - KOWALA_NETWORK="kusd-zygote"
+    commands:
+      - cd wallet-app
+      - make build
+    when:
+      event: [push,tag]
       branch: [master]
 
   upload_gource_mp4_to_s3:

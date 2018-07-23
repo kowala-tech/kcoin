@@ -1,8 +1,6 @@
 # kWallet
 
 ## Getting Started
-Requires yarn and watchman.
-
 Run `make install` and then `make start`.
 
 http://localhost:3000
