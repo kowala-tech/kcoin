@@ -61,4 +61,16 @@ You can use that address in the [Coin Faucet](<(http://faucet.testnet.kowala.io/
 > kcoin.getBalance(kcoin.coinbase)
 ```
 
+## Network Status
+
+The KCoin network status monitor is a web-based application to monitor the health of the testnet/mainnet through a group of nodes.
+
+You can visit [here](https://zygote.kowala.tech/stats/).
+
+## BlockChain Explorer
+
+Easy viewer for investors and developers.
+
+You can visit [here](https://explorer.zygote.kowala.tech/).
+
 </br></br>
