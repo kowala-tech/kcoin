@@ -53,33 +53,31 @@ type Consensus interface {
 	Token() token.Token
 }
 
-type mUSD struct {
-	*MiningToken
+type mToken struct {
+	*MiningTokenSession
 	chainID *big.Int
 }
 
-func NewMUSD(contractBackend bind.ContractBackend, chainID *big.Int) (*mUSD, error) {
-	mtoken, err := NewMiningToken(mapMiningTokenToAddr[chainID.Uint64()], contractBackend)
+func NewMToken(contractBackend bind.ContractBackend, chainID *big.Int) (*mToken, error) {
+	tkn, err := NewMiningToken(mapMiningTokenToAddr[chainID.Uint64()], contractBackend)
 	if err != nil {
 		return nil, err
 	}
-	return &mUSD{MiningToken: mtoken, chainID: chainID}, nil
+	return &mToken{
+		MiningTokenSession: &MiningTokenSession{
+			Contract: tkn,
+			CallOpts: bind.CallOpts{},
+		},
+		chainID: chainID,
+	}, nil
 }
 
-func (tkn *mUSD) Transfer(walletAccount accounts.WalletAccount, to common.Address, value *big.Int, data []byte, customFallback string) (common.Hash, error) {
-	tx, err := tkn.MiningToken.Transfer(transactOpts(walletAccount, tkn.chainID), to, value, data, customFallback)
+func (tkn *mToken) Transfer(walletAccount accounts.WalletAccount, to common.Address, value *big.Int, data []byte, customFallback string) (common.Hash, error) {
+	tx, err := tkn.MiningTokenSession.Contract.Transfer(transactOpts(walletAccount, tkn.chainID), to, value, data, customFallback)
 	if err != nil {
 		return common.Hash{}, err
 	}
 	return tx.Hash(), err
-}
-
-func (tkn *mUSD) BalanceOf(target common.Address) (*big.Int, error) {
-	return tkn.MiningToken.BalanceOf(&bind.CallOpts{}, target)
-}
-
-func (tkn *mUSD) Name() (string, error) {
-	return tkn.MiningToken.Name(&bind.CallOpts{})
 }
 
 type consensus struct {
@@ -102,7 +100,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		return nil, err
 	}
 
-	mUSD, err := NewMUSD(contractBackend, chainID)
+	mToken, err := NewMToken(contractBackend, chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +108,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 	return &consensus{
 		manager:     manager,
 		managerAddr: addr,
-		mtoken:      mUSD,
+		mtoken:      mToken,
 		chainID:     chainID,
 		addr:        addr,
 	}, nil

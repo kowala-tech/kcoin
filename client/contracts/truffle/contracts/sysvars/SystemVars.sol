@@ -16,7 +16,7 @@ contract SystemVars {
     uint public prevCurrencyPrice = 1 ether;
     uint public currencyPrice = 1 ether;
     uint public currencySupply = 0;
-    uint public prevMintedAmount = 0;
+    uint public mintedReward = 0;
 
     function SystemVars(uint initialPrice) public {
         require(initialPrice > 0);

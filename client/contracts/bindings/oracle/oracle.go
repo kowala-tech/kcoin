@@ -20,6 +20,7 @@ type Manager interface {
 	Submissions() ([]common.Address, error)
 	AveragePrice() (*big.Int, error)
 	GetOracleCount() (*big.Int, error)
+	MaxOracles() (*big.Int, error)
 }
 
 type manager struct {
