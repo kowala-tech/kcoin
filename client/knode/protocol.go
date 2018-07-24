@@ -12,22 +12,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
-// Constants to match up protocol versions and messages
-const (
-	kcoin1 = 1
-)
-
-// Official short name of the protocol used during capability negotiation.
-var ProtocolName = "kcoin"
-
-// Supported versions of the kcoin protocol (first is primary).
-var ProtocolVersions = []uint{kcoin1}
-
-// Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{21}
-
-const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
-
 // kcoin protocol message codes
 const (
 	StatusMsg          = 0x00
@@ -81,6 +65,7 @@ var errorToString = map[int]string{
 	ErrExtraStatusMsg:          "Extra status message",
 	ErrSuspendedPeer:           "Suspended peer",
 }
+
 
 type txPool interface {
 	// AddRemotes should add the given transactions to the pool.
