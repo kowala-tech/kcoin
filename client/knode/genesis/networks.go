@@ -7,6 +7,9 @@ var Networks = map[string]map[string]Options{
 		MainNetwork: Options{
 			Network:   MainNetwork,
 			ExtraData: "Kowala's first block",
+			SystemVars: &SystemVarsOpts{
+				InitialPrice:  1,
+			},
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
@@ -46,7 +49,6 @@ var Networks = map[string]map[string]Options{
 				FreezePeriod:  1,
 				BaseDeposit:   10,
 				Price: PriceOpts{
-					InitialPrice:  1,
 					SyncFrequency: 600,
 					UpdatePeriod:  30,
 				},
@@ -73,6 +75,9 @@ var Networks = map[string]map[string]Options{
 		TestNetwork: Options{
 			Network:   TestNetwork,
 			ExtraData: "Kowala's first block",
+			SystemVars: &SystemVarsOpts{
+				InitialPrice:  1,
+			},
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
@@ -112,7 +117,6 @@ var Networks = map[string]map[string]Options{
 				FreezePeriod:  1,
 				BaseDeposit:   10,
 				Price: PriceOpts{
-					InitialPrice:  1,
 					SyncFrequency: 600,
 					UpdatePeriod:  30,
 				},

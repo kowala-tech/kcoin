@@ -192,6 +192,10 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		}
 	}
 
+	// sysvars
+	initialPrice := new(big.Int)
+	new(big.Float).Mul(new(big.Float).SetFloat64(options.SystemVars.InitialPrice), big.NewFloat(params.Kcoin)).Int(initialPrice)
+
 	// governance
 	multiSigCreator, err := getAddress(options.Governance.Origin)
 	if err != nil {
@@ -231,9 +235,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
 	oracleBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
 	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
-
-	initialPrice := new(big.Int)
-	new(big.Float).Mul(new(big.Float).SetFloat64(options.DataFeedSystem.Price.InitialPrice), big.NewFloat(params.Kcoin)).Int(initialPrice)
 	syncFrequency := new(big.Int).SetUint64(options.DataFeedSystem.Price.SyncFrequency)
 	updatePeriod := new(big.Int).SetUint64(options.DataFeedSystem.Price.UpdatePeriod)
 
@@ -262,6 +263,9 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	return &validGenesisOptions{
 		network:         network,
 		consensusEngine: consensusEngine,
+		sysvars: &validSystemVarsOpts{
+			
+		},
 		multiSig: &validMultiSigOpts{
 			multiSigCreator:  multiSigCreator,
 			multiSigOwners:   multiSigOwners,

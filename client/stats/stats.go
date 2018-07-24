@@ -95,7 +95,7 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 		return nil, fmt.Errorf("Failed to load the consensus contract %v", err)
 	}
 
-	var sysvars sys.System
+	var sysvars sysvars.System
 	if err := kowalaServ.Contract(sysvars); err != nil {
 		return nil, fmt.Errorf("Failed to load the consensus contract %v", err)
 	}
