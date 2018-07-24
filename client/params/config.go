@@ -25,7 +25,7 @@ var (
 		Konsensus: new(KonsensusConfig),
 	}
 
-	// AllTendermintProtocolChanges contains every protocol change (EIPs)
+	// AllKonsensusProtocolChanges contains every protocol change (EIPs)
 	// introduced and accepted by the Kowala core developers.
 	//
 	// This configuration is intentionally not using keyed fields.
@@ -33,7 +33,7 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllTendermintProtocolChanges = &ChainConfig{big.NewInt(1337), new(KonsensusConfig)}
+	AllKonsensusProtocolChanges = &ChainConfig{big.NewInt(1337), new(KonsensusConfig)}
 	TestChainConfig              = &ChainConfig{big.NewInt(1), new(KonsensusConfig)}
 	TestRules                    = TestChainConfig.Rules(new(big.Int))
 )
@@ -47,7 +47,7 @@ type ChainConfig struct {
 	ChainID *big.Int `json:"chainID"` // Chain id identifies the current chain and is used for replay protection
 
 	// Various consensus engines
-	Konsensus *KonsensusConfig `json:"tendermint,omitempty"`
+	Konsensus *KonsensusConfig `json:"konsensus,omitempty"`
 }
 
 // KonsensusConfig is the consensus engine configs for proof-of-stake based sealing.
