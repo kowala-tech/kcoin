@@ -264,7 +264,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		network:         network,
 		consensusEngine: consensusEngine,
 		sysvars: &validSystemVarsOpts{
-			
+			initialPrice: initialPrice,
 		},
 		multiSig: &validMultiSigOpts{
 			multiSigCreator:  multiSigCreator,
