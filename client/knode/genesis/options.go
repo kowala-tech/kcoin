@@ -44,7 +44,7 @@ var (
 
 type Options struct {
 	Network           string
-	SystemVars		  *SystemVarsOpts
+	SystemVars        *SystemVarsOpts
 	Governance        *GovernanceOpts
 	Consensus         *ConsensusOpts
 	DataFeedSystem    *DataFeedSystemOpts
@@ -58,7 +58,7 @@ type TokenHolder struct {
 }
 
 type SystemVarsOpts struct {
-	InitialPrice  float64
+	InitialPrice float64
 }
 
 type MiningTokenOpts struct {
@@ -151,8 +151,8 @@ type validMiningTokenOpts struct {
 }
 
 type validSystemVarsOpts struct {
-	initialPrice  *big.Int
-	owner common.Address
+	initialPrice *big.Int
+	owner        common.Address
 }
 
 type validMultiSigOpts struct {

@@ -34,8 +34,8 @@ var (
 	// anyone adding flags to the config to also have to set these
 	// fields.
 	AllKonsensusProtocolChanges = &ChainConfig{big.NewInt(1337), new(KonsensusConfig)}
-	TestChainConfig              = &ChainConfig{big.NewInt(1), new(KonsensusConfig)}
-	TestRules                    = TestChainConfig.Rules(new(big.Int))
+	TestChainConfig             = &ChainConfig{big.NewInt(1), new(KonsensusConfig)}
+	TestRules                   = TestChainConfig.Rules(new(big.Int))
 )
 
 // ChainConfig is the core config which determines the blockchain settings.

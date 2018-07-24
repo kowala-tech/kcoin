@@ -72,7 +72,7 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 		GasLimit:  4700000,
 		Alloc:     gen.alloc,
 		Config: &params.ChainConfig{
-			ChainID:    getNetwork(validOptions.network),
+			ChainID:   getNetwork(validOptions.network),
 			Konsensus: getConsensusEngine(validOptions.consensusEngine),
 		},
 		ExtraData: getExtraData(opts.ExtraData),

@@ -8,7 +8,7 @@ var Networks = map[string]map[string]Options{
 			Network:   MainNetwork,
 			ExtraData: "Kowala's first block",
 			SystemVars: &SystemVarsOpts{
-				InitialPrice:  1,
+				InitialPrice: 1,
 			},
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
@@ -76,7 +76,7 @@ var Networks = map[string]map[string]Options{
 			Network:   TestNetwork,
 			ExtraData: "Kowala's first block",
 			SystemVars: &SystemVarsOpts{
-				InitialPrice:  1,
+				InitialPrice: 1,
 			},
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
