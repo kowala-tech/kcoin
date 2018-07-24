@@ -35,63 +35,65 @@ func (ks *Konsensus) Author(header *types.Header) (common.Address, error) {
 }
 
 func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
-	mintedAmount, err := ks.MintedAmount()
-	if err != nil {
-		return nil, err
-	}
-
-	// oracle fund
-	oracleDeduction, err := ks.OracleDeduction(mintedAmount)
-	if err != nil {
-		return nil, err
-	}
-	state.AddBalance(ks.Address(), oracleDeduction)
-
-	// mining rewards
-	mintedReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
-	state.AddBalance(header.Coinbase, mintedReward)
-
-	if OracleEpochEnd(header.Number) {
-		// oracle rewards
-		submissions, err := ks.oracleMgr.Submissions()
+	if !ks.fakeMode {
+		mintedAmount, err := ks.MintedAmount()
 		if err != nil {
 			return nil, err
 		}
-		oracleReward, err := ks.OracleReward(mintedAmount)
+
+		// oracle fund
+		oracleDeduction, err := ks.OracleDeduction(mintedAmount)
 		if err != nil {
 			return nil, err
 		}
-		rewardPerOracle := new(big.Int).Div(oracleReward, new(big.Int).SetUint64(uint64(len(submissions))))
-		for _, oracle := range submissions {
-			transfer(state, ks.Address(), oracle, rewardPerOracle)
+		state.AddBalance(ks.Address(), oracleDeduction)
+
+		// mining rewards
+		mintedReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
+		state.AddBalance(header.Coinbase, mintedReward)
+
+		if OracleEpochEnd(header.Number) {
+			// oracle rewards
+			submissions, err := ks.oracleMgr.Submissions()
+			if err != nil {
+				return nil, err
+			}
+			oracleReward, err := ks.OracleReward(mintedAmount)
+			if err != nil {
+				return nil, err
+			}
+			rewardPerOracle := new(big.Int).Div(oracleReward, new(big.Int).SetUint64(uint64(len(submissions))))
+			for _, oracle := range submissions {
+				transfer(state, ks.Address(), oracle, rewardPerOracle)
+			}
+
+			// update prev price and current price
+			averagePrice, err := ks.oracleMgr.AveragePrice()
+			if err != nil {
+				return nil, err
+			}
+			currentPrice, err := ks.CurrencyPrice()
+			if err != nil {
+				return nil, err
+			}
+			state.SetState(ks.Address(), common.BytesToHash([]byte{0}), common.BytesToHash(currentPrice.Bytes()))
+			state.SetState(ks.Address(), common.BytesToHash([]byte{1}), common.BytesToHash(averagePrice.Bytes()))
 		}
 
-		// update prev price and current price
-		averagePrice, err := ks.oracleMgr.AveragePrice()
+		// update currency supply
+		supply, err := ks.CurrencySupply()
 		if err != nil {
 			return nil, err
 		}
-		currentPrice, err := ks.CurrencyPrice()
-		if err != nil {
-			return nil, err
-		}
-		state.SetState(ks.Address(), common.BytesToHash([]byte{0}), common.BytesToHash(currentPrice.Bytes()))
-		state.SetState(ks.Address(), common.BytesToHash([]byte{1}), common.BytesToHash(averagePrice.Bytes()))
+		state.SetState(ks.Address(), common.BytesToHash([]byte{2}), common.BytesToHash(new(big.Int).Add(supply, mintedAmount).Bytes()))
+
+		// update prev minted amount
+		state.SetState(ks.Address(), common.BytesToHash([]byte{3}), common.BytesToHash(mintedAmount.Bytes()))
 	}
-
-	// update currency supply
-	supply, err := ks.CurrencySupply()
-	if err != nil {
-		return nil, err
-	}
-	state.SetState(ks.Address(), common.BytesToHash([]byte{2}), common.BytesToHash(new(big.Int).Add(supply, mintedAmount).Bytes()))
-
-	// update prev minted amount
-	state.SetState(ks.Address(), common.BytesToHash([]byte{3}), common.BytesToHash(mintedAmount.Bytes()))
 
 	// Accumulate any block and uncle rewards and commit the final state root
 	header.Root = state.IntermediateRoot(true)
-
+	
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, receipts, commit), nil
 }

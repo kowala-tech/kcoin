@@ -42,8 +42,11 @@ func getDefaultOpts() genesis.Options {
 
 	opts := genesis.Options{
 		Network: "test",
+		SystemVars: &genesis.SystemVarsOpts{
+			InitialPrice: 1,
+		},
 		Consensus: &genesis.ConsensusOpts{
-			Engine:           "tendermint",
+			Engine:           "konsensus",
 			MaxNumValidators: 10,
 			FreezePeriod:     30,
 			BaseDeposit:      baseDeposit,
@@ -70,7 +73,6 @@ func getDefaultOpts() genesis.Options {
 			FreezePeriod:  0,
 			BaseDeposit:   0,
 			Price: genesis.PriceOpts{
-				InitialPrice:  1,
 				SyncFrequency: 600,
 				UpdatePeriod:  30,
 			},

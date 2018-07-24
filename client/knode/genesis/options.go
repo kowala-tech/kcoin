@@ -317,6 +317,7 @@ func mapNetwork(network string) (string, error) {
 }
 
 func mapConsensusEngine(consensus string) (string, error) {
+	fmt.Println(consensus)
 	if !availableConsensusEngines[consensus] {
 		return "", ErrInvalidConsensusEngine
 	}
