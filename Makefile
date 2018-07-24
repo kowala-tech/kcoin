@@ -164,7 +164,7 @@ e2e: dep
 .PHONY: wallet_app_tests
 wallet_app_tests:
 	@cd wallet-app; \
-	yarn install && \
+	yarn install --network-concurrency 1 && \
 	yarn run test
 
 ## Docs
