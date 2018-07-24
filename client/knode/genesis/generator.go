@@ -52,6 +52,7 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(MiningTokenContract)
 	gen.AddContract(ValidatorMgrContract)
 	gen.AddContract(OracleMgrContract)
+	gen.AddContract(SystemVarsContract)
 
 	return gen.Generate(opts)
 }

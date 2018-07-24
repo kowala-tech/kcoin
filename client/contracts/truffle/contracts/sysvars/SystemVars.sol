@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/math/Math.sol";
 
-contract System {
+contract SystemVars {
     
     uint constant public initialMintedAmount = 42 ether;
     uint constant public initialCap  = 82 ether;
@@ -18,12 +18,12 @@ contract System {
     uint public currencySupply = 0;
     uint public prevMintedAmount = 0;
 
-    function _hasLowSupply() private view returns (bool) {
-        return currencySupply < lowSupplyMetric;
+    function _hasEnoughSupply() private view returns (bool) {
+        return currencySupply >= lowSupplyMetric;
     }
 
     function _cap() private view returns (uint amount) {
-        return ((block.number > 1) && !_hasLowSupply) ? currencySupply/10000 : initialCap;
+        return ((block.number > 1) && _hasEnoughSupply()) ? currencySupply/10000 : initialCap;
     }
 
     function mintedAmount() public view returns (uint) {

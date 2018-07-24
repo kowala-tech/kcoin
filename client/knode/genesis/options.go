@@ -147,6 +147,10 @@ type validMiningTokenOpts struct {
 	owner    common.Address
 }
 
+type validSystemVarsOpts struct {
+	owner common.Address
+}
+
 type validMultiSigOpts struct {
 	multiSigCreator  *common.Address
 	multiSigOwners   []common.Address
@@ -166,6 +170,7 @@ type validGenesisOptions struct {
 	validatorMgr      *validValidatorMgrOpts
 	oracleMgr         *validOracleMgrOpts
 	miningToken       *validMiningTokenOpts
+	sysvars           *validSystemVarsOpts
 	ExtraData         string
 }
 

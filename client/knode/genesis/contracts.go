@@ -32,6 +32,27 @@ func (contract *contract) AsGenesisAccount() core.GenesisAccount {
 	}
 }
 
+var SystemVarsContract = &contract{
+	name: "SystemVars",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		systemVarsABI, err := abi.JSON(strings.NewReader(sysvars.SystemVarsABI))
+		if err != nil {
+			return err
+		}
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = opts.sysvars.owner
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(ownership.SystemVarsBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
+}
+
 var MultiSigContract = &contract{
 	name: "MultiSigWallet",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
@@ -63,6 +84,7 @@ var MultiSigContract = &contract{
 		opts.miningToken.owner = contractAddr
 		opts.validatorMgr.owner = contractAddr
 		opts.oracleMgr.owner = contractAddr
+		opts.sysvars.owner = contractAddr
 
 		return nil
 	},
