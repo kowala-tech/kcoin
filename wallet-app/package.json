@@ -6,7 +6,7 @@
     "npm": "^9.11.1"
   },
   "scripts": {
-    "precommit": "yarn run lint && yarn test",
+    "precommit": "npm run lint && npm test",
     "start-message": "babel-node tools/startMessage.js",
     "prestart": "npm run start-message",
     "start": "concurrently -k -r -s first \"npm run test:watch\" \"npm run open:src\" \"npm run lint:watch\"",
@@ -18,8 +18,7 @@
     "lint:fix": "npm run lint -- --fix",
     "clean-dist": "npm run remove-dist && mkdir dist",
     "remove-dist": "rimraf ./dist",
-    "drone:build": "npm run clean-dist && babel-node tools/build.js",
-    "prebuild": "npm run clean-dist && npm run lint && npm run test",
+    "prebuild": "npm run clean-dist",
     "build": "babel-node tools/build.js",
     "test": "jest",
     "test:CI": "babel-node tools/testCi.js",

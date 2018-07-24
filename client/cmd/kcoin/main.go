@@ -44,10 +44,6 @@ var (
 		utils.DataDirFlag,
 		utils.KeyStoreDirFlag,
 		utils.NoUSBFlag,
-		utils.DashboardEnabledFlag,
-		utils.DashboardAddrFlag,
-		utils.DashboardPortFlag,
-		utils.DashboardRefreshFlag,
 		utils.TxPoolNoLocalsFlag,
 		utils.TxPoolJournalFlag,
 		utils.TxPoolRejournalFlag,
@@ -114,7 +110,7 @@ var (
 		utils.IPCDisabledFlag,
 		utils.IPCPathFlag,
 	}
-	
+
 	metricsFlags = []cli.Flag{
 		utils.MetricsEnableInfluxDBFlag,
 		utils.MetricsInfluxDBEndpointFlag,
@@ -189,7 +185,7 @@ func init() {
 		utils.SetupMetrics(ctx)
 
 		// Start system runtime metrics collection
-		go metrics.CollectProcessMetrics(3 * time.Second, ctx.GlobalString(utils.MetricsPrometheusAddressFlag.Name), ctx.GlobalString(utils.MetricsPrometheusSubsystemFlag.Name))
+		go metrics.CollectProcessMetrics(3*time.Second, ctx.GlobalString(utils.MetricsPrometheusAddressFlag.Name), ctx.GlobalString(utils.MetricsPrometheusSubsystemFlag.Name))
 
 		utils.SetupNetwork(ctx)
 		return nil

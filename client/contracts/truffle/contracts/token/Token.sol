@@ -93,8 +93,9 @@ contract Token is ERC223  {
             if (balanceOf(msg.sender) < _value) revert();
             balances[msg.sender] = balances[msg.sender].sub(_value);
             balances[_to] = balances[_to].add(_value);
+            // _to.transfer(0);
             assert(_to.call.value(0)(bytes4(keccak256(_custom_fallback)), msg.sender, _value, _data));
-            emit Transfer(msg.sender, _to, _value, _data);
+            Transfer(msg.sender, _to, _value, _data);
             return true;
         }
         else {
@@ -122,6 +123,7 @@ contract Token is ERC223  {
     //assemble the given address bytecode. If bytecode exists then the _addr is a contract.
     function isContract(address _addr) private view returns (bool is_contract) {
         uint length;
+        /* solium-disable-next-line security/no-inline-assembly */
         assembly {
             //retrieve the size of the code on target address, this needs assembly
             length := extcodesize(_addr)
@@ -134,7 +136,7 @@ contract Token is ERC223  {
         if (balanceOf(msg.sender) < _value) revert();
         balances[msg.sender] = balances[msg.sender].sub(_value);
         balances[_to] = balances[_to].add(_value);
-        emit Transfer(msg.sender, _to, _value, _data);
+        Transfer(msg.sender, _to, _value, _data);
         return true;
     }
     
@@ -145,7 +147,7 @@ contract Token is ERC223  {
         balances[_to] = balances[_to].add(_value);
         TokenReceiver receiver = TokenReceiver(_to);
         receiver.tokenFallback(msg.sender, _value, _data);
-        emit Transfer(msg.sender, _to, _value, _data);
+        Transfer(msg.sender, _to, _value, _data);
         return true;
     }
 

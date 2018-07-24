@@ -69,6 +69,7 @@ type ConsensusOpts struct {
 	MaxNumValidators uint64
 	FreezePeriod     uint64
 	BaseDeposit      uint64
+	SuperNodeAmount  uint64
 	Validators       []Validator
 	MiningToken      *MiningTokenOpts
 }
@@ -111,6 +112,7 @@ type validValidatorMgrOpts struct {
 	maxNumValidators *big.Int
 	freezePeriod     *big.Int
 	baseDeposit      *big.Int
+	superNodeAmount  *big.Int
 	validators       []*validValidator
 	miningTokenAddr  common.Address
 	owner            common.Address
@@ -123,11 +125,12 @@ type validPriceOpts struct {
 }
 
 type validOracleMgrOpts struct {
-	maxNumOracles *big.Int
-	freezePeriod  *big.Int
-	baseDeposit   *big.Int
-	price         validPriceOpts
-	owner         common.Address
+	maxNumOracles    *big.Int
+	freezePeriod     *big.Int
+	baseDeposit      *big.Int
+	price            validPriceOpts
+	validatorMgrAddr common.Address
+	owner            common.Address
 }
 
 type validTokenHolder struct {
@@ -201,6 +204,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	maxNumValidators := new(big.Int).SetUint64(options.Consensus.MaxNumValidators)
 	consensusBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.BaseDeposit), big.NewInt(params.Kcoin))
 	consensusFreezePeriod := new(big.Int).SetUint64(options.Consensus.FreezePeriod)
+	superNodeAmount := new(big.Int).Mul(new(big.Int).SetUint64(options.Consensus.SuperNodeAmount), big.NewInt(params.Kcoin))
 
 	validators := make([]*validValidator, 0, len(options.Consensus.Validators))
 	for _, validator := range options.Consensus.Validators {
@@ -216,7 +220,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// data feed system
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
-	oracleBaseDeposit := new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit)
+	oracleBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
 	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
 
 	initialPrice := new(big.Int)
@@ -258,6 +262,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			maxNumValidators: maxNumValidators,
 			freezePeriod:     consensusFreezePeriod,
 			baseDeposit:      consensusBaseDeposit,
+			superNodeAmount:  superNodeAmount,
 			validators:       validators,
 		},
 		oracleMgr: &validOracleMgrOpts{

@@ -21,7 +21,7 @@ You'll need to set the `WS_SECRET` environment variable. This will be required f
 npm start
 ```
 
-or, for yarm users:
+or, for yarn users:
 
 ```bash
 yarn start

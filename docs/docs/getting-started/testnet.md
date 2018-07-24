@@ -23,7 +23,12 @@ docker pull kowalatech/kusd
 With docker installed, it's time to fire up the the terminal. To download the mining client, start it, generate a wallet and connect to the testnet, run:
 
 ```
-docker run --rm -it kowalatech/kusd
+docker run --rm -it kowalatech/kusd --testnet --new-account console
+```
+
+Or if you already have an account:
+```
+docker run --rm -it kowalatech/kusd --testnet console
 ```
 
 Note that this command will create a disposable version of the mining client — all accounts will be deleted as soon as you terminate the process. If want to persist the state, you can leave off the --rm flag.
@@ -55,5 +60,17 @@ You can use that address in the [Coin Faucet](<(http://faucet.testnet.kowala.io/
 ```
 > kcoin.getBalance(kcoin.coinbase)
 ```
+
+## Network Status
+
+The KCoin network status monitor is a web-based application to monitor the health of the testnet/mainnet through a group of nodes.
+
+You can visit [here](https://zygote.kowala.tech/stats/).
+
+## BlockChain Explorer
+
+Easy viewer for investors and developers.
+
+You can visit [here](https://explorer.zygote.kowala.tech/).
 
 </br></br>
