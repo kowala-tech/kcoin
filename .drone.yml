@@ -237,7 +237,7 @@ pipeline:
       - cd wallet-app
       - make build
     when:
-      event: [push,tag,wallet]
+      event: [push,tag]
       branch: [dev]
 
   build_wallet_app_production:
