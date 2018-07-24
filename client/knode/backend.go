@@ -2,6 +2,7 @@
 package knode
 
 import (
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"reflect"
 	"errors"
 	"fmt"
@@ -122,9 +123,37 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		deposit:        config.Deposit,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
+		bindingFuncs:   []BindingConstructor{oracle.Binding, consensus.Binding, sys.Binding},
 	}
 
 	log.Info("Initialising Kowala protocol", "versions", ProtocolVersions, "network", config.NetworkId)
+
+	kcoin.apiBackend = &KowalaAPIBackend{kcoin, nil}
+
+	for _, constructor := range kcoin.bindingFuncs {
+		contract, err := constructor(NewContractBackend(kcoin.apiBackend), kcoin.chainConfig.ChainID)
+		if err != nil {
+			return nil, err
+		}
+		kind := reflect.TypeOf(contract)
+		if _, exists := kcoin.contracts[kind]; exists {
+			return nil, errDuplicateContract
+		}
+		kcoin.contracts[kind] = contract
+	}
+
+	var oracleMgr oracle.Manager
+	if err := kcoin.Contract(&oracleMgr); err != nil {
+		return nil, err
+	}
+
+	var sys sys.System
+	if err := kcoin.Contract(&sys); err != nil {
+		return nil, err
+	}
+
+	// consensus engine
+	kcoin.engine = CreateConsensusEngine(ctx, kcoin.config, kcoin.chainConfig, kcoin.chainDb, oracleMgr, sys)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
@@ -153,19 +182,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kcoin.txPool = core.NewTxPool(config.TxPool, kcoin.chainConfig, kcoin.blockchain)
 
-	kcoin.apiBackend = &KowalaAPIBackend{kcoin, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.GasPrice
 	}
 	kcoin.apiBackend.gpo = gasprice.NewOracle(kcoin.apiBackend, gpoParams)
-
-	// consensus manager
-	consensus, err := consensus.Binding(NewContractBackend(kcoin.apiBackend), chainConfig.ChainID)
-	if err != nil {
-		log.Crit("Failed to load the network contract", "err", err)
-	}
-	kcoin.consensus = consensus
 
 	kcoin.validator = validator.New(kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
 	kcoin.validator.SetExtra(makeExtraData(config.ExtraData))
@@ -209,9 +230,8 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kcoindb.Da
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Kowala service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database) engine.Engine {
-	// @TODO (rgeraldes) - complete with konsensus config if necessary, set rewarded to true
-	engine := konsensus.New(&params.KonsensusConfig{})
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database, oracleMgr oracle.Manager, sys sys.System) engine.Engine {
+	engine := konsensus.New(&params.KonsensusConfig{}, oracleMgr, sys)
 	return engine
 }
 
@@ -393,6 +413,15 @@ func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.
 func (s *Kowala) Consensus() consensus.Consensus     { return s.consensus }
 func (s *Kowala) APIBackend() *KowalaAPIBackend      { return s.apiBackend }
 func (s *Kowala) ChainConfig() *params.ChainConfig   { return s.chainConfig }
+
+func (s *Kowala) Contract(contract interface{}) error {
+	element := reflect.ValueOf(contract).Elem()
+	if c, ok := s.contracts[element.Type()]; ok {
+		element.Set(reflect.ValueOf(c))
+		return nil
+	}
+	return errContractUnknown
+}
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.

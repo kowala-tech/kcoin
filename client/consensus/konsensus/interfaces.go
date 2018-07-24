@@ -12,7 +12,10 @@ type OracleMgr interface {
 }
 
 type System interface {
+	CurrencySupply() (*big.Int, error)
+	CurrencyPrice() (*big.Int, error)
 	MintedAmount() (*big.Int, error)
 	OracleDeduction(*big.Int) (*big.Int, error)
+	OracleReward(*big.Int) (*big.Int, error)
 	Address() common.Address
 }

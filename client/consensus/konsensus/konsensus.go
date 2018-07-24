@@ -51,10 +51,43 @@ func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header,
 	mintedReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
 	state.AddBalance(header.Coinbase, mintedReward)
 
-	// system updates and oracle rewards
 	if OracleEpochEnd(header.Number) {
+		// oracle rewards
+		submissions, err := ks.oracleMgr.Submissions()
+		if err != nil {
+			return nil, err
+		}
+		oracleReward, err := ks.OracleReward(mintedAmount)
+		if err != nil {
+			return nil, err
+		}
+		rewardPerOracle := new(big.Int).Div(oracleReward, new(big.Int).SetUint64(uint64(len(submissions))))
+		for _, oracle := range submissions {
+			transfer(state, ks.Address(), oracle, rewardPerOracle)
+		}
 
+		// update prev price and current price
+		averagePrice, err := ks.oracleMgr.AveragePrice()
+		if err != nil {
+			return nil, err
+		}
+		currentPrice, err := ks.CurrencyPrice()
+		if err != nil {
+			return nil, err
+		}
+		state.SetState(ks.Address(), common.BytesToHash([]byte{0}), common.BytesToHash(currentPrice.Bytes()))
+		state.SetState(ks.Address(), common.BytesToHash([]byte{1}), common.BytesToHash(averagePrice.Bytes()))
 	}
+
+	// update currency supply
+	supply, err := ks.CurrencySupply()
+	if err != nil {
+		return nil, err
+	}
+	state.SetState(ks.Address(), common.BytesToHash([]byte{2}), common.BytesToHash(new(big.Int).Add(supply, mintedAmount).Bytes()))
+
+	// update prev minted amount
+	state.SetState(ks.Address(), common.BytesToHash([]byte{3}), common.BytesToHash(mintedAmount.Bytes()))
 
 	// Accumulate any block and uncle rewards and commit the final state root
 	header.Root = state.IntermediateRoot(true)
@@ -95,4 +128,9 @@ func (ks *Konsensus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 
 func (ks *Konsensus) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
+}
+
+func transfer(state *state.StateDB, sender, recipient common.Address, amount *big.Int) {
+	state.SubBalance(sender, amount)
+	state.AddBalance(recipient, amount)
 }
