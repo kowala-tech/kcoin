@@ -18,6 +18,12 @@ contract SystemVars {
     uint public currencySupply = 0;
     uint public prevMintedAmount = 0;
 
+    function SystemVars(uint initialPrice) public {
+        require(initialPrice > 0);
+        prevCurrencyPrice = initialPrice;
+        currencyPrice = initialPrice;
+    }
+
     function _hasEnoughSupply() private view returns (bool) {
         return currencySupply >= lowSupplyMetric;
     }

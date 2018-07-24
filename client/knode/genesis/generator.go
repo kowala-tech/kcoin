@@ -73,7 +73,7 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 		Alloc:     gen.alloc,
 		Config: &params.ChainConfig{
 			ChainID:    getNetwork(validOptions.network),
-			Tendermint: getConsensusEngine(validOptions.consensusEngine),
+			Konsensus: getConsensusEngine(validOptions.consensusEngine),
 		},
 		ExtraData: getExtraData(opts.ExtraData),
 	}
@@ -143,12 +143,12 @@ func getExtraData(extraData string) []byte {
 	return append([]byte(extra), extraSlice[len(extra):]...)
 }
 
-func getConsensusEngine(consensusEngine string) *params.TendermintConfig {
-	var consensus *params.TendermintConfig
+func getConsensusEngine(consensusEngine string) *params.KonsensusConfig {
+	var consensus *params.KonsensusConfig
 
 	switch consensusEngine {
-	case TendermintConsensus:
-		consensus = &params.TendermintConfig{}
+	case KonsensusConsensus:
+		consensus = &params.KonsensusConfig{}
 	}
 
 	return consensus

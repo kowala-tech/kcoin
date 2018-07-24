@@ -15,7 +15,7 @@ const (
 	TestNetwork  = "test"
 	OtherNetwork = "other"
 
-	TendermintConsensus = "tendermint"
+	KonsensusConsensus = "konsensus"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 	}
 
 	availableConsensusEngines = map[string]bool{
-		TendermintConsensus: true,
+		KonsensusConsensus: true,
 	}
 
 	ErrEmptyMaxNumValidators             = errors.New("max number of validators is mandatory")
@@ -44,6 +44,7 @@ var (
 
 type Options struct {
 	Network           string
+	SystemVars		  *SystemVarsOpts
 	Governance        *GovernanceOpts
 	Consensus         *ConsensusOpts
 	DataFeedSystem    *DataFeedSystemOpts
@@ -54,6 +55,10 @@ type Options struct {
 type TokenHolder struct {
 	Address   string
 	NumTokens uint64
+}
+
+type SystemVarsOpts struct {
+	InitialPrice  float64
 }
 
 type MiningTokenOpts struct {
@@ -81,7 +86,6 @@ type GovernanceOpts struct {
 }
 
 type PriceOpts struct {
-	InitialPrice  float64
 	SyncFrequency uint64
 	UpdatePeriod  uint64
 }
@@ -119,7 +123,6 @@ type validValidatorMgrOpts struct {
 }
 
 type validPriceOpts struct {
-	initialPrice  *big.Int
 	syncFrequency *big.Int
 	updatePeriod  *big.Int
 }
@@ -148,6 +151,7 @@ type validMiningTokenOpts struct {
 }
 
 type validSystemVarsOpts struct {
+	initialPrice  *big.Int
 	owner common.Address
 }
 
@@ -180,7 +184,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		return nil, err
 	}
 
-	consensusEngine := TendermintConsensus
+	consensusEngine := KonsensusConsensus
 	if options.Consensus.Engine != "" {
 		consensusEngine, err = mapConsensusEngine(options.Consensus.Engine)
 		if err != nil {
@@ -275,7 +279,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			freezePeriod:  oracleFreezePeriod,
 			baseDeposit:   oracleBaseDeposit,
 			price: validPriceOpts{
-				initialPrice:  initialPrice,
 				syncFrequency: syncFrequency,
 				updatePeriod:  updatePeriod,
 			},

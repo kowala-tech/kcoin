@@ -10,7 +10,7 @@ contract OracleMgr is Pausable {
     uint public freezePeriod;
     uint public syncFrequency;
     uint public updatePeriod;
-    uint public averagePrice;
+    uint public averagePrice = 0;
     ValidatorMgr validatorMgr;
     bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
@@ -65,7 +65,6 @@ contract OracleMgr is Pausable {
     }
 
     function OracleMgr(
-        uint _initialPrice, 
         uint _baseDeposit,
         uint _maxNumOracles,
         uint _freezePeriod,
@@ -73,7 +72,6 @@ contract OracleMgr is Pausable {
         uint _updatePeriod,
         address _validatorMgrAddr) 
     public {
-        require(_initialPrice > 0);
         require(_maxNumOracles > 0);
         require(_syncFrequency >= 0);
 
@@ -82,7 +80,6 @@ contract OracleMgr is Pausable {
             require(_updatePeriod > 0 && _updatePeriod <= _syncFrequency);
         }
         
-        price = _initialPrice;
         baseDeposit = _baseDeposit;
         maxNumOracles = _maxNumOracles;
         freezePeriod = _freezePeriod * 1 days;
@@ -223,7 +220,7 @@ contract OracleMgr is Pausable {
     }
 
     function submitPrice(uint _price) public whenNotPaused onlyOracle onlyOnce onlyValidPrice(_price) {
-        price = _price;
+        averagePrice = _price;
         oracleRegistry[msg.sender].hasSubmittedPrice = true;
         submissions.push(msg.sender);
     }

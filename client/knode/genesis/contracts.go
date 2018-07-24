@@ -10,6 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 )
@@ -35,14 +36,24 @@ func (contract *contract) AsGenesisAccount() core.GenesisAccount {
 var SystemVarsContract = &contract{
 	name: "SystemVars",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.sysvars
+
 		systemVarsABI, err := abi.JSON(strings.NewReader(sysvars.SystemVarsABI))
 		if err != nil {
 			return err
 		}
 
+		systemVarsParams, err := systemVarsABI.Pack(
+			"",
+			args.initialPrice,
+		)
+		if err != nil {
+			return err
+		}
+
 		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = opts.sysvars.owner
-		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(ownership.SystemVarsBin), runtimeCfg)
+		runtimeCfg.Origin = args.owner
+		contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(sysvars.SystemVarsBin), systemVarsParams...), runtimeCfg)
 		if err != nil {
 			return err
 		}
@@ -168,7 +179,6 @@ var OracleMgrContract = &contract{
 
 		managerParams, err := managerABI.Pack(
 			"",
-			args.price.initialPrice,
 			args.baseDeposit,
 			args.maxNumOracles,
 			args.freezePeriod,

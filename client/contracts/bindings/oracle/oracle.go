@@ -23,7 +23,7 @@ type Manager interface {
 }
 
 type manager struct {
-	*OracleMgr
+	*OracleMgrSession
 	addr common.Address
 }
 
@@ -40,8 +40,11 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 	}
 
 	return &manager{
-		OracleMgr: mgr,
-		addr:      addr,
+		OracleMgrSession: &OracleMgrSession{
+			Contract: mgr,
+			CallOpts: bind.CallOpts{},
+		},
+		addr: addr,
 	}, nil
 }
 
@@ -49,19 +52,15 @@ func (mgr *manager) Address() common.Address {
 	return mgr.addr
 }
 
-func (mgr *manager) AveragePrice() (*big.Int, error) {
-	return
-}
-
 func (mgr *manager) Submissions() ([]common.Address, error) {
-	numSubmissions, err := mgr.GetNumSubmissions(&bind.CallOpts{})
+	numSubmissions, err := mgr.GetNumSubmissions()
 	if err != nil {
 		return nil, err
 	}
 
 	submissions := make([]common.Address, numSubmissions.Uint64())
 	for i := int64(0); i < numSubmissions.Int64(); i++ {
-		submission, err := mgr.GetSubmissionAtIndex(&bind.CallOpts{}, big.NewInt(i))
+		submission, err := mgr.GetSubmissionAtIndex(big.NewInt(i))
 		if err != nil {
 			return nil, err
 		}

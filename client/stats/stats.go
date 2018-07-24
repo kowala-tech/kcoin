@@ -19,6 +19,7 @@ import (
 	engine "github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
@@ -63,7 +64,7 @@ type Service struct {
 
 	oracleMgr    oracle.Manager // oracle manager to retrieve oracle fields
 	validatorMgr consensus.Consensus
-	sys          sys.System
+	sysvars          sysvars.System
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
@@ -94,8 +95,8 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 		return nil, fmt.Errorf("Failed to load the consensus contract %v", err)
 	}
 
-	var sys sys.System
-	if err := kowalaServ.Contract(sys); err != nil {
+	var sysvars sys.System
+	if err := kowalaServ.Contract(sysvars); err != nil {
 		return nil, fmt.Errorf("Failed to load the consensus contract %v", err)
 	}
 
@@ -104,7 +105,7 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 		engine:       engine,
 		oracleMgr:    oracleMgr,
 		validatorMgr: validatorMgr,
-		sys:          sys,
+		sysvars:          sysvars,
 		node:         parts[1],
 		pass:         parts[3],
 		host:         parts[4],
