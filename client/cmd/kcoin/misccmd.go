@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
-	"github.com/kowala-tech/kcoin/client/knode"
+	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/params"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -41,7 +41,7 @@ func version(ctx *cli.Context) error {
 		fmt.Println("BuildTime:", params.BuildTime)
 	}
 	fmt.Println("Architecture:", runtime.GOARCH)
-	fmt.Println("Protocol Versions:", knode.ProtocolVersions)
+	fmt.Println("Protocol Versions:", protocol.ProtocolVersions)
 	fmt.Println("Go Version:", runtime.Version())
 	fmt.Println("Operating System:", runtime.GOOS)
 	return nil

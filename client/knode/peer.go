@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/rlp"
@@ -395,8 +396,8 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 	if msg.Code != StatusMsg {
 		return errResp(ErrNoStatusMsg, "first msg has code %x (!= %x)", msg.Code, StatusMsg)
 	}
-	if msg.Size > ProtocolMaxMsgSize {
-		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+	if msg.Size > protocol.ProtocolMaxMsgSize {
+		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, protocol.ProtocolMaxMsgSize)
 	}
 	// Decode the handshake and make sure everything matches
 	if err := msg.Decode(&status); err != nil {
