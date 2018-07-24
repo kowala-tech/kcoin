@@ -52,7 +52,7 @@ pipeline:
     when:
       event: [pull_request]
 
-  wallet_app:
+  test_wallet_app:
     group: testing
     image: node:9
     commands:
@@ -279,19 +279,33 @@ pipeline:
       event: [push, tag]
       branch: [dev]
 
-  upload_kusd_zygote:
+  upload_wallet_zygote_dev:
     group: asset_deployment
     image: plugins/s3
     region: us-east-1
     acl: public-read
     encryption: AES256
-    bucket: "wallet.zygote.kowala.io"
-    source: dist/**/*
-    strip_prefix: dist
+    bucket: "wallet.zygote.kowala.tech"
+    source: wallet-app/dist/**/*
+    strip_prefix: wallet-app/dist
     target: /
     when:
       event: [push]
-      branch: [master]
+      branch: [dev]
+
+  upload_wallet_zygote_prod:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: "wallet.kowala.tech"
+    source: wallet-app/dist/**/*
+    strip_prefix: wallet-app/dist
+    target: /
+    when:
+      event: [tag]
+      branch: [dev]
 
   upload_dev_docs_to_s3:
     group: asset_deployment
