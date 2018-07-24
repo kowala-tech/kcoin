@@ -28,17 +28,3 @@ var (
 	Big256 = big.NewInt(256)
 	Big257 = big.NewInt(257)
 )
-
-func Max(b1 *big.Int, b2 *big.Int) *big.Int {
-	if b1.Cmp(b2) >= 0 {
-		return b1
-	}
-	return b2
-}
-
-func Min(b1 *big.Int, b2 *big.Int) *big.Int {
-	if b1.Cmp(b2) <= 0 {
-		return b1
-	}
-	return b2
-}
