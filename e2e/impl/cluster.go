@@ -267,7 +267,7 @@ func (ctx *Context) buildGenesis() error {
 	newGenesis, err := genesis.Generate(genesis.Options{
 		Network: "test",
 		Consensus: &genesis.ConsensusOpts{
-			Engine:           "tendermint",
+			Engine:           "konsensus",
 			MaxNumValidators: 10,
 			FreezePeriod:     5,
 			BaseDeposit:      baseDeposit,

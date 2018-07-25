@@ -12,7 +12,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/math"
-	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
+	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
 	"github.com/kowala-tech/kcoin/client/core/rawdb"
@@ -52,9 +52,9 @@ type SimulatedBackend struct {
 // for testing purposes.
 func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	database := kcoindb.NewMemDatabase()
-	genesis := core.Genesis{Config: params.AllTendermintProtocolChanges, Alloc: alloc}
+	genesis := core.Genesis{Config: params.AllKonsensusProtocolChanges, Alloc: alloc}
 	genesis.MustCommit(database)
-	blockchain, _ := core.NewBlockChain(database, nil, genesis.Config, tendermint.NewFaker(), vm.Config{})
+	blockchain, _ := core.NewBlockChain(database, nil, genesis.Config, konsensus.NewFaker(), vm.Config{})
 
 	backend := &SimulatedBackend{
 		database:   database,
@@ -87,7 +87,7 @@ func (b *SimulatedBackend) Rollback() {
 }
 
 func (b *SimulatedBackend) rollback() {
-	blocks, _ := core.GenerateChain(b.config, b.CurrentBlock(), tendermint.NewFaker(), b.database, 1, func(int, *core.BlockGen) {})
+	blocks, _ := core.GenerateChain(b.config, b.CurrentBlock(), konsensus.NewFaker(), b.database, 1, func(int, *core.BlockGen) {})
 	statedb, _ := b.State()
 
 	b.pendingBlock = blocks[0]
@@ -291,7 +291,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
 	}
 
-	blocks, _ := core.GenerateChain(b.config, b.CurrentBlock(), tendermint.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := core.GenerateChain(b.config, b.CurrentBlock(), konsensus.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTxWithChain(b.BlockChain, tx)
 		}
@@ -370,7 +370,7 @@ func (b *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query kowala
 func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	blocks, _ := core.GenerateChain(b.config, b.BlockChain.CurrentBlock(), tendermint.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
+	blocks, _ := core.GenerateChain(b.config, b.BlockChain.CurrentBlock(), konsensus.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx)
 		}
@@ -405,8 +405,8 @@ type filterBackend struct {
 	bc *core.BlockChain
 }
 
-func (fb *filterBackend) ChainDb() kcoindb.Database  { return fb.db }
-func (fb *filterBackend) EventMux() *event.TypeMux { panic("not supported") }
+func (fb *filterBackend) ChainDb() kcoindb.Database { return fb.db }
+func (fb *filterBackend) EventMux() *event.TypeMux  { panic("not supported") }
 
 func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {
 	if block == rpc.LatestBlockNumber {

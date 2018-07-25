@@ -1,26 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"runtime"
 	"strconv"
-	"sync/atomic"
-	"time"
 
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
-	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/console"
 	"github.com/kowala-tech/kcoin/client/core"
-	"github.com/kowala-tech/kcoin/client/core/state"
-	"github.com/kowala-tech/kcoin/client/core/types"
-	"github.com/kowala-tech/kcoin/client/event"
-	"github.com/kowala-tech/kcoin/client/kcoindb"
-	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	genesisgen "github.com/kowala-tech/kcoin/client/knode/genesis"
 	"github.com/kowala-tech/kcoin/client/log"
-	"github.com/kowala-tech/kcoin/client/trie"
-	"github.com/syndtr/goleveldb/leveldb/util"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -44,115 +30,116 @@ participating.
 
 It expects the genesis file as argument.`,
 	}
-	importCommand = cli.Command{
-		Action:    utils.MigrateFlags(importChain),
-		Name:      "import",
-		Usage:     "Import a blockchain file",
-		ArgsUsage: "<filename> (<filename 2> ... <filename N>) ",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
-			utils.CacheFlag,
-			utils.LightModeFlag,
-			utils.GCModeFlag,
-			utils.CacheDatabaseFlag,
-			utils.CacheGCFlag,
-		},
-		Category: "BLOCKCHAIN COMMANDS",
-		Description: `
-The import command imports blocks from an RLP-encoded form. The form can be one file
-with several RLP-encoded blocks, or several files can be used.
+	/*
+			importCommand = cli.Command{
+				Action:    utils.MigrateFlags(importChain),
+				Name:      "import",
+				Usage:     "Import a blockchain file",
+				ArgsUsage: "<filename> (<filename 2> ... <filename N>) ",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.CacheFlag,
+					utils.LightModeFlag,
+					utils.GCModeFlag,
+					utils.CacheDatabaseFlag,
+					utils.CacheGCFlag,
+				},
+				Category: "BLOCKCHAIN COMMANDS",
+				Description: `
+		The import command imports blocks from an RLP-encoded form. The form can be one file
+		with several RLP-encoded blocks, or several files can be used.
 
-If only one file is used, import error will result in failure. If several files are used,
-processing will proceed even if an individual RLP-file import failure occurs.`,
-	}
-	exportCommand = cli.Command{
-		Action:    utils.MigrateFlags(exportChain),
-		Name:      "export",
-		Usage:     "Export blockchain into file",
-		ArgsUsage: "<filename> [<blockNumFirst> <blockNumLast>]",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
-			utils.CacheFlag,
-			utils.LightModeFlag,
-		},
-		Category: "BLOCKCHAIN COMMANDS",
-		Description: `
-Requires a first argument of the file to write to.
-Optional second and third arguments control the first and
-last block to write. In this mode, the file will be appended
-if already existing.`,
-	}
-	importPreimagesCommand = cli.Command{
-		Action:    utils.MigrateFlags(importPreimages),
-		Name:      "import-preimages",
-		Usage:     "Import the preimage database from an RLP stream",
-		ArgsUsage: "<datafile>",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
-			utils.CacheFlag,
-			utils.LightModeFlag,
-		},
-		Category: "BLOCKCHAIN COMMANDS",
-		Description: `
-	The import-preimages command imports hash preimages from an RLP encoded stream.`,
-	}
-	exportPreimagesCommand = cli.Command{
-		Action:    utils.MigrateFlags(exportPreimages),
-		Name:      "export-preimages",
-		Usage:     "Export the preimage database into an RLP stream",
-		ArgsUsage: "<dumpfile>",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
-			utils.CacheFlag,
-			utils.LightModeFlag,
-		},
-		Category: "BLOCKCHAIN COMMANDS",
-		Description: `
-The export-preimages command export hash preimages to an RLP encoded stream`,
-	}
-	copydbCommand = cli.Command{
-		Action:    utils.MigrateFlags(copyDb),
-		Name:      "copydb",
-		Usage:     "Create a local chain from a target chaindata folder",
-		ArgsUsage: "<sourceChaindataDir>",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
-			utils.CacheFlag,
-			utils.SyncModeFlag,
-			utils.TestnetFlag,
-		},
-		Category: "BLOCKCHAIN COMMANDS",
-		Description: `
-The first argument must be the directory containing the blockchain to download from`,
-	}
-	removedbCommand = cli.Command{
-		Action:    utils.MigrateFlags(removeDB),
-		Name:      "removedb",
-		Usage:     "Remove blockchain and state databases",
-		ArgsUsage: " ",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
-			utils.LightModeFlag,
-		},
-		Category: "BLOCKCHAIN COMMANDS",
-		Description: `
-Remove blockchain and state databases`,
-	}
-	dumpCommand = cli.Command{
-		Action:    utils.MigrateFlags(dump),
-		Name:      "dump",
-		Usage:     "Dump a specific block from storage",
-		ArgsUsage: "[<blockHash> | <blockNum>]...",
-		Flags: []cli.Flag{
-			utils.DataDirFlag,
-			utils.CacheFlag,
-			utils.LightModeFlag,
-		},
-		Category: "BLOCKCHAIN COMMANDS",
-		Description: `
-The arguments are interpreted as block numbers or hashes.
-Use "ethereum dump 0" to dump the genesis block.`,
-	}
+		If only one file is used, import error will result in failure. If several files are used,
+		processing will proceed even if an individual RLP-file import failure occurs.`,
+			}
+			exportCommand = cli.Command{
+				Action:    utils.MigrateFlags(exportChain),
+				Name:      "export",
+				Usage:     "Export blockchain into file",
+				ArgsUsage: "<filename> [<blockNumFirst> <blockNumLast>]",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.CacheFlag,
+					utils.LightModeFlag,
+				},
+				Category: "BLOCKCHAIN COMMANDS",
+				Description: `
+		Requires a first argument of the file to write to.
+		Optional second and third arguments control the first and
+		last block to write. In this mode, the file will be appended
+		if already existing.`,
+			}
+			importPreimagesCommand = cli.Command{
+				Action:    utils.MigrateFlags(importPreimages),
+				Name:      "import-preimages",
+				Usage:     "Import the preimage database from an RLP stream",
+				ArgsUsage: "<datafile>",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.CacheFlag,
+					utils.LightModeFlag,
+				},
+				Category: "BLOCKCHAIN COMMANDS",
+				Description: `
+			The import-preimages command imports hash preimages from an RLP encoded stream.`,
+			}
+			exportPreimagesCommand = cli.Command{
+				Action:    utils.MigrateFlags(exportPreimages),
+				Name:      "export-preimages",
+				Usage:     "Export the preimage database into an RLP stream",
+				ArgsUsage: "<dumpfile>",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.CacheFlag,
+					utils.LightModeFlag,
+				},
+				Category: "BLOCKCHAIN COMMANDS",
+				Description: `
+		The export-preimages command export hash preimages to an RLP encoded stream`,
+			}
+			copydbCommand = cli.Command{
+				Action:    utils.MigrateFlags(copyDb),
+				Name:      "copydb",
+				Usage:     "Create a local chain from a target chaindata folder",
+				ArgsUsage: "<sourceChaindataDir>",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.CacheFlag,
+					utils.SyncModeFlag,
+					utils.TestnetFlag,
+				},
+				Category: "BLOCKCHAIN COMMANDS",
+				Description: `
+		The first argument must be the directory containing the blockchain to download from`,
+			}
+			removedbCommand = cli.Command{
+				Action:    utils.MigrateFlags(removeDB),
+				Name:      "removedb",
+				Usage:     "Remove blockchain and state databases",
+				ArgsUsage: " ",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.LightModeFlag,
+				},
+				Category: "BLOCKCHAIN COMMANDS",
+				Description: `
+		Remove blockchain and state databases`,
+			}
+			dumpCommand = cli.Command{
+				Action:    utils.MigrateFlags(dump),
+				Name:      "dump",
+				Usage:     "Dump a specific block from storage",
+				ArgsUsage: "[<blockHash> | <blockNum>]...",
+				Flags: []cli.Flag{
+					utils.DataDirFlag,
+					utils.CacheFlag,
+					utils.LightModeFlag,
+				},
+				Category: "BLOCKCHAIN COMMANDS",
+				Description: `
+		The arguments are interpreted as block numbers or hashes.
+		Use "ethereum dump 0" to dump the genesis block.`,
+			}*/
 )
 
 // initGenesis will initialise the given JSON format genesis file and writes it as
@@ -203,6 +190,7 @@ func extractNetworkKey(ctx *cli.Context) string {
 	return networkKey
 }
 
+/*
 func importChain(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		utils.Fatalf("This command requires an argument.")
@@ -463,6 +451,7 @@ func dump(ctx *cli.Context) error {
 	chainDb.Close()
 	return nil
 }
+*/
 
 // hashish returns true for strings that look like hashes.
 func hashish(x string) bool {
