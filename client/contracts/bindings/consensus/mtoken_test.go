@@ -18,7 +18,7 @@ import (
 
 var (
 	owner, _            = crypto.GenerateKey()
-	initialBalance      = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Kcoin))                       // 10 Kcoin
+	initialBalance      = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Kcoin))                       // 32 Kcoin
 	miningTokenCap      = new(big.Int).Mul(new(big.Int).SetUint64(1073741824), new(big.Int).SetUint64(params.Kcoin)) // 1073741824 Kcoin
 	miningTokenName     = "mUSD"
 	miningTokenDecimals = uint8(18)
@@ -50,8 +50,7 @@ func (suite *MiningTokenSuite) BeforeTest(suiteName, testName string) {
 	suite.backend = backend
 
 	// MiningToken instance
-	transactOpts := bind.NewKeyedTransactor(owner)
-	_, _, mToken, err := consensus.DeployMiningToken(transactOpts, backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
+	_, _, mToken, err := consensus.DeployMiningToken(NewKeyedTransactor(owner), backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
 	req.NoError(err)
 	req.NotNil(mToken)
 	suite.miningToken = mToken

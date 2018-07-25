@@ -19,7 +19,6 @@ contract SystemVars {
     uint public mintedReward = 0;
 
     function SystemVars(uint initialPrice) public {
-        require(initialPrice > 0);
         prevCurrencyPrice = initialPrice;
         currencyPrice = initialPrice;
     }
