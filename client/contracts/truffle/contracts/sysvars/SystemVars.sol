@@ -35,11 +35,11 @@ contract SystemVars {
     function mintedAmount() public view returns (uint) {
         if (block.number == 1) return initialMintedAmount;
 
-        uint adjustment = prevMintedAmount/adjustmentFactor;
+        uint adjustment = mintedReward/adjustmentFactor;
         if ((currencyPrice > prevCurrencyPrice) && (prevCurrencyPrice > stabilizedPrice)) {
-            return Math.min256(prevMintedAmount + adjustment, _cap());
+            return Math.min256(mintedReward + adjustment, _cap());
         }
-        return Math.max256(prevMintedAmount - adjustment, maxUnderNormalConditions);
+        return Math.max256(mintedReward - adjustment, maxUnderNormalConditions);
     }
 
     function oracleDeduction(uint mintedAmount) public view returns (uint) {
