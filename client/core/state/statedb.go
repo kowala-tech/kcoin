@@ -42,6 +42,9 @@ var (
 
 	// emptyCode is the known hash of the empty EVM bytecode.
 	emptyCode = crypto.Keccak256Hash(nil)
+
+	sysvars   = common.HexToAddress("0x17C56D5aC0cddFd63aC860237197827cB4639CDA")
+	supplyIdx = common.BytesToHash([]byte{2})
 )
 
 // StateDBs within the ethereum protocol are used to store anything
@@ -271,6 +274,14 @@ func (self *StateDB) HasSuicided(addr common.Address) bool {
 /*
  * SETTERS
  */
+
+func (self *StateDB) Mint(addr common.Address, amount *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.AddBalance(amount)
+		self.SetState(sysvars, supplyIdx, common.BytesToHash(new(big.Int).Add(self.GetState(sysvars, supplyIdx).Big(), amount).Bytes()))
+	}
+}
 
 // AddBalance adds amount to the account associated with addr.
 func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {

@@ -11,6 +11,12 @@ import (
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
+var (
+	prevPriceIdx    = common.BytesToHash([]byte{0})
+	priceIdx        = common.BytesToHash([]byte{1})
+	mintedAmountIdx = common.BytesToHash([]byte{3})
+)
+
 type Konsensus struct {
 	System
 	config    *params.KonsensusConfig // Consensus engine configuration parameters
@@ -46,11 +52,11 @@ func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header,
 		if err != nil {
 			return nil, err
 		}
-		state.AddBalance(ks.Address(), oracleDeduction)
+		state.Mint(ks.Address(), oracleDeduction)
 
 		// mining rewards
 		mintedReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
-		state.AddBalance(header.Coinbase, mintedReward)
+		state.Mint(header.Coinbase, mintedReward)
 
 		if OracleEpochEnd(header.Number) {
 			// oracle rewards
@@ -76,22 +82,15 @@ func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header,
 			if err != nil {
 				return nil, err
 			}
-			state.SetState(ks.Address(), common.BytesToHash([]byte{0}), common.BytesToHash(currentPrice.Bytes()))
-			state.SetState(ks.Address(), common.BytesToHash([]byte{1}), common.BytesToHash(averagePrice.Bytes()))
+			state.SetState(ks.Address(), prevPriceIdx, common.BytesToHash(currentPrice.Bytes()))
+			state.SetState(ks.Address(), priceIdx, common.BytesToHash(averagePrice.Bytes()))
 		}
 
-		// update currency supply
-		supply, err := ks.CurrencySupply()
-		if err != nil {
-			return nil, err
-		}
-		state.SetState(ks.Address(), common.BytesToHash([]byte{2}), common.BytesToHash(new(big.Int).Add(supply, mintedAmount).Bytes()))
-
-		// update prev minted amount
-		state.SetState(ks.Address(), common.BytesToHash([]byte{3}), common.BytesToHash(mintedAmount.Bytes()))
+		// update minted amount
+		state.SetState(ks.Address(), mintedAmountIdx, common.BytesToHash(mintedAmount.Bytes()))
 	}
 
-	// Accumulate any block and uncle rewards and commit the final state root
+	// commit the final state root
 	header.Root = state.IntermediateRoot(true)
 
 	// Header seems complete, assemble into a block and return
