@@ -15,7 +15,7 @@ const (
 	TestNetwork  = "test"
 	OtherNetwork = "other"
 
-	TendermintConsensus = "tendermint"
+	KonsensusConsensus = "konsensus"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 	}
 
 	availableConsensusEngines = map[string]bool{
-		TendermintConsensus: true,
+		KonsensusConsensus: true,
 	}
 
 	ErrEmptyMaxNumValidators             = errors.New("max number of validators is mandatory")
@@ -44,6 +44,7 @@ var (
 
 type Options struct {
 	Network           string
+	SystemVars        *SystemVarsOpts
 	Governance        *GovernanceOpts
 	Consensus         *ConsensusOpts
 	DataFeedSystem    *DataFeedSystemOpts
@@ -54,6 +55,10 @@ type Options struct {
 type TokenHolder struct {
 	Address   string
 	NumTokens uint64
+}
+
+type SystemVarsOpts struct {
+	InitialPrice float64
 }
 
 type MiningTokenOpts struct {
@@ -81,7 +86,6 @@ type GovernanceOpts struct {
 }
 
 type PriceOpts struct {
-	InitialPrice  float64
 	SyncFrequency uint64
 	UpdatePeriod  uint64
 }
@@ -119,7 +123,6 @@ type validValidatorMgrOpts struct {
 }
 
 type validPriceOpts struct {
-	initialPrice  *big.Int
 	syncFrequency *big.Int
 	updatePeriod  *big.Int
 }
@@ -147,6 +150,11 @@ type validMiningTokenOpts struct {
 	owner    common.Address
 }
 
+type validSystemVarsOpts struct {
+	initialPrice *big.Int
+	owner        common.Address
+}
+
 type validMultiSigOpts struct {
 	multiSigCreator  *common.Address
 	multiSigOwners   []common.Address
@@ -166,6 +174,7 @@ type validGenesisOptions struct {
 	validatorMgr      *validValidatorMgrOpts
 	oracleMgr         *validOracleMgrOpts
 	miningToken       *validMiningTokenOpts
+	sysvars           *validSystemVarsOpts
 	ExtraData         string
 }
 
@@ -175,13 +184,17 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		return nil, err
 	}
 
-	consensusEngine := TendermintConsensus
+	consensusEngine := KonsensusConsensus
 	if options.Consensus.Engine != "" {
 		consensusEngine, err = mapConsensusEngine(options.Consensus.Engine)
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	// sysvars
+	initialPrice := new(big.Int)
+	new(big.Float).Mul(new(big.Float).SetFloat64(options.SystemVars.InitialPrice), big.NewFloat(params.Kcoin)).Int(initialPrice)
 
 	// governance
 	multiSigCreator, err := getAddress(options.Governance.Origin)
@@ -222,9 +235,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
 	oracleBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
 	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
-
-	initialPrice := new(big.Int)
-	new(big.Float).Mul(new(big.Float).SetFloat64(options.DataFeedSystem.Price.InitialPrice), big.NewFloat(params.Kcoin)).Int(initialPrice)
 	syncFrequency := new(big.Int).SetUint64(options.DataFeedSystem.Price.SyncFrequency)
 	updatePeriod := new(big.Int).SetUint64(options.DataFeedSystem.Price.UpdatePeriod)
 
@@ -253,6 +263,9 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	return &validGenesisOptions{
 		network:         network,
 		consensusEngine: consensusEngine,
+		sysvars: &validSystemVarsOpts{
+			initialPrice: initialPrice,
+		},
 		multiSig: &validMultiSigOpts{
 			multiSigCreator:  multiSigCreator,
 			multiSigOwners:   multiSigOwners,
@@ -270,7 +283,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			freezePeriod:  oracleFreezePeriod,
 			baseDeposit:   oracleBaseDeposit,
 			price: validPriceOpts{
-				initialPrice:  initialPrice,
 				syncFrequency: syncFrequency,
 				updatePeriod:  updatePeriod,
 			},
@@ -305,6 +317,7 @@ func mapNetwork(network string) (string, error) {
 }
 
 func mapConsensusEngine(consensus string) (string, error) {
+	fmt.Println(consensus)
 	if !availableConsensusEngines[consensus] {
 		return "", ErrInvalidConsensusEngine
 	}

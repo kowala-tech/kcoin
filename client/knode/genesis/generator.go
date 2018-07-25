@@ -52,6 +52,7 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(MiningTokenContract)
 	gen.AddContract(ValidatorMgrContract)
 	gen.AddContract(OracleMgrContract)
+	gen.AddContract(SystemVarsContract)
 
 	return gen.Generate(opts)
 }
@@ -71,8 +72,8 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 		GasLimit:  4700000,
 		Alloc:     gen.alloc,
 		Config: &params.ChainConfig{
-			ChainID:    getNetwork(validOptions.network),
-			Tendermint: getConsensusEngine(validOptions.consensusEngine),
+			ChainID:   getNetwork(validOptions.network),
+			Konsensus: getConsensusEngine(validOptions.consensusEngine),
 		},
 		ExtraData: getExtraData(opts.ExtraData),
 	}
@@ -91,7 +92,19 @@ func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 	}
 
 	gen.prefundAccounts(opts.prefundedAccounts)
-	gen.addBatchOfPrefundedAccountsIntoGenesis()
+
+	// @NOTE (rgeraldes) - storage needs to be addressed in the end as
+	// contracts can interact with each other modifying each other's state
+	for _, contract := range gen.contracts {
+		contract.storage = contract.runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contract.address]
+		gen.alloc[contract.address] = contract.AsGenesisAccount()
+	}
+
+	for _, vAccount := range opts.prefundedAccounts {
+		gen.alloc[*vAccount.accountAddress] = core.GenesisAccount{
+			Balance: gen.sharedState.GetBalance(*vAccount.accountAddress),
+		}
+	}
 
 	return nil
 }
@@ -107,13 +120,6 @@ func (gen *generator) deployContracts(opts *validGenesisOptions) error {
 				return err
 			}
 		}
-	}
-
-	for _, contract := range gen.contracts {
-		// @NOTE (rgeraldes) - storage needs to be addressed in the end as
-		// contracts can interact with each other modifying each other's state
-		contract.storage = contract.runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contract.address]
-		gen.alloc[contract.address] = contract.AsGenesisAccount()
 	}
 
 	return nil
@@ -142,12 +148,12 @@ func getExtraData(extraData string) []byte {
 	return append([]byte(extra), extraSlice[len(extra):]...)
 }
 
-func getConsensusEngine(consensusEngine string) *params.TendermintConfig {
-	var consensus *params.TendermintConfig
+func getConsensusEngine(consensusEngine string) *params.KonsensusConfig {
+	var consensus *params.KonsensusConfig
 
 	switch consensusEngine {
-	case TendermintConsensus:
-		consensus = &params.TendermintConfig{}
+	case KonsensusConsensus:
+		consensus = &params.KonsensusConfig{}
 	}
 
 	return consensus
@@ -168,17 +174,8 @@ func getNetwork(network string) *big.Int {
 	return chainId
 }
 
-func (gen *generator) addBatchOfPrefundedAccountsIntoGenesis() {
-	// Add a batch of precompile balances to avoid them getting deleted
-	for i := int64(0); i < 256; i++ {
-		gen.alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
-	}
-}
-
 func (gen *generator) prefundAccounts(validPrefundedAccounts []*validPrefundedAccount) {
 	for _, vAccount := range validPrefundedAccounts {
-		gen.alloc[*vAccount.accountAddress] = core.GenesisAccount{
-			Balance: vAccount.balance,
-		}
+		gen.sharedState.Mint(*vAccount.accountAddress, vAccount.balance)
 	}
 }

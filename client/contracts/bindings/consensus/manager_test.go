@@ -21,15 +21,19 @@ import (
 )
 
 var (
-	validator, _     = crypto.GenerateKey()
-	deregistered, _  = crypto.GenerateKey()
-	user, _          = crypto.GenerateKey()
-	governor, _      = crypto.GenerateKey()
-	author, _        = crypto.HexToECDSA("bfef37ae9ac5d5e7ebbbefc19f4e1f572a7ca7aa0d28e527b7d62950951cc5eb")
+	// roles
+	validator, _    = crypto.GenerateKey()
+	deregistered, _ = crypto.GenerateKey()
+	user, _         = crypto.GenerateKey()
+	governor, _     = crypto.GenerateKey()
+	author, _       = crypto.HexToECDSA("bfef37ae9ac5d5e7ebbbefc19f4e1f572a7ca7aa0d28e527b7d62950951cc5eb")
+
+	// contracts
 	validatorMgrAddr = common.HexToAddress("0x161ad311F1D66381C17641b1B73042a4CA731F9f")
 	multiSigAddr     = common.HexToAddress("0xA143ac5ec5D95f16aFD5Fc3B09e0aDaf360ffC9e")
 	tokenAddr        = common.HexToAddress("0xB012F49629258C9c35b2bA80cD3dc3C841d9719D")
-	secondsPerDay    = new(big.Int).SetUint64(86400)
+
+	secondsPerDay = new(big.Int).SetUint64(86400)
 )
 
 func getDefaultOpts() genesis.Options {
@@ -42,8 +46,11 @@ func getDefaultOpts() genesis.Options {
 
 	opts := genesis.Options{
 		Network: "test",
+		SystemVars: &genesis.SystemVarsOpts{
+			InitialPrice: 1,
+		},
 		Consensus: &genesis.ConsensusOpts{
-			Engine:           "tendermint",
+			Engine:           "konsensus",
 			MaxNumValidators: 10,
 			FreezePeriod:     30,
 			BaseDeposit:      baseDeposit,
@@ -70,7 +77,6 @@ func getDefaultOpts() genesis.Options {
 			FreezePeriod:  0,
 			BaseDeposit:   0,
 			Price: genesis.PriceOpts{
-				InitialPrice:  1,
 				SyncFrequency: 600,
 				UpdatePeriod:  30,
 			},
