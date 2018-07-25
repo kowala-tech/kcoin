@@ -28,6 +28,7 @@ var (
 	userWithoutMUSD, _ = crypto.GenerateKey()
 	governor, _        = crypto.GenerateKey()
 	author, _          = crypto.HexToECDSA("bfef37ae9ac5d5e7ebbbefc19f4e1f572a7ca7aa0d28e527b7d62950951cc5eb")
+	
 	validatorMgrAddr   = common.HexToAddress("0x161ad311F1D66381C17641b1B73042a4CA731F9f")
 	multiSigAddr       = common.HexToAddress("0xA143ac5ec5D95f16aFD5Fc3B09e0aDaf360ffC9e")
 	oracleMgrAddr      = common.HexToAddress("0x2c3DA02A82D11D649857AaE537920D8cA368cAB5")

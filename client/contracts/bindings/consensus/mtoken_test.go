@@ -50,7 +50,8 @@ func (suite *MiningTokenSuite) BeforeTest(suiteName, testName string) {
 	suite.backend = backend
 
 	// MiningToken instance
-	_, _, mToken, err := consensus.DeployMiningToken(NewKeyedTransactor(owner), backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, _, mToken, err := consensus.DeployMiningToken(transactOpts, backend, miningTokenName, miningTokenName, miningTokenCap, miningTokenDecimals)
 	req.NoError(err)
 	req.NotNil(mToken)
 	suite.miningToken = mToken

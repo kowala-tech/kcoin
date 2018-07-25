@@ -14,7 +14,7 @@ import (
 var (
 	prevPriceIdx    = common.BytesToHash([]byte{0})
 	priceIdx        = common.BytesToHash([]byte{1})
-	mintedAmountIdx = common.BytesToHash([]byte{3})
+	mintedRewardIdx = common.BytesToHash([]byte{3})
 )
 
 type Konsensus struct {
@@ -46,17 +46,11 @@ func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header,
 		if err != nil {
 			return nil, err
 		}
-
-		// oracle fund
 		oracleDeduction, err := ks.OracleDeduction(mintedAmount)
 		if err != nil {
 			return nil, err
 		}
-		state.Mint(ks.Address(), oracleDeduction)
-
-		// mining rewards
 		mintedReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
-		state.Mint(header.Coinbase, mintedReward)
 
 		if OracleEpochEnd(header.Number) {
 			// oracle rewards
@@ -86,8 +80,14 @@ func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header,
 			state.SetState(ks.Address(), priceIdx, common.BytesToHash(averagePrice.Bytes()))
 		}
 
-		// update minted amount
-		state.SetState(ks.Address(), mintedAmountIdx, common.BytesToHash(mintedAmount.Bytes()))
+		// reset mintedReward
+		state.SetState(ks.Address(), mintedRewardIdx, common.BytesToHash([]byte{0}))
+
+		// mining rewards
+		state.Mint(header.Coinbase, mintedReward)
+
+		// oracle fund
+		state.Mint(ks.Address(), oracleDeduction)
 	}
 
 	// commit the final state root

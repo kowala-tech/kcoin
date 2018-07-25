@@ -12,14 +12,19 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
-	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/stretchr/testify/suite"
 )
 
 var (
-	owner, _       = crypto.GenerateKey()
+	// roles
+	user, _     = crypto.GenerateKey()
+	governor, _ = crypto.GenerateKey()
+
+	// contracts
+	systemVarsAddr = common.HexToAddress("0x17C56D5aC0cddFd63aC860237197827cB4639CDA")
+
 	initialBalance = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Kcoin)) // 32 Kcoin
 	initialPrice   = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin))  // $1
 )
@@ -28,7 +33,7 @@ func getDefaultOpts() genesis.Options {
 	baseDeposit := uint64(20)
 	superNodeAmount := uint64(6000000)
 	tokenHolder := genesis.TokenHolder{
-		Address:   getAddress(validator).Hex(),
+		Address:   getAddress(user).Hex(),
 		NumTokens: superNodeAmount,
 	}
 
@@ -43,27 +48,30 @@ func getDefaultOpts() genesis.Options {
 			FreezePeriod:     30,
 			BaseDeposit:      baseDeposit,
 			SuperNodeAmount:  superNodeAmount,
-			Validators: []genesis.Validator{{
-				Address: tokenHolder.Address,
-				Deposit: tokenHolder.NumTokens,
-			}},
+			Validators: []genesis.Validator{
+				{
+					Address: tokenHolder.Address,
+					Deposit: tokenHolder.NumTokens,
+				},
+			},
 			MiningToken: &genesis.MiningTokenOpts{
 				Name:     "mUSD",
 				Symbol:   "mUSD",
 				Cap:      20000000,
 				Decimals: 18,
-				Holders:  []genesis.TokenHolder{tokenHolder, {Address: getAddress(user).Hex(), NumTokens: 10000000}},
+				Holders:  []genesis.TokenHolder{tokenHolder},
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
-			Origin:           getAddress(author).Hex(),
+			// Origin needs to be the same as the testnet for now since we are using hardcoded addresses
+			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 			Governors:        []string{getAddress(governor).Hex()},
 			NumConfirmations: 1,
 		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{
 			MaxNumOracles: 10,
-			FreezePeriod:  0,
-			BaseDeposit:   0,
+			FreezePeriod:  32,
+			BaseDeposit:   1,
 			Price: genesis.PriceOpts{
 				SyncFrequency: 600,
 				UpdatePeriod:  30,
@@ -76,14 +84,6 @@ func getDefaultOpts() genesis.Options {
 			},
 			{
 				Address: getAddress(governor).Hex(),
-				Balance: 10,
-			},
-			{
-				Address: getAddress(user).Hex(),
-				Balance: 10,
-			},
-			{
-				Address: getAddress(deregistered).Hex(),
 				Balance: 10,
 			},
 		},
@@ -104,7 +104,7 @@ func TestSystemVarsSuite(t *testing.T) {
 }
 
 func (suite *SystemVarsSuite) BeforeTest(suiteName, testName string) {
-	if strings.Contains(testName, "TestDeploy") {
+	if strings.Contains(testName, "TestMintedAmount") {
 		return
 	}
 
@@ -124,59 +124,45 @@ func (suite *SystemVarsSuite) BeforeTest(suiteName, testName string) {
 	suite.backend = backend
 
 	// SystemVars instance
-	_, _, sysvars, err := sysvars.DeploySystemVars(bind.NewKeyedTransactor(owner), backend, initialPrice)
+	sysvars, err := sysvars.NewSystemVars(systemVarsAddr, backend)
 	req.NoError(err)
 	req.NotNil(sysvars)
 	suite.sysvars = sysvars
-
-	suite.backend.Commit()
 }
 
-func (suite *SystemVarsSuite) TestDeploy() {
+func (suite *SystemVarsSuite) TestDeploySystemVars() {
 	req := suite.Require()
 
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(owner): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
-		},
-	})
+	initialPrice := new(big.Int)
+	new(big.Float).Mul(new(big.Float).SetFloat64(suite.opts.SystemVars.InitialPrice), big.NewFloat(params.Kcoin)).Int(initialPrice)
 
-	// SystemVars instance
-	transactOpts := bind.NewKeyedTransactor(owner)
-	_, _, sysvars, err := sysvars.DeploySystemVars(transactOpts, backend, initialPrice)
+	storedPrice, err := suite.sysvars.CurrencyPrice(&bind.CallOpts{})
 	req.NoError(err)
-	req.NotNil(sysvars)
+	req.NotNil(storedPrice)
+	req.Equal(initialPrice, storedPrice)
 
-	backend.Commit()
+	storedPrevPrice, err := suite.sysvars.PrevCurrencyPrice(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(storedPrevPrice)
+	req.Equal(initialPrice, storedPrevPrice)
 
-	storedPrice
+	mintedAmount := new(big.Int)
+	for _, prefundedAccount := range suite.opts.PrefundedAccounts {
+		mintedAmount.Add(mintedAmount, new(big.Int).Mul(new(big.Int).SetUint64(prefundedAccount.Balance), new(big.Int).SetUint64(params.Kcoin)))
+	}
+
+	storedCurrencySupply, err := suite.sysvars.CurrencySupply(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(storedCurrencySupply)
+	req.Equal(mintedAmount, storedCurrencySupply)
+
+	storedMintedReward, err := suite.sysvars.MintedReward(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(storedMintedReward)
+	req.Equal(mintedAmount, storedMintedReward)
 }
 
 // getAddress return the address of the given private key
 func getAddress(privateKey *ecdsa.PrivateKey) common.Address {
 	return crypto.PubkeyToAddress(privateKey.PublicKey)
 }
-
-/*
-func (suite *OracleMgrSuite) TestDeployOracleMgr_InitialPriceEqualsZero() {
-	req := suite.Require()
-
-	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(governor): core.GenesisAccount{
-			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
-		},
-	})
-	req.NotNil(backend)
-
-	initialPrice := common.Big0
-	baseDeposit := new(big.Int).SetUint64(100)
-	maxNumOracles := new(big.Int).SetUint64(100)
-	freezePeriod := new(big.Int).SetUint64(10)
-	syncFrequency := new(big.Int).SetUint64(20)
-	updatePeriod := new(big.Int).SetUint64(5)
-
-	transactOpts := bind.NewKeyedTransactor(governor)
-	_, _, _, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
-	req.Error(err, "initial price cannot be zero")
-}
-*/
