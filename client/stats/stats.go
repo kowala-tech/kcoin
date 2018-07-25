@@ -25,6 +25,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/knode"
+	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/p2p"
@@ -381,7 +382,7 @@ func (s *Service) login(conn *websocket.Conn) error {
 
 	info := infos.Protocols["kcoin"]
 	network := fmt.Sprintf("%d", info.(*knode.KowalaNodeInfo).Network)
-	protocol := fmt.Sprintf("kcoin/%d", knode.ProtocolVersions[0])
+	protocol := fmt.Sprintf("kcoin/%d", protocol.ProtocolVersions[0])
 
 	auth := &authMsg{
 		ID: s.node,
