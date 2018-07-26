@@ -12,7 +12,6 @@ contract OracleMgr is Pausable {
     uint public updatePeriod;
     uint public averagePrice = 0;
     ValidatorMgr validatorMgr;
-    bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
     struct Deposit {
         uint amount;

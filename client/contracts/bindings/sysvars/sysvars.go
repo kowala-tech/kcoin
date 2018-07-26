@@ -23,7 +23,7 @@ type System interface {
 	MintedAmount() (*big.Int, error)
 	MintedReward() (*big.Int, error)
 	OracleDeduction(*big.Int) (*big.Int, error)
-	OracleReward(*big.Int) (*big.Int, error)
+	OracleReward() (*big.Int, error)
 }
 
 type system struct {

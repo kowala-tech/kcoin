@@ -21,6 +21,7 @@ type Manager interface {
 	AveragePrice() (*big.Int, error)
 	GetOracleCount() (*big.Int, error)
 	MaxOracles() (*big.Int, error)
+	Address() common.Address
 }
 
 type manager struct {

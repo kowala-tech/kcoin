@@ -11,25 +11,18 @@ import (
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
-var (
-	prevPriceIdx    = common.BytesToHash([]byte{0})
-	priceIdx        = common.BytesToHash([]byte{1})
-	supplyIdx       = common.BytesToHash([]byte{2})
-	mintedRewardIdx = common.BytesToHash([]byte{3})
-)
-
 type Konsensus struct {
-	System
-	config    *params.KonsensusConfig
-	oracleMgr OracleMgr
-	fakeMode  bool
+	config   *params.KonsensusConfig
+	provider PriceProvider
+	reader   SystemVarsReader
+	fakeMode bool
 }
 
-func New(config *params.KonsensusConfig, oracleMgr OracleMgr, sys System) *Konsensus {
+func New(config *params.KonsensusConfig, provider PriceProvider, reader SystemVarsReader) *Konsensus {
 	return &Konsensus{
-		config:    config,
-		System:    sys,
-		oracleMgr: oracleMgr,
+		config:   config,
+		reader:   reader,
+		provider: provider,
 	}
 }
 
@@ -43,58 +36,10 @@ func (ks *Konsensus) Author(header *types.Header) (common.Address, error) {
 
 func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
 	if !ks.fakeMode {
-		mintedAmount, err := ks.MintedAmount()
-		if err != nil {
+		system := sys(state, ks.reader, ks.provider)
+		if err := updateSystem(header.Number, header.Coinbase, system); err != nil {
 			return nil, err
 		}
-		oracleDeduction, err := ks.OracleDeduction(mintedAmount)
-		if err != nil {
-			return nil, err
-		}
-		mintedReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
-
-		if OracleEpochEnd(header.Number) {
-			// oracle rewards
-			submissions, err := ks.oracleMgr.Submissions()
-			if err != nil {
-				return nil, err
-			}
-			oracleReward, err := ks.OracleReward(mintedAmount)
-			if err != nil {
-				return nil, err
-			}
-			rewardPerOracle := new(big.Int).Div(oracleReward, new(big.Int).SetUint64(uint64(len(submissions))))
-			for _, oracle := range submissions {
-				transfer(state, ks.Address(), oracle, rewardPerOracle)
-			}
-
-			// update prev price and current price
-			averagePrice, err := ks.oracleMgr.AveragePrice()
-			if err != nil {
-				return nil, err
-			}
-
-			currentPrice, err := ks.System.CurrencyPrice()
-			if err != nil {
-				return nil, err
-			}
-
-			// @TODO (trigger)
-			state.SetState(ks.Address(), prevPriceIdx, common.BytesToHash(currentPrice.Bytes()))
-			state.SetState(ks.Address(), priceIdx, common.BytesToHash(averagePrice.Bytes()))
-		}
-
-		// mining rewards
-		state.AddBalance(header.Coinbase, mintedReward)
-
-		// oracle fund
-		state.AddBalance(ks.Address(), oracleDeduction)
-
-		// set currency supply
-		state.SetState(ks.Address(), supplyIdx, common.BytesToHash(new(big.Int).Add(state.GetState(ks.Address(), supplyIdx).Big(), mintedAmount).Bytes()))
-
-		// set minted reward
-		state.SetState(ks.Address(), mintedRewardIdx, common.BytesToHash(mintedAmount.Bytes()))
 	}
 
 	// commit the final state root
@@ -104,7 +49,51 @@ func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header,
 	return types.NewBlock(header, txs, receipts, commit), nil
 }
 
-func OracleEpochEnd(blockNumber *big.Int) bool {
+func updateSystem(blockNumber *big.Int, validator common.Address, sys System) error {
+	mintedAmount, err := sys.MintedAmount()
+	if err != nil {
+		return err
+	}
+
+	// oracle fund
+	oracleDeduction, err := sys.OracleDeduction(mintedAmount)
+	sys.Mint(sys.OracleFund(), oracleDeduction)
+
+	// mining reward
+	miningReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
+	sys.Mint(validator, miningReward)
+
+	// update price and reward oracles
+	if oracleEpochEnd(blockNumber) {
+		submissions, err := sys.PriceProvider().Submissions()
+		if err != nil {
+			return err
+		}
+		if len(submissions) != 0 {
+			// reward oracle
+			oracleReward, err := sys.OracleReward()
+			if err != nil {
+				return err
+			}
+			rewardPerOracle := new(big.Int).Div(oracleReward, new(big.Int).SetUint64(uint64(len(submissions))))
+			for _, oracle := range submissions {
+				// transfer reward from the oracle fund to the oracle
+				sys.Transfer(sys.OracleFund(), oracle, rewardPerOracle)
+			}
+
+			// update price
+			newPrice, err := sys.PriceProvider().AveragePrice()
+			if err != nil {
+				return err
+			}
+			sys.SetPrice(newPrice)
+		}
+	}
+
+	return nil
+}
+
+func oracleEpochEnd(blockNumber *big.Int) bool {
 	_, mod := new(big.Int).DivMod(blockNumber, params.OracleEpochDuration, new(big.Int))
 	return mod.Cmp(common.Big0) == 0
 }

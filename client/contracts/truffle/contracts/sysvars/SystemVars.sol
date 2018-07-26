@@ -30,11 +30,11 @@ contract SystemVars {
     }
 
     function _cap() private view returns (uint amount) {
-        return ((block.number > 1) && _hasEnoughSupply()) ? currencySupply/10000 : initialCap;
+        return (((block.number + 1) > 1) && _hasEnoughSupply()) ? currencySupply/10000 : initialCap;
     }
 
     function mintedAmount() public view returns (uint) {
-        if (block.number == 1) return initialMintedAmount;
+        if ((block.number + 1) == 1) return initialMintedAmount;
 
         uint adjustment = mintedReward/adjustmentFactor;
         if ((currencyPrice > prevCurrencyPrice) && (prevCurrencyPrice > stabilizedPrice)) {
