@@ -24,9 +24,6 @@ var (
 
 	// contracts
 	systemVarsAddr = common.HexToAddress("0x17C56D5aC0cddFd63aC860237197827cB4639CDA")
-
-	initialBalance = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Kcoin)) // 32 Kcoin
-	initialPrice   = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin))  // $1
 )
 
 func getDefaultOpts() genesis.Options {
