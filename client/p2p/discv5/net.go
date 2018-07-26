@@ -1098,7 +1098,7 @@ func (net *Network) checkPacket(n *Node, ev nodeEvent, pkt *ingressPacket) error
 func checkTopic(topics []Topic) error {
 	err := errors.New("handle only kcoin peers")
 	for _, topic := range topics {
-		if strings.HasPrefix(string(topic), protocol.ProtocolPrefix()) {
+		if strings.HasPrefix(string(topic), protocol.ProtocolPrefix) {
 			err = nil
 			break
 		}

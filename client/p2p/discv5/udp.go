@@ -14,15 +14,17 @@ import (
 	"github.com/kowala-tech/kcoin/client/p2p/nat"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
+	"github.com/kowala-tech/kcoin/client/knode/protocol"
 )
 
 const Version = 4
 
 // Errors
 var (
-	errPacketTooSmall = errors.New("too small")
-	errBadPrefix      = errors.New("bad prefix")
-	errTimeout        = errors.New("RPC timeout")
+	errPacketTooSmall    = errors.New("too small")
+	errBadPrefix         = errors.New("bad prefix")
+	errTimeout           = errors.New("RPC timeout")
+	errUnknownPacketType = errors.New("unknown packet type")
 )
 
 // Timeouts
@@ -358,10 +360,6 @@ func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) (p, hash 
 	return packet, hash, nil
 }
 
-func IsDiscoveryPacket(p []byte) bool {
-	return bytes.HasPrefix(p, versionPrefix)
-}
-
 // readLoop runs in its own goroutine. it injects ingress UDP packets
 // into the network loop.
 func (t *udp) readLoop() {
@@ -373,12 +371,17 @@ func (t *udp) readLoop() {
 	for {
 		nbytes, from, err := t.conn.ReadFromUDP(buf)
 		ingressTrafficMeter.Mark(int64(nbytes))
+
+		if err := IsDiscoveryPacket(buf); err != nil {
+			continue
+		}
+
 		if netutil.IsTemporaryError(err) {
 			// Ignore temporary read errors.
 			log.Debug(fmt.Sprintf("Temporary read error: %v", err))
 			continue
 		} else if err != nil {
-			// Shut down the loop for permament errors.
+			// Shut down the loop for permanent errors.
 			log.Debug(fmt.Sprintf("Read error: %v", err))
 			return
 		}
@@ -436,4 +439,47 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	s := rlp.NewStream(bytes.NewReader(sigdata[1:]), 0)
 	err = s.Decode(pkt.data)
 	return err
+}
+
+// IsDiscoveryPacket returns nil error if a packet is a DiscoveryV5 KCOIN packet
+// it's a kind of 'bad and fast' code to make dropping non-kcoin connections as fast as possible
+func IsDiscoveryPacket(buffer []byte) error {
+	if len(buffer) < headSize+1 {
+		return errPacketTooSmall
+	}
+
+	prefix, _, sigdata := buffer[:versionPrefixSize], buffer[versionPrefixSize:headSize], buffer[headSize:]
+	if sigdata[0] < pingPacket || sigdata[0] > topicNodesPacket {
+		return errUnknownPacketType
+	}
+
+	if !bytes.Equal(prefix, versionPrefix) {
+		return errBadPrefix
+	}
+
+	// further "magic" numbers are from ping, topicRegister, topicQuery types memory model
+	// startIndex stands for a position in raw packet where we should find Topic data
+	var startIndex int
+	switch sigdata[0] {
+	case pingPacket:
+		if sigdata[1] == 235 {
+			// a correct ping without a Topic
+			return nil
+		}
+
+		startIndex = 47
+	case topicRegisterPacket:
+		startIndex = 4
+	case topicQueryPacket:
+		startIndex = 3
+	default:
+		return nil
+	}
+
+	endIndex := startIndex + len(protocol.ProtocolPrefixBytes)
+	if !bytes.HasPrefix(sigdata[startIndex:endIndex], protocol.ProtocolPrefixBytes) {
+		return errBadPrefix
+	}
+
+	return nil
 }
