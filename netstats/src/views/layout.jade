@@ -12,8 +12,32 @@ html(ng-app="netStatsApp")
     section#nav.container-fluid
       nav.navbar(ng-controller='NavCtrl')
         .navbar-header
+          button.navbar-toggle(type='button', data-toggle='collapse', data-target='#Navbar')
+            i.fa.fa-bars
           a.navbar-brand(href="/")
-            img(src="/kusd-testnet.svg" height="35")
+            img(src="/kusd-testnet.svg" height="25")
+        #Navbar.collapse.navbar-collapse
+          ul.navbar-nav.nav.navbar-right
+            li
+              a(href="https://explorer.zygote.kowala.tech", target="_blank") Blockchain Explorer
+            li
+              a(href="https://faucet.zygote.kowala.tech", target="_blank") Faucet
+            li
+              a(href="https://docs.kowala.tech", target="_blank") kCoin Docs
+            li
+              a(href="https://www.kowala.tech", target="_blank") Kowala's Website
+            li
+              a(href="https://github.com/kowala-tech/kcoin", target="_blank")
+                i.fa.fa-github
+            li
+              a(href="https://twitter.com/KowalaTech", target="_blank")
+                i.fa.fa-twitter
+            li
+              a(href="https://www.facebook.com/kowalatech/", target="_blank")
+                i.fa.fa-facebook
+            li
+              a(href="https://t.me/kowalaofficial", target="_blank")
+                i.fa.fa-telegram
     section#content.container-fluid
       block content
 

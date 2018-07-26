@@ -450,7 +450,7 @@ svg .bars g:hover .highlight {
 
 svg .line {
 	fill: none;
-	stroke: #ff0000;
+	stroke: #fff;
 	stroke-width: 1.3px;
 	stroke-linejoin: round;
 	stroke-linecap: round;
