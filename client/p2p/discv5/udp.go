@@ -122,6 +122,7 @@ type (
 )
 
 var (
+	//fixme: @jekamas use a shorter prefix. Breaking change!
 	versionPrefix     = []byte("temporary discovery v5")
 	versionPrefixSize = len(versionPrefix)
 	sigSize           = 520 / 8
@@ -272,6 +273,10 @@ func (t *udp) sendNeighbours(remote *Node, results []*Node) {
 	// to stay below the 1280 byte limit.
 	p := neighbors{Expiration: uint64(time.Now().Add(expiration).Unix())}
 	for i, result := range results {
+		if result.ID == remote.ID {
+			//skip remote node itself
+			continue
+		}
 		p.Nodes = append(p.Nodes, nodeToRPC(result))
 		if len(p.Nodes) == maxNeighbors || i == len(results)-1 {
 			t.sendPacket(remote.ID, remote.addr(), byte(neighborsPacket), p)
@@ -353,6 +358,10 @@ func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) (p, hash 
 	return packet, hash, nil
 }
 
+func IsDiscoveryPacket(p []byte) bool {
+	return bytes.HasPrefix(p, versionPrefix)
+}
+
 // readLoop runs in its own goroutine. it injects ingress UDP packets
 // into the network loop.
 func (t *udp) readLoop() {
@@ -381,7 +390,6 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	pkt := ingressPacket{remoteAddr: from}
 	if err := decodePacket(buf, &pkt); err != nil {
 		log.Debug(fmt.Sprintf("Bad packet from %v: %v", from, err))
-		//fmt.Println("bad packet", err)
 		return err
 	}
 	t.net.reqReadPacket(pkt)

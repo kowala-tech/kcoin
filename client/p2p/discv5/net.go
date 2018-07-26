@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/crypto/sha3"
+	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
@@ -726,7 +728,7 @@ func (net *Network) internNodeFromDB(dbn *Node) *Node {
 }
 
 func (net *Network) internNodeFromNeighbours(sender *net.UDPAddr, rn rpcNode) (n *Node, err error) {
-	if rn.ID == net.tab.self.ID {
+	if net.IsSelf(rn) {
 		return nil, errors.New("is self")
 	}
 	if rn.UDP <= lowPort {
@@ -757,6 +759,10 @@ func (net *Network) internNodeFromNeighbours(sender *net.UDPAddr, rn rpcNode) (n
 		}
 	}
 	return n, err
+}
+
+func (net *Network) IsSelf(rn rpcNode) bool {
+	return rn.ID == net.tab.self.ID
 }
 
 // nodeNetGuts is embedded in Node and contains fields.
@@ -1059,6 +1065,27 @@ func (net *Network) checkPacket(n *Node, ev nodeEvent, pkt *ingressPacket) error
 		}
 		n.pingEcho = nil
 	}
+
+	// filter only kcoin users
+	switch data := pkt.data.(type) {
+	case *topicQuery:
+		if err := checkTopic([]Topic{data.Topic}); err != nil {
+			return err
+		}
+	case *topicRegister:
+		if err := checkTopic(data.Topics); err != nil {
+			return err
+		}
+	case *ping:
+		if len(data.Topics) == 0 {
+			// ping can be empty
+			break
+		}
+		if err := checkTopic(data.Topics); err != nil {
+			return err
+		}
+	}
+
 	// Address validation.
 	// TODO: Ideally we would do the following:
 	//  - reject all packets with wrong address except ping.
@@ -1066,6 +1093,18 @@ func (net *Network) checkPacket(n *Node, ev nodeEvent, pkt *ingressPacket) error
 	//    previous node (with old address) around. if the new one reaches known,
 	//    swap it out.
 	return nil
+}
+
+func checkTopic(topics []Topic) error {
+	err := errors.New("handle only kcoin peers")
+	for _, topic := range topics {
+		if strings.HasPrefix(string(topic), protocol.ProtocolPrefix()) {
+			err = nil
+			break
+		}
+	}
+
+	return err
 }
 
 func (net *Network) transition(n *Node, next *nodeState) {

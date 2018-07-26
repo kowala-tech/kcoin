@@ -55,6 +55,7 @@ var (
 	errBusy                    = errors.New("busy")
 	errUnknownPeer             = errors.New("peer is unknown or unhealthy")
 	errBadPeer                 = errors.New("action from bad peer ignored")
+	errEmptyHeader             = errors.New("empty header")
 	errStallingPeer            = errors.New("peer is stalling")
 	errNoPeers                 = errors.New("no peers to keep download active")
 	errTimeout                 = errors.New("timeout")
@@ -542,12 +543,14 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 			}
 			// Make sure the peer actually gave something valid
 			headers := packet.(*headerPack).headers
-			if len(headers) != 1 {
-				p.log.Debug("Multiple headers for single request", "headers", len(headers))
-				return nil, errBadPeer
+			head, err := getHeader(headers, packet.PeerID(), log.Debug)
+			if err == errEmptyHeader {
+				break
 			}
-			head := headers[0]
-			p.log.Debug("Remote head header identified", "number", head.Number, "hash", head.Hash())
+			if err != nil {
+				return nil, err
+			}
+
 			return head, nil
 
 		case <-timeout:
@@ -693,18 +696,21 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				}
 				// Make sure the peer actually gave something valid
 				headers := packer.(*headerPack).headers
-				if len(headers) != 1 {
-					p.log.Debug("Multiple headers for single request", "headers", len(headers))
-					return 0, errBadPeer
+				head, err := getHeader(headers, packer.PeerID(), p.log.Debug)
+				if err == errEmptyHeader {
+					break
+				}
+				if err != nil {
+					return 0, err
 				}
 				arrived = true
 
 				// Modify the search interval based on the response
-				if (d.mode == FullSync && !d.blockchain.HasBlock(headers[0].Hash(), headers[0].Number.Uint64())) || (d.mode != FullSync && !d.lightchain.HasHeader(headers[0].Hash(), headers[0].Number.Uint64())) {
+				if (d.mode == FullSync && !d.blockchain.HasBlock(head.Hash(), head.Number.Uint64())) || (d.mode != FullSync && !d.lightchain.HasHeader(head.Hash(), head.Number.Uint64())) {
 					end = check
 					break
 				}
-				header := d.lightchain.GetHeaderByHash(headers[0].Hash()) // Independent of sync mode, header surely exists
+				header := d.lightchain.GetHeaderByHash(head.Hash()) // Independent of sync mode, header surely exists
 				if header.Number.Uint64() != check {
 					p.log.Debug("Received non requested header", "number", header.Number, "hash", header.Hash(), "request", check)
 					return 0, errBadPeer
@@ -1614,4 +1620,23 @@ func (d *Downloader) requestTTL() time.Duration {
 		ttl = ttlLimit
 	}
 	return ttl
+}
+
+func getHeader(headers []*types.Header, peerID string, logger func(msg string, ctx ...interface{})) (*types.Header, error) {
+	if len(headers) == 0 {
+		// we do have empty headers (blocks without any TXs)
+		// it's different from Ethereum consensus.
+		logger("Received empty headers from peer", "peer", peerID)
+		return nil, errEmptyHeader
+	}
+
+	if len(headers) != 1 {
+		logger("Multiple headers for single request", "headers", len(headers))
+		return nil, errBadPeer
+	}
+
+	head := headers[0]
+
+	logger("Remote head header identified", "number", head.Number, "hash", head.Hash())
+	return head, nil
 }

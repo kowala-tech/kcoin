@@ -1,4 +1,4 @@
-package oracle
+package oracle_test
 
 import (
 	"context"
@@ -7,11 +7,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/knode/genesis"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/stretchr/testify/suite"
 )
@@ -19,21 +23,94 @@ import (
 const secondsPerDay = 86400
 
 var (
-	owner, _       = crypto.GenerateKey()
-	user, _        = crypto.GenerateKey()
-	initialBalance = new(big.Int).Mul(common.Big32, new(big.Int).SetUint64(params.Kcoin)) // 10 Kcoin
-	baseDeposit    = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin))  // 1 Kcoin
-	maxNumOracles  = common.Big256
-	freezePeriod   = common.Big32
-	initialPrice   = new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kcoin)) // $1
-	syncFrequency  = big.NewInt(600)
-	updatePeriod   = big.NewInt(30)
+	user, _            = crypto.GenerateKey()
+	superNode, _       = crypto.GenerateKey()
+	userWithoutMUSD, _ = crypto.GenerateKey()
+	governor, _        = crypto.GenerateKey()
+	author, _          = crypto.HexToECDSA("bfef37ae9ac5d5e7ebbbefc19f4e1f572a7ca7aa0d28e527b7d62950951cc5eb")
+	validatorMgrAddr   = common.HexToAddress("0x161ad311F1D66381C17641b1B73042a4CA731F9f")
+	multiSigAddr       = common.HexToAddress("0xA143ac5ec5D95f16aFD5Fc3B09e0aDaf360ffC9e")
+	oracleMgrAddr      = common.HexToAddress("0x2c3DA02A82D11D649857AaE537920D8cA368cAB5")
 )
+
+func getDefaultOpts() genesis.Options {
+	baseDeposit := uint64(20)
+	superNodeAmount := uint64(6000000)
+	tokenHolder := genesis.TokenHolder{
+		Address:   getAddress(user).Hex(),
+		NumTokens: superNodeAmount,
+	}
+
+	opts := genesis.Options{
+		Network: "test",
+		Consensus: &genesis.ConsensusOpts{
+			Engine:           "tendermint",
+			MaxNumValidators: 10,
+			FreezePeriod:     30,
+			BaseDeposit:      baseDeposit,
+			SuperNodeAmount:  superNodeAmount,
+			Validators: []genesis.Validator{
+				{
+					Address: tokenHolder.Address,
+					Deposit: tokenHolder.NumTokens,
+				},
+				{
+					Address: getAddress(superNode).Hex(),
+					Deposit: superNodeAmount,
+				},
+			},
+			MiningToken: &genesis.MiningTokenOpts{
+				Name:     "mUSD",
+				Symbol:   "mUSD",
+				Cap:      20000000,
+				Decimals: 18,
+				Holders:  []genesis.TokenHolder{tokenHolder, {Address: getAddress(superNode).Hex(), NumTokens: superNodeAmount}},
+			},
+		},
+		Governance: &genesis.GovernanceOpts{
+			Origin:           getAddress(author).Hex(),
+			Governors:        []string{getAddress(governor).Hex()},
+			NumConfirmations: 1,
+		},
+		DataFeedSystem: &genesis.DataFeedSystemOpts{
+			MaxNumOracles: 10,
+			FreezePeriod:  32,
+			BaseDeposit:   1,
+			Price: genesis.PriceOpts{
+				InitialPrice:  1,
+				SyncFrequency: 600,
+				UpdatePeriod:  30,
+			},
+		},
+		PrefundedAccounts: []genesis.PrefundedAccount{
+			{
+				Address: tokenHolder.Address,
+				Balance: 10,
+			},
+			{
+				Address: getAddress(superNode).Hex(),
+				Balance: 10,
+			},
+			{
+				Address: getAddress(governor).Hex(),
+				Balance: 10,
+			},
+			{
+				Address: getAddress(userWithoutMUSD).Hex(),
+				Balance: 10,
+			},
+		},
+	}
+
+	return opts
+}
 
 type OracleMgrSuite struct {
 	suite.Suite
 	backend   *backends.SimulatedBackend
-	oracleMgr *OracleMgr
+	opts      genesis.Options
+	multiSig  *ownership.MultiSigWallet
+	oracleMgr *oracle.OracleMgr
 }
 
 func TestOracleMgrSuite(t *testing.T) {
@@ -47,75 +124,89 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 
 	req := suite.Require()
 
-	// create backend
-	alloc := make(core.GenesisAlloc)
-	alloc[getAddress(owner)] = core.GenesisAccount{Balance: initialBalance}
-	alloc[getAddress(user)] = core.GenesisAccount{Balance: initialBalance}
-	backend := backends.NewSimulatedBackend(alloc)
-	req.NotNil(backend)
-	suite.backend = backend
-
-	finalMaxNumOracles := maxNumOracles
-	finalFreezePeriod := freezePeriod
+	// create genesis
+	opts := getDefaultOpts()
+	req.NotNil(opts)
 
 	switch {
 	case strings.Contains(testName, "_Full"):
-		finalMaxNumOracles = common.Big1
+		opts.DataFeedSystem.MaxNumOracles = 1
 	case testName == "TestReleaseDeposits_UnlockedDeposit":
-		finalFreezePeriod = common.Big0
+		opts.DataFeedSystem.FreezePeriod = 0
 	}
+	suite.opts = opts
+
+	genesis, err := genesis.Generate(opts)
+	req.NoError(err)
+	req.NotNil(genesis)
+
+	backend := backends.NewSimulatedBackend(genesis.Alloc)
+	req.NotNil(backend)
+	suite.backend = backend
+
+	// multiSig instance
+	multiSig, err := ownership.NewMultiSigWallet(multiSigAddr, backend)
+	req.NoError(err)
+	req.NotNil(multiSig)
+	suite.multiSig = multiSig
 
 	// OracleMgr instance
-	oracleMgr, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, finalMaxNumOracles, finalFreezePeriod, syncFrequency, updatePeriod)
+	oracleMgr, err := oracle.NewOracleMgr(oracleMgrAddr, backend)
 	req.NoError(err)
 	req.NotNil(oracleMgr)
 	suite.oracleMgr = oracleMgr
-
-	suite.backend.Commit()
 }
 
 func (suite *OracleMgrSuite) TestDeployOracleMgr() {
 	req := suite.Require()
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(owner): core.GenesisAccount{
+		getAddress(governor): core.GenesisAccount{
 			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
 		},
 	})
 	req.NotNil(backend)
 
-	oracleMgr, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
+	initialPrice := new(big.Int).SetUint64(1)
+	baseDeposit := new(big.Int).SetUint64(100)
+	maxNumOracles := new(big.Int).SetUint64(100)
+	freezePeriod := new(big.Int).SetUint64(10)
+	syncFrequency := new(big.Int).SetUint64(20)
+	updatePeriod := new(big.Int).SetUint64(5)
+
+	transactOpts := bind.NewKeyedTransactor(governor)
+	_, _, mgr, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.NoError(err)
-	req.NotNil(oracleMgr)
+	req.NotNil(mgr)
 
 	backend.Commit()
 
-	storedBaseDeposit, err := oracleMgr.BaseDeposit(&bind.CallOpts{})
+	storedBaseDeposit, err := mgr.BaseDeposit(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedBaseDeposit)
 	req.Equal(baseDeposit, storedBaseDeposit)
 
-	storedMaxNumOracles, err := oracleMgr.MaxNumOracles(&bind.CallOpts{})
+	storedMaxNumOracles, err := mgr.MaxNumOracles(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedMaxNumOracles)
 	req.Equal(maxNumOracles, storedMaxNumOracles)
 
-	storedFreezePeriod, err := oracleMgr.FreezePeriod(&bind.CallOpts{})
+	storedFreezePeriod, err := mgr.FreezePeriod(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedFreezePeriod)
 	req.Equal(dtos(freezePeriod), storedFreezePeriod)
 
-	storedInitialPrice, err := oracleMgr.Price(&bind.CallOpts{})
+	storedInitialPrice, err := mgr.Price(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedInitialPrice)
 	req.Equal(initialPrice, storedInitialPrice)
 
-	storedSyncFrequency, err := oracleMgr.SyncFrequency(&bind.CallOpts{})
+	storedSyncFrequency, err := mgr.SyncFrequency(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedSyncFrequency)
 	req.Equal(syncFrequency, storedSyncFrequency)
 
-	storedUpdatePeriod, err := oracleMgr.UpdatePeriod(&bind.CallOpts{})
+	storedUpdatePeriod, err := mgr.UpdatePeriod(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedUpdatePeriod)
 	req.Equal(updatePeriod, storedUpdatePeriod)
@@ -125,14 +216,21 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_MaxNumOraclesEqualZero() {
 	req := suite.Require()
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(owner): core.GenesisAccount{
+		getAddress(governor): core.GenesisAccount{
 			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
 		},
 	})
 	req.NotNil(backend)
 
+	initialPrice := new(big.Int).SetUint64(1)
+	baseDeposit := new(big.Int).SetUint64(100)
 	maxNumOracles := common.Big0
-	_, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
+	freezePeriod := new(big.Int).SetUint64(10)
+	syncFrequency := new(big.Int).SetUint64(20)
+	updatePeriod := new(big.Int).SetUint64(5)
+
+	transactOpts := bind.NewKeyedTransactor(governor)
+	_, _, _, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.Error(err, "maximum number of oracles cannot be zero")
 }
 
@@ -140,14 +238,21 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_InitialPriceEqualsZero() {
 	req := suite.Require()
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(owner): core.GenesisAccount{
+		getAddress(governor): core.GenesisAccount{
 			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
 		},
 	})
 	req.NotNil(backend)
 
 	initialPrice := common.Big0
-	_, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
+	baseDeposit := new(big.Int).SetUint64(100)
+	maxNumOracles := new(big.Int).SetUint64(100)
+	freezePeriod := new(big.Int).SetUint64(10)
+	syncFrequency := new(big.Int).SetUint64(20)
+	updatePeriod := new(big.Int).SetUint64(5)
+
+	transactOpts := bind.NewKeyedTransactor(governor)
+	_, _, _, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.Error(err, "initial price cannot be zero")
 }
 
@@ -155,14 +260,21 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_SyncEnabled_UpdatePeriodEqualsZ
 	req := suite.Require()
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(owner): core.GenesisAccount{
+		getAddress(governor): core.GenesisAccount{
 			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
 		},
 	})
 	req.NotNil(backend)
 
+	initialPrice := new(big.Int).SetUint64(1)
+	baseDeposit := new(big.Int).SetUint64(100)
+	maxNumOracles := new(big.Int).SetUint64(100)
+	freezePeriod := new(big.Int).SetUint64(10)
+	syncFrequency := new(big.Int).SetUint64(20)
 	updatePeriod := common.Big0
-	_, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
+
+	transactOpts := bind.NewKeyedTransactor(governor)
+	_, _, _, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.Error(err, "update period cannot be zero if sync is enabled")
 }
 
@@ -170,14 +282,21 @@ func (suite *OracleMgrSuite) TestDeployOracleMgr_SyncEnabled_UpdatePeriodGreater
 	req := suite.Require()
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
-		getAddress(owner): core.GenesisAccount{
+		getAddress(governor): core.GenesisAccount{
 			Balance: new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin)),
 		},
 	})
 	req.NotNil(backend)
 
+	initialPrice := new(big.Int).SetUint64(1)
+	baseDeposit := new(big.Int).SetUint64(100)
+	maxNumOracles := new(big.Int).SetUint64(100)
+	freezePeriod := new(big.Int).SetUint64(10)
+	syncFrequency := new(big.Int).SetUint64(20)
 	updatePeriod := new(big.Int).Add(syncFrequency, common.Big1)
-	_, err := suite.deployOracleMgr(owner, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
+
+	transactOpts := bind.NewKeyedTransactor(governor)
+	_, _, _, err := oracle.DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod, validatorMgrAddr)
 	req.Error(err, "update period cannot be greater that sync frequency if sync is enabled")
 }
 
@@ -187,13 +306,13 @@ func (suite *OracleMgrSuite) TestGetMinimumDeposit_NotFull() {
 	storedMinDeposit, err := suite.oracleMgr.GetMinimumDeposit(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedMinDeposit)
-	req.Equal(baseDeposit, storedMinDeposit)
+	req.Equal(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin)), storedMinDeposit)
 }
 
 func (suite *OracleMgrSuite) TestGetMinimumDeposit_Full() {
 	req := suite.Require()
 
-	deposit := baseDeposit
+	deposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
 	req.NoError(suite.registerOracle(user, deposit))
 
 	suite.backend.Commit()
@@ -207,14 +326,15 @@ func (suite *OracleMgrSuite) TestGetMinimumDeposit_Full() {
 func (suite *OracleMgrSuite) TestRegisterOracle_WhenPaused() {
 	req := suite.Require()
 
-	suite.pauseOracleMgr(owner)
+	suite.pauseService()
 
-	req.Error(suite.registerOracle(user, baseDeposit), "cannot register the oracle because the service is paused")
+	req.Error(suite.registerOracle(user, new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))), "cannot register the oracle because the service is paused")
 }
 
 func (suite *OracleMgrSuite) TestRegisterOracle_Duplicate() {
 	req := suite.Require()
 
+	baseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
 	req.NoError(suite.registerOracle(user, baseDeposit))
 	req.Error(suite.registerOracle(user, baseDeposit), "cannot register the same oracle twice")
 }
@@ -222,14 +342,20 @@ func (suite *OracleMgrSuite) TestRegisterOracle_Duplicate() {
 func (suite *OracleMgrSuite) TestRegisterOracle_WithoutMinDeposit() {
 	req := suite.Require()
 
-	deposit := new(big.Int).Sub(baseDeposit, common.Big1)
+	deposit := new(big.Int).Sub(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin)), common.Big1)
 	req.Error(suite.registerOracle(user, deposit), "registerOracle requires the minimum deposit")
+}
+
+func (suite *OracleMgrSuite) TestRegisterOracle_NotSuperNode() {
+	req := suite.Require()
+
+	req.Error(suite.registerOracle(userWithoutMUSD, new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))), "registerOracle requires a super node")
 }
 
 func (suite *OracleMgrSuite) TestRegister_NotFull_GreaterThan() {
 	req := suite.Require()
 
-	req.NoError(suite.registerOracle(owner, baseDeposit))
+	req.NoError(suite.registerOracle(superNode, new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))))
 
 	suite.backend.Commit()
 
@@ -237,7 +363,7 @@ func (suite *OracleMgrSuite) TestRegister_NotFull_GreaterThan() {
 	req.NoError(err)
 	req.NotNil(initialOracleCount)
 
-	deposit := new(big.Int).Add(baseDeposit, common.Big1)
+	deposit := new(big.Int).Add(new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin)), common.Big1)
 	req.NoError(suite.registerOracle(user, deposit))
 
 	suite.backend.Commit()
@@ -261,7 +387,8 @@ func (suite *OracleMgrSuite) TestRegister_NotFull_GreaterThan() {
 func (suite *OracleMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
 	req := suite.Require()
 
-	req.NoError(suite.registerOracle(owner, baseDeposit))
+	baseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
+	req.NoError(suite.registerOracle(superNode, baseDeposit))
 
 	suite.backend.Commit()
 
@@ -275,10 +402,10 @@ func (suite *OracleMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
 
 	storedOracle := suite.getHighestBidder()
 	req.NotZero(storedOracle)
-	req.Equal(getAddress(owner), storedOracle.Code)
+	req.Equal(getAddress(superNode), storedOracle.Code)
 	req.Equal(baseDeposit, storedOracle.Deposit)
 
-	storedDeposit := suite.getCurrentDeposit(owner)
+	storedDeposit := suite.getCurrentDeposit(superNode)
 	req.NotZero(storedDeposit)
 	req.Zero(storedDeposit.AvailableAt.Uint64())
 	req.Equal(baseDeposit, storedDeposit.Amount)
@@ -292,7 +419,8 @@ func (suite *OracleMgrSuite) TestRegister_NotFull_LessOrEqualTo() {
 func (suite *OracleMgrSuite) TestRegister_Full_Replacement() {
 	req := suite.Require()
 
-	req.NoError(suite.registerOracle(owner, baseDeposit))
+	baseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
+	req.NoError(suite.registerOracle(superNode, baseDeposit))
 
 	suite.backend.Commit()
 
@@ -328,7 +456,7 @@ func (suite *OracleMgrSuite) TestRegister_Full_Replacement() {
 func (suite *OracleMgrSuite) TestDeregisterOracle_WhenPaused() {
 	req := suite.Require()
 
-	suite.pauseOracleMgr(owner)
+	suite.pauseService()
 
 	req.Error(suite.deregisterOracle(user), "cannot deregister the oracle because the service is paused")
 }
@@ -336,7 +464,7 @@ func (suite *OracleMgrSuite) TestDeregisterOracle_WhenPaused() {
 func (suite *OracleMgrSuite) TestDeregisterOracle_NotOracle() {
 	req := suite.Require()
 
-	suite.pauseOracleMgr(owner)
+	suite.pauseService()
 
 	req.Error(suite.deregisterOracle(user), "cannot deregister a non-oracle")
 }
@@ -344,6 +472,7 @@ func (suite *OracleMgrSuite) TestDeregisterOracle_NotOracle() {
 func (suite *OracleMgrSuite) TestDeregisterOracle() {
 	req := suite.Require()
 
+	baseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(suite.opts.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
 	req.NoError(suite.registerOracle(user, baseDeposit))
 	req.NoError(suite.deregisterOracle(user))
 
@@ -358,7 +487,7 @@ func (suite *OracleMgrSuite) TestDeregisterOracle() {
 func (suite *OracleMgrSuite) TestReleaseDeposits_WhenPaused() {
 	req := suite.Require()
 
-	suite.pauseOracleMgr(owner)
+	suite.pauseService()
 
 	req.Error(suite.releaseDeposits(user), "cannot release deposits because the service is paused")
 }
@@ -434,17 +563,20 @@ func (suite *OracleMgrSuite) TestReleaseDeposits_UnlockedDeposit() {
 	req.True(finalBalance.Cmp(common.Big1) > 0)
 }
 
-func (suite *OracleMgrSuite) deployOracleMgr(user *ecdsa.PrivateKey, backend bind.ContractBackend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod *big.Int) (*OracleMgr, error) {
-	transactOpts := bind.NewKeyedTransactor(user)
-	_, _, oracleMgr, err := DeployOracleMgr(transactOpts, backend, initialPrice, baseDeposit, maxNumOracles, freezePeriod, syncFrequency, updatePeriod)
-	return oracleMgr, err
-}
-
-func (suite *OracleMgrSuite) pauseOracleMgr(user *ecdsa.PrivateKey) {
+func (suite *OracleMgrSuite) pauseService() {
 	req := suite.Require()
 
-	pauseOpts := bind.NewKeyedTransactor(user)
-	_, err := suite.oracleMgr.Pause(pauseOpts)
+	// pause the service
+	oracleMgrABI, err := abi.JSON(strings.NewReader(oracle.OracleMgrABI))
+	req.NoError(err)
+	req.NotNil(oracleMgrABI)
+
+	pauseParams, err := oracleMgrABI.Pack("pause")
+	req.NoError(err)
+	req.NotZero(pauseParams)
+
+	transactOpts := bind.NewKeyedTransactor(governor)
+	_, err = suite.multiSig.SubmitTransaction(transactOpts, oracleMgrAddr, common.Big0, pauseParams)
 	req.NoError(err)
 }
 
