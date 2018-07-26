@@ -1,20 +1,16 @@
 html {
 	width: 100%;
 	height: 100%;
-	background-color: #f90054;
 }
 
 body {
 	width: 100%;
-	background: -moz-linear-gradient(top, #531c85 0%, #571b84 14%, #641980 30%, #7a157a 46%, #981071 62%, #be0a65 79%, #ed0258 96%, #f90054 100%) !important;
-	background: -webkit-linear-gradient(top, #531c85 0%, #571b84 14%, #641980 30%, #7a157a 46%, #981071 62%, #be0a65 79%, #ed0258 96%, #f90054 100%) !important;
-	background: linear-gradient(to bottom, #531c85 0%, #571b84 14%, #641980 30%, #7a157a 46%, #981071 62%, #be0a65 79%, #ed0258 96%, #f90054 100%) !important;
-	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#531c85', endColorstr='#f90054',GradientType=0 );
-	color: #fff;
+	background: #008ef5;
+	color: white;
+	font-family: Poppins, sans-serif;
 	font-smooth: auto;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
-	font-family: "Montserrat";
 	overflow-x: hidden;
 }
 
@@ -26,7 +22,6 @@ body {
 }
 
 .content a {
-	color: white;
 	text-decoration: underline;
 }
 
@@ -140,7 +135,7 @@ div.small-title-miner {
 	line-height: 20px;
 	letter-spacing: 1px;
 	text-transform: uppercase;
-	color: #fff;
+	color: white;
 }
 
 span.small-title span.small {
@@ -148,7 +143,7 @@ span.small-title span.small {
 	font-weight: 600;
 	line-height: 16px;
 	letter-spacing: 0px;
-	color: #fff;
+	color: white;
 	-webkit-font-smoothing: subpixel-antialiased;
 	-moz-osx-font-smoothing: auto;
 }
@@ -282,7 +277,7 @@ table td {
 }
 
 table th {
-	color: #fff;
+	color: white;
 }
 
 table th i {
@@ -397,7 +392,7 @@ nodepropagchart {
 	left: 50%;
 	margin-left: -5px;
 	border-width: 5px 5px 0;
-	border-top-color: #fff;
+	border-top-color: white;
 }
 
 .datamaps-hoverover .tooltip-arrow,
@@ -407,7 +402,7 @@ nodepropagchart {
 	left: 0px;
 	margin-left: -5px;
 	border-width: 0px 5px 5px 5px;
-	border-bottom-color: #fff;
+	border-bottom-color: white;
 }
 
 .d3-tip .tooltip-arrow {
@@ -460,7 +455,7 @@ svg .line {
 	stroke-linejoin: round;
 	stroke-linecap: round;
 	shape-rendering: geometric-precision;
-	/*-webkit-svg-shadow: 0 0 7px #fff;*/
+	/*-webkit-svg-shadow: 0 0 7px white;*/
 }
 
 svg .bar text {
@@ -488,18 +483,7 @@ svg .y.axis .tick:first-child text {
 	opacity: 0;
 }
 
-.kowala{
-	color: #fff !important;
-	text-shadow: 2px 2px 2px #1f033d !important;
-}
-
-.kowala-inverse{
-	color: #fe0053 !important;
-	text-shadow: 2px 2px 2px #1f033d !important;
-}
-
 #nav {
-	background-color: #531c85;
 	padding-bottom: 25px;
 }
 
