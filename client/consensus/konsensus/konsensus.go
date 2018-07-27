@@ -126,8 +126,3 @@ func (ks *Konsensus) Seal(chain consensus.ChainReader, block *types.Block, stop 
 func (ks *Konsensus) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
 }
-
-func transfer(state *state.StateDB, sender, recipient common.Address, amount *big.Int) {
-	state.SubBalance(sender, amount)
-	state.AddBalance(recipient, amount)
-}
