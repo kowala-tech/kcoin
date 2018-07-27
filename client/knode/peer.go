@@ -65,7 +65,7 @@ type peer struct {
 	*p2p.Peer
 	rw p2p.MsgReadWriter
 
-	version int // Protocol version negotiated
+	version int // Consts version negotiated
 
 	blockNumber *big.Int
 	head        common.Hash
@@ -396,8 +396,8 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 	if msg.Code != StatusMsg {
 		return errResp(ErrNoStatusMsg, "first msg has code %x (!= %x)", msg.Code, StatusMsg)
 	}
-	if msg.Size > protocol.ProtocolMaxMsgSize {
-		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, protocol.ProtocolMaxMsgSize)
+	if msg.Size > protocol.Consts.MaxMsgSize {
+		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, protocol.Consts.MaxMsgSize)
 	}
 	// Decode the handshake and make sure everything matches
 	if err := msg.Decode(&status); err != nil {

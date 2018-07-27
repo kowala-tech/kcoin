@@ -40,7 +40,7 @@ type nodeDB struct {
 // Schema layout for the node database
 var (
 	nodeDBVersionKey = []byte("version") // Version of the database to flush if changes
-	nodeDBItemPrefix = []byte("n:")      // Identifier to prefix node entries with
+	nodeDBItemPrefix = []byte("n:")      // Identifier to Prefix node entries with
 
 	nodeDBDiscoverRoot          = ":discover"
 	nodeDBDiscoverPing          = nodeDBDiscoverRoot + ":lastping"

@@ -39,7 +39,7 @@ type Backend interface {
 }
 
 type Validator interface {
-	ValidatorSafe
+	Service
 	Start(walletAccount accounts.WalletAccount, deposit *big.Int)
 	Stop() error
 	SetExtra(extra []byte) error
@@ -51,7 +51,7 @@ type Validator interface {
 	RedeemDeposits() error
 }
 
-type ValidatorSafe interface {
+type Service interface {
 	Validating() bool
 	Running() bool
 	AddProposal(proposal *types.Proposal) error

@@ -1,8 +1,8 @@
 package protocol
 
 import (
-	"strings"
 	"strconv"
+	"strings"
 )
 
 // Constants to match up protocol versions and messages
@@ -13,17 +13,26 @@ const (
 	ProtocolName = "kcoin"
 )
 
-var (
-	ProtocolNameUpper = strings.ToUpper("kcoin")
-	ProtocolVersionStr = strconv.Itoa(Kcoin1)
-	ProtocolPrefix = ProtocolNameUpper+ProtocolVersionStr
-	ProtocolPrefixBytes = []byte(ProtocolNameUpper+ProtocolVersionStr)
-)
+var Consts = struct {
+	NameUpper   string
+	VersionStr  string
+	Prefix      string
+	PrefixBytes []byte
 
-// Supported versions of the kcoin protocol (first is primary).
-var ProtocolVersions = []uint{Kcoin1}
+	// Supported versions of the kcoin protocol (first is primary).
+	Versions []uint
 
-// Number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{21}
+	// Number of implemented message corresponding to different protocol versions.
+	Lengths []uint64
 
-const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
+	// Maximum cap on the size of a protocol message
+	MaxMsgSize uint32
+}{
+	strings.ToUpper(ProtocolName),
+	strconv.Itoa(Kcoin1),
+	strings.ToUpper(ProtocolName) + strconv.Itoa(Kcoin1),         // ProtocolNameUpper+ProtocolVersionStr
+	[]byte(strings.ToUpper(ProtocolName) + strconv.Itoa(Kcoin1)), // ProtocolNameUpper+ProtocolVersionStr
+	[]uint{Kcoin1},
+	[]uint64{21},
+	10 * 1024 * 1024,
+}

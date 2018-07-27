@@ -14,7 +14,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/p2p/nat"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
-	"github.com/kowala-tech/kcoin/client/knode/protocol"
 )
 
 const Version = 4
@@ -22,9 +21,10 @@ const Version = 4
 // Errors
 var (
 	errPacketTooSmall    = errors.New("too small")
-	errBadPrefix         = errors.New("bad prefix")
+	errBadPrefix         = errors.New("bad Prefix")
 	errTimeout           = errors.New("RPC timeout")
 	errUnknownPacketType = errors.New("unknown packet type")
+	errBadTopic          = errors.New("bad Topic")
 )
 
 // Timeouts
@@ -124,7 +124,7 @@ type (
 )
 
 var (
-	//fixme: @jekamas use a shorter prefix. Breaking change!
+	//fixme: @jekamas use a shorter Prefix. Breaking change!
 	versionPrefix     = []byte("temporary discovery v5")
 	versionPrefixSize = len(versionPrefix)
 	sigSize           = 520 / 8
@@ -405,18 +405,18 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	}
 	buf := make([]byte, len(buffer))
 	copy(buf, buffer)
-	prefix, sig, sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:headSize], buf[headSize:]
-	if !bytes.Equal(prefix, versionPrefix) {
-		return errBadPrefix
+	packet := newPacket(buf)
+	if err := packet.isCorrectPrefix(); err != nil {
+		return err
 	}
-	fromID, err := recoverNodeID(crypto.Keccak256(buf[headSize:]), sig)
+	fromID, err := recoverNodeID(crypto.Keccak256(buf[headSize:]), packet.Signature)
 	if err != nil {
 		return err
 	}
 	pkt.rawData = buf
 	pkt.hash = crypto.Keccak256(buf[versionPrefixSize:])
 	pkt.remoteID = fromID
-	switch pkt.ev = nodeEvent(sigdata[0]); pkt.ev {
+	switch pkt.ev = nodeEvent(packet.packetType); pkt.ev {
 	case pingPacket:
 		pkt.data = new(ping)
 	case pongPacket:
@@ -434,52 +434,9 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	case topicNodesPacket:
 		pkt.data = new(topicNodes)
 	default:
-		return fmt.Errorf("unknown packet type: %d", sigdata[0])
+		return fmt.Errorf("unknown packet type: %d", packet.packetType)
 	}
-	s := rlp.NewStream(bytes.NewReader(sigdata[1:]), 0)
+	s := rlp.NewStream(bytes.NewReader(packet.Data[1:]), 0)
 	err = s.Decode(pkt.data)
 	return err
-}
-
-// IsDiscoveryPacket returns nil error if a packet is a DiscoveryV5 KCOIN packet
-// it's a kind of 'bad and fast' code to make dropping non-kcoin connections as fast as possible
-func IsDiscoveryPacket(buffer []byte) error {
-	if len(buffer) < headSize+1 {
-		return errPacketTooSmall
-	}
-
-	prefix, _, sigdata := buffer[:versionPrefixSize], buffer[versionPrefixSize:headSize], buffer[headSize:]
-	if sigdata[0] < pingPacket || sigdata[0] > topicNodesPacket {
-		return errUnknownPacketType
-	}
-
-	if !bytes.Equal(prefix, versionPrefix) {
-		return errBadPrefix
-	}
-
-	// further "magic" numbers are from ping, topicRegister, topicQuery types memory model
-	// startIndex stands for a position in raw packet where we should find Topic data
-	var startIndex int
-	switch sigdata[0] {
-	case pingPacket:
-		if sigdata[1] == 235 {
-			// a correct ping without a Topic
-			return nil
-		}
-
-		startIndex = 47
-	case topicRegisterPacket:
-		startIndex = 4
-	case topicQueryPacket:
-		startIndex = 3
-	default:
-		return nil
-	}
-
-	endIndex := startIndex + len(protocol.ProtocolPrefixBytes)
-	if !bytes.HasPrefix(sigdata[startIndex:endIndex], protocol.ProtocolPrefixBytes) {
-		return errBadPrefix
-	}
-
-	return nil
 }

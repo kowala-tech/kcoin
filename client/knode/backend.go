@@ -111,7 +111,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
 
-	log.Info("Initialising Kowala protocol", "versions", protocol.ProtocolVersions, "network", config.NetworkId)
+	log.Info("Initialising Kowala protocol", "versions", protocol.Consts.Versions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
