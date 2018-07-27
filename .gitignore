@@ -20,31 +20,14 @@
 /test/e2e/logs
 godog.test
 
-# dashboard
-/client/dashboard/assets/node_modules
-/client/dashboard/assets/stats.json
-/client/dashboard/assets/public/bundle.js
-
 # truffle and npm
 /client/contracts/truffle/node_modules/
 /client/contracts/truffle/coverage/
 /client/contracts/truffle/build/contracts
 /client/contracts/truffle/coverage.json
 
-# go bindings
-/client/contracts/bindings/consensus/build/
-/client/contracts/bindings/consensus/gen_manager.go
-/client/contracts/bindings/consensus/gen_mtoken.go
-
-/client/contracts/bindings/consensus/testfiles/build/
-/client/contracts/bindings/consensus/testfiles/gen_compatible.go
-/client/contracts/bindings/consensus/testfiles/gen_incompatible.go
-
-/client/contracts/bindings/oracle/build/
-/client/contracts/bindings/oracle/gen_manager.go
-
-/client/contracts/bindings/ownership/build/
-/client/contracts/bindings/ownership/gen_multisig.go
+#drone
+nsqd.*
 
 # netstats
 /netstats/node_modules

@@ -31,6 +31,7 @@ pages:
     - 'Roadmap': 'project/roadmap.md'
   - Getting Started:
     - 'Overview': 'getting-started/index.md'
+    - 'Download KClient' : 'getting-started/download.md'
     - 'Join the Test Network' : 'getting-started/testnet.md'
     - 'Validator Registry': 'getting-started/consensus.md'
   - Glossary: 'glossary/index.md'
