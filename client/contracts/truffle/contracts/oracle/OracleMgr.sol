@@ -135,10 +135,11 @@ contract OracleMgr is Pausable {
         return oraclePool.length;
     }
 
-    function getOracleAtIndex(uint index) public view returns (address code, uint deposit) {
+    function getOracleAtIndex(uint index) public view returns (address code, uint deposit, bool price) {
         code = oraclePool[index];
         Oracle oracle = oracleRegistry[code];
         deposit = oracle.deposits[oracle.deposits.length - 1].amount;
+        price = oracle.hasSubmittedPrice;
     }
 
     function getNumSubmissions() public view returns (uint count) {

@@ -23,7 +23,7 @@ type system struct {
 	provider PriceProvider
 }
 
-func sys(state *state.StateDB, reader SystemVarsReader, provider PriceProvider) System {
+func Sys(state *state.StateDB, reader SystemVarsReader, provider PriceProvider) System {
 	return &system{
 		StateDB:          state,
 		SystemVarsReader: reader,

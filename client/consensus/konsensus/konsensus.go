@@ -36,7 +36,7 @@ func (ks *Konsensus) Author(header *types.Header) (common.Address, error) {
 
 func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
 	if !ks.fakeMode {
-		system := sys(state, ks.reader, ks.provider)
+		system := Sys(state, ks.reader, ks.provider)
 		if err := updateSystem(header.Number, header.Coinbase, system); err != nil {
 			return nil, err
 		}
