@@ -26,7 +26,7 @@ godog.test
 /client/contracts/truffle/build/contracts
 /client/contracts/truffle/coverage.json
 
-#drone
+# drone
 nsqd.*
 
 # netstats
@@ -47,6 +47,11 @@ wallet-app/.yarn_cache/*
 !wallet-app/.yarn_cache/.gitkeep
 wallet-app/node_modules/
 wallet-app/yarn-error.log
+
+# wallet tools (myetherwallet) 
+wallet-tools/dist
+wallet-tools/node_modules
+wallet-tools/deploy
 
 # Docs
 docs/site

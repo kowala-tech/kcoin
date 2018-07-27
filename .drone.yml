@@ -200,6 +200,19 @@ pipeline:
       branch: [dev, master]
       event: [push, tag]
 
+  docker_wallet_tools:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/wallet-tools
+    dockerfile: wallet-tools/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
   build_artifacts:
     group: build_artifacts
     image: kowalatech/go:1.0.11
