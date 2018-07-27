@@ -3,46 +3,25 @@
 /* eslint consistent-return: 0 */
 /* eslint-disable max-len */
 
+process.env.NODE_ENV = 'test';
+
 require('chai')
   .use(require('chai-as-promised'))
+  .use(require('chai-bignumber')(web3.BigNumber))
   .should();
+
+const { Contracts } = require('zos-lib');
 
 const KNS = artifacts.require('KNSRegistry.sol');
 const KNSV1 = artifacts.require('KNSRegistryV1.sol');
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
 const PublicResolver = artifacts.require('PublicResolver.sol');
 const ValidatorMgr = artifacts.require('ValidatorMgr.sol');
-// const DummyImplementation = artifacts.require('DummyImplementation');
-const UpgradeabilityProxy = artifacts.require('UpgradeabilityProxyFactory.sol');
-const AdminUpgradeabilityProxy = artifacts.require('AdminUpgradeabilityProxy.sol');
+const UpgradeabilityProxy = Contracts.getFromNodeModules('zos-lib', 'UpgradeabilityProxyFactory');
+const AdminUpgradeabilityProxy = Contracts.getFromNodeModules('zos-lib', 'AdminUpgradeabilityProxy');
 const namehash = require('eth-ens-namehash');
 
 contract('Proxy Functionality', ([_, admin, owner, anotherAccount]) => {
-  // before(async () => {
-  //   this.implementation_v0 = (await KNS.new()).address;
-  // });
-
-  // beforeEach(async () => {
-  //   this.proxy = await AdminUpgradeabilityProxy.new(this.implementation_v0, { from: admin });
-  //   this.proxyAddress = this.proxy.address;
-  // });
-
-  // describe('implementation', () => {
-  //   it('returns the current implementation address', async () => {
-  //     const implementation = await this.proxy.implementation({ from: admin });
-
-  //     implementation.should.be.equal(this.implementation_v0);
-  //   });
-
-  //   it('delegates to the implementation', async () => {
-  //     const dummy = new KNS(this.proxyAddress);
-  //     await dummy.initialize(admin);
-  //     console.log(await dummy.owner(0));
-  //     console.log(admin);
-  //     // const value = await dummy.get();
-  //     // value.should.be.true;
-  //   });
-  // });
   it('should access contracts via proxy', async () => {
     const proxyFactory = await UpgradeabilityProxy.new();
 

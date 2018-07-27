@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
 import "./KNS.sol";
-import "../proxy/Initializable.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
 
 /**
  * A registrar that allocates subdomains to the first person to claim them.
