@@ -152,7 +152,7 @@
           <a href="https://ledger.zendesk.com/hc/en-us/articles/115005200009-How-to-use-Kowala Wallet Tools-with-Ledger"
              target="_blank"
              rel="noopener noreferrer">
-          How to use Kowala Wallet Tools with your Ledger Hardware Wallet
+          How to use your Ledger Hardware Wallet (FIXME)
           </a>
         </li>
         <li class="u__protip">
@@ -175,32 +175,8 @@
       </div>
       <div role="alert" ng-show="ledgerError">
         <p class="strong text-danger">
-          {{ledgerErrorString}}
+          Something went wrong connecting to your device. Please make sure your Ledger device is connected, that you've entered your PIN, and that you've opened the kUSD app. You'll also need to make sure that 'Browser support' is enabled in the kUSD app settings.
         </p>
-        <ul>
-          <li ng-hide="isSSL"
-              translate="ADD_Ledger_0a" >
-                Please use Kowala Wallet Tools on a secure (SSL / HTTPS) connection to connect.
-          </li>
-          <li>
-            <span translate="ADD_Ledger_2" ng-if="ajaxReq.type=='ETH'||ajaxReq.type=='ETC'||ajaxReq.type=='ROPSTEN ETH'||ajaxReq.type=='RINKEBY ETH'||ajaxReq.type=='KOVAN ETH'">
-              Open the Kowala application (or a contract application)
-            </span>
-            <span translate="ADD_Ledger_2_Exp" ng-if="ajaxReq.type=='EXP'">
-              Open the Expanse application (or a contract application)
-            </span>
-            <span translate="ADD_Ledger_2_Ubq" ng-if="ajaxReq.type=='UBQ'">
-              Open the Ubiq application (or a contract application)
-            </span>
-          </li>
-          <li>
-            <a href="https://myetherwallet.github.io/knowledge-base/hardware-wallets/ledger-hardware-wallet-unable-to-connect-on-myetherwallet.html"
-             target="_blank"
-             rel="noopener noreferrer">
-                Still not working? More Troubleshooting Tips
-            </a>
-          </li>
-        </ul>
       </div>
     </div>
     <!-- / Ledger-->

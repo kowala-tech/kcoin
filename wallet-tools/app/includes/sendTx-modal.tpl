@@ -137,14 +137,6 @@
         </button>
       </div>
 
-      <p class="small text-center" style="padding: 0px 5px;">
-        <a href="https://myetherwallet.github.io/knowledge-base/transactions/transactions-not-showing-or-pending.html" target="_blank" ref="noopener noreferrer">
-          The network is a bit overloaded. If you're having issues with TXs, please read me.
-        </a>
-      </p>
-
-
-
     </section>
   </section>
 </article>

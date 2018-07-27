@@ -328,6 +328,7 @@ var decryptWalletCtrl = function($scope, $sce, walletService) {
         else {
             $scope.ledgerError = true;
             $scope.ledgerErrorString = error;
+			console.log("Ledger error", error);
             $scope.$apply();
         }
     }

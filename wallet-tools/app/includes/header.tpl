@@ -183,7 +183,7 @@
       <li class="nav-item help">
         <a href="https://myetherwallet.github.io/knowledge-base/" target="_blank" rel="noopener noreferrer">
           <span translate="NAV_Help">
-            Help
+            Help (FIXME:guide)
           </span>
         </a>
       </li>
