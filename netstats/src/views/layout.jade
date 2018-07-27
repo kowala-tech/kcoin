@@ -6,39 +6,36 @@ html(ng-app="netStatsApp")
     title Kowala - kUSD TESTNET
     style(type="text/css") [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak { display: none !important; }
     link(rel="stylesheet", href="https://fonts.googleapis.com/css?family=Poppins:300,400,500")
-    link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css')
-    link(rel='stylesheet', href='/css/netstats.min.css')
+    link(rel="stylesheet", href="https://cdn.kowala.tech/styles/kowala.css")
   body
-    section#nav.container-fluid
-      nav.navbar(ng-controller='NavCtrl')
-        .navbar-header
-          button.navbar-toggle(type='button', data-toggle='collapse', data-target='#Navbar')
-            i.fa.fa-bars
-          a.navbar-brand(href="/")
-            img(src="/kusd-testnet.svg" height="25")
-        #Navbar.collapse.navbar-collapse
-          ul.navbar-nav.nav.navbar-right
-            li
-              a(href="https://explorer.zygote.kowala.tech", target="_blank") Blockchain Explorer
-            li
-              a(href="https://faucet.zygote.kowala.tech", target="_blank") Faucet
-            li
-              a(href="https://docs.kowala.tech", target="_blank") kCoin Docs
-            li
-              a(href="https://www.kowala.tech", target="_blank") Kowala's Website
-            li
-              a(href="https://github.com/kowala-tech/kcoin", target="_blank")
-                i.fa.fa-github
-            li
-              a(href="https://twitter.com/KowalaTech", target="_blank")
-                i.fa.fa-twitter
-            li
-              a(href="https://www.facebook.com/kowalatech/", target="_blank")
-                i.fa.fa-facebook
-            li
-              a(href="https://t.me/kowalaofficial", target="_blank")
-                i.fa.fa-telegram
-    section#content.container-fluid
+    header
+      nav.container
+        .masthead
+          .title
+            a(href="https://www.kowala.tech")
+              img(src="https://cdn.kowala.tech/images/kowala/kowala-white.svg" title="Kowala")
+          .menu
+            ul
+              li
+                a(href="https://explorer.zygote.kowala.tech" rel="noopener" target="_blank") BLOCK EXPLORER
+              li
+                a(href="https://faucet.zygote.kowala.tech" rel="noopener" target="_blank") GET TEST COINS
+              li
+                a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION
+              li
+                a(href="https://www.kowala.tech" rel="noopener" target="_blank") KOWALA'S WEBSITE
+              li
+                a(href="https://t.me/kowalaofficial" rel="noopener" target="_blank")
+                  .icon.i-telegram
+                a(href="https://twitter.com/KowalaTech" rel="noopener" target="_blank")
+                  .icon.i-twitter
+                a(href="https://www.facebook.com/kowalatech/" rel="noopener" target="_blank")
+                  .icon.i-facebook
+                a(href="https://www.linkedin.com/company/kowala" rel="noopener" target="_blank")
+                  .icon.i-linked-in
+                a(href="https://github.com/kowala-tech" rel="noopener" target="_blank")
+                  .icon.i-github
+    main
       block content
 
     script(src="/js/netstats.min.js")

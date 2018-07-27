@@ -27,8 +27,6 @@ var vendor = [
 ];
 
 var styles = [
-	'bootstrap.css',
-	'minimal-icons-embedded.css',
 	'toastr.min.css',
 	'style.css'
 ];

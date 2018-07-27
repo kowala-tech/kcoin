@@ -2,145 +2,91 @@
 extends ./layout.jade
 
 block content
-  div.container-fluid.full(ng-controller='StatsCtrl')
-    div.row
-      div.row(ng-cloak)
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title last block
-            span.big-details {{'#'}}{{ bestBlock | number}}
+  .grid-container(ng-controller='StatsCtrl')
+    .grid-x.grid-margin-x(ng-cloak)
+      .cell.small-3
+        .title Last Block
+        .value {{'#'}}{{ bestBlock | number}}
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title since last block
-            span.big-details {{ lastBlock | blockTimeFilter }}
+      .cell.small-3
+        .title Time Since Last Block
+        .value {{ lastBlock | blockTimeFilter }}
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title avg block time
-            span.big-details {{ avgBlockTime | avgTimeFilter }}
+      .cell.small-3
+        .title Average Block Time
+        .value {{ avgBlockTime | avgTimeFilter }}
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title active nodes
-            span.big-details {{nodesActive}}/{{nodesTotal}}
+      .cell.small-3
+        .title Active Nodes
+        .value {{nodesActive}}/{{nodesTotal}}
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title gas price
-            span.big-details {{ bestStats.gasPrice.toString() | gasPriceFilter }}
+      .cell.small-3
+        .title Gas Price
+        .value {{ bestStats.gasPrice.toString() | gasPriceFilter }}
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title gas limit
-            span.big-details {{ bestStats.block.gasLimit | number }}
+      .cell.small-3
+        .title Gas Limit
+        .value {{ bestStats.block.gasLimit | number }}
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title page latency
-            span.big-details {{latency}} ms
+      .cell.small-3
+        .title Page Latency
+        .value {{latency}} ms
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title validators
-            span.big-details {{ bestStats.block.validatorCount | number }}/{{ bestStats.block.maxValidators | number }}
+      .cell.small-3
+        .title Validators
+        .value {{ bestStats.block.validatorCount | number }}/{{ bestStats.block.maxValidators | number }}
 
-      div.row(ng-cloak)
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title oracles
-            span.big-details {{ bestStats.block.oracleCount | number }}
+      .cell.small-3
+        .title Oracles
+        .value {{ bestStats.block.oracleCount | number }}
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title min. validator deposit
-            span.big-details {{ bestStats.block.minDeposit | gasPriceFilter }}
+      .cell.small-3
+        .title Min. Validator Deposit
+        .value {{ bestStats.block.minDeposit | gasPriceFilter }}
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title minted reward
-            span.big-details {{ bestStats.block.mintedReward | gasPriceFilter }}
+      .cell.small-3
+        .title Minted Reward
+        .value {{ bestStats.block.mintedReward | gasPriceFilter }}
 
-        div.col-sm-6.col-md-3.stat-holder
-          div.big-info
-            span.small-title stability fee
-            span.big-details {{ bestStats.block.stabilityFee | gasPriceFilter }}
+      .cell.small-3
+        .title Stability Fee
+        .value {{ bestStats.block.stabilityFee | gasPriceFilter }}
 
-      div.row(ng-cloak)
-        div.col-lg-3.col-sm-6.stat-holder
-          div.big-info.chart
-            //- i.icon-gasprice
-            span.small-title gas spending
-            sparkchart.big-details.spark-gasspending(data="{{gasSpending.join(',')}}")
-        div.col-lg-3.col-sm-6.stat-holder
-          div.big-info.chart
-            //- i.icon-uncle
-            span.small-title transactions
-            sparkchart.big-details.spark-transactions(data="{{transactionDensity.join(',')}}")
-        div.col-lg-3.col-sm-6.stat-holder
-          div.big-info.chart(class="{{ avgBlockTime | avgTimeClass }}")
-            span.small-title block time
-            sparkchart.big-details.spark-blocktimes(data="{{lastBlocksTime.join(',')}}", tooltipsuffix="s")
-        div.col-lg-3.col-sm-6.stat-holder.xpull-right
-          div.big-info.chart.xdouble-chart(class="{{ blockPropagationAvg | propagationAvgTimeClass : true }}")
-            span.small-title Currency market price
-            sparkchart.big-details.spark-currency-price(data="{{currencyPrice.join(',')}}", tooltipprefix="$")
-    div.row(style="margin-top:10px;")
-      div.row
-        div.table-responsive
-          table.table(ng-cloak)
-            thead
-              tr
-                th.th-nodecheck
-                  i.icon-check-o(data-toggle="tooltip", data-placement="top", title="Pin nodes to display first", ng-click="orderTable(['-stats.block.number', 'stats.block.propagation'], false)")
-                th.th-nodename
-                  i.icon-node(data-toggle="tooltip", data-placement="top", title="Node name", ng-click="orderTable(['info.name'], false)")
-                th.th-nodetype
-                  i.icon-laptop(data-toggle="tooltip", data-placement="top", title="Node type", ng-click="orderTable(['info.node'], false)")
-                th.th-latency
-                  i.icon-clock(data-toggle="tooltip", data-placement="top", title="Node latency", ng-click="orderTable(['stats.latency'], false)")
-                th
-                  i.icon-group(data-toggle="tooltip", data-placement="top", title="Peers", ng-click="orderTable(['-stats.peers'], false)")
-                th
-                  i.icon-network(data-toggle="tooltip", data-placement="top", title="Pending transactions", ng-click="orderTable(['-stats.pending'], false)")
-                th
-                  i.icon-block(data-toggle="tooltip", data-placement="top", title="Last block", ng-click="orderTable(['-stats.block.number', 'stats.block.propagation'], false)")
-                th.th-blockhash &nbsp;
-                th
-                  i.icon-check-o(data-toggle="tooltip", data-placement="top", title="Block transactions", ng-click="orderTable(['-stats.block.transactions.length'], false)")
-                th.th-blocktime
-                  i.icon-time(data-toggle="tooltip", data-placement="top", title="Last block time", ng-click="orderTable(['-stats.block.received'], false)")
-                th.th-peerPropagationTime
-                  i.icon-gas(data-toggle="tooltip", data-placement="top", title="Propagation time", ng-click="orderTable(['-stats.block.number', 'stats.block.propagation'], false)")
-                th.th-peerPropagationAvg
-                  i.icon-gas(data-toggle="tooltip", data-placement="top", title="Average propagation time", ng-click="orderTable(['stats.propagationAvg'], false)")
-                th
-                  i.icon-bulb(data-toggle="tooltip", data-placement="top", title="Up-time", ng-click="orderTable(['-stats.uptime'], false)")
-            tbody(ng-cloak)
-              tr(ng-repeat='node in nodes | orderBy:predicate track by node.id', class="{{ node.stats | mainClass : bestBlock }}", id="node_{{node.id}}")
-                td.td-nodecheck
-                  i(ng-click="pinNode(node.id)", class="{{ node.pinned | nodePinClass }}", data-toggle="tooltip", data-placement="right", data-original-title="Click to {{ node.pinned ? 'un' : '' }}pin")
-                td.nodeInfo(rel="{{node.id}}")
-                  span.small(data-toggle="tooltip", data-placement="top", data-html="true", data-original-title="{{node | geoTooltip}}") {{node.info.name}}
-                  //- span.small &nbsp;({{node.info.ip}})
-                  a.small(href="https://github.com/ethereum/wiki/wiki/Network-Status#updating", target="_blank", data-toggle="tooltip", data-placement="top", data-html="true", data-original-title="Netstats client needs update.<br>Click this icon for instructions.", class="{{ node.info | nodeClientClass : currentApiVersion }}")
-                    i.icon-warning-o
-                td
-                  div.small(ng-bind-html="node.info.node | nodeVersion")
-                td(class="{{ node.readable.latencyClass }}")
-                  span.small {{ node.readable.latency }}
-                td(class="{{ node.stats.peers | peerClass : node.stats.active }}", style="padding-left: 11px;") {{node.stats.peers}}
-                td(style="padding-left: 15px;") {{node.stats.pending}}
-                td(class="{{ node.stats | blockClass : bestBlock }}")
-                  span(class="{{ node.readable.forkMessage ? node.readable.forkClass : '' }}") {{'#'}}{{ node.stats.block.number | number }}
-                  //- a.small(data-toggle="tooltip", data-placement="top", data-html="true", data-original-title="{{ node.readable.forkMessage }}", class="{{ node.readable.forkClass }}")
-                    i.icon-warning-o
-                td(class="{{ node.stats | blockClass : bestBlock }}")
-                  span.small {{node.stats.block.hash | hashFilter}}
-                td(class="{{ node.stats | blockClass : bestBlock }}")
-                td(style="padding-left: 14px;") {{node.stats.block.transactions.length || 0}}
-                td(class="{{ node.stats.block.received | timeClass : node.stats.active }}") {{node.stats.block.received | blockTimeFilter }}
-                td(class="{{ node.stats | propagationTimeClass : bestBlock }}")
-                  div.propagationBox
-                  span {{node.stats.block.propagation | blockPropagationFilter}}
-                td(class="{{ node.stats.uptime | upTimeClass : node.stats.active }}") {{ node.stats.uptime | upTimeFilter }}
+    .grid-x.grid-margin-x(ng-cloak)
+      .cell.small-3
+        .chart
+          .title Gas Spending
+          sparkchart.spark-gasspending(data="{{gasSpending.join(',')}}")
+      .cell.small-3
+        .chart
+          .title Transactions
+          sparkchart.spark-transactions(data="{{transactionDensity.join(',')}}")
+      .cell.small-3
+        .chart(class="{{ avgBlockTime | avgTimeClass }}")
+          .title Block Time
+          sparkchart.spark-blocktimes(data="{{lastBlocksTime.join(',')}}", tooltipsuffix="s")
+      .cell.small-3
+        .chart.xdouble-chart(class="{{ blockPropagationAvg | propagationAvgTimeClass : true }}")
+          .title Currency Market Price
+          sparkchart.spark-currency-price(data="{{currencyPrice.join(',')}}", tooltipprefix="$")
+
+    .grid-x.grid-margin-x(ng-cloak)
+        table
+          thead
+            tr
+              th(ng-click="orderTable(['info.name'], false)") Node
+              th(ng-click="orderTable(['stats.latency'], false)") Latency
+              th(ng-click="orderTable(['-stats.peers'], false)") Peers
+              th(ng-click="orderTable(['-stats.block.number', 'stats.block.propagation'], false)") Last Block
+              th(ng-click="orderTable(['-stats.block.received'], false)") Last Block Time
+              th(ng-click="orderTable(['stats.propagationAvg'], false)") Avg. Propagation Time
+              th(ng-click="orderTable(['-stats.uptime'], false)") Up Time
+          tbody
+            tr(ng-repeat='node in nodes | orderBy:predicate track by node.id')
+              td {{node.info.name}} {{node.info.node | nodeVersion}}
+              td {{ node.readable.latency }}
+              td {{node.stats.peers}}
+              td {{'#'}}{{ node.stats.block.number | number }}
+              td {{node.stats.block.received | blockTimeFilter }}
+              td {{node.stats.block.propagation | blockPropagationFilter}}
+              td {{ node.stats.uptime | upTimeFilter }}
