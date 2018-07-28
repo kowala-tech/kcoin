@@ -584,7 +584,7 @@ func (s *Service) assembleStats(block *types.Block, state *state.StateDB) (*bloc
 		return nil, err
 	}
 
-	maxOracles, err := s.oracleMgr.MaxOracles()
+	maxOracles, err := s.oracleMgr.MaxNumOracles()
 	if err != nil {
 		return nil, err
 	}

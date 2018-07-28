@@ -44,6 +44,7 @@ var (
 
 type Options struct {
 	Network           string
+	Number 			  uint64
 	SystemVars        *SystemVarsOpts
 	Governance        *GovernanceOpts
 	Consensus         *ConsensusOpts
@@ -171,6 +172,7 @@ type validPrefundedAccount struct {
 
 type validGenesisOptions struct {
 	network           string
+	number 			 uint64
 	consensusEngine   string
 	prefundedAccounts []*validPrefundedAccount
 	multiSig          *validMultiSigOpts
@@ -266,6 +268,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	return &validGenesisOptions{
 		network:         network,
+		number: options.Number,
 		consensusEngine: consensusEngine,
 		sysvars: &validSystemVarsOpts{
 			initialPrice:  initialPrice,

@@ -1,11 +1,13 @@
 package oracle
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
+	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -17,10 +19,13 @@ var mapOracleMgrToAddr = map[uint64]common.Address{
 }
 
 type Manager interface {
+	RegisterOracle(user *ecdsa.PrivateKey) (*types.Transaction, error)
+	SubmitPrice(user *ecdsa.PrivateKey, price *big.Int) (*types.Transaction, error)
 	Submissions() ([]common.Address, error)
 	AveragePrice() (*big.Int, error)
 	GetOracleCount() (*big.Int, error)
-	MaxOracles() (*big.Int, error)
+	GetOracleAtIndex(*big.Int) (common.Address, *big.Int, bool, error)
+	MaxNumOracles() (*big.Int, error)
 	Address() common.Address
 }
 
@@ -70,4 +75,17 @@ func (mgr *manager) Submissions() ([]common.Address, error) {
 	}
 
 	return submissions, nil
+}
+
+func (mgr *manager) RegisterOracle(user *ecdsa.PrivateKey) (*types.Transaction, error) {
+	return mgr.OracleMgrSession.Contract.RegisterOracle(bind.NewKeyedTransactor(user))
+}
+
+func (mgr *manager) SubmitPrice(user *ecdsa.PrivateKey, price *big.Int) (*types.Transaction, error) {
+	return mgr.OracleMgrSession.Contract.SubmitPrice(bind.NewKeyedTransactor(user), price)
+}
+
+func (mgr *manager) GetOracleAtIndex(index *big.Int) (common.Address, *big.Int, bool, error) {
+	values, err := mgr.OracleMgrSession.GetOracleAtIndex(index)
+	return values.Code, values.Deposit, values.Price, err
 }

@@ -6,6 +6,7 @@ var Networks = map[string]map[string]Options{
 	knode.KUSD: {
 		MainNetwork: Options{
 			Network:   MainNetwork,
+			Number : 0,
 			ExtraData: "Kowala's first block",
 			SystemVars: &SystemVarsOpts{
 				InitialPrice: 1,
@@ -74,6 +75,7 @@ var Networks = map[string]map[string]Options{
 		},
 		TestNetwork: Options{
 			Network:   TestNetwork,
+			Number: 0,
 			ExtraData: "Kowala's first block",
 			SystemVars: &SystemVarsOpts{
 				InitialPrice: 1,

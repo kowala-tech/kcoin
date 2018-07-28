@@ -37,7 +37,7 @@ func (sys *system) SetPrice(price *big.Int) error {
 	// update current price
 	sys.SetState(sys.Address(), priceIdx, common.BytesToHash(price.Bytes()))
 	// reset average price
-	sys.SetState(sys.Address(), avgPriceIdx, common.BytesToHash(common.Big0.Bytes()))
+	sys.SetState(sys.provider.Address(), avgPriceIdx, common.BytesToHash(common.Big0.Bytes()))
 	// reset oracles state - hasSubmittedPrice
 	keccak := sha3.NewKeccak256()
 	participants, err := sys.provider.Submissions()
@@ -53,6 +53,9 @@ func (sys *system) SetPrice(price *big.Int) error {
 
 		// reset hasSubmittedPrice per submission
 		sys.SetState(sys.provider.Address(), key, common.BytesToHash([]byte{0}))
+
+		// reset submissions entry
+		sys.SetState(sys.provider.Address(), key, common.BytesToHash([]byte{}))
 	}
 	return nil
 }

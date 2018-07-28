@@ -12,6 +12,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/math"
+	"github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
@@ -64,6 +65,11 @@ func NewSimulatedBackend(alloc core.GenesisAlloc) *SimulatedBackend {
 	}
 	backend.rollback()
 	return backend
+}
+
+func (b *SimulatedBackend) WithEngine(engine consensus.Engine) {
+	blockchain, _ := core.NewBlockChain(b.database, nil, b.config, engine, vm.Config{})
+	b.BlockChain = blockchain
 }
 
 // Commit imports all the pending transactions as a single block and starts a

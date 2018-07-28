@@ -13,17 +13,18 @@ import (
 //go:generate ../../../build/bin/abigen -abi build/SystemVars.abi -bin build/SystemVars.bin -pkg sysvars -type SystemVars -out ./gen_system.go
 
 var mapSystemToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x17C56D5aC0cddFd63aC860237197827cB4639CDA"),
 }
 
 type System interface {
-	Address() common.Address
 	CurrencySupply() (*big.Int, error)
+	PrevCurrencyPrice() (*big.Int, error)
 	CurrencyPrice() (*big.Int, error)
 	MintedAmount() (*big.Int, error)
 	MintedReward() (*big.Int, error)
 	OracleDeduction(*big.Int) (*big.Int, error)
 	OracleReward() (*big.Int, error)
+	Address() common.Address
 }
 
 type system struct {

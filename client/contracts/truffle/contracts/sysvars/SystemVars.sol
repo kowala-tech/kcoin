@@ -4,14 +4,14 @@ import "openzeppelin-solidity/contracts/math/Math.sol";
 
 contract SystemVars {
     
-    uint constant public initialMintedAmount = 42 ether;
-    uint constant public initialCap  = 82 ether;
-    uint constant public stabilizedPrice = 1 ether;
-    uint constant public adjustmentFactor = 10000;
-    uint constant public lowSupplyMetric = 1000000 ether;
-    uint constant public maxUnderNormalConditions = 1e12;
-    uint constant public defaultOracleReward = 1 ether;
-    uint constant public oracleDeductionFraction = 4;
+    uint constant initialMintedAmount = 42 ether;
+    uint constant initialCap  = 82 ether;
+    uint constant stabilizedPrice = 1 ether;
+    uint constant adjustmentFactor = 10000;
+    uint constant lowSupplyMetric = 1000000 ether;
+    uint constant maxUnderNormalConditions = 1e12;
+    uint constant defaultOracleReward = 1 ether;
+    uint constant oracleDeductionFraction = 4;
 
     uint public prevCurrencyPrice;
     uint public currencyPrice;
