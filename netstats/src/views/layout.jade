@@ -7,12 +7,26 @@ html(ng-app="netStatsApp")
     style(type="text/css") [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak { display: none !important; }
     link(rel="stylesheet", href="https://fonts.googleapis.com/css?family=Poppins:300,400,500")
     link(rel="stylesheet", href="https://cdn.kowala.tech/styles/kowala.css")
-  body
+    link(rel='stylesheet', href='/css/netstats.min.css')
+  body.light-blue-background.light-#fff-text
+    #mobile-menu(data-reveal="")
+      img(src="https://cdn.kowala.tech/images/kowala/kowala-white.svg" title="Kowala")
+      ul
+        li
+          a(href="https://explorer.zygote.kowala.tech" rel="noopener" target="_blank") BLOCK EXPLORER
+        li
+          a(href="https://faucet.zygote.kowala.tech" rel="noopener" target="_blank") GET TEST COINS
+        li
+          a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION
+        li
+          a(href="https://www.kowala.tech" rel="noopener" target="_blank") KOWALA'S WEBSITE
     header
-      nav.container
-        .masthead
+      .burger(data-toggle="mobile-menu")
+        button
+      .grid-container
+        nav
           .title
-            a(href="https://www.kowala.tech")
+            a(href="/")
               img(src="https://cdn.kowala.tech/images/kowala/kowala-white.svg" title="Kowala")
           .menu
             ul
@@ -36,6 +50,8 @@ html(ng-app="netStatsApp")
                 a(href="https://github.com/kowala-tech" rel="noopener" target="_blank")
                   .icon.i-github
     main
-      block content
+      .container
+        block content
+
 
     script(src="/js/netstats.min.js")

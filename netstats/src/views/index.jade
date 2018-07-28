@@ -4,73 +4,88 @@ extends ./layout.jade
 block content
   .grid-container(ng-controller='StatsCtrl')
     .grid-x.grid-margin-x(ng-cloak)
-      .cell.small-3
-        .title Last Block
-        .value {{'#'}}{{ bestBlock | number}}
+      .cell.large-12
+        h4 Blockchain Metrics
+      .cell.large-3
+        h5 Last Block
+        h3 {{ lastBlock | blockTimeFilter }}
 
-      .cell.small-3
-        .title Time Since Last Block
-        .value {{ lastBlock | blockTimeFilter }}
+      .cell.large-3
+        h5 Last Block #
+        h3 {{ bestBlock | number}}
 
-      .cell.small-3
-        .title Average Block Time
-        .value {{ avgBlockTime | avgTimeFilter }}
+      .cell.large-3
+        h5 Avg. Block Time
+        h3 {{ avgBlockTime | avgTimeFilter }}
 
-      .cell.small-3
-        .title Active Nodes
-        .value {{nodesActive}}/{{nodesTotal}}
+      .cell.large-3
+        h5 Active Nodes
+        h3 {{nodesActive}}/{{nodesTotal}}
 
-      .cell.small-3
-        .title Gas Price
-        .value {{ bestStats.gasPrice.toString() | gasPriceFilter }}
+      .cell.large-3
+        h5 Gas Price
+        h3 {{ bestStats.gasPrice.toString() | priceFilter }}
 
-      .cell.small-3
-        .title Gas Limit
-        .value {{ bestStats.block.gasLimit | number }}
+      .cell.large-3
+        h5 Gas Limit
+        h3 {{ bestStats.block.gasLimit || 0 | number }}
 
-      .cell.small-3
-        .title Page Latency
-        .value {{latency}} ms
+      .cell.large-3
+        h5 Stability Fee
+        h3 {{ bestStats.block.stabilityFee | priceFilter }}
 
-      .cell.small-3
-        .title Validators
-        .value {{ bestStats.block.validatorCount | number }}/{{ bestStats.block.maxValidators | number }}
+      .cell.large-3
+        h5 Page Latency
+        h3 {{ latency }} {{"ms"}}
 
-      .cell.small-3
-        .title Oracles
-        .value {{ bestStats.block.oracleCount | number }}
-
-      .cell.small-3
-        .title Min. Validator Deposit
-        .value {{ bestStats.block.minDeposit | gasPriceFilter }}
-
-      .cell.small-3
-        .title Minted Reward
-        .value {{ bestStats.block.mintedReward | gasPriceFilter }}
-
-      .cell.small-3
-        .title Stability Fee
-        .value {{ bestStats.block.stabilityFee | gasPriceFilter }}
 
     .grid-x.grid-margin-x(ng-cloak)
-      .cell.small-3
-        .chart
-          .title Gas Spending
-          sparkchart.spark-gasspending(data="{{gasSpending.join(',')}}")
-      .cell.small-3
-        .chart
-          .title Transactions
-          sparkchart.spark-transactions(data="{{transactionDensity.join(',')}}")
-      .cell.small-3
+      .cell.large-4
         .chart(class="{{ avgBlockTime | avgTimeClass }}")
-          .title Block Time
+          h5 Block Time
           sparkchart.spark-blocktimes(data="{{lastBlocksTime.join(',')}}", tooltipsuffix="s")
-      .cell.small-3
+
+      .cell.large-4
+        .chart
+          h5 Transactions
+          sparkchart.spark-transactions(data="{{transactionDensity.join(',')}}")
+
+      .cell.large-4
+        .chart
+          h5 Gas Spending
+          sparkchart.spark-gasspending(data="{{gasSpending.join(',')}}")
+
+
+    .grid-x.grid-margin-x(ng-cloak)
+      .cell.large-12
+        h4 Validator Metrics
+
+      .cell.large-3
+        h5 Validators
+        h3 {{ bestStats.block.validatorCount || 0 | number }}/{{ bestStats.block.maxValidators || 0 | number }}
+
+      .cell.large-3
+        h5 Min. Validator Deposit
+        h3 {{ bestStats.block.minDeposit | priceFilter }}
+
+      .cell.large-3
+        h5 Minted Reward
+        h3 {{ bestStats.block.mintedReward | priceFilter }}
+
+      .cell.large-3
+        h5 Oracles
+        h3 {{ bestStats.block.oracleCount || 0 | number }}
+
+    .grid-x.grid-margin-x(ng-cloak)
+      .cell.large-12
         .chart.xdouble-chart(class="{{ blockPropagationAvg | propagationAvgTimeClass : true }}")
-          .title Currency Market Price
+          h5 Currency Market Price
           sparkchart.spark-currency-price(data="{{currencyPrice.join(',')}}", tooltipprefix="$")
 
     .grid-x.grid-margin-x(ng-cloak)
+      .cell.large-12
+        h4 Nodes
+      .cell.large-12
         table
           thead
             tr

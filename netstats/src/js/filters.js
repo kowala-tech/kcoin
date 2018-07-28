@@ -86,7 +86,7 @@ angular
             : "text-danger";
     };
   })
-  .filter("gasPriceFilter", [
+  .filter("priceFilter", [
     "$filter",
     function(filter) {
       var numberFilter = filter("number");
