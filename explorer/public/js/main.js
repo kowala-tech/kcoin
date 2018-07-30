@@ -188,7 +188,7 @@ BlocksApp.config(['$stateProvider', '$urlRouterProvider', function($stateProvide
                         files: [
                              '/js/controllers/TxController.js',
                              '/js/units.js',
-                            '/plugins/bignumber.js'
+                             '/plugins/bignumber.js'
                         ]
                     });
                 }]
