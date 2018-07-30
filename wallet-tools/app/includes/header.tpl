@@ -19,57 +19,25 @@
 <meta name="twitter:description" content="Free, open-source, client-side Kowala wallet. Enabling you to interact with the blockchain easily & securely.">
 <meta name="robots" content="index,follow">
 <meta name="googlebot" content="index,follow">
-<meta name="google-site-verification" content="IpChQ00NYUQuNs_7Xs6xlnSdzalOlTUYbBsr8f7OpvM" />
-<link href="images/fav/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180">
-<link href="images/fav/favicon-32x32.png" rel="icon" type="image/png" sizes="32x32">
-<link href="images/fav/favicon-16x16.png" rel="icon" type="image/png" sizes="16x16">
-<link href="images/fav/manifest.json" rel="manifest">
-<link href="images/fav/safari-pinned-tab.svg" rel="mask-icon" color="#2f99b0">
-<link href="images/fav/favicon.ico" rel="shortcut icon">
+<link rel="apple-touch-icon" sizes="180x180" href="https://cdn.kowala.tech/images/meta/apple-touch-icon.png?v=69Pwvmj0bL">
+<link rel="icon" type="image/png" sizes="32x32" href="https://cdn.kowala.tech/images/meta/favicon-32x32.png?v=69Pwvmj0bL">
+<link rel="icon" type="image/png" sizes="16x16" href="https://cdn.kowala.tech/images/meta/favicon-16x16.png?v=69Pwvmj0bL">
+<link rel="manifest" href="https://cdn.kowala.tech/images/meta/site.webmanifest?v=69Pwvmj0bL">
+<link rel="mask-icon" href="ihttps://cdn.kowala.tech/images/meta/safari-pinned-tab.svg?v=69Pwvmj0bL" color="#5bbad5">
+<link rel="shortcut icon" href="https://cdn.kowala.tech/images/meta/favicon.ico?v=69Pwvmj0bL">
 <meta name="apple-mobile-web-app-title" content="Kowala Wallet Tools &middot; Your Key to Kowala">
 <meta name="application-name" content="Kowala Wallet Tools">
-<meta name="msapplication-config" content="images/fav/browserconfig.xml">
+<meta name="msapplication-config" content="https://cdn.kowala.tech/images/meta/browserconfig.xml">
 <meta name="theme-color" content="#1d6986">
 <meta name="apple-mobile-web-app-status-bar-style" content="#1d6986">
-<meta property="og:url" content="https://www.myetherwallet.com" />
-<meta property="og:title" content="Kowala Wallet Tools  &middot; Your Key to Kowala" />
+<meta property="og:url" content="https://wallet-tools.zygote.kowala.tech" />
+<meta property="og:title" content="Kowala Wallet Tools  &middot; Your Key to Kcoins" />
 <meta property="og:type" content="website">
-<meta property="og:image" content="/images/myetherwallet-logo-banner.png" />
-<meta property="og:image" content="/images/myetherwallet-logo.png" />
-<meta property="og:image" content="/images/myetherwallet-logo-square.png" />
-<meta property="og:image" content="/images/myetherwallet-banner-fun.jpg" />
-<meta name="twitter:image" content="/images/myetherwallet-logo-twitter.png">
+<meta property="og:image" content="https://cdn.kowala.tech/images/meta/android-chrome-256x256.png" />
+<meta name="twitter:image" content="https://cdn.kowala.tech/images/meta/android-chrome-256x256.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@Kowala Wallet Tools">
 <meta name="twitter:creator" content="@Kowala Wallet Tools">
-<script type="application/ld+json">
-{
-"@context": "http://schema.org",
-"@type" : "Organization",
-"name" : "Kowala Wallet Tools",
-"legalName" : "Kowala Wallet Tools Inc",
-"url" : "https://www.myetherwallet.com/",
-"contactPoint" : [{
-  "@type" : "ContactPoint",
-  "email" : "support@myetherwallet.com",
-  "url"   : "https://myetherwallet.com",
-  "contactType" : "customer service"
-}],
-"logo" : "https://www.myetherwallet.com/images/myetherwallet-logo.png",
-"description": "Kowala Wallet Tools is a free, open-source, client-side interface for generating Kowala wallets &amp; more. Interact with the Kowala blockchain easily &amp; securely.",
-"sameAs" : [
-  "https://www.myetherwallet.com/",
-  "https://chrome.google.com/webstore/detail/myetherwallet-cx/nlbmnnijcnlegkjjpcfjclmcfggfefdm",
-  "https://www.facebook.com/Kowala Wallet Tools/",
-  "https://twitter.com/myetherwallet",
-  "https://medium.com/@myetherwallet",
-  "https://myetherwallet.github.io/knowledge-base/",
-  "https://github.com/kvhnuke/etherwallet",
-  "https://github.com/Kowala Wallet Tools",
-  "https://kvhnuke.github.io/etherwallet/","https://myetherwallet.slack.com/"
-]
-}
-</script>
 <link href="https://fonts.googleapis.com/css?family=Poppins" rel="stylesheet">
 </head>
 <body>
