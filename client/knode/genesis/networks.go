@@ -6,7 +6,11 @@ var Networks = map[string]map[string]Options{
 	knode.KUSD: {
 		MainNetwork: Options{
 			Network:   MainNetwork,
+			Number : 0,
 			ExtraData: "Kowala's first block",
+			SystemVars: &SystemVarsOpts{
+				InitialPrice: 1,
+			},
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
@@ -17,8 +21,8 @@ var Networks = map[string]map[string]Options{
 				NumConfirmations: 2,
 			},
 			Consensus: &ConsensusOpts{
-				Engine:           TendermintConsensus,
-				MaxNumValidators: 100,
+				Engine:           KonsensusConsensus,
+				MaxNumValidators: 500,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
 				SuperNodeAmount:  6000000,
@@ -46,7 +50,6 @@ var Networks = map[string]map[string]Options{
 				FreezePeriod:  1,
 				BaseDeposit:   10,
 				Price: PriceOpts{
-					InitialPrice:  1,
 					SyncFrequency: 600,
 					UpdatePeriod:  30,
 				},
@@ -72,7 +75,11 @@ var Networks = map[string]map[string]Options{
 		},
 		TestNetwork: Options{
 			Network:   TestNetwork,
+			Number: 0,
 			ExtraData: "Kowala's first block",
+			SystemVars: &SystemVarsOpts{
+				InitialPrice: 1,
+			},
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
@@ -83,8 +90,8 @@ var Networks = map[string]map[string]Options{
 				NumConfirmations: 2,
 			},
 			Consensus: &ConsensusOpts{
-				Engine:           TendermintConsensus,
-				MaxNumValidators: 100,
+				Engine:           KonsensusConsensus,
+				MaxNumValidators: 500,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
 				SuperNodeAmount:  6000000,
@@ -112,7 +119,6 @@ var Networks = map[string]map[string]Options{
 				FreezePeriod:  1,
 				BaseDeposit:   10,
 				Price: PriceOpts{
-					InitialPrice:  1,
 					SyncFrequency: 600,
 					UpdatePeriod:  30,
 				},

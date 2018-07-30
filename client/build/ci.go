@@ -126,17 +126,18 @@ var (
 	// stablePackages is a list of packages known to be stable to do full test and linters
 	stablePackages = []string{
 		"./consensus",
-		"./consensus/tendermint",
+		"./consensus/konsensus",
 		"./knode/validator",
 		"./knode/genesis",
 		"./kcoinclient",
 		"./accounts",
 		"./core/types",
 		"./params",
-		"./contracts/bindings/token",
-		"./contracts/bindings/ownership",
-		"./contracts/bindings/oracle",
 		"./contracts/bindings/consensus",
+		"./contracts/bindings/oracle",
+		"./contracts/bindings/ownership",
+		"./contracts/bindings/sysvars",
+		"./contracts/bindings/token",
 		// "../e2e/cluster",
 		// "../e2e/impl",
 	}

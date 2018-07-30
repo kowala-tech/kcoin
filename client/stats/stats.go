@@ -16,9 +16,12 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
-	"github.com/kowala-tech/kcoin/client/consensus"
+	engine "github.com/kowala-tech/kcoin/client/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/knode"
@@ -50,6 +53,7 @@ type txPool interface {
 
 type blockChain interface {
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
+	State() (*state.StateDB, error)
 }
 
 // Service implements an Kowala netstats reporting daemon that pushes local
@@ -57,10 +61,13 @@ type blockChain interface {
 type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
-	server    *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	kcoin     *knode.Kowala    // Full Kowala service if monitoring a full node
-	engine    consensus.Engine // Consensus engine to retrieve variadic block fields
-	oracleMgr oracle.Manager   // oracle manager to retrieve oracle fields
+	server *p2p.Server   // Peer-to-peer server to retrieve networking infos
+	kcoin  *knode.Kowala // Full Kowala service if monitoring a full node
+	engine engine.Engine // Consensus engine to retrieve variadic block fields
+
+	oracleMgr    oracle.Manager // oracle manager to retrieve oracle fields
+	validatorMgr consensus.Consensus
+	sysvars      sysvars.System
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
@@ -80,20 +87,33 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 	}
 	// Assemble and return the stats service
 	engine := kowalaServ.Engine()
-	oracleMgr, err := oracle.Binding(knode.NewContractBackend(kowalaServ.APIBackend()), kowalaServ.ChainConfig().ChainID)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to load the network contract %v", err)
+
+	var oracleMgr oracle.Manager
+	if err := kowalaServ.Contract(oracleMgr); err != nil {
+		return nil, fmt.Errorf("Failed to load the oracle contract %v", err)
+	}
+
+	var validatorMgr consensus.Consensus
+	if err := kowalaServ.Contract(validatorMgr); err != nil {
+		return nil, fmt.Errorf("Failed to load the consensus contract %v", err)
+	}
+
+	var sysvars sysvars.System
+	if err := kowalaServ.Contract(sysvars); err != nil {
+		return nil, fmt.Errorf("Failed to load the consensus contract %v", err)
 	}
 
 	return &Service{
-		kcoin:     kowalaServ,
-		engine:    engine,
-		oracleMgr: oracleMgr,
-		node:      parts[1],
-		pass:      parts[3],
-		host:      parts[4],
-		pongCh:    make(chan struct{}),
-		histCh:    make(chan []uint64, 1),
+		kcoin:        kowalaServ,
+		engine:       engine,
+		oracleMgr:    oracleMgr,
+		validatorMgr: validatorMgr,
+		sysvars:      sysvars,
+		node:         parts[1],
+		pass:         parts[3],
+		host:         parts[4],
+		pongCh:       make(chan struct{}),
+		histCh:       make(chan []uint64, 1),
 	}, nil
 }
 
@@ -129,6 +149,10 @@ func (s *Service) loop() {
 
 	blockchain = s.kcoin.BlockChain()
 	txpool = s.kcoin.TxPool()
+	state, err := blockchain.State()
+	if err != nil {
+		log.Warn("Blockchain state failed", "err", err)
+	}
 
 	chainHeadCh := make(chan core.ChainHeadEvent, chainHeadChanSize)
 	headSub := blockchain.SubscribeChainHeadEvent(chainHeadCh)
@@ -240,7 +264,7 @@ func (s *Service) loop() {
 					log.Warn("Requested history report failed", "err", err)
 				}
 			case head := <-headCh:
-				if err = s.reportBlock(conn, head); err != nil {
+				if err = s.reportBlock(conn, head, state); err != nil {
 					log.Warn("Block stats report failed", "err", err)
 				}
 				if err = s.reportPending(conn); err != nil {
@@ -397,7 +421,7 @@ func (s *Service) report(conn *websocket.Conn) error {
 	if err := s.reportLatency(conn); err != nil {
 		return err
 	}
-	if err := s.reportBlock(conn, nil); err != nil {
+	if err := s.reportBlock(conn, nil, nil); err != nil {
 		return err
 	}
 	if err := s.reportPending(conn); err != nil {
@@ -462,8 +486,11 @@ type blockStats struct {
 	ValidatorCount *big.Int       `json:"validatorCount"`
 	MaxValidators  *big.Int       `json:"maxValidators"`
 	OracleCount    *big.Int       `json:"oracleCount"`
+	MaxOracles     *big.Int       `json:"maxOracles"`
 	CurrencyPrice  *big.Int       `json:"currencyPrice"`
+	CurrencySupply *big.Int       `json:"currencySupply"`
 	MintedReward   *big.Int       `json:"mintedReward"`
+	OracleFund     *big.Int       `json:"oracleFund"`
 	StabilityFee   *big.Int       `json:"stabilityFee"`
 }
 
@@ -483,10 +510,10 @@ func (s uncleStats) MarshalJSON() ([]byte, error) {
 	return []byte("[]"), nil
 }
 
-// reportBlock retrieves the current chain head and repors it to the stats server.
-func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
+// reportBlock retrieves the current chain head/state and reports it to the stats server.
+func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block, state *state.StateDB) error {
 	// Gather the block details from the header or block chain
-	details, err := s.assembleBlockStats(block)
+	details, err := s.assembleStats(block, state)
 
 	if err != nil {
 		return err
@@ -505,9 +532,9 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	return websocket.JSON.Send(conn, report)
 }
 
-// assembleBlockStats retrieves any required metadata to report a single block
+// assembleStats retrieves any required metadata to report a single block
 // and assembles the block stats. If block is nil, the current head is processed.
-func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
+func (s *Service) assembleStats(block *types.Block, state *state.StateDB) (*blockStats, error) {
 	// Gather the block infos from the local blockchain
 	var (
 		header *types.Header
@@ -517,6 +544,13 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 	// Full nodes have all needed information available
 	if block == nil {
 		block = s.kcoin.BlockChain().CurrentBlock()
+	}
+	if state == nil {
+		var err error
+		state, err = s.kcoin.BlockChain().State()
+		if err != nil {
+			return nil, err
+		}
 	}
 	header = block.Header()
 
@@ -550,7 +584,22 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 		return nil, err
 	}
 
-	currencyPrice, err := s.oracleMgr.Price()
+	maxOracles, err := s.oracleMgr.MaxNumOracles()
+	if err != nil {
+		return nil, err
+	}
+
+	currencyPrice, err := s.sysvars.CurrencyPrice()
+	if err != nil {
+		return nil, err
+	}
+
+	currencySupply, err := s.sysvars.CurrencySupply()
+	if err != nil {
+		return nil, err
+	}
+
+	mintedReward, err := s.sysvars.MintedReward()
 	if err != nil {
 		return nil, err
 	}
@@ -570,7 +619,11 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 		ValidatorCount: validatorCount,
 		MaxValidators:  maxValidators,
 		OracleCount:    oracleCount,
+		MaxOracles:     maxOracles,
 		CurrencyPrice:  currencyPrice,
+		CurrencySupply: currencySupply,
+		MintedReward:   mintedReward,
+		OracleFund:     state.GetBalance(s.sysvars.Address()),
 	}, nil
 }
 
@@ -603,8 +656,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 		// If we do have the block, add to the history and continue
 		if block != nil {
 
-			stats, err := s.assembleBlockStats(block)
-
+			stats, err := s.assembleStats(block, nil)
 			if err != nil {
 				return err
 			}
