@@ -301,7 +301,7 @@ func (val *validator) AddVote(vote *types.Vote) error {
 	}
 
 	if err := val.votingSystem.Add(addressVote); err != nil {
-		return err
+		log.Error("cannot add the vote", "err", err)
 	}
 
 	return nil
