@@ -173,7 +173,7 @@ func (suite *MiningTokenSuite) TestMint_NotOwner() {
 	numTokens := miningTokenCap
 	transactOpts := bind.NewKeyedTransactor(user)
 	_, err := suite.miningToken.Mint(transactOpts, getAddress(user), numTokens)
-	req.Error(err, "method Mint is just available to the contract owner")
+	req.Error(err, "method Minter is just available to the contract owner")
 }
 
 func (suite *MiningTokenSuite) TestMint_OverCap() {

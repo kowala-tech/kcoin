@@ -555,7 +555,6 @@ func (w *wallet) SignTxWithPassphrase(account accounts.Account, passphrase strin
 	return w.SignTx(account, tx, chainID)
 }
 
-// @TODO (jekamas)
 func (w *wallet) NewKeyedTransactor(account accounts.Account, auth string) (*accounts.TransactOpts, error) {
 	return nil, nil
 }

@@ -291,6 +291,20 @@ func (ctx *ValidationContext) execCommand(command []string, response ...*cluster
 	return ctx.makeExecFunc(command, response...)()
 }
 
+func (ctx *ValidationContext) getTokenBalance(at common.Address) (*big.Int, error) {
+	res := &cluster.ExecResponse{}
+	if err := ctx.execCommand(getTokenBalance(at), res); err != nil {
+		return nil, err
+	}
+
+	currentBalanceBig, ok := new(big.Int).SetString(res.StdOut, 10)
+	if !ok {
+		return nil, fmt.Errorf("incorrect mToken deposit %q of %s", res.StdOut, at.String())
+	}
+
+	return currentBalanceBig, nil
+}
+
 func isError(s string) error {
 	if strings.HasPrefix(s, "Error: EOF") {
 		return nil

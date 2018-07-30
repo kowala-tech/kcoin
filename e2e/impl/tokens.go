@@ -45,13 +45,13 @@ func (ctx *ValidationContext) sendTokens(from, to accounts.Account, tokens int64
 }
 
 func (ctx *ValidationContext) mintTokensAndWait(governance []accounts.Account, to accounts.Account, tokens int64) error {
-	res := &cluster.ExecResponse{}
-	if err := ctx.execCommand(getTokenBalance(to.Address), res); err != nil {
+	var (
+		err error
+		currentBalanceBig *big.Int
+	)
+
+	if currentBalanceBig, err = ctx.getTokenBalance(to.Address); err != nil {
 		return err
-	}
-	currentBalanceBig, ok := new(big.Int).SetString(res.StdOut, 10)
-	if !ok {
-		return fmt.Errorf("incorrect mToken deposit %q of %s", res.StdOut, to.Address.String())
 	}
 	currentBalance := new(big.Int).Div(currentBalanceBig, big.NewInt(params.Kcoin)).Int64()
 

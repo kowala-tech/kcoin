@@ -643,6 +643,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		if err := pm.validator.AddVote(&vote); err != nil {
 			// ignore
+			log.Error("cannot add the vote", "err", err)
 			break
 		}
 		p.MarkVote(vote.Hash())

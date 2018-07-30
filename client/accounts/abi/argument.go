@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 // Argument holds the name of the argument and the corresponding type.
@@ -254,9 +255,9 @@ func (arguments Arguments) Pack(args ...interface{}) ([]byte, error) {
 		input := abiArgs[i]
 
 		// to be sure that all args are not 'nil' and reflect won't panic
-		v := reflect.ValueOf(a)
-		if a == nil || (v.Kind() == reflect.Ptr && v.IsNil()) {
-			return nil, fmt.Errorf("got `nil` argument: %v(%d)", a, i)
+		v, err := common.SafeValueOf(a)
+		if err != nil {
+			return nil, fmt.Errorf("got error for an argument %v(%d): %v", a, i, err)
 		}
 
 		// pack the input

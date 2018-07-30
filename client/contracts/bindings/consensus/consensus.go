@@ -64,10 +64,10 @@ type Consensus interface {
 	IsValidator(address common.Address) (bool, error)
 	MinimumDeposit() (*big.Int, error)
 	Token() token.Token
-	Mint
+	Minter
 }
 
-type Mint interface {
+type Minter interface {
 	Mint(opts *accounts.TransactOpts, to common.Address) (common.Hash, error)
 }
 
@@ -257,7 +257,7 @@ func (consensus *consensus) Token() token.Token {
 	return consensus.mtoken
 }
 
-//Mint interface implementation
+//Minter interface implementation
 
 func (consensus *consensus) MintInit() error {
 	var err error
