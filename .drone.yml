@@ -200,7 +200,23 @@ pipeline:
       branch: [dev, master]
       event: [push, tag]
 
-  docker_wallet_tools:
+  docker_wallet_tools_dev:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/wallet-tools
+    dockerfile: wallet-tools/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    build_args:
+      - APP_URL=https://wallet-tools.zygote.kowala.io
+      - CDN_URL=https://cdn.kowala.io
+    when:
+      branch: [dev]
+      event: [push]
+
+  docker_wallet_tools_prod:
     group: docker_deployment
     image: kowalatech/drone-docker
     repo: kowalatech/wallet-tools
@@ -210,8 +226,9 @@ pipeline:
     privileged: true
     auto_tag: true
     when:
-      branch: [dev, master]
+      branch: [master]
       event: [push, tag]
+
 
   build_artifacts:
     group: build_artifacts

@@ -55,6 +55,25 @@ function notifyFunc(msg) {
 }
 
 
+function appURL() {
+	var url = process.env.APP_URL;
+
+	if (!url) {
+		url = "https://wallet-tools.kowala.tech";
+	}
+
+	return url;
+}
+
+function cdnURL() {
+	var url = process.env.CDN_URL;
+
+	if (!url) {
+		url = "https://cdn.kowala.tech";
+	}
+
+	return url;
+}
 
 // HTML / TPL Pages
 let htmlFiles = app + 'layouts/*.html';
@@ -63,7 +82,13 @@ let tplFiles = app + 'includes/*.tpl';
 gulp.task('html', function(done) {
     return gulp.src(htmlFiles)
         .pipe(plumber({ errorHandler: onError }))
-        .pipe(fileinclude({ prefix: '@@', basepath: '@file' }))
+        .pipe(fileinclude({ 
+			prefix: '@@', 
+			basepath: '@file', 
+			context: { 
+				appURL: appURL(),
+				cdnURL: cdnURL(),
+		} }))
         .pipe(gulp.dest(dist))
         .pipe(gulp.dest(dist_CX))
         .pipe(notify(onSuccess('HTML')))

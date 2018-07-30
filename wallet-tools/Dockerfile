@@ -8,8 +8,11 @@ RUN openssl genrsa -des3 -passout pass:x -out server.pass.key 2048 && \
     openssl req -new -key server.key -out server.csr -subj "/C=US/ST=California/L=California/O=localhost/OU=localhost/CN=localhost" && \
     openssl x509 -req -sha256 -days 365 -in server.csr -signkey server.key -out server.crt
 
-WORKDIR /etherwallet
-ADD . /etherwallet
+WORKDIR /wallet-tools
+ADD . /wallet-tools
+
+ARG APP_URL
+ARG CDN_URL
 RUN npm install
 RUN npm run dist
 
@@ -36,7 +39,7 @@ RUN echo "server {\
   }\
 }" > /etc/nginx/conf.d/ssl.conf
 
-COPY --from=builder  /etherwallet/dist /usr/share/nginx/html
+COPY --from=builder  /wallet-tools/dist /usr/share/nginx/html
 COPY --from=builder  /server.crt /opt/ssl/server.crt
 COPY --from=builder  /server.key /opt/ssl/server.key
 

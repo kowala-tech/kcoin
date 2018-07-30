@@ -8,9 +8,9 @@
 <meta property="og:site_name" content="Kowala Wallet Tools: Your Key to Kowala">
 <meta name="twitter:title" content="Kowala Wallet Tools: Your Key to Kowala">
 <meta name="apple-mobile-web-app-title" content="Kowala Wallet Tools: Your Key to Kowala">
-<link href="https://www.myetherwallet.com" rel="canonical">
-<meta content="https://www.myetherwallet.com" property="og:url">
-<meta content="https://www.myetherwallet.com" name="twitter:url">
+<link href="@@appURL" rel="canonical">
+<meta content="@@appURL" property="og:url">
+<meta content="@@appURL" name="twitter:url">
 <link rel="stylesheet" href="css/etherwallet-master.min.css">
 <script type="text/javascript" src="js/etherwallet-static.min.js"></script>
 <script type="text/javascript" src="js/etherwallet-master.js"></script>
@@ -19,22 +19,22 @@
 <meta name="twitter:description" content="Free, open-source, client-side Kowala wallet. Enabling you to interact with the blockchain easily & securely.">
 <meta name="robots" content="index,follow">
 <meta name="googlebot" content="index,follow">
-<link rel="apple-touch-icon" sizes="180x180" href="https://cdn.kowala.tech/images/meta/apple-touch-icon.png?v=69Pwvmj0bL">
-<link rel="icon" type="image/png" sizes="32x32" href="https://cdn.kowala.tech/images/meta/favicon-32x32.png?v=69Pwvmj0bL">
-<link rel="icon" type="image/png" sizes="16x16" href="https://cdn.kowala.tech/images/meta/favicon-16x16.png?v=69Pwvmj0bL">
-<link rel="manifest" href="https://cdn.kowala.tech/images/meta/site.webmanifest?v=69Pwvmj0bL">
-<link rel="mask-icon" href="ihttps://cdn.kowala.tech/images/meta/safari-pinned-tab.svg?v=69Pwvmj0bL" color="#5bbad5">
-<link rel="shortcut icon" href="https://cdn.kowala.tech/images/meta/favicon.ico?v=69Pwvmj0bL">
+<link rel="apple-touch-icon" sizes="180x180" href="@@cdnURL/images/meta/apple-touch-icon.png?v=69Pwvmj0bL">
+<link rel="icon" type="image/png" sizes="32x32" href="@@cdnURL/images/meta/favicon-32x32.png?v=69Pwvmj0bL">
+<link rel="icon" type="image/png" sizes="16x16" href="@@cdnURL/images/meta/favicon-16x16.png?v=69Pwvmj0bL">
+<link rel="manifest" href="@@cdnURL/images/meta/site.webmanifest?v=69Pwvmj0bL">
+<link rel="mask-icon" href="@@cdnURL/images/meta/safari-pinned-tab.svg?v=69Pwvmj0bL" color="#5bbad5">
+<link rel="shortcut icon" href="@@cdnURL/images/meta/favicon.ico?v=69Pwvmj0bL">
 <meta name="apple-mobile-web-app-title" content="Kowala Wallet Tools &middot; Your Key to Kowala">
 <meta name="application-name" content="Kowala Wallet Tools">
-<meta name="msapplication-config" content="https://cdn.kowala.tech/images/meta/browserconfig.xml">
+<meta name="msapplication-config" content="@@cdnURL/images/meta/browserconfig.xml">
 <meta name="theme-color" content="#1d6986">
 <meta name="apple-mobile-web-app-status-bar-style" content="#1d6986">
 <meta property="og:url" content="https://wallet-tools.zygote.kowala.tech" />
 <meta property="og:title" content="Kowala Wallet Tools  &middot; Your Key to Kcoins" />
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://cdn.kowala.tech/images/meta/android-chrome-256x256.png" />
-<meta name="twitter:image" content="https://cdn.kowala.tech/images/meta/android-chrome-256x256.png">
+<meta property="og:image" content="@@cdnURL/images/meta/android-chrome-256x256.png" />
+<meta name="twitter:image" content="@@cdnURL/images/meta/android-chrome-256x256.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@Kowala Wallet Tools">
 <meta name="twitter:creator" content="@Kowala Wallet Tools">
