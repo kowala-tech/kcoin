@@ -77,7 +77,7 @@ test_notifications: dep
 
 .PHONY: test_truffle
 test_truffle:
-	cd client/contracts/truffle; npm ci; npm run test
+	cd client/contracts/truffle; npm install; npm run test
 
 .PHONY: lint
 lint: all
