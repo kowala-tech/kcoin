@@ -13,16 +13,16 @@ import (
 
 type Konsensus struct {
 	config   *params.KonsensusConfig
-	provider PriceProvider
-	reader   SystemVarsReader
+	system   System
+	//provider PriceProvider
+	//reader   SystemVarsReader
 	fakeMode bool
 }
 
 func New(config *params.KonsensusConfig, provider PriceProvider, reader SystemVarsReader) *Konsensus {
 	return &Konsensus{
 		config:   config,
-		reader:   reader,
-		provider: provider,
+		system: NewSystem()
 	}
 }
 
@@ -36,8 +36,8 @@ func (ks *Konsensus) Author(header *types.Header) (common.Address, error) {
 
 func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
 	if !ks.fakeMode {
-		system := Sys(state, ks.reader, ks.provider)
-		if err := updateSystem(header.Number, header.Coinbase, system); err != nil {
+		ks.sys.WithState(state)
+		if err := systemUpdate(header.Number, header.Coinbase, ks.system); err != nil {
 			return nil, err
 		}
 	}
@@ -49,7 +49,7 @@ func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header,
 	return types.NewBlock(header, txs, receipts, commit), nil
 }
 
-func updateSystem(blockNumber *big.Int, validator common.Address, sys System) error {
+func systemUpdate(blockNumber *big.Int, validator common.Address, sys System) error {
 	mintedAmount, err := sys.MintedAmount()
 	if err != nil {
 		return err

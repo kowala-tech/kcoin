@@ -1,10 +1,6 @@
 package konsensus
 
-import (
-	"math/big"
-
-	"github.com/kowala-tech/kcoin/client/common"
-)
+/*
 
 type PriceProvider interface {
 	AveragePrice() (*big.Int, error)
@@ -36,3 +32,4 @@ type System interface {
 	Transfer(common.Address, common.Address, *big.Int)
 	OracleFund() common.Address
 }
+*/
