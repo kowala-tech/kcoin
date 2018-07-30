@@ -75,6 +75,10 @@ test_notifications: dep
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go test ./... -tags=integration
 
+.PHONY: test_truffle
+test_truffle:
+	cd client/contracts/truffle; npm ci; npm run test
+
 .PHONY: lint
 lint: all
 	cd client; build/env.sh go run build/ci.go lint
