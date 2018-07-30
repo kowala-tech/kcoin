@@ -27,13 +27,12 @@ Feature: Using mTokens
     Then the token balance of A should be 6 mTokens
     And the token balance of C should be 9 mTokens
 
-
   #  Scenario: Mint tokens: consensus established
   #    Given I wait for my node to be synced
   #    And I start validator with 5 mTokens deposit
   #    When 2 of 3 governance accounts mint 1 mToken to C
   #    Then the token balance of C should be 1 mTokens
-
+  #
   #  Scenario: Mint tokens: failed consensus
   #    Given I wait for my node to be synced
   #    Given I start validator with 5 mTokens deposit
