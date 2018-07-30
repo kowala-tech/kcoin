@@ -1,11 +1,12 @@
 pragma solidity 0.4.24;
 
 import "./KNS.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
 
 /**
  * A registrar that allocates subdomains to the first person to claim them.
  */
-contract FIFSRegistrar {
+contract FIFSRegistrar is Initializable{
     KNS kns;
     bytes32 rootNode;
 
@@ -21,6 +22,16 @@ contract FIFSRegistrar {
      * @param node The node that this registrar administers.
      */
     constructor(KNS knsAddr, bytes32 node) public {
+        kns = knsAddr;
+        rootNode = node;
+    }
+
+    /**
+     * @dev initialize function for Proxy Pattern.
+     * @param knsAddr The address of the KNS registry.
+     * @param node The node that this registrar administers.
+     */
+    function initialize(KNS knsAddr, bytes32 node) isInitializer public {
         kns = knsAddr;
         rootNode = node;
     }

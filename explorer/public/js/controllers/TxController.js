@@ -1,5 +1,5 @@
 angular.module('BlocksApp').controller('TxController', function($stateParams, $rootScope, $scope, $http, $location) {
-    $scope.$on('$viewContentLoaded', function() {   
+    $scope.$on('$viewContentLoaded', function() {
         // initialize core components
         App.initAjax();
     });
@@ -40,4 +40,4 @@ angular.module('BlocksApp').controller('TxController', function($stateParams, $r
         $scope.internal_transactions = resp.data;
       });      
     }
-})
+});

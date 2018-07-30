@@ -40,6 +40,14 @@ pipeline:
     when:
       event: [pull_request]
 
+  test_truffle:
+    group: testing
+    image: node:9
+    commands:
+      - make test_truffle
+    when:
+      event: [pull_request]
+
   e2e:
     group: testing
     image: kowalatech/go:1.0.11
