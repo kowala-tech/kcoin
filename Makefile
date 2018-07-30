@@ -140,15 +140,17 @@ kcoin_cross_compress:
 kcoin_cross_rename:
 ifdef DRONE_TAG
 	cd client/build/bin && for f in kcoin-*; do \
+		mkdir -p "client/build/bin/tags/$(DRONE_TAG)";\
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
-		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_TAG)"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "tags/$(DRONE_TAG)/kcoin"); print }');\
 		cp $$f $$release;\
 		mv $$f $$version;\
 	done;
 else
 	cd client/build/bin && for f in kcoin-*; do \
+		mkdir -p "client/build/bin/commits/$(DRONE_COMMIT_SHA)";\
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-unstable"); print }');\
-		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_COMMIT_SHA)"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "commits/$(DRONE_COMMIT_SHA)/kcoin"); print }');\
 		cp $$f $$release;\
 		mv $$f $$version;\
 	done;

@@ -285,7 +285,7 @@ var checkBlockDBExistsThenWrite = function(config, patchData, flush) {
   });
 };
 
-var config = require('../config-loader');
+var config = require('../config');
 
 // set the default NODE address to localhost if it's not provided
 if (!('nodeAddr' in config) || !(config.nodeAddr)) {
