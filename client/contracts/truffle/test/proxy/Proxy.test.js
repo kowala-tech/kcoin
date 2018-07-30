@@ -61,6 +61,9 @@ contract('Proxy Functionality', ([_, admin, owner, anotherAccount]) => {
     await knsProxy.upgradeTo(knsv1.address, { from: admin });
     knsContract = await KNSV1.at(knsProxyAddress);
 
+    const hello = await knsContract.helloProxy();
+    await hello.should.be.equal('HelloProxy');
+
     const resolverStorage = await knsContract.resolver(namehash('validator.kowala'));
     await resolverStorage.should.be.equal(resolverProxyAddress);
 
