@@ -1,12 +1,13 @@
 pragma solidity 0.4.24;
 
 import "./KNS.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
 
 /**
  * A simple resolver anyone can use; only allows the owner of a node to set its
  * address.
  */
-contract PublicResolver {
+contract PublicResolver is Initializable {
 
     bytes4 constant INTERFACE_META_ID = 0x01ffc9a7;
     bytes4 constant ADDR_INTERFACE_ID = 0x3b3b57de;
@@ -54,6 +55,14 @@ contract PublicResolver {
      * @param knsAddr The KNS registrar contract.
      */
     constructor(KNS knsAddr) public {
+        kns = knsAddr;
+    }
+
+    /**
+     * @dev initialize function for Proxy Pattern.
+     * @param knsAddr The address of the KNS registry.
+     */
+    function initialize(KNS knsAddr) isInitializer public {
         kns = knsAddr;
     }
 
