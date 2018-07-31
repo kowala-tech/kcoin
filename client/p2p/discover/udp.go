@@ -519,6 +519,11 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 	buf := make([]byte, 1280)
 	for {
 		nbytes, from, err := t.conn.ReadFromUDP(buf)
+		if err := discv5.IsDiscoveryPacket(buf); err == nil {
+			unhandled <- ReadPacket{buf[:nbytes], from}
+			continue
+		}
+
 		if netutil.IsTemporaryError(err) {
 			// Ignore temporary read errors.
 			log.Debug("Temporary UDP read error", "err", err)
@@ -529,12 +534,7 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 			return
 		}
 
-		if discv5.IsDiscoveryPacket(buf) && unhandled != nil {
-			unhandled <- ReadPacket{buf[:nbytes], from}
-			continue
-		}
-
-		if t.handlePacket(from, buf[:nbytes]) != nil {
+		if err := t.handlePacket(from, buf[:nbytes]); err != nil {
 			log.Debug("discoveryV4 error", "err", err)
 			continue
 		}
