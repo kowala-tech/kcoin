@@ -4,11 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
+	"sync"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
@@ -34,6 +39,14 @@ var mapMiningTokenToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"),
 }
 
+var mapOracleToAddr = map[uint64]common.Address{
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
+}
+
+var mapMultiSigWalletToAddr = map[uint64]common.Address{
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"),
+}
+
 // ValidatorsChecksum lets a validator know if there are changes in the validator set
 type ValidatorsChecksum [32]byte
 
@@ -51,6 +64,11 @@ type Consensus interface {
 	IsValidator(address common.Address) (bool, error)
 	MinimumDeposit() (*big.Int, error)
 	Token() token.Token
+	Minter
+}
+
+type Minter interface {
+	Mint(opts *accounts.TransactOpts, to common.Address) (common.Hash, error)
 }
 
 type mUSD struct {
@@ -74,6 +92,26 @@ func (tkn *mUSD) Transfer(walletAccount accounts.WalletAccount, to common.Addres
 	return tx.Hash(), err
 }
 
+func (tkn *mUSD) Mint(opts *accounts.TransactOpts, to common.Address, value *big.Int) (common.Hash, error) {
+	tx, err := tkn.MiningToken.Mint(toBind(opts), to, value)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return tx.Hash(), err
+}
+
+func toBind(opts *accounts.TransactOpts) *bind.TransactOpts {
+	return &bind.TransactOpts{
+		From:     opts.From,
+		Nonce:    opts.Nonce,
+		Signer:   bind.SignerFn(opts.Signer),
+		Value:    opts.Value,
+		GasPrice: opts.GasPrice,
+		GasLimit: opts.GasLimit.Uint64(),
+		Context:  opts.Context,
+	}
+}
+
 func (tkn *mUSD) BalanceOf(target common.Address) (*big.Int, error) {
 	return tkn.MiningToken.BalanceOf(&bind.CallOpts{}, target)
 }
@@ -83,10 +121,15 @@ func (tkn *mUSD) Name() (string, error) {
 }
 
 type consensus struct {
-	manager     *ValidatorMgr
-	managerAddr common.Address
-	mtoken      token.Token
-	chainID     *big.Int
+	manager         *ValidatorMgr
+	managerAddr     common.Address
+	mtoken          token.Token
+	chainID         *big.Int
+	contractBackend bind.ContractBackend
+
+	initMint       sync.Once
+	multiSigWallet *ownership.MultiSigWallet
+	oracle         *oracle.OracleMgr
 }
 
 // Binding returns a binding to the current consensus engine
@@ -107,10 +150,11 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus
 	}
 
 	return &consensus{
-		manager:     manager,
-		managerAddr: addr,
-		mtoken:      mUSD,
-		chainID:     chainID,
+		manager:         manager,
+		managerAddr:     addr,
+		mtoken:          mUSD,
+		chainID:         chainID,
+		contractBackend: contractBackend,
 	}, nil
 }
 
@@ -211,6 +255,70 @@ func (consensus *consensus) MaxValidators() (*big.Int, error) {
 
 func (consensus *consensus) Token() token.Token {
 	return consensus.mtoken
+}
+
+//Minter interface implementation
+
+func (consensus *consensus) MintInit() error {
+	var err error
+	consensus.initMint.Do(func() {
+		if consensus.multiSigWallet == nil {
+			addr, ok := mapMultiSigWalletToAddr[consensus.chainID.Uint64()]
+			if !ok {
+				err = bindings.ErrNoAddress
+				return
+			}
+
+			var multisig *ownership.MultiSigWallet
+			multisig, err = ownership.NewMultiSigWallet(addr, consensus.contractBackend)
+			if err != nil {
+				return
+			}
+
+			consensus.multiSigWallet = multisig
+		}
+
+		if consensus.oracle == nil {
+			addr, ok := mapOracleToAddr[consensus.chainID.Uint64()]
+			if !ok {
+				err = bindings.ErrNoAddress
+				return
+			}
+
+			var oracleMgr *oracle.OracleMgr
+			oracleMgr, err = oracle.NewOracleMgr(addr, consensus.contractBackend)
+			if err != nil {
+				return
+			}
+
+			consensus.oracle = oracleMgr
+		}
+	})
+
+	return err
+}
+
+func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address) (common.Hash, error) {
+	if err := consensus.MintInit(); err != nil {
+		return common.Hash{}, err
+	}
+
+	tokenABI, err := abi.JSON(strings.NewReader(MiningTokenABI))
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	mintParams, err := tokenABI.Pack("mint", to, opts.Value)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	tx, err := consensus.multiSigWallet.SubmitTransaction(toBind(opts), to, common.Big0, mintParams)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return tx.Hash(), err
 }
 
 func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.TransactOpts {

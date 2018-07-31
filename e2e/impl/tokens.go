@@ -35,11 +35,51 @@ func (ctx *ValidationContext) sendTokens(from, to accounts.Account, tokens int64
 	weis := toWei(tokens)
 	hexWeis := hexutil.Big(*weis)
 	args := knode.TransferArgs{
+			From:  from.Address,
+			To:    &to.Address,
+			Value: &hexWeis,
+	}
+
+	res := &cluster.ExecResponse{}
+	return ctx.execCommand(transferTokens(args), res)
+}
+
+func (ctx *ValidationContext) mintTokensAndWait(governance []accounts.Account, to accounts.Account, tokens int64) error {
+	var (
+		err error
+		currentBalanceBig *big.Int
+	)
+
+	if currentBalanceBig, err = ctx.getTokenBalance(to.Address); err != nil {
+		return err
+	}
+	currentBalance := new(big.Int).Div(currentBalanceBig, big.NewInt(params.Kcoin)).Int64()
+
+	return ctx.waiter.Do(
+		func() error {
+			var err error
+			for _, from := range governance {
+				err = ctx.mintTokens(from, to, tokens, AccountPass)
+				if err != nil {
+					break
+				}
+			}
+			return err
+		},
+		func() error {
+			return ctx.checkTokenBalance(to, currentBalance+tokens)
+		})
+}
+
+func (ctx *ValidationContext) mintTokens(from, to accounts.Account, tokens int64, pass string) error {
+	weis := toWei(tokens)
+	hexWeis := hexutil.Big(*weis)
+	args := knode.TransferArgs{
 		From:  from.Address,
 		To:    &to.Address,
 		Value: &hexWeis,
 	}
 
 	res := &cluster.ExecResponse{}
-	return ctx.execCommand(transferTokens(args), res)
+	return ctx.execCommand(mintTokens(args, pass), res)
 }

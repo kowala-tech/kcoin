@@ -67,7 +67,7 @@ func (abi ABI) Pack(name string, args ...interface{}) ([]byte, error) {
 
 	arguments, err := method.Inputs.Pack(args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("got an error in call `%s` method: %s", method.String(), err.Error())
 	}
 	// Pack up the method ID too if not a constructor and return
 	return append(method.Id(), arguments...), nil
