@@ -182,10 +182,10 @@ type PublicTokenAPI struct {
 	consensus  consensus.Consensus
 }
 
-func NewPublicTokenAPI(accountMgr *accounts.Manager, token consensus.Consensus) *PublicTokenAPI {
+func NewPublicTokenAPI(accountMgr *accounts.Manager, c consensus.Consensus) *PublicTokenAPI {
 	return &PublicTokenAPI{
 		accountMgr: accountMgr,
-		consensus:  token,
+		consensus:  c,
 	}
 }
 

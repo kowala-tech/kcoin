@@ -62,7 +62,7 @@ abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
 .PHONY: test
-test: all mocks
+test: all
 	cd client; build/env.sh go run build/ci.go test
 
 .PHONY: test_genesis
@@ -74,13 +74,6 @@ test_notifications: dep
 	cd notifications && \
 	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go test ./... -tags=integration
-
-.PHONY: mocks
-mocks:
-	$(MOCKERY_BIN) -dir ./client/accounts/ -name Wallet -output ./client/accounts/ -outpkg accounts -inpkg
-	$(MOCKERY_BIN) -dir ./client/core/types -name AddressVote -output ./client/core/types/mocks
-	$(MOCKERY_BIN) -dir ./client/kcoinclient -name RpcClient -output ./client/kcoinclient/mocks
-	$(MOCKERY_BIN) -dir ./notifications/protocolbuffer -name TransactionServiceClient -output ./notifications/protocolbuffer/mocks
 
 .PHONY: test_truffle
 test_truffle:
