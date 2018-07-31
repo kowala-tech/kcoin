@@ -9,6 +9,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/params"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/blang/semver"
+	"github.com/rhysd/go-github-selfupdate/selfupdate"
 )
 
 var (
@@ -20,8 +22,18 @@ var (
 		Category:  "MISCELLANEOUS COMMANDS",
 		Description: `
 The output of this command is supposed to be machine-readable.
-`,
-	}
+`}
+
+	updateCommand = cli.Command{
+		Action:    utils.MigrateFlags(update),
+		Name:      "update",
+		Usage:     "Update client to latest version",
+		ArgsUsage: " ",
+		Category:  "MISCELLANEOUS COMMANDS",
+		Description: `
+This should update client to latest version.
+`}
+
 	licenseCommand = cli.Command{
 		Action:    utils.MigrateFlags(license),
 		Name:      "license",
@@ -61,5 +73,22 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with knode. If not, see <http://www.gnu.org/licenses/>.
 `)
+	return nil
+}
+
+func update(ctx *cli.Context) error {
+	v := semver.MustParse(params.Version)
+	latest, err := selfupdate.UpdateSelf(v, "kowala-tech/kcoin")
+	if err != nil {
+		fmt.Println("Binary update failed:", err)
+		return err
+	}
+	if latest.Version.Equals(v) {
+		// latest version is the same as current version. It means current binary is up to date.
+		fmt.Println("Current binary is the latest version", params.Version)
+	} else {
+		fmt.Println("Successfully updated to version", latest.Version)
+		fmt.Println("Release note:\n", latest.ReleaseNotes)
+	}
 	return nil
 }

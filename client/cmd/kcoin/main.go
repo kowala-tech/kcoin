@@ -149,6 +149,7 @@ func init() {
 		versionCommand,
 		bugCommand,
 		licenseCommand,
+		updateCommand,
 		// See config.go
 		dumpConfigCommand,
 	}
