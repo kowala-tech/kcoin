@@ -4,7 +4,7 @@
   "version": "0.0.9",
   "private": false,
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "grunt && node ./bin/www"
   },
   "dependencies": {
     "body-parser": "^1.18.3",
@@ -21,6 +21,7 @@
     "grunt-contrib-cssmin": "^0.12.3",
     "grunt-contrib-jade": "^1.0.0",
     "grunt-contrib-uglify": "^3.3.0",
+    "grunt-replace": "^1.0.1",
     "jade": "1.11.0",
     "lodash": "3.10.1",
     "primus": "6.0.5",

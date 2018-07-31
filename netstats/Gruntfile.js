@@ -33,6 +33,33 @@ var styles = [
 
 module.exports = function(grunt) {
 	grunt.initConfig({
+		replace: {
+      dist: {
+        options: {
+          patterns: [
+            {
+              match: 'cdnURL',
+              replacement: '<%= process.env.CDN_URL %>'
+            },
+						{
+              match: 'URL',
+              replacement: '<%= process.env.URL %>'
+            },
+						{
+              match: 'explorerURL',
+              replacement: '<%= process.env.EXPLORER_URL %>'
+            },
+						{
+              match: 'faucetURL',
+              replacement: '<%= process.env.FAUCET_URL %>'
+            }
+          ]
+        },
+        files: [
+          {expand: true, flatten: true, src: 'dist/index.html', dest: 'dist/'}
+        ]
+      }
+    },
 		pkg: grunt.file.readJSON('package.json'),
 		clean: {
 			build: ['dist'],
@@ -148,6 +175,7 @@ module.exports = function(grunt) {
 		}
 	});
 
+	grunt.loadNpmTasks('grunt-replace');
 	grunt.loadNpmTasks('grunt-contrib-watch');
 	grunt.loadNpmTasks('grunt-contrib-clean');
 	grunt.loadNpmTasks('grunt-contrib-copy');
@@ -156,7 +184,7 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-contrib-cssmin');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 
-	grunt.registerTask('default', ['clean:build', 'clean:cleanup_js', 'clean:cleanup_css', 'jade:build', 'copy:build', 'cssmin:build', 'concat:vendor', 'concat:scripts', 'uglify:app', 'concat:netstats', 'concat:css', 'clean:cleanup_js', 'clean:cleanup_css']);
-	grunt.registerTask('build',   'default');
-	grunt.registerTask('all',   ['default']);
+	grunt.registerTask('default', ['clean:build', 'clean:cleanup_js', 'clean:cleanup_css', 'jade:build', 'copy:build', 'cssmin:build', 'concat:vendor', 'concat:scripts', 'uglify:app', 'concat:netstats', 'concat:css', 'clean:cleanup_js', 'clean:cleanup_css', 'replace']);
+	grunt.registerTask('build', 'default');
+	grunt.registerTask('all', ['default']);
 };

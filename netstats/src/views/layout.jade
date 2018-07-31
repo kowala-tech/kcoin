@@ -3,19 +3,40 @@ doctype html
 html(ng-app="netStatsApp")
   head
     meta(name="viewport", content="width=device-width, initial-scale=1.0, maximum-scale=1.0")
-    title Kowala - kUSD Test Network
+    title Kowala - Network Stats
+    link(rel='apple-touch-icon', sizes='180x180', href='@@cdnURL/images/meta/apple-touch-icon.png?v=69Pwvmj0bL')
+    link(rel='icon', type='image/png', sizes='32x32', href='@@cdnURL/images/meta/favicon-32x32.png?v=69Pwvmj0bL')
+    link(rel='icon', type='image/png', sizes='16x16', href='@@cdnURL/images/meta/favicon-16x16.png?v=69Pwvmj0bL')
+    link(rel='manifest', href='@@cdnURL/images/meta/site.webmanifest?v=69Pwvmj0bL')
+    link(rel='mask-icon', href='@@cdnURL/images/meta/safari-pinned-tab.svg?v=69Pwvmj0bL', color='#5bbad5')
+    link(rel='shortcut icon', href='@@cdnURL/images/meta/favicon.ico?v=69Pwvmj0bL')
+    meta(name='apple-mobile-web-app-title', content='Kowala Network Stats')
+    meta(name='application-name', content='Kowala Network Stats')
+    meta(name='msapplication-config', content='@@cdnURL/images/meta/browserconfig.xml')
+    meta(name='theme-color', content='#1d6986')
+    meta(name='apple-mobile-web-app-status-bar-style', content='#1d6986')
+    meta(property='og:url', content='@@URL')
+    meta(property='og:title', content='Kowala Network Stats')
+    meta(property='og:type', content='website')
+    meta(property='og:image', content='@@cdnURL/images/meta/android-chrome-256x256.png')
+    meta(name='twitter:image', content='@@cdnURL/images/meta/android-chrome-256x256.png')
+    meta(name='twitter:card', content='summary_large_image')
+    meta(name='twitter:site', content='@KowalaTech')
+    meta(name='twitter:creator', content='@KowalaTech')
     style(type="text/css") [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak { display: none !important; }
     link(rel="stylesheet", href="https://fonts.googleapis.com/css?family=Poppins:300,400,500")
-    link(rel="stylesheet", href="https://cdn.kowala.tech/styles/kowala.css")
+    link(rel="stylesheet", href="@@cdnURL/styles/kowala.css")
     link(rel='stylesheet', href='/css/netstats.min.css')
-  body.light-blue-background.light-#fff-text
+
+
+  body.light-blue-background.light-#fff-textmake
     #mobile-menu(data-reveal="")
-      img(src="https://cdn.kowala.tech/images/kowala/kowala-white.svg" title="Kowala")
+      img(src="@@cdnURL/images/kowala/kowala-white.svg" title="Kowala")
       ul
         li
-          a(href="https://explorer.zygote.kowala.tech" rel="noopener" target="_blank") BLOCK EXPLORER
+          a(href="@@explorerURL" rel="noopener" target="_blank") BLOCK EXPLORER
         li
-          a(href="https://faucet.zygote.kowala.tech" rel="noopener" target="_blank") GET TEST COINS
+          a(href="@@faucetURL" rel="noopener" target="_blank") GET TEST COINS
         li
           a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION
         li
@@ -27,13 +48,13 @@ html(ng-app="netStatsApp")
         nav
           .title
             a(href="/")
-              img(src="https://cdn.kowala.tech/images/kowala/kowala-white.svg" title="Kowala")
+              img(src="@@cdnURL/images/kowala/kowala-white.svg" title="Kowala")
           .menu
             ul
               li
-                a(href="https://explorer.zygote.kowala.tech" rel="noopener" target="_blank") BLOCK EXPLORER
+                a(href="@@explorerURL" rel="noopener" target="_blank") BLOCK EXPLORER
               li
-                a(href="https://faucet.zygote.kowala.tech" rel="noopener" target="_blank") GET TEST COINS
+                a(href="@@faucetURL" rel="noopener" target="_blank") GET TEST COINS
               li
                 a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION
               li
