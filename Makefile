@@ -171,7 +171,6 @@ e2e: dep
 wallet_app_tests:
 	@cd wallet-app; \
 	yarn install --network-concurrency 1 && \
-	yarn run lint && \
 	yarn run test
 
 ## Docs
