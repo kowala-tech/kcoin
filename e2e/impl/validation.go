@@ -161,7 +161,7 @@ func (ctx *ValidationContext) checkTokenBalance(account accounts.Account, expect
 	}
 
 	if currentDeposit.Cmp(expectedWei) != 0 {
-		return fmt.Errorf("account %s have %v, expected %v", account.Address.String(), currentDeposit, expectedWei)
+		return fmt.Errorf("account %s have %v mTokens, expected %v", account.Address.String(), currentDeposit, expectedWei)
 	}
 
 	return nil
@@ -179,6 +179,15 @@ func (ctx *ValidationContext) ITransferMTokens(mTokens int64, from, to string) e
 	}
 
 	return ctx.sendTokensAndWait(fromAccount, toAccount, mTokens)
+}
+
+func (ctx *ValidationContext) MintMTokens(m, n int64, mTokens int64, to string) error {
+	toAccount, ok := ctx.globalCtx.accounts[to]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", to)
+	}
+
+	return ctx.mintTokensAndWait(ctx.globalCtx.mtokensGovernanceAccounts[:m], toAccount, mTokens)
 }
 
 func (ctx *ValidationContext) isMTokensDepositExact(deposit *Deposit, expectedMTokens *big.Int) error {
@@ -282,6 +291,20 @@ func (ctx *ValidationContext) execCommand(command []string, response ...*cluster
 	return ctx.makeExecFunc(command, response...)()
 }
 
+func (ctx *ValidationContext) getTokenBalance(at common.Address) (*big.Int, error) {
+	res := &cluster.ExecResponse{}
+	if err := ctx.execCommand(getTokenBalance(at), res); err != nil {
+		return nil, err
+	}
+
+	currentBalanceBig, ok := new(big.Int).SetString(res.StdOut, 10)
+	if !ok {
+		return nil, fmt.Errorf("incorrect mToken deposit %q of %s", res.StdOut, at.String())
+	}
+
+	return currentBalanceBig, nil
+}
+
 func isError(s string) error {
 	if strings.HasPrefix(s, "Error: EOF") {
 		return nil
@@ -297,7 +320,7 @@ func blockNumberCommand() []string {
 }
 
 func isSyncedCommand() []string {
-	return cluster.KcoinExecCommand("eth.blockNumber > 0 && eth.syncing == false")
+	return cluster.KcoinExecCommand("eth.blockNumber > 1 && net.peerCount > 0 && eth.syncing == false")
 }
 
 func validatorStartCommand(mtokens int64) []string {
@@ -323,4 +346,9 @@ func getTokenBalance(at common.Address) []string {
 func transferTokens(transferArgs knode.TransferArgs) []string {
 	args, _ := json.Marshal(transferArgs)
 	return cluster.KcoinExecCommand(fmt.Sprintf("mtoken.transfer(%s)", string(args)))
+}
+
+func mintTokens(transferArgs knode.TransferArgs, pass string) []string {
+	args, _ := json.Marshal(transferArgs)
+	return cluster.KcoinExecCommand(fmt.Sprintf("mtoken.mint(%s, %q)", string(args), pass))
 }

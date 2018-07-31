@@ -1,11 +1,14 @@
 package keystore
 
 import (
+	"errors"
 	"math/big"
 
 	ethereum "github.com/kowala-tech/kcoin/client"
 	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original
@@ -144,4 +147,36 @@ func (w *keystoreWallet) SignTxWithPassphrase(account accounts.Account, passphra
 	}
 	// Account seems valid, request the keystore to sign
 	return w.keystore.SignTxWithPassphrase(account, passphrase, tx, chainID)
+}
+
+func (w *keystoreWallet) NewKeyedTransactor(account accounts.Account, auth string) (*accounts.TransactOpts, error) {
+	// Make sure the requested account is contained within
+	if account.Address != w.account.Address {
+		return nil, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return nil, accounts.ErrUnknownAccount
+	}
+
+	return newKeyedTransactor(w.keystore, account, auth), nil
+}
+
+func newKeyedTransactor(ks *KeyStore, a accounts.Account, auth string) *accounts.TransactOpts {
+	_, key, _ := ks.getDecryptedKey(a, auth)
+
+	keyAddr := crypto.PubkeyToAddress(key.PrivateKey.PublicKey)
+	return &accounts.TransactOpts{
+		From: keyAddr,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			if address != keyAddr {
+				return nil, errors.New("not authorized to sign this account")
+			}
+
+			signature, err := crypto.Sign(signer.Hash(tx).Bytes(), key.PrivateKey)
+			if err != nil {
+				return nil, err
+			}
+			return tx.WithSignature(signer, signature)
+		},
+	}
 }

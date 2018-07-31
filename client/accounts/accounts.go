@@ -2,6 +2,7 @@
 package accounts
 
 import (
+	"context"
 	"math/big"
 
 	kcoin "github.com/kowala-tech/kcoin/client"
@@ -116,7 +117,23 @@ type Wallet interface {
 	// It looks up the account specified either solely via its address contained within,
 	// or optionally with the aid of any location metadata from the embedded URL field.
 	SignTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+
+	NewKeyedTransactor(account Account, auth string) (*TransactOpts, error)
 }
+
+type TransactOpts struct {
+	From   common.Address // Kowala account to send the transaction from
+	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
+	Signer SignerFn       // Method to use for signing the transaction (mandatory)
+
+	Value    *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
+	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)
+	GasLimit *big.Int // Gas limit to set for the transaction execution (nil = estimate + 10%)
+
+	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
+}
+
+type SignerFn func(types.Signer, common.Address, *types.Transaction) (*types.Transaction, error)
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can
 // sign transactions with and upon request, do so.

@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -78,7 +79,7 @@ func (val *validator) notLoggedInState() stateFn {
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
 
-	log.Info("Voter has been accepted in the election")
+	log.Info("Voter has been accepted in the election", "enode", val.walletAccount.Account().Address.String())
 	val.restoreLastCommit()
 
 	return val.newElectionState
@@ -129,7 +130,7 @@ func (val *validator) newProposalState() stateFn {
 		log.Info("Proposing a new block")
 		val.propose()
 	} else {
-		log.Info("Waiting for the proposal", proposer.Address())
+		log.Info("Waiting for the proposal", "addr", proposer.Address())
 		val.waitForProposal()
 	}
 	return val.preVoteState
@@ -239,6 +240,7 @@ func (val *validator) commitState() stateFn {
 		log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}
 	if !voter {
+		log.Info(fmt.Sprintf("Logging out. Account %q is not a validator", val.walletAccount.Account().Address.String()))
 		return val.loggedOutState
 	}
 
