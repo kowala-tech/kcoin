@@ -2,7 +2,9 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "../consensus/mgr/ValidatorMgr.sol";
-
+/**
+* @title Oracle Manager contract
+*/
 contract OracleMgr is Pausable {
 
     uint public baseDeposit;       
