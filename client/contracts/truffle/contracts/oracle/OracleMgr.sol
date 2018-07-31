@@ -90,15 +90,24 @@ contract OracleMgr is Pausable {
         updatePeriod = _updatePeriod;
         validatorMgr = ValidatorMgr(_validatorMgrAddr);
     }
-
+    /**
+     * @dev Checks if given address is Oracle
+     * @param identity Address of an Oracle.
+     */
     function isOracle(address identity) public view returns (bool isIndeed) {
         return oracleRegistry[identity].isOracle;
     }
-
+    /**
+     * @dev Checks availability of OraclePool
+     */
     function _hasAvailability() public view returns (bool available) {
         return (maxNumOracles - oraclePool.length) > 0;
     }
 
+    /**
+     * @dev Deletes given oracle
+     * @param identity Address of an Oracle.
+     */
     function _deleteOracle(address identity) private {
         Oracle oracle = oracleRegistry[identity];
         for (uint index = oracle.index; index < oraclePool.length - 1; index++) {
@@ -110,11 +119,18 @@ contract OracleMgr is Pausable {
         oracle.deposits[oracle.deposits.length - 1].availableAt = now + freezePeriod;
     }
 
-    // _deleteSmallestBidder removes the oracle with the smallest deposit
+    /**
+     * @dev removes the oracle with the smallest deposit
+     */
     function _deleteSmallestBidder() private {
         _deleteOracle(oraclePool[oraclePool.length - 1]);
     }
 
+    /**
+     * @dev Inserts oracle
+     * @param identity Address of an Oracle.
+     * @param deposit Deposit ammount
+     */
     function _insertOracle(address identity, uint deposit) private {
         Oracle oracle = oracleRegistry[identity];
         oracle.index = oraclePool.push(identity) - 1;
@@ -135,18 +151,27 @@ contract OracleMgr is Pausable {
         }
     }
 
+    /**
+     * @dev Get Oracle count
+     */
     function getOracleCount() public view returns (uint count) {
         return oraclePool.length;
     }
 
+    /**
+     * @dev Get oracle information
+     * @param index index of an Oracle to check.
+     */
     function getOracleAtIndex(uint index) public view returns (address code, uint deposit) {
         code = oraclePool[index];
         Oracle oracle = oracleRegistry[code];
         deposit = oracle.deposits[oracle.deposits.length - 1].amount;
     }
 
-    // getMinimumDeposit returns the base deposit if there are positions available or
-    // the current smallest deposit required if there aren't positions available.
+    /**
+     * @dev returns the base deposit if there are positions available or
+        the current smallest deposit required if there aren't positions available.
+     */
     function getMinimumDeposit() public view returns (uint deposit) {
         // there are positions for validator available
         if (_hasAvailability()) {
@@ -157,16 +182,24 @@ contract OracleMgr is Pausable {
         }
     }
     
+    /**
+     * @dev Get deposit count
+     */
     function getDepositCount() public view returns (uint count) {
         return oracleRegistry[msg.sender].deposits.length; 
     }
-
+    /**
+     * @dev Get deposit at given index
+     * @param index index of an Oracle
+     */
     function getDepositAtIndex(uint index) public view returns (uint amount, uint availableAt) {
         Deposit deposit = oracleRegistry[msg.sender].deposits[index];
         return (deposit.amount, deposit.availableAt);
     }
 
-    // registerOracle registers a new candidate as oracle
+    /**
+     * @dev Registers a new candidate as oracle
+     */
     function registerOracle() public payable whenNotPaused onlyNewCandidate onlyWithMinDeposit onlySuperNode {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
@@ -174,11 +207,18 @@ contract OracleMgr is Pausable {
         _insertOracle(msg.sender, msg.value);
     }
 
-    // deregisterOracle deregisters the msg sender from the oracle set
+    /**
+     * @dev Deregisters the msg sender from the oracle set
+     */
     function deregisterOracle() public whenNotPaused onlyOracle {
         _deleteOracle(msg.sender);
     }
 
+    /**
+     * @dev Remove deposit from an Oracle
+     * @param identity Address of an Oracle.
+     * @param index index of an Oracle
+     */
     function _removeDeposits(address identity, uint index) private {
         if (index == 0) return;
 
@@ -193,8 +233,9 @@ contract OracleMgr is Pausable {
         oracle.deposits.length = lo;
     }
 
-    // releaseDeposits transfers locked deposit(s) back the user account if they
-    // are past the freeze period
+    /**
+     * @dev transfers locked deposit(s) back the user account if they are past the freeze period
+     */
     function releaseDeposits() public whenNotPaused {
         uint refund = 0;
         uint i = 0;
@@ -213,7 +254,10 @@ contract OracleMgr is Pausable {
             msg.sender.transfer(refund);
         }
     }
-
+    /**
+     * @dev Adds price
+     * @param _price price
+     */
     function addPrice(uint _price) public whenNotPaused onlyOracle onlyValidPrice(_price) {
         price = _price;
     }
