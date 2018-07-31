@@ -1,10 +1,12 @@
 pragma solidity 0.4.24;
 
 import "./KNS.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
+
 /**
  * The KNS registry contract.
  */
-contract KNSRegistry is KNS {
+contract KNSRegistry is KNS, Initializable {
     struct Record {
         address owner;
         address resolver;
@@ -24,6 +26,14 @@ contract KNSRegistry is KNS {
      */
     constructor() public {
         records[0x0].owner = msg.sender;
+    }
+
+     /**
+     * @dev initialize function for Proxy Pattern.
+     * @param _owner address of the root owner
+     */
+    function initialize(address _owner) isInitializer public {
+        records[0x0].owner = _owner;
     }
 
     /**

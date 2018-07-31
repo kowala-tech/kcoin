@@ -73,7 +73,7 @@ func TestServer_RegistersStoresInKV(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, val, "")
 
-	_, err = apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{wallet, email})
+	_, err = apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{Wallet: wallet, Email: email})
 	require.NoError(t, err)
 
 	// Make sure data changed
@@ -95,7 +95,7 @@ func TestServer_RegistersStoresInKVUsingLowercases(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, val, "")
 
-	_, err = apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{wallet, email})
+	_, err = apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{Wallet: wallet, Email: email})
 	require.NoError(t, err)
 
 	// Make sure data changed
@@ -113,9 +113,9 @@ func TestServer_RegistersFailsIfExists(t *testing.T) {
 	defer grpcServer.Stop()
 	defer grpcClient.Close()
 
-	_, err := apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{wallet, email1})
+	_, err := apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{Wallet: wallet, Email: email1})
 	require.NoError(t, err)
-	_, err = apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{wallet, email2})
+	_, err = apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{Wallet: wallet, Email: email2})
 	require.Error(t, err)
 
 	// Make sure data changed once
@@ -132,7 +132,7 @@ func TestServer_UnregistersRemovesFromKV(t *testing.T) {
 	defer grpcServer.Stop()
 	defer grpcClient.Close()
 
-	_, err := apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{wallet, email})
+	_, err := apiClient.Register(context.Background(), &protocolbuffer.RegisterRequest{Wallet: wallet, Email: email})
 	require.NoError(t, err)
 
 	// Make sure initial data is valid
@@ -140,7 +140,7 @@ func TestServer_UnregistersRemovesFromKV(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, val, email)
 
-	_, err = apiClient.Unregister(context.Background(), &protocolbuffer.UnregisterRequest{wallet})
+	_, err = apiClient.Unregister(context.Background(), &protocolbuffer.UnregisterRequest{Wallet: wallet})
 	require.NoError(t, err)
 
 	// Make sure data changed
@@ -156,7 +156,7 @@ func TestServer_UnregisterFailsIfDoesNotExist(t *testing.T) {
 	defer grpcServer.Stop()
 	defer grpcClient.Close()
 
-	_, err := apiClient.Unregister(context.Background(), &protocolbuffer.UnregisterRequest{wallet})
+	_, err := apiClient.Unregister(context.Background(), &protocolbuffer.UnregisterRequest{Wallet: wallet})
 	require.Error(t, err)
 }
 

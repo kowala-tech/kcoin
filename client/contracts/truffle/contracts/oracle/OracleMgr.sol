@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
+import "../consensus/mgr/ValidatorMgr.sol";
 
 contract OracleMgr is Pausable {
 
@@ -10,6 +11,8 @@ contract OracleMgr is Pausable {
     uint public syncFrequency;
     uint public updatePeriod;
     uint public price;
+    ValidatorMgr validatorMgr;
+    bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
     struct Deposit {
         uint amount;
@@ -43,6 +46,11 @@ contract OracleMgr is Pausable {
         _;
     }
 
+    modifier onlySuperNode {
+        require(validatorMgr.isSuperNode(msg.sender));
+        _;
+    }
+
     modifier onlyValidPrice(uint _price) {
         require(_price > 0);
         _;
@@ -62,7 +70,8 @@ contract OracleMgr is Pausable {
         uint _maxNumOracles,
         uint _freezePeriod,
         uint _syncFrequency,
-        uint _updatePeriod) 
+        uint _updatePeriod,
+        address _validatorMgrAddr) 
     public {
         require(_initialPrice > 0);
         require(_maxNumOracles > 0);
@@ -79,6 +88,7 @@ contract OracleMgr is Pausable {
         freezePeriod = _freezePeriod * 1 days;
         syncFrequency = _syncFrequency;
         updatePeriod = _updatePeriod;
+        validatorMgr = ValidatorMgr(_validatorMgrAddr);
     }
 
     function isOracle(address identity) public view returns (bool isIndeed) {
@@ -157,7 +167,7 @@ contract OracleMgr is Pausable {
     }
 
     // registerOracle registers a new candidate as oracle
-    function registerOracle() public payable whenNotPaused onlyNewCandidate onlyWithMinDeposit {
+    function registerOracle() public payable whenNotPaused onlyNewCandidate onlyWithMinDeposit onlySuperNode {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
         }

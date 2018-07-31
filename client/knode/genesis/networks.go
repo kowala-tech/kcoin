@@ -21,6 +21,7 @@ var Networks = map[string]map[string]Options{
 				MaxNumValidators: 100,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
+				SuperNodeAmount:  6000000,
 				Validators: []Validator{
 					{
 						Address: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
@@ -86,10 +87,11 @@ var Networks = map[string]map[string]Options{
 				MaxNumValidators: 100,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
+				SuperNodeAmount:  6000000,
 				Validators: []Validator{
 					{
 						Address: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
-						Deposit: 1000000,
+						Deposit: 6000000,
 					},
 				},
 				MiningToken: &MiningTokenOpts{
@@ -100,7 +102,7 @@ var Networks = map[string]map[string]Options{
 					Holders: []TokenHolder{
 						{
 							Address:   "0xd6e579085c82329c89fca7a9f012be59028ed53f",
-							NumTokens: 3000000,
+							NumTokens: 10000000,
 						},
 					},
 				},
