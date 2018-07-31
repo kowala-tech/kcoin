@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client"
-	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/math"
 	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
@@ -25,10 +24,8 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
+	"github.com/kowala-tech/kcoin/client/log"
 )
-
-// This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
-var _ bind.ContractBackend = (*SimulatedBackend)(nil)
 
 var errBlockNumberUnsupported = errors.New("SimulatedBackend cannot access blocks other than the latest block")
 var errGasEstimationFailed = errors.New("gas required exceeds allowance or always failing transaction")
@@ -226,6 +223,10 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg)
 		b.pendingState.RevertToSnapshot(snapshot)
 
 		if err != nil || failed {
+			if err != nil {
+				log.Error("can't estimate gas limit", "err", err)
+			}
+
 			return false
 		}
 		return true

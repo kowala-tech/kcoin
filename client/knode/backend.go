@@ -26,6 +26,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/knode/filters"
 	"github.com/kowala-tech/kcoin/client/knode/gasprice"
+	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
@@ -110,7 +111,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
 
-	log.Info("Initialising Kowala protocol", "versions", ProtocolVersions, "network", config.NetworkId)
+	log.Info("Initialising Kowala protocol", "versions", protocol.ProtocolVersions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
@@ -229,7 +230,7 @@ func (s *Kowala) APIs() []rpc.API {
 		}, {
 			Namespace: "mtoken",
 			Version:   "1.0",
-			Service:   NewPublicTokenAPI(s.accountManager, s.consensus.Token()),
+			Service:   NewPublicTokenAPI(s.accountManager, s.consensus),
 			Public:    false,
 		}, {
 			Namespace: "eth",
@@ -406,7 +407,7 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 
 	//fixme: should be removed after develop light client
 	if srvr.DiscoveryV5 {
-		protocolTopic := discv5.DiscoveryTopic(s.blockchain.Genesis().Hash(), ProtocolName, kcoin1)
+		protocolTopic := discv5.DiscoveryTopic(s.blockchain.Genesis().Hash(), protocol.ProtocolName, protocol.Kcoin1)
 
 		go func() {
 			srvr.DiscV5.RegisterTopic(protocolTopic, s.shutdownChan)

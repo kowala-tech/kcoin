@@ -14,6 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/p2p/nat"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
+	"github.com/kowala-tech/kcoin/client/p2p/discv5"
 )
 
 // Errors
@@ -523,15 +524,19 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 			log.Debug("Temporary UDP read error", "err", err)
 			continue
 		} else if err != nil {
-			// Shut down the loop for permament errors.
+			// Shut down the loop for permanent errors.
 			log.Debug("UDP read error", "err", err)
 			return
 		}
-		if t.handlePacket(from, buf[:nbytes]) != nil && unhandled != nil {
-			select {
-			case unhandled <- ReadPacket{buf[:nbytes], from}:
-			default:
-			}
+
+		if discv5.IsDiscoveryPacket(buf) && unhandled != nil {
+			unhandled <- ReadPacket{buf[:nbytes], from}
+			continue
+		}
+
+		if t.handlePacket(from, buf[:nbytes]) != nil {
+			log.Debug("discoveryV4 error", "err", err)
+			continue
 		}
 	}
 }
@@ -639,6 +644,11 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 	// Send neighbors in chunks with at most maxNeighbors per packet
 	// to stay below the 1280 byte limit.
 	for _, n := range closest {
+		if fromID == n.ID {
+			//skip remote node itself
+			continue
+		}
+
 		if netutil.CheckRelayIP(from.IP, n.IP) == nil {
 			p.Nodes = append(p.Nodes, nodeToRPC(n))
 		}

@@ -24,6 +24,11 @@
 #   go-tests = true
 #   unused-packages = true
 
+ignored = [
+  "github.com/kowala-tech/kcoin/client",
+  "github.com/kowala-tech/kcoin/client/*"
+]
+
 [prune]
   go-tests = true
   unused-packages = true

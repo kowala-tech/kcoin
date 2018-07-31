@@ -13,13 +13,13 @@ type DepositResponse struct {
 }
 
 type Deposit struct {
-	AvailableAt *GethTime
+	AvailableAt *ChainTime
 	Value       *big.Int
 }
 
-type GethTime time.Time
+type ChainTime time.Time
 
-func (g *GethTime) UnmarshalJSON(data []byte) error {
+func (g *ChainTime) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		return nil
 	}
@@ -29,12 +29,12 @@ func (g *GethTime) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	*g = GethTime(t)
+	*g = ChainTime(t)
 
 	return nil
 }
 
-func (g *GethTime) Time() time.Time {
+func (g *ChainTime) Time() time.Time {
 	return time.Time(*g)
 }
 

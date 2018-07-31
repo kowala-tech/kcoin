@@ -160,15 +160,6 @@ Use "ethereum dump 0" to dump the genesis block.`,
 func initGenesis(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
 	genesisPath := ctx.Args().First()
-	if len(genesisPath) == 0 {
-		utils.Fatalf("Must supply path to genesis JSON file")
-	}
-	file, err := os.Open(genesisPath)
-	if err != nil {
-		utils.Fatalf("Failed to read genesis file: %v", err)
-	}
-	defer file.Close()
-	
 	networkKey := extractNetworkKey(ctx)
 	kCoin := ctx.GlobalString(utils.CurrencyFlag.Name)
 

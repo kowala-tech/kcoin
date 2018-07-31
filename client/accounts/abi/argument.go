@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 // Argument holds the name of the argument and the corresponding type.
@@ -252,8 +253,15 @@ func (arguments Arguments) Pack(args ...interface{}) ([]byte, error) {
 	var ret []byte
 	for i, a := range args {
 		input := abiArgs[i]
+
+		// to be sure that all args are not 'nil' and reflect won't panic
+		v, err := common.SafeValueOf(a)
+		if err != nil {
+			return nil, fmt.Errorf("got error for an argument %v(%d): %v", a, i, err)
+		}
+
 		// pack the input
-		packed, err := input.Type.pack(reflect.ValueOf(a))
+		packed, err := input.Type.pack(v)
 		if err != nil {
 			return nil, err
 		}
