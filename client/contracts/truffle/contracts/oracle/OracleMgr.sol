@@ -47,7 +47,15 @@ contract OracleMgr is Pausable {
         require(_price > 0);
         _;
     }
-
+    /**
+     * Constructor.
+     * @param _initialPrice Initial Price.
+     * @param _baseDeposit base deposit for Oracle.
+     * @param _maxNumOracles Maximum numbers of Oracles.
+     * @param _freezePeriod Freeze period for Oracle.
+     * @param _syncFrequency Synchronize frequency for Oracles.
+     * @param _updatePeriod Update period.
+     */
     function OracleMgr(
         uint _initialPrice, 
         uint _baseDeposit,
