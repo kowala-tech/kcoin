@@ -1,11 +1,11 @@
-IMAGE_NAME     := kowala-app-web
+IMAGE_NAME     					:= kowala-app-web
 CUCUMBER_IMAGE_NAME     := kowala-app-web-tests
 
 install:
-	@yarn install --network-concurrency 1
+	@yarn install
 
-build:
-	@yarn run build
+build: install
+	KOWALA_NETWORK="kusd-zygote" yarn run build
 
 test:
 	@yarn run test
@@ -47,7 +47,7 @@ serve: watch
 # Start the website on port 3000
 watch: .started
 	@docker-compose exec $(IMAGE_NAME) make install
-	@docker-compose exec $(IMAGE_NAME) yarn run start:server
+	@docker-compose exec $(IMAGE_NAME) npm run start:server
 
 stop:
 	@docker-compose kill
