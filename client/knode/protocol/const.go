@@ -13,7 +13,7 @@ const (
 	ProtocolName = "kcoin"
 )
 
-var Consts = struct {
+var Constants = struct {
 	NameUpper   string
 	VersionStr  string
 	Prefix      string

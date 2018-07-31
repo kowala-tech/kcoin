@@ -522,8 +522,6 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 		if err := discv5.IsDiscoveryPacket(buf); err == nil {
 			unhandled <- ReadPacket{buf[:nbytes], from}
 			continue
-		} else {
-			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", err)
 		}
 
 		if netutil.IsTemporaryError(err) {

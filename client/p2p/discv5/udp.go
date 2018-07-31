@@ -124,7 +124,7 @@ type (
 )
 
 var (
-	//fixme: @jekamas use a shorter Prefix. Breaking change!
+	//fixme: @jekamas use a shorter prefix. Breaking change!
 	versionPrefix     = []byte("temporary discovery v5")
 	versionPrefixSize = len(versionPrefix)
 	sigSize           = 520 / 8

@@ -41,7 +41,7 @@ func version(ctx *cli.Context) error {
 		fmt.Println("BuildTime:", params.BuildTime)
 	}
 	fmt.Println("Architecture:", runtime.GOARCH)
-	fmt.Println("Consts Versions:", protocol.Consts.Versions)
+	fmt.Println("Constants Versions:", protocol.Constants.Versions)
 	fmt.Println("Go Version:", runtime.Version())
 	fmt.Println("Operating System:", runtime.GOOS)
 	return nil

@@ -57,7 +57,7 @@ func (packet *Packet) getPacketTopic() []byte {
 		startIndex = 3
 	}
 
-	endIndex := startIndex + len(protocol.Consts.PrefixBytes)
+	endIndex := startIndex + len(protocol.Constants.PrefixBytes)
 	if endIndex >= len(packet.Data) {
 		return nil
 	}
@@ -126,7 +126,7 @@ func (packet *Packet) isCorrectTopicQueryPacket() error {
 }
 
 func (packet *Packet) isCorrectTopic() error {
-	if !bytes.HasPrefix(packet.topic, protocol.Consts.PrefixBytes) {
+	if !bytes.HasPrefix(packet.topic, protocol.Constants.PrefixBytes) {
 		return errBadTopic
 	}
 	return nil

@@ -358,7 +358,7 @@ func (s *Service) login(conn *websocket.Conn) error {
 
 	info := infos.Protocols["kcoin"]
 	network := fmt.Sprintf("%d", info.(*knode.KowalaNodeInfo).Network)
-	protocol := fmt.Sprintf("kcoin/%d", protocol.Consts.Versions[0])
+	protocol := fmt.Sprintf("kcoin/%d", protocol.Constants.Versions[0])
 
 	auth := &authMsg{
 		ID: s.node,
