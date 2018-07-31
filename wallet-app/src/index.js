@@ -7,7 +7,7 @@ import configureStore, { history } from "./redux/configureStore";
 import Root from "./components/Root";
 import "./styles/styles.scss";
 import injectTapEventPlugin from "react-tap-event-plugin";
-require("./favicon.ico"); // Tell webpack to load favicon.ico
+require("../../cdn/images/meta/favicon.ico"); // Tell webpack to load favicon.ico
 const store = configureStore();
 
 render(

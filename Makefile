@@ -187,8 +187,7 @@ e2e: dep
 .PHONY: wallet_app_tests
 wallet_app_tests:
 	@cd wallet-app; \
-	yarn install --network-concurrency 1 && \
-	yarn run test
+	make install && make test
 
 ## Docs
 BUILD_DOCS := mkdocs build --clean --strict -d site

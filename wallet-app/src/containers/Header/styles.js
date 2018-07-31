@@ -8,7 +8,7 @@ const styles = (theme) => ({
 		margin: `${theme.spacing.unit} 0`
 	},
 	menuLogo: {
-		height: "18px",
+		height: "15px",
 		marginTop: theme.spacing.unit
 	},
 	header: {
@@ -32,6 +32,9 @@ const styles = (theme) => ({
 	rightIcon: {
 		flex: 1,
 		textAlign: "right"
+	},
+	button: {
+		textDecoration: "none"
 	}
 });
 

@@ -1,23 +1,25 @@
 # kWallet
 
 ## Getting Started
-Run `make install` and then `make start`.
+Requires docker and docker-compose.
+
+Run `make docker-start`.
 
 http://localhost:3000
 
 ## Running the Production Build
-Run `make build`.
+Run `make docker-build`.
 
 ## Component Storybooks
 Components are designed and maintained using [Storybook](https://github.com/storybooks/storybook).
-To run the storybook locally, run `make storybook`. To build the storybook for static deploys, run `make build-storybook`.
+To run the storybook locally, run `make docker-storybook`.
 
 http://localhost:6006
 
 ## Component Testing
 Components are unit tested with [Jest](https://github.com/facebook/jest).
 
-Run `make test` to run all tests.
+Run `make docker-test` to run all tests.
 
 ## Container Testing
 Containers will be end to end tested using *TBD*.

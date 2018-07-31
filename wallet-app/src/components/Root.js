@@ -8,7 +8,6 @@ import { IntlProvider } from "react-intl";
 import { MuiThemeProvider, withTheme } from "@material-ui/core/styles";
 import muiTheme from "./MuiTheme";
 import AppContainer from "../containers/AppContainer";
-import Particles from "./Particles";
 
 class Root extends Component {
 	render() {
@@ -21,7 +20,6 @@ class Root extends Component {
 			<Provider store={store}>
 				<IntlProvider locale="en">
 					<MuiThemeProvider theme={muiTheme}>
-						<Particles />
 						<ConnectedRouter history={history}>
 							<Route path="/"
 								component={AppContainer} />

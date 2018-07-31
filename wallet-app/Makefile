@@ -1,25 +1,27 @@
-IMAGE_NAME     					:= kowala-app-web
-CUCUMBER_IMAGE_NAME     := kowala-app-web-tests
+DOCKER_NAME = kowala-app-web
+
+start: .docker-started docker-install docker-serve
 
 install:
 	@yarn install
 
-build: install
-	KOWALA_NETWORK="kusd-zygote" yarn run build
+build:
+	@yarn run build
+
+serve:
+	@yarn run start
+
+watch:
+	@yarn run start
 
 test:
 	@yarn run test
+	@cucumber --tags 'not @ignore'
 
 lint:
 	@yarn run lint
 
-start:
-	KOWALA_NETWORK="kusd-zygote" yarn run start
-
 storybook:
-	@yarn run storybook
-
-build-storybook:
 	@yarn run storybook
 
 clean:
@@ -27,31 +29,35 @@ clean:
 	@rm -rf dist/
 	@rm -rf coverage/
 
-cucumber-test:
-	@cucumber --tags 'not @ignore'
+docker-install: .docker-started
+	@docker-compose exec $(DOCKER_NAME) make install
 
-test-e2e:
-	@docker-compose exec $(CUCUMBER_IMAGE_NAME) make cucumber-test
+docker-serve: .docker-started
+	@docker-compose exec $(DOCKER_NAME) make serve
 
-.started:
-	@docker-compose build
-	@docker-compose up -d
-	@touch .started
-	@echo "Docker containers are now running."
+docker-build: .docker-started
+	@docker-compose exec $(DOCKER_NAME) make build
 
-start-docker-images: .started
+docker-test: .docker-started
+	@docker-compose exec $(DOCKER_NAME) make test
 
-# Alias for watch
-serve: watch
+docker-storybook: .docker-started
+	@docker-compose exec $(DOCKER_NAME) make storybook
 
-# Start the website on port 3000
-watch: .started
-	@docker-compose exec $(IMAGE_NAME) make install
-	@docker-compose exec $(IMAGE_NAME) npm run start:server
+docker-bash: .docker-started
+	@docker-compose exec $(DOCKER_NAME) /bin/bash
 
-stop:
-	@docker-compose kill
+docker-stop:
 	@docker-compose stop
 	@docker-compose down
+	@rm .docker-started
+
+docker-clean: docker-stop
+	@docker-compose kill
 	@docker-compose rm -f
-	-@rm .started
+
+.docker-started:
+	@docker-compose build
+	@docker-compose up -d
+	@touch .docker-started
+	@echo "Docker containers are now running."

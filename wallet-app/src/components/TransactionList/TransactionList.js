@@ -12,8 +12,6 @@ import CardHeader from "@material-ui/core/CardHeader";
 import CardContent from "@material-ui/core/CardContent";
 import CardActions from "@material-ui/core/CardActions";
 import Grow from "@material-ui/core/Grow";
-import IconButton from "@material-ui/core/IconButton";
-import MoreVertIcon from "@material-ui/icons/MoreVert";
 import ListIcon from "@material-ui/icons/List";
 // Component Related Imports
 import ListItem from "./components/ListItem";
@@ -45,11 +43,6 @@ function TransactionList( { classes, loading, transactions, toggleTransactionDet
 						<Avatar className={classes.avatar}>
 							<ListIcon />
 						</Avatar>
-					}
-					action={
-						<IconButton disabled>
-							<MoreVertIcon />
-						</IconButton>
 					}
 					title={
 						<Typography variant="subheading">

@@ -32,7 +32,7 @@ export default {
 	plugins: [
 		new webpack.DefinePlugin({
 			VERSION: JSON.stringify(gitRevisionPlugin.version()),
-			KOWALA_NETWORK: JSON.stringify(process.env.KOWALA_NETWORK),
+			KOWALA_NETWORK: JSON.stringify(process.env.KOWALA_NETWORK || "kusd-zygote"),
 			"process.env.NODE_ENV": JSON.stringify("development"), // Tells React to build in either dev or prod modes. https://facebook.github.io/react/downloads.html (See bottom)
 			__DEV__: true,
 		}),
@@ -40,7 +40,7 @@ export default {
 		new webpack.NoEmitOnErrorsPlugin(),
 		new HtmlWebpackPlugin({     // Create HTML file that includes references to bundled CSS and JS.
 			template: "src/index.ejs",
-			favicon: "src/images/favicon.png",
+			favicon: "../cdn/images/meta/favicon-32x32.png",
 			minify: {
 				removeComments: true,
 				collapseWhitespace: true

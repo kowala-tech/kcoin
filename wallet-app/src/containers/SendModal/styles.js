@@ -1,11 +1,6 @@
 const styles = (theme) => ({
 	root: {
-		width: "100%",
-		minWidth: "35vw",
-		padding: theme.spacing.unit
-	},
-	form: {
-
+		width: "100vw"
 	},
 	recentAddresses: {
 		backgroundColor: theme.palette.background.paper,

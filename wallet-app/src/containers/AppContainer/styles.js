@@ -3,7 +3,6 @@ const toolbarHeight = 75;
 const styles = (theme) => ({
 	root: {
 		height: "inherit",
-		backgroundColor: theme.palette.primary.main,
 		color: theme.palette.primary.contrastText
 	},
 	flexContainer: {

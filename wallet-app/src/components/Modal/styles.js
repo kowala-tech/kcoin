@@ -1,7 +1,7 @@
-const styles = () => ({
+const styles = (theme) => ({
 	content: {
 		display: "flex",
-		padding: 0
+		padding: theme.spacing.unit * 2
 	},
 	contentText: {
 		display: "flex",

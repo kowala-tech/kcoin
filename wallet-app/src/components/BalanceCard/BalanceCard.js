@@ -19,11 +19,6 @@ class BalanceCard extends React.Component {
 		return (
 			<div className={classes.root}>
 				<Typography
-					className={classes.text}
-				>
-					Your wallet's current balance is
-				</Typography>
-				<Typography
 					variant="title"
 					className={classes.balance}
 				>

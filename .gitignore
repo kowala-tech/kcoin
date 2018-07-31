@@ -11,6 +11,7 @@
 *.swp
 .DS_Store
 .node-xmlhttprequest-*
+*.orig
 
 # used by the Makefile
 /client/build/_workspace/
@@ -42,7 +43,7 @@ nsqd.*
 wallet-app/dist/
 wallet-app/src/store/__snapshots__/
 wallet-app/coverage/
-wallet-app/.started
+wallet-app/.docker-started
 wallet-app/.yarn_cache/*
 !wallet-app/.yarn_cache/.gitkeep
 wallet-app/node_modules/

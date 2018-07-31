@@ -7,7 +7,8 @@ export const edgeWalletNamespace = "wallet:" + edgeWalletName;
 export const edge = makeContext({
 	apiKey: "e6eee331afb0385b6a6223719802fcfd00fc2331",
 	plugins: [ kowalaCurrencyPluginFactory ],
-	appId: edgeWalletName
+	appId: edgeWalletName,
+	appName: edgeWalletName
 });
 
 export const storeEdgeOnWindow = async () => {
@@ -98,6 +99,7 @@ export const getLocalEdgeAccount = () => {
 
 export const getWallet = (id) => {
 	console.log("Getting wallet " + id);
+	console.log(getLocalEdgeAccount());
 	const wallets = getLocalEdgeAccount().currencyWallets;
 	return wallets[id];
 };

@@ -18,8 +18,6 @@ import Slide from "@material-ui/core/Slide";
 import PersonIcon from "@material-ui/icons/Person";
 // Component Related Imports
 import styles from "./styles";
-import logoUrl from "../../images/kwallet.svg";
-import darkLogoUrl from "../../images/kwallet-dark.svg";
 import { deleteLocalAccount, logout } from "../../modules/edge";
 
 class Header extends React.Component {
@@ -64,7 +62,7 @@ class Header extends React.Component {
 				position="static"
 				elevation={0}
 			>
-				<Toolbar disableGutters>
+				<Toolbar>
 					<div className={classes.leftIcon}>
 						{ leftButton &&
 						(	<Slide
@@ -79,12 +77,15 @@ class Header extends React.Component {
 					<div className={classes.title}>
 						<img
 							className={classes.logo}
-							src={logoUrl}
+							src="https://cdn.kowala.tech/images/kowala/kowala-white.svg"
 						/>
 					</div>
 					<div className={classes.rightIcon}>
 						{ !user.username && (
-							<Link to="/login">
+							<Link
+								to="/login"
+								className={classes.button}
+							>
 								<Button
 									size="small"
 									id="trigger-icon"
@@ -158,23 +159,11 @@ class Header extends React.Component {
 									</MenuItem>
 
 									<Divider />
-									<MenuItem
-										disabled={true}
-									>
-										<div style={{ flex:2 }}>
-											<img
-												src={darkLogoUrl}
-												alt="kWallet"
-												className={classes.menuLogo}
-											/>
-										</div>
-										<div style={{ flex:1 }}>
-											<Typography variant="caption">
-												{KOWALA_NETWORK}-{VERSION}
-											</Typography>
-										</div>
+									<MenuItem>
+										<Typography variant="caption">
+											{KOWALA_NETWORK}-{VERSION}
+										</Typography>
 									</MenuItem>
-
 
 								</Menu>
 							</span>

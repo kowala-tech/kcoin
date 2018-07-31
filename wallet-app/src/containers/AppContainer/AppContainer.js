@@ -39,7 +39,7 @@ export class App extends React.Component {
 		} = this.props;
 
 		return (
-			<div className={`kowalaGradient ${classes.root}`}>
+			<div className={classes.root}>
 				<Header
 					user={user}
 				/>
@@ -88,7 +88,7 @@ const mapDispatchToProps = (dispatch) => {
 	return {
 		setUsername: (username) => {
 			if (username) {
-				const message = "Welcome back " + username + "!";
+				const message = "Welcome back " + username + "! Enter your PIN to unlock your wallet." ;
 				dispatch(setUsername(username));
 				dispatch(openMessage(message));
 			}

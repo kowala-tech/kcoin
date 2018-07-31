@@ -1,0 +1,9 @@
+[submodule "wallet-app/kowala-assets"]
+	path = wallet-app/kowala-assets
+	url = git@github.com:kowala-tech/kowala-assets.git
+[submodule "wallet-app/src/styles/kowala-assets"]
+	path = wallet-app/src/styles/kowala-assets
+	url = git@github.com:kowala-tech/kowala-assets.git
+[submodule "wallet-app/src/styles/--force"]
+	path = wallet-app/src/styles/--force
+	url = git@github.com:kowala-tech/kowala-assets.git
