@@ -11,12 +11,20 @@ import (
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
 
+type System interface {
+	Mint()
+}
+
 type Konsensus struct {
 	config   *params.KonsensusConfig
 	system   System
 	//provider PriceProvider
 	//reader   SystemVarsReader
 	fakeMode bool
+}
+
+func NewFaker() *Konsensus {
+	return &Konsensus{fakeMode: true}
 }
 
 func New(config *params.KonsensusConfig, provider PriceProvider, reader SystemVarsReader) *Konsensus {
@@ -26,17 +34,13 @@ func New(config *params.KonsensusConfig, provider PriceProvider, reader SystemVa
 	}
 }
 
-func NewFaker() *Konsensus {
-	return &Konsensus{fakeMode: true}
-}
-
 func (ks *Konsensus) Author(header *types.Header) (common.Address, error) {
 	return header.Coinbase, nil
 }
 
 func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
 	if !ks.fakeMode {
-		ks.sys.WithState(state)
+		ks.system.WithState(state)
 		if err := systemUpdate(header.Number, header.Coinbase, ks.system); err != nil {
 			return nil, err
 		}
@@ -50,43 +54,43 @@ func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header,
 }
 
 func systemUpdate(blockNumber *big.Int, validator common.Address, sys System) error {
-	mintedAmount, err := sys.MintedAmount()
+	mintedAmount, err := system.MintedAmount()
 	if err != nil {
 		return err
 	}
 
 	// oracle fund
-	oracleDeduction, err := sys.OracleDeduction(mintedAmount)
-	sys.Mint(sys.OracleFund(), oracleDeduction)
+	oracleDeduction, err := system.OracleDeduction(mintedAmount)
+	system.Mint(system.OracleFund(), oracleDeduction)
 
 	// mining reward
 	miningReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
-	sys.Mint(validator, miningReward)
+	system.Mint(validator, miningReward)
 
 	// update price and reward oracles
 	if oracleEpochEnd(blockNumber) {
-		submissions, err := sys.PriceProvider().Submissions()
+		submissions, err := system.PriceProvider().Submissions()
 		if err != nil {
 			return err
 		}
 		if len(submissions) != 0 {
 			// reward oracle
-			oracleReward, err := sys.OracleReward()
+			oracleReward, err := system.OracleReward()
 			if err != nil {
 				return err
 			}
 			rewardPerOracle := new(big.Int).Div(oracleReward, new(big.Int).SetUint64(uint64(len(submissions))))
 			for _, oracle := range submissions {
 				// transfer reward from the oracle fund to the oracle
-				sys.Transfer(sys.OracleFund(), oracle, rewardPerOracle)
+				system.Transfer(system.OracleFund(), oracle, rewardPerOracle)
 			}
 
 			// update price
-			newPrice, err := sys.PriceProvider().AveragePrice()
+			newPrice, err := system.PriceProvider().AveragePrice()
 			if err != nil {
 				return err
 			}
-			sys.SetPrice(newPrice)
+			system.SetPrice(newPrice)
 		}
 	}
 

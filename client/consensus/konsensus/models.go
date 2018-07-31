@@ -27,6 +27,32 @@ func (vars *SystemVars) BeforeUpdate(fieldName string) {
 	switch field := strings.ToLower(fieldName); field {
 	case "currencyprice":
 		vars.PrevCurrencyPrice = vars.CurrencyPrice
+
+		// reset oracle mgr
+		oracleMgr := &OracleMgr{
+			AveragePrice: common.Big0
+			
+		}
+
+		// reset hasSubmittedPrice per author
+		keccak := sha3.NewKeccak256()
+		participants, err := sys.provider.Submissions()
+		if err != nil {
+			return err
+		}
+		for _, oracle := range participants {
+			// oracle contract key (oracleRegistry)
+			keccak.Write(oracle.Bytes())
+			keccak.Write(hasSubmittedPriceIdx.Bytes())
+			key := common.BytesToHash(keccak.Sum(nil))
+			keccak.Reset()
+
+			// reset hasSubmittedPrice per submission
+			sys.SetState(sys.provider.Address(), key, common.BytesToHash([]byte{0}))
+
+			// reset submissions entry
+			sys.SetState(sys.provider.Address(), key, common.BytesToHash([]byte{}))
+		}
 	}
 }
 
