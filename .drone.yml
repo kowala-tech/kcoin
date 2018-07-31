@@ -156,7 +156,7 @@ pipeline:
       branch: [dev, master]
       event: [push, tag]
 
-  docker_netstats:
+  docker_netstats_dev:
     group: docker_deployment
     image: kowalatech/drone-docker
     repo: kowalatech/netstats
@@ -166,7 +166,26 @@ pipeline:
     privileged: true
     auto_tag: true
     when:
-      branch: [dev, master]
+      branch: [dev]
+      event: [push, tag]
+
+  docker_netstats_prod:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/netstats
+    dockerfile: netstats/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    build_args:
+      - URL=https://stats.kowala.tech
+      - EXPLORER_URL=https://explorer.zygote.kowala.tech
+      - FAUCET_URL=https://faucet.zygote.kowala.tech
+      - CDN_URL=https://cdn.kowala.tech
+      - WS_SECRET=abc123
+    when:
+      branch: [master]
       event: [push, tag]
 
   docker_explorer_web:
