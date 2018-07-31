@@ -99,7 +99,7 @@ bindings_node_modules:
 	cd client/contracts/truffle && npm ci
 
 .PHONY: go_generate
-go_generate: notifications_dep wallet_backend_dep bindings_node_modules abigen  moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec 
+go_generate: notifications_dep wallet_backend_dep bindings_node_modules abigen  moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
 	go generate ./...
 
 .PHONY: docker_go_generate
@@ -171,7 +171,6 @@ e2e: dep
 wallet_app_tests:
 	@cd wallet-app; \
 	yarn install --network-concurrency 1 && \
-	yarn run lint && \
 	yarn run test
 
 ## Docs
