@@ -149,9 +149,9 @@
       </li>
       }
       <li class="nav-item help">
-        <a href="https://myetherwallet.github.io/knowledge-base/" target="_blank" rel="noopener noreferrer">
+        <a href="https://kowala.tech/tutorials/ledger" target="_blank" rel="noopener noreferrer">
           <span translate="NAV_Help">
-            Help (FIXME:guide)
+            Help
           </span>
         </a>
       </li>
