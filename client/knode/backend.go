@@ -111,7 +111,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
 
-	log.Info("Initialising Kowala protocol", "versions", protocol.ProtocolVersions, "network", config.NetworkId)
+	log.Info("Initialising Kowala protocol", "versions", protocol.Constants.Versions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
@@ -230,7 +230,7 @@ func (s *Kowala) APIs() []rpc.API {
 		}, {
 			Namespace: "mtoken",
 			Version:   "1.0",
-			Service:   NewPublicTokenAPI(s.accountManager, s.consensus.Token()),
+			Service:   NewPublicTokenAPI(s.accountManager, s.consensus),
 			Public:    false,
 		}, {
 			Namespace: "eth",
