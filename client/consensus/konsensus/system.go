@@ -8,6 +8,17 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/state"
 )
 
+type PriceProvider interface {
+	AveragePrice() (*big.Int, error)
+	Submissions() ([]common.Address, error)
+}
+
+type SystemVarsReader interface {
+	MintedAmount() (*big.Int, error)
+	OracleDeduction(*big.Int) (*big.Int, error)
+	OracleReward() (*big.Int, error)
+}
+
 // Minter represts the person who mints money
 type Minter interface {
 	Mint(account common.Address, amount *big.Int)

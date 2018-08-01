@@ -41,8 +41,45 @@ func (ks *Konsensus) Author(header *types.Header) (common.Address, error) {
 func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
 	if !ks.fakeMode {
 		ks.system.WithState(state)
-		if err := systemUpdate(header.Number, header.Coinbase, ks.system); err != nil {
-			return nil, err
+		
+		mintedAmount, err := system.MintedAmount()
+		if err != nil {
+			return err
+		}
+
+		// oracle fund
+		oracleDeduction, err := system.OracleDeduction(mintedAmount)
+		system.Mint(system.OracleFund(), oracleDeduction)
+
+		// mining reward
+		miningReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
+		system.Mint(validator, miningReward)
+
+		// update price and reward oracles
+		if oracleEpochEnd(blockNumber) {
+			submissions, err := system.PriceProvider().Submissions()
+			if err != nil {
+				return err
+			}
+			if len(submissions) != 0 {
+				// reward oracle
+				oracleReward, err := system.OracleReward()
+				if err != nil {
+					return err
+				}
+				rewardPerOracle := new(big.Int).Div(oracleReward, new(big.Int).SetUint64(uint64(len(submissions))))
+				for _, oracle := range submissions {
+					// transfer reward from the oracle fund to the oracle
+					system.Transfer(system.OracleFund(), oracle, rewardPerOracle)
+				}
+
+				// update price
+				newPrice, err := system.PriceProvider().AveragePrice()
+				if err != nil {
+					return err
+				}
+				system.SetPrice(newPrice)
+			}
 		}
 	}
 
@@ -51,50 +88,6 @@ func (ks *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header,
 
 	// Header seems complete, assemble into a block and return
 	return types.NewBlock(header, txs, receipts, commit), nil
-}
-
-func systemUpdate(blockNumber *big.Int, validator common.Address, sys System) error {
-	mintedAmount, err := system.MintedAmount()
-	if err != nil {
-		return err
-	}
-
-	// oracle fund
-	oracleDeduction, err := system.OracleDeduction(mintedAmount)
-	system.Mint(system.OracleFund(), oracleDeduction)
-
-	// mining reward
-	miningReward := new(big.Int).Sub(mintedAmount, oracleDeduction)
-	system.Mint(validator, miningReward)
-
-	// update price and reward oracles
-	if oracleEpochEnd(blockNumber) {
-		submissions, err := system.PriceProvider().Submissions()
-		if err != nil {
-			return err
-		}
-		if len(submissions) != 0 {
-			// reward oracle
-			oracleReward, err := system.OracleReward()
-			if err != nil {
-				return err
-			}
-			rewardPerOracle := new(big.Int).Div(oracleReward, new(big.Int).SetUint64(uint64(len(submissions))))
-			for _, oracle := range submissions {
-				// transfer reward from the oracle fund to the oracle
-				system.Transfer(system.OracleFund(), oracle, rewardPerOracle)
-			}
-
-			// update price
-			newPrice, err := system.PriceProvider().AveragePrice()
-			if err != nil {
-				return err
-			}
-			system.SetPrice(newPrice)
-		}
-	}
-
-	return nil
 }
 
 func oracleEpochEnd(blockNumber *big.Int) bool {

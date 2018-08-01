@@ -3,7 +3,7 @@ package state
 import "reflect"
 
 // DataMapper converts data between different systems (vm storage <> golang types)
-type Mapper interface {
+type DataMapper interface {
 	Update(value interface{})
 	Get(out interface{})
 }
