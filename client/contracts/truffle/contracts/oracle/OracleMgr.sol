@@ -63,7 +63,7 @@ contract OracleMgr is Pausable {
      * @param _initialPrice Initial Price.
      * @param _baseDeposit base deposit for Oracle.
      * @param _maxNumOracles Maximum numbers of Oracles.
-     * @param _freezePeriod Freeze period for Oracle.
+     * @param _freezePeriod Freeze period for Oracle's deposit.
      * @param _syncFrequency Synchronize frequency for Oracles.
      * @param _updatePeriod Update period.
      */
