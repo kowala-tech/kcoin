@@ -109,15 +109,15 @@ contract ValidatorMgr is Pausable {
     }
 
     /**
-     * @dev Get validator count
+     * @dev Get Validator count
      */
     function getValidatorCount() public view returns (uint count) {
         return validatorPool.length;
     }
 
     /**
-     * @dev Get validator information
-     * @param index index of an validator to check.
+     * @dev Get Validator information
+     * @param index index of an Validator to check.
      */
     function getValidatorAtIndex(uint index) public view returns (address code, uint deposit) {
         code = validatorPool[index];
@@ -186,7 +186,7 @@ contract ValidatorMgr is Pausable {
     }
 
     /**
-     * @dev Set maximum of Validators
+     * @dev Set maximum numbers of Validators
      * @param max number of max Validators
      */
     function setMaxValidators(uint max) public onlyOwner { 
@@ -200,7 +200,7 @@ contract ValidatorMgr is Pausable {
     }
 
     /**
-     * @dev Delete validator
+     * @dev Delete Validator
      * @param account address of a Validator
      */
     function _deleteValidator(address account) private {
@@ -217,7 +217,7 @@ contract ValidatorMgr is Pausable {
     }
 
     /**
-     * @dev removes the validator with the smallest deposit
+     * @dev removes the Validator with the smallest deposit
      */
     function _deleteSmallestBidder() private {
         _deleteValidator(validatorPool[validatorPool.length - 1]);
@@ -232,7 +232,7 @@ contract ValidatorMgr is Pausable {
 
     /**
      * @dev Get deposit at given index
-     * @param index index of a validator to get deposit
+     * @param index index of a Validator to get deposit
      */
     function getDepositAtIndex(uint index) public view returns (uint amount, uint availableAt) {
         Deposit deposit = validatorRegistry[msg.sender].deposits[index];
@@ -240,7 +240,7 @@ contract ValidatorMgr is Pausable {
     }
 
     /**
-     * @dev Register new validator
+     * @dev Register new Validator
      */
     function _registerValidator() private whenNotPaused onlyNewCandidate onlyWithMinDeposit {
         if (!_hasAvailability()) {
@@ -250,7 +250,7 @@ contract ValidatorMgr is Pausable {
     }
 
     /**
-     * @dev deregister validator
+     * @dev deregister Validator
      */
     function deregisterValidator() public whenNotPaused onlyValidator {
         _deleteValidator(msg.sender);
@@ -301,7 +301,7 @@ contract ValidatorMgr is Pausable {
     }
     
      /**
-     * @dev Register validator
+     * @dev Register Validator
      * @param _from
      * @param _value
      * @param _data
