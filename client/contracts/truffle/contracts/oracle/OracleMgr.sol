@@ -57,6 +57,7 @@ contract OracleMgr is Pausable {
         require(_price > 0);
         _;
     }
+
     /**
      * Constructor.
      * @param _initialPrice Initial Price.
@@ -92,6 +93,7 @@ contract OracleMgr is Pausable {
         updatePeriod = _updatePeriod;
         validatorMgr = ValidatorMgr(_validatorMgrAddr);
     }
+
     /**
      * @dev Checks if given address is Oracle
      * @param identity Address of an Oracle.
@@ -99,6 +101,7 @@ contract OracleMgr is Pausable {
     function isOracle(address identity) public view returns (bool isIndeed) {
         return oracleRegistry[identity].isOracle;
     }
+
     /**
      * @dev Checks availability of OraclePool
      */
@@ -161,7 +164,7 @@ contract OracleMgr is Pausable {
     }
 
     /**
-     * @dev Get oracle information
+     * @dev Get Oracle information
      * @param index index of an Oracle to check.
      */
     function getOracleAtIndex(uint index) public view returns (address code, uint deposit) {
@@ -256,6 +259,7 @@ contract OracleMgr is Pausable {
             msg.sender.transfer(refund);
         }
     }
+    
     /**
      * @dev Adds price
      * @param _price price

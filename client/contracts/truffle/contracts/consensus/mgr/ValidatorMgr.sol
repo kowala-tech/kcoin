@@ -4,6 +4,7 @@ import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "../../token/ERC223.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
 //import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
+
 /**
  * @title Validator Manager for PoS consensus
  */
@@ -61,13 +62,14 @@ contract ValidatorMgr is Pausable {
         require(!isValidator(tkn.sender));
         _;
     }
+
     /**
      * Constructor.
-     * @param _baseDeposit base deposit for Oracle.
+     * @param _baseDeposit Validator's deposits.
      * @param _maxNumValidators Maximum numbers of Validators.
      * @param _freezePeriod Freeze period for Validator.
      * @param _miningTokenAddr Address of mining token.
-     * @param _superNodeAmount Amount of super nodes.
+     * @param _superNodeAmount Amount required to be considered a super node.
      */
     function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _miningTokenAddr, uint _superNodeAmount) public {
         require(_maxNumValidators >= 1);
@@ -107,7 +109,7 @@ contract ValidatorMgr is Pausable {
     }
 
     /**
-     * @dev gets validator count
+     * @dev Get validator count
      */
     function getValidatorCount() public view returns (uint count) {
         return validatorPool.length;
@@ -129,7 +131,7 @@ contract ValidatorMgr is Pausable {
 
     /**
      * @dev returns the base deposit if there are positions available or
-            the current smallest deposit required if there aren't positions availabe.
+            the current smallest deposit required if there aren't positions available.
      */
     function getMinimumDeposit() public view returns (uint deposit) {
         // there are positions for validator available
@@ -151,7 +153,7 @@ contract ValidatorMgr is Pausable {
     /**
      * @dev Add new validator
      * @param code
-     * @param deposit deposit amount
+     * @param deposit amount to deposit
      */
     function _insertValidator(address code, uint deposit) private {
         Validator sender = validatorRegistry[code];
@@ -177,15 +179,15 @@ contract ValidatorMgr is Pausable {
     }
 
     /**
-     * @dev Sets new base deposit for validators
+     * @dev Set new base deposit for Validators
      */
     function setBaseDeposit(uint deposit) public onlyOwner {
         baseDeposit = deposit;
     }
 
     /**
-     * @dev Set maximum of validators
-     * @param max number of max validators
+     * @dev Set maximum of Validators
+     * @param max number of max Validators
      */
     function setMaxValidators(uint max) public onlyOwner { 
         if (max < validatorPool.length) {
@@ -196,9 +198,10 @@ contract ValidatorMgr is Pausable {
         }
         maxNumValidators = max;   
     }
+
     /**
      * @dev Delete validator
-     * @param account address of a validator
+     * @param account address of a Validator
      */
     function _deleteValidator(address account) private {
         Validator validator = validatorRegistry[account];
@@ -296,6 +299,7 @@ contract ValidatorMgr is Pausable {
             mtoken.transfer(msg.sender, refund);
         }
     }
+    
      /**
      * @dev Register validator
      * @param _from
