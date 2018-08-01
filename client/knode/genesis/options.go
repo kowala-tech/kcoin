@@ -49,6 +49,7 @@ type Options struct {
 	Governance        *GovernanceOpts
 	Consensus         *ConsensusOpts
 	DataFeedSystem    *DataFeedSystemOpts
+	StabilityContract *StabilityContractOpts
 	PrefundedAccounts []PrefundedAccount
 	ExtraData         string
 }
@@ -56,6 +57,10 @@ type Options struct {
 type TokenHolder struct {
 	Address   string
 	NumTokens uint64
+}
+
+type StabilityContractOpts {
+	MinDeposit
 }
 
 type SystemVarsOpts struct {
@@ -97,6 +102,7 @@ type DataFeedSystemOpts struct {
 	FreezePeriod  uint64 // in days
 	BaseDeposit   uint64 // in kUSD
 	Price         PriceOpts
+	Exchanges []string
 }
 
 type PrefundedAccount struct {
@@ -137,6 +143,7 @@ type validOracleMgrOpts struct {
 	price            validPriceOpts
 	validatorMgrAddr common.Address
 	owner            common.Address
+	exchanges        []string
 }
 
 type validTokenHolder struct {
@@ -156,6 +163,12 @@ type validMiningTokenOpts struct {
 type validSystemVarsOpts struct {
 	initialPrice  *big.Int
 	initialSupply *big.Int
+	owner         common.Address
+}
+
+type validStabilityContractOpts struct {
+	minDeposit  *big.Int
+	systemVarsAddr common.Address
 	owner         common.Address
 }
 
@@ -180,6 +193,7 @@ type validGenesisOptions struct {
 	oracleMgr         *validOracleMgrOpts
 	miningToken       *validMiningTokenOpts
 	sysvars           *validSystemVarsOpts
+	stability		  *validStabilityContractOpts
 	ExtraData         string
 }
 
@@ -200,6 +214,9 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	// sysvars
 	initialPrice := new(big.Int)
 	new(big.Float).Mul(new(big.Float).SetFloat64(options.SystemVars.InitialPrice), big.NewFloat(params.Kcoin)).Int(initialPrice)
+
+	// stability contract
+	minDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.StabilityContract.MinDeposit), big.NewInt(params.Kcoin))
 
 	// governance
 	multiSigCreator, err := getAddress(options.Governance.Origin)
@@ -274,6 +291,9 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			initialPrice:  initialPrice,
 			initialSupply: mintedAmount,
 		},
+		stability: &validStabilityContractOpts{
+			minDeposit: minDeposit,
+		}
 		multiSig: &validMultiSigOpts{
 			multiSigCreator:  multiSigCreator,
 			multiSigOwners:   multiSigOwners,
@@ -295,6 +315,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 				syncFrequency: syncFrequency,
 				updatePeriod:  updatePeriod,
 			},
+			exchanges: options.DataFeedSystem.exchanges,
 		},
 		miningToken: &validMiningTokenOpts{
 			name:     options.Consensus.MiningToken.Name,

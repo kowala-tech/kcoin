@@ -53,6 +53,7 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(ValidatorMgrContract)
 	gen.AddContract(OracleMgrContract)
 	gen.AddContract(SystemVarsContract)
+	gen.AddContract(StabilityContract)
 
 	return gen.Generate(opts)
 }
@@ -68,7 +69,7 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 	}
 
 	genesis := &core.Genesis{
-		Number: validOptions.number,
+		Number:    validOptions.number,
 		Timestamp: uint64(genesisTimestamp),
 		GasLimit:  4700000,
 		Alloc:     gen.alloc,

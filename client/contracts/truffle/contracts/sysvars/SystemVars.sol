@@ -25,6 +25,10 @@ contract SystemVars {
         currencySupply = initialSupply;
     }
 
+    function price() public view returns (uint price) {
+        return currencyPrice;
+    }
+
     function _hasEnoughSupply() private view returns (bool) {
         return currencySupply >= lowSupplyMetric;
     }

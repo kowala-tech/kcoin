@@ -11,7 +11,12 @@ contract OracleMgr is Pausable {
     uint public syncFrequency;
     uint public updatePeriod;
     uint public averagePrice = 0;
+    []string public exchanges;
     ValidatorMgr validatorMgr;
+
+    struct Exchange {
+        string name   
+    }
 
     struct Deposit {
         uint amount;
@@ -69,7 +74,8 @@ contract OracleMgr is Pausable {
         uint _freezePeriod,
         uint _syncFrequency,
         uint _updatePeriod,
-        address _validatorMgrAddr) 
+        address _validatorMgrAddr,
+        []string _exchanges) 
     public {
         require(_maxNumOracles > 0);
         require(_syncFrequency >= 0);
@@ -77,6 +83,7 @@ contract OracleMgr is Pausable {
         // sync enabled
         if (_syncFrequency > 0) {
             require(_updatePeriod > 0 && _updatePeriod <= _syncFrequency);
+            require(len(_exchanges) > 0);
         }
         
         baseDeposit = _baseDeposit;
@@ -91,7 +98,7 @@ contract OracleMgr is Pausable {
         return oracleRegistry[identity].isOracle;
     }
 
-    function _hasAvailability() public view returns (bool available) {
+    function _hasAvailability() private view returns (bool available) {
         return (maxNumOracles - oraclePool.length) > 0;
     }
 
@@ -223,5 +230,9 @@ contract OracleMgr is Pausable {
         averagePrice = _price;
         oracleRegistry[msg.sender].hasSubmittedPrice = true;
         submissions.push(msg.sender);
+    }
+
+    function reportExchange(string exchange) public whenNotPause onlyOracle {
+        
     }
 }

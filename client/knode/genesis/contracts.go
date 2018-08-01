@@ -33,6 +33,38 @@ func (contract *contract) AsGenesisAccount() core.GenesisAccount {
 	}
 }
 
+var StabilityContract = &contract{
+	name: "Stability",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.stability
+
+		stabilityABI, err := abi.JSON(strings.NewReader(stability.StabilityABI))
+		if err != nil {
+			return err
+		}
+
+		stabilityParams, err := stabilityABI.Pack(
+			"",
+			args.minDeposit,
+			args.systemVarsAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = args.owner
+		contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(sysvars.StabilityBin), StabilityParams...), runtimeCfg)
+		if err != nil {
+			return err
+		}
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
+}
+
 var SystemVarsContract = &contract{
 	name: "SystemVars",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
@@ -60,6 +92,8 @@ var SystemVarsContract = &contract{
 		}
 		contract.code = contractCode
 		contract.address = contractAddr
+
+		opts.stability.systemVarsAddr = contractAddr
 
 		return nil
 	},
@@ -97,6 +131,7 @@ var MultiSigContract = &contract{
 		opts.validatorMgr.owner = contractAddr
 		opts.oracleMgr.owner = contractAddr
 		opts.sysvars.owner = contractAddr
+		opts.stability.owner = contractAddr
 
 		return nil
 	},
