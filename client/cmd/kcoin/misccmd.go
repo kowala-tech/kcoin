@@ -11,6 +11,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
+	"errors"
 )
 
 var (
@@ -77,8 +78,18 @@ along with knode. If not, see <http://www.gnu.org/licenses/>.
 }
 
 func update(ctx *cli.Context) error {
+	repository := "kowala-tech/kcoin"
+	latest, found, err := selfupdate.DetectLatest(repository)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return errors.New("could not detect latest version")
+	}
+	fmt.Sprintf("Latest version found: %s", latest.Version.String())
+
 	v := semver.MustParse(params.Version)
-	latest, err := selfupdate.UpdateSelf(v, "kowala-tech/kcoin")
+	latest, err = selfupdate.UpdateSelf(v, repository)
 	if err != nil {
 		fmt.Println("Binary update failed:", err)
 		return err
