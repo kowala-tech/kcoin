@@ -65,9 +65,9 @@ contract ValidatorMgr is Pausable {
 
     /**
      * Constructor.
-     * @param _baseDeposit Validator's deposits.
+     * @param _baseDeposit base deposit for Validator
      * @param _maxNumValidators Maximum numbers of Validators.
-     * @param _freezePeriod Freeze period for Validator.
+     * @param _freezePeriod Freeze period for Validator's deposits.
      * @param _miningTokenAddr Address of mining token.
      * @param _superNodeAmount Amount required to be considered a super node.
      */
