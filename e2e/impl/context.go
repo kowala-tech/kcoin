@@ -29,10 +29,11 @@ type Context struct {
 	client                 *kcoinclient.Client
 	chainID                *big.Int
 
-	genesisValidatorAccount accounts.Account
-	mtokensSeederAccount    accounts.Account
-	kusdSeederAccount       accounts.Account
-	accounts                map[string]accounts.Account
+	genesisValidatorAccount   accounts.Account
+	mtokensSeederAccount      accounts.Account
+	mtokensGovernanceAccounts []accounts.Account
+	kusdSeederAccount         accounts.Account
+	accounts                  map[string]accounts.Account
 
 	lastTx              *types.Transaction
 	lastTxErr           error
