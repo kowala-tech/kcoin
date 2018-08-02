@@ -3,34 +3,76 @@ doctype html
 html(ng-app="netStatsApp")
   head
     meta(name="viewport", content="width=device-width, initial-scale=1.0, maximum-scale=1.0")
-    title Kowala Test Network
+    title Kowala - Network Stats
+    link(rel='apple-touch-icon', sizes='180x180', href='@@cdnURL/images/meta/apple-touch-icon.png?v=69Pwvmj0bL')
+    link(rel='icon', type='image/png', sizes='32x32', href='@@cdnURL/images/meta/favicon-32x32.png?v=69Pwvmj0bL')
+    link(rel='icon', type='image/png', sizes='16x16', href='@@cdnURL/images/meta/favicon-16x16.png?v=69Pwvmj0bL')
+    link(rel='manifest', href='@@cdnURL/images/meta/site.webmanifest?v=69Pwvmj0bL')
+    link(rel='mask-icon', href='@@cdnURL/images/meta/safari-pinned-tab.svg?v=69Pwvmj0bL', color='#5bbad5')
+    link(rel='shortcut icon', href='@@cdnURL/images/meta/favicon.ico?v=69Pwvmj0bL')
+    meta(name='apple-mobile-web-app-title', content='Kowala Network Stats')
+    meta(name='application-name', content='Kowala Network Stats')
+    meta(name='msapplication-config', content='@@cdnURL/images/meta/browserconfig.xml')
+    meta(name='theme-color', content='#1d6986')
+    meta(name='apple-mobile-web-app-status-bar-style', content='#1d6986')
+    meta(property='og:url', content='@@URL')
+    meta(property='og:title', content='Kowala Network Stats')
+    meta(property='og:type', content='website')
+    meta(property='og:image', content='@@cdnURL/images/meta/android-chrome-256x256.png')
+    meta(name='twitter:image', content='@@cdnURL/images/meta/android-chrome-256x256.png')
+    meta(name='twitter:card', content='summary_large_image')
+    meta(name='twitter:site', content='@KowalaTech')
+    meta(name='twitter:creator', content='@KowalaTech')
     style(type="text/css") [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak { display: none !important; }
-    link(rel='stylesheet', href='//fonts.googleapis.com/css?family=Montserrat:200,300,400,500,600"')
-    link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css')
+    link(rel="stylesheet", href="https://fonts.googleapis.com/css?family=Poppins:300,400,500")
+    link(rel="stylesheet", href="@@cdnURL/styles/kowala.css")
     link(rel='stylesheet', href='/css/netstats.min.css')
-  body
-    section#nav.container-fluid
-      nav.navbar(ng-controller='NavCtrl')
-        .navbar-header
-          button.navbar-toggle(type='button', data-toggle='collapse', data-target='#Navbar')
-            i.fa.fa-bars
-          a.navbar-brand(href="/")
-            img(src="/kowala-zygote-testnet.svg" height="25")
-        #Navbar.collapse.navbar-collapse
-          ul.navbar-nav.nav.navbar-right
-            li
-              a(href="/stats") Network stats
-            li
-              a(href="https://explorer.zygote.kowala.tech", target="_blank") BlockChain Explorer
-            li
-              a(href="https://faucet.zygote.kowala.tech", target="_blank") Coin faucet
-            li
-              a(href="https://github.com/kowala-tech/kcoin", target="_blank") Github
-            li
-              a(href="https://docs.kowala.tech", target="_blank") Documentation
-            li
-              a(href="https://t.me/kowalaofficial", target="_blank") Telegram Community
-    section#content.container-fluid
-      block content
+
+
+  body.light-blue-background.light-#fff-textmake
+    #mobile-menu(data-reveal="")
+      img(src="@@cdnURL/images/kowala/kowala-white.svg" title="Kowala")
+      ul
+        li
+          a(href="@@explorerURL" rel="noopener" target="_blank") BLOCK EXPLORER
+        li
+          a(href="@@faucetURL" rel="noopener" target="_blank") GET TEST COINS
+        li
+          a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION
+        li
+          a(href="https://www.kowala.tech" rel="noopener" target="_blank") KOWALA'S WEBSITE
+    header
+      .burger(data-toggle="mobile-menu")
+        button
+      .grid-container
+        nav
+          .title
+            a(href="/")
+              img(src="@@cdnURL/images/kowala/kowala-white.svg" title="Kowala")
+          .menu
+            ul
+              li
+                a(href="@@explorerURL" rel="noopener" target="_blank") BLOCK EXPLORER
+              li
+                a(href="@@faucetURL" rel="noopener" target="_blank") GET TEST COINS
+              li
+                a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION
+              li
+                a(href="https://www.kowala.tech" rel="noopener" target="_blank") KOWALA'S WEBSITE
+              li
+                a(href="https://t.me/kowalaofficial" rel="noopener" target="_blank")
+                  .icon.i-telegram
+                a(href="https://twitter.com/KowalaTech" rel="noopener" target="_blank")
+                  .icon.i-twitter
+                a(href="https://www.facebook.com/kowalatech/" rel="noopener" target="_blank")
+                  .icon.i-facebook
+                a(href="https://www.linkedin.com/company/kowala" rel="noopener" target="_blank")
+                  .icon.i-linked-in
+                a(href="https://github.com/kowala-tech" rel="noopener" target="_blank")
+                  .icon.i-github
+    main
+      .grid-container
+        block content
+
 
     script(src="/js/netstats.min.js")
