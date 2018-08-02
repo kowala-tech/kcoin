@@ -1,9 +1,9 @@
 package version
 
 import (
+	"errors"
 	"github.com/blang/semver"
 	"regexp"
-	"errors"
 )
 
 // matches version (1.0.0), os (linux) and architecture (amd64)

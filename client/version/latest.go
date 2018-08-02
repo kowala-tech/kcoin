@@ -2,9 +2,9 @@ package version
 
 import (
 	"bufio"
-	"net/http"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/pkg/errors"
+	"net/http"
 )
 
 const indexFile = "index.txt"
