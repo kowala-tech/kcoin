@@ -81,6 +81,15 @@ pipeline:
   docker_kusd:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/kusd
     dockerfile: client/release/kcoin.Dockerfile
     pull: true
@@ -94,6 +103,15 @@ pipeline:
   docker_bootnode:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/bootnode
     dockerfile: client/release/bootnode.Dockerfile
     pull: true
@@ -107,6 +125,15 @@ pipeline:
   docker_faucet:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/faucet
     dockerfile: client/release/faucet.Dockerfile
     pull: true
@@ -120,6 +147,15 @@ pipeline:
   docker_notifications_api:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/backend_api
     dockerfile: notifications/api.Dockerfile
     pull: true
@@ -133,6 +169,15 @@ pipeline:
   docker_notifications_emailer:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/emailer
     dockerfile: notifications/emailer.Dockerfile
     pull: true
@@ -146,6 +191,15 @@ pipeline:
   docker_notifications_db_sync:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/transactions_persistance
     dockerfile: notifications/transactions_db_synchronize.Dockerfile
     pull: true
@@ -159,6 +213,15 @@ pipeline:
   docker_netstats_dev:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/netstats
     dockerfile: netstats/Dockerfile
     pull: true
@@ -191,6 +254,15 @@ pipeline:
   docker_explorer_web:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/kexplorer
     dockerfile: explorer/web.Dockerfile
     pull: true
@@ -204,6 +276,15 @@ pipeline:
   docker_explorer_sync:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/kexplorersync
     dockerfile: explorer/sync.Dockerfile
     pull: true
@@ -217,6 +298,15 @@ pipeline:
   docker_notifications_tx_publisher:
     group: docker_deployment
     image: kowalatech/drone-docker
+    build_args:
+      - CI 
+      - DRONE 
+      - DRONE_REPO 
+      - DRONE_COMMIT_SHA 
+      - DRONE_COMMIT_BRANCH 
+      - DRONE_TAG 
+      - DRONE_BUILD_NUMBER 
+      - DRONE_BUILD_EVENT
     repo: kowalatech/transactions_publisher
     dockerfile: notifications/transactions_publisher.Dockerfile
     pull: true

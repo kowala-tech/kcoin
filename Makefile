@@ -190,35 +190,35 @@ dev_docker_images: dev_explorer_docker_image dev_explorer_sync_docker_image dev_
 
 .PHONY: dev_kusd_docker_image
 dev_kusd_docker_image:
-	docker build -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
+	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/kusd:dev -f client/release/kcoin.Dockerfile .
 
 .PHONY: dev_bootnode_docker_image
 dev_bootnode_docker_image:
-	docker build -t kowalatech/bootnode:dev -f client/release/bootnode.Dockerfile .
+	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/bootnode:dev -f client/release/bootnode.Dockerfile .
 
 .PHONY: dev_faucet_docker_image
 dev_faucet_docker_image:
-	docker build -t kowalatech/faucet:dev -f client/release/faucet.Dockerfile .
+	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/faucet:dev -f client/release/faucet.Dockerfile .
 
 .PHONY: dev_wallet_backend_docker_image
 dev_wallet_backend_docker_image:
-	docker build -t kowalatech/wallet_backend:dev -f wallet-backend/Dockerfile .
+	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/wallet_backend:dev -f wallet-backend/Dockerfile .
 
 .PHONY: dev_transactions_persistance_docker_image
 dev_transactions_persistance_docker_image:
-	docker build -t kowalatech/transactions_persistance:dev -f notifications/transactions_db_synchronize.Dockerfile .
+	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/transactions_persistance:dev -f notifications/transactions_db_synchronize.Dockerfile .
 
 .PHONY: dev_transactions_publisher_docker_image
 dev_transactions_publisher_docker_image:
-	docker build -t kowalatech/transactions_publisher:dev -f notifications/transactions_publisher.Dockerfile .
+	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/transactions_publisher:dev -f notifications/transactions_publisher.Dockerfile .
 
 .PHONY: dev_backend_api_docker_image
 dev_backend_api_docker_image:
-	docker build -t kowalatech/backend_api:dev -f notifications/api.Dockerfile .
+	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/backend_api:dev -f notifications/api.Dockerfile .
 
 .PHONY: dev_explorer_docker_image
 dev_explorer_docker_image:
-	docker build -t kowalatech/kexplorer -f explorer/web.Dockerfile .
+	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/kexplorer -f explorer/web.Dockerfile .
 
 .PHONY: dev_explorer_sync_docker_image
 dev_explorer_sync_docker_image:
