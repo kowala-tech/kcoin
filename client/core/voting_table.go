@@ -6,6 +6,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 var ErrDuplicateVote = errors.New("duplicate vote")
@@ -58,6 +59,7 @@ func (table *votingTable) isDuplicate(vote *types.Vote) bool {
 	voteHash := vote.Hash()
 	for _, tableVote := range table.votes {
 		if tableVote.Hash() == voteHash {
+			log.Error(fmt.Sprintf("a duplicate vote in voting table %v. Error: %s", table.voteType, vote.String()))
 			return true
 		}
 	}

@@ -548,6 +548,9 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
+		if err != nil {
+			log.Error("an error while the blockchain do a call. can't get a state and a header", "err", err)
+		}
 		return nil, 0, false, err
 	}
 	// Set sender address or use a default if none specified
@@ -586,6 +589,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Get a new instance of the EVM.
 	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
+		log.Error("an error while the blockchain do a call. can't get a EVM instance", "err", err)
 		return nil, 0, false, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
@@ -600,6 +604,9 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	gp := new(core.GasPool).AddGas(math.MaxUint64)
 	res, gas, failed, err := core.ApplyMessage(evm, msg, gp)
 	if err := vmError(); err != nil {
+		if err != nil {
+			log.Error("an error while setting GasPrice", "err", err)
+		}
 		return nil, 0, false, err
 	}
 	return res, gas, failed, err
@@ -639,6 +646,10 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 
 		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{}, 0)
 		if err != nil || failed {
+			if err != nil {
+				log.Error("can't estimate gas limit", "err", err)
+			}
+
 			return false
 		}
 		return true

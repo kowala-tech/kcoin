@@ -39,20 +39,24 @@ type Backend interface {
 }
 
 type Validator interface {
+	Service
 	Start(walletAccount accounts.WalletAccount, deposit *big.Int)
 	Stop() error
 	SetExtra(extra []byte) error
-	Validating() bool
-	Running() bool
 	SetCoinbase(walletAccount accounts.WalletAccount) error
 	SetDeposit(deposit *big.Int) error
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
+	Deposits(address *common.Address) ([]*types.Deposit, error)
+	RedeemDeposits() error
+}
+
+type Service interface {
+	Validating() bool
+	Running() bool
 	AddProposal(proposal *types.Proposal) error
 	AddVote(vote *types.Vote) error
 	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
-	Deposits(address *common.Address) ([]*types.Deposit, error)
-	RedeemDeposits() error
 }
 
 // validator represents a consensus validator
@@ -85,6 +89,8 @@ type validator struct {
 	eventMux *event.TypeMux
 
 	wg sync.WaitGroup
+
+	handleMutex sync.Mutex
 }
 
 // New returns a new consensus validator
@@ -284,8 +290,10 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 
 	log.Info("Received Proposal")
 
+	val.handleMutex.Lock()
 	val.proposal = proposal
 	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
+	val.handleMutex.Unlock()
 
 	return nil
 }
@@ -295,14 +303,16 @@ func (val *validator) AddVote(vote *types.Vote) error {
 		return ErrCantVoteNotValidating
 	}
 
+	val.handleMutex.Lock()
+	defer val.handleMutex.Unlock()
+
 	addressVote, err := types.NewAddressVote(val.signer, vote)
 	if err != nil {
 		return err
 	}
 
 	if err := val.votingSystem.Add(addressVote); err != nil {
-		switch err {
-		}
+		log.Error("cannot add the vote", "err", err)
 	}
 
 	return nil
@@ -606,15 +616,20 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		if err != nil {
 			log.Crit("Failed to process the block", "err", err)
 		}
+
+		// guarded section
+		val.handleMutex.Lock()
 		val.receipts = receipts
 
 		// Validate the state using the default validator
 		err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
 		if err != nil {
+			val.handleMutex.Unlock()
 			log.Crit("Failed to validate the state", "err", err)
 		}
 
 		val.block = block
+		val.handleMutex.Unlock()
 
 		go func() { val.blockCh <- block }()
 	}

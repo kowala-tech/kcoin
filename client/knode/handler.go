@@ -104,14 +104,14 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fastSync = uint32(1)
 	}
 	// Initiate a sub-protocol for every implemented version we can handle
-	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.ProtocolVersions))
-	for i, version := range protocol.ProtocolVersions {
+	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Constants.Versions))
+	for i, version := range protocol.Constants.Versions {
 		// Compatible; initialise the sub-protocol
 		version := version // Closure for the run
 		manager.SubProtocols = append(manager.SubProtocols, p2p.Protocol{
 			Name:    protocol.ProtocolName,
 			Version: version,
-			Length:  protocol.ProtocolLengths[i],
+			Length:  protocol.Constants.Lengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
 				peer := manager.newPeer(int(version), p, rw)
 				select {
@@ -296,8 +296,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	if err != nil {
 		return err
 	}
-	if msg.Size > protocol.ProtocolMaxMsgSize {
-		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, protocol.ProtocolMaxMsgSize)
+	if msg.Size > protocol.Constants.MaxMsgSize {
+		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, protocol.Constants.MaxMsgSize)
 	}
 	defer msg.Discard()
 

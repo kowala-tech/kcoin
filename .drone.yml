@@ -60,7 +60,7 @@ pipeline:
     when:
       event: [pull_request]
 
-  wallet_app:
+  test_wallet_app:
     group: testing
     image: node:9
     commands:
@@ -266,15 +266,28 @@ pipeline:
       event: [push,tag]
       branch: [master,dev]
 
-  build_wallet_app:
+  build_wallet_app_dev:
     group: build_artifacts
     image: node:9
     environment:
       - KOWALA_NETWORK="kusd-zygote"
     commands:
-      - cd wallet-app ; yarn run drone:build
+      - cd wallet-app
+      - make build
     when:
-      event: [push]
+      event: [push,tag]
+      branch: [dev]
+
+  build_wallet_app_production:
+    group: build_artifacts
+    image: node:9
+    environment:
+      - KOWALA_NETWORK="kusd-zygote"
+    commands:
+      - cd wallet-app
+      - make build
+    when:
+      event: [push,tag]
       branch: [master]
 
   upload_gource_mp4_to_s3:
@@ -304,19 +317,33 @@ pipeline:
       event: [push, tag]
       branch: [dev]
 
-  upload_kusd_zygote:
+  upload_wallet_zygote_dev:
     group: asset_deployment
     image: plugins/s3
     region: us-east-1
     acl: public-read
     encryption: AES256
-    bucket: "wallet.zygote.kowala.io"
-    source: dist/**/*
-    strip_prefix: dist
+    bucket: "wallet.zygote.kowala.tech"
+    source: wallet-app/dist/**/*
+    strip_prefix: wallet-app/dist
     target: /
     when:
       event: [push]
-      branch: [master]
+      branch: [dev]
+
+  upload_wallet_zygote_prod:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: "wallet.kowala.tech"
+    source: wallet-app/dist/**/*
+    strip_prefix: wallet-app/dist
+    target: /
+    when:
+      event: [tag]
+      branch: [dev]
 
   upload_dev_docs_to_s3:
     group: asset_deployment

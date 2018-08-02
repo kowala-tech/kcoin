@@ -29,6 +29,8 @@ angular.module('BlocksApp').controller('TxController', function($stateParams, $r
         $scope.tx.datetime = new Date(resp.data.timestamp*1000); 
       if (resp.data.isTrace) // Get internal txs
         fetchInternalTxs();
+
+      $scope.tx.gasPrice = toKUSD($scope.tx.gasPrice);
     });
 
     var fetchInternalTxs = function() {

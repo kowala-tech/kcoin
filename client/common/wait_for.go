@@ -64,7 +64,7 @@ func (w *waiter) Do(execFunc func() error, condFuncs ...func() error) error {
 		return err
 	}
 
-	err = w.waitBlocksFrom(currentBlock, 5, condFuncs...)
+	err = w.waitBlocksFrom(currentBlock, 10, condFuncs...)
 	if err != nil {
 		return err
 	}

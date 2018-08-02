@@ -186,7 +186,9 @@ BlocksApp.config(['$stateProvider', '$urlRouterProvider', function($stateProvide
                         name: 'BlocksApp',
                         insertBefore: '#ng_load_plugins_before', // load the above css files before '#ng_load_plugins_before'
                         files: [
-                             '/js/controllers/TxController.js'
+                             '/js/controllers/TxController.js',
+                             '/js/units.js',
+                             '/plugins/bignumber.js'
                         ]
                     });
                 }]

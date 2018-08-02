@@ -554,3 +554,7 @@ func (w *wallet) SignHashWithPassphrase(account accounts.Account, passphrase str
 func (w *wallet) SignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	return w.SignTx(account, tx, chainID)
 }
+
+func (w *wallet) NewKeyedTransactor(account accounts.Account, auth string) (*accounts.TransactOpts, error) {
+	return nil, nil
+}
