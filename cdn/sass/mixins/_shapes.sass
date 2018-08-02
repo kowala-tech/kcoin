@@ -1,0 +1,25 @@
+=circle
+  width: 100%
+  height: auto
+  padding-bottom: 100%
+  -moz-border-radius: 50%
+  -webkit-border-radius: 50%
+  border-radius: 50%
+
+=curve($side: "top", $amount:50%)
+  position: relative
+  z-index: 1000
+  width: 200vw
+  margin-left: -50%
+
+  .container
+    width: 50%
+
+  @if $side == "top"
+    border-top-left-radius: $amount
+    border-top-right-radius: $amount
+  @else
+    border-bottom-left-radius: $amount
+    border-bottom-right-radius: $amount
+    position: relative
+    margin-bottom: 2em

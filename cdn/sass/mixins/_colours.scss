@@ -1,0 +1,27 @@
+$colour-white: #ffffff;
+$colour-black: #e2e2e2;
+
+$colour-blue: #008ef5;
+$colour-green: #33d093;
+$colour-pink: #dc76d9;
+$colour-purple: #a388e3;
+$colour-yellow: #f4b457;
+$colour-aqua: #2eb4e5;
+$colour-grey: #e6e6e6;
+$colour-shade-amount: 10%;
+$colour-trans-amount: 0.5;
+
+$colours: (
+  white: (trans: transparentize($colour-white, $colour-trans-amount), light: lighten($colour-white, $colour-shade-amount), base: $colour-white, dark: darken($colour-white, 25%), text: darken($colour-white, 30%)),
+  black: (trans: transparentize($colour-black, $colour-trans-amount), light: lighten($colour-black, $colour-shade-amount), base: $colour-black, dark: darken($colour-black, 25%), text: darken($colour-black, 30%)),
+  blue: (trans: transparentize($colour-blue, $colour-trans-amount), light: lighten($colour-blue, $colour-shade-amount), base: $colour-blue, dark: darken($colour-blue, 25%), text: darken($colour-blue, 30%)),
+  green: (trans: transparentize($colour-green, $colour-trans-amount), light: lighten($colour-green, $colour-shade-amount), base: $colour-green, dark: darken($colour-green, $colour-shade-amount)),
+  pink: (trans: transparentize($colour-pink, $colour-trans-amount), light: lighten($colour-pink, $colour-shade-amount), base: $colour-pink, dark: darken($colour-pink, $colour-shade-amount)),
+  purple: (trans: transparentize($colour-purple, $colour-trans-amount), light: lighten($colour-purple, $colour-shade-amount), base: $colour-purple, dark: darken($colour-purple, $colour-shade-amount)),
+  aqua: (trans: transparentize($colour-aqua, $colour-trans-amount), light: lighten($colour-aqua, $colour-shade-amount), base: $colour-aqua, dark: darken($colour-aqua, $colour-shade-amount)),
+  gray: (trans: transparentize($colour-grey, $colour-trans-amount), light: lighten($colour-grey, $colour-shade-amount), base: $colour-grey, dark: darken($colour-grey, $colour-shade-amount))
+);
+
+@function colour($name, $tone: 'base') {
+  @return map-get(map-get($colours, $name), $tone);
+};

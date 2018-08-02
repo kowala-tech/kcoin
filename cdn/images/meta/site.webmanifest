@@ -1,0 +1,19 @@
+{
+    "name": "",
+    "short_name": "",
+    "icons": [
+        {
+            "src": "https://cdn.kowala.tech/images/meta/android-chrome-192x192.png?v=69Pwvmj0bL",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://cdn.kowala.tech/images/meta/android-chrome-256x256.png?v=69Pwvmj0bL",
+            "sizes": "256x256",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#1d6986",
+    "background_color": "#ffffff",
+    "display": "standalone"
+}
