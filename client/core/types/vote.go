@@ -229,7 +229,6 @@ func NewVotes() *VotesSet {
 }
 
 func (v *VotesSet) Add(vote *Vote) {
-	fmt.Println("*** Add", vote.Hash(), vote.Round())
 	v.l.Lock()
 	v.m[vote.Hash()] = vote
 	v.l.Unlock()

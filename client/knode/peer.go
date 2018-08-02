@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"gopkg.in/fatih/set.v0"
@@ -524,7 +524,7 @@ func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
-	var list []*peer
+	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
 		if !p.knownVotes.Has(hash) {
 			list = append(list, p)
