@@ -61,6 +61,7 @@ var (
 		utils.LightServFlag,
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
+		utils.VersionRepository,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
 		utils.CacheGCFlag,
@@ -147,6 +148,7 @@ func init() {
 		javascriptCommand,
 		// See misccmd.go:
 		versionCommand,
+		updateCommand,
 		bugCommand,
 		licenseCommand,
 		// See config.go
