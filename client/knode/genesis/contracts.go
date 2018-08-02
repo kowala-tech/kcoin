@@ -12,6 +12,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
 )
 
 type contract struct {
@@ -35,6 +36,21 @@ func (contract *contract) AsGenesisAccount() core.GenesisAccount {
 var UpgradeabilityProxyFactoryContract = &contract{
 	name: "UpgradeabilityProxyFactoryContract",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		abi, err := abi.JSON(strings.NewReader(proxy.UpgradeabilityProxyFactoryABI))
+		if err != nil {
+			return err
+		}
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = common.Address{}
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(ownership.MultiSigWalletBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+
+		contract.code = contractCode
+		contract.address = contractAddr
+
 		return nil
 	},
 }
