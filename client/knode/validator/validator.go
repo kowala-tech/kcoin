@@ -578,7 +578,8 @@ func (val *validator) vote(vote *types.Vote) {
 
 	err = val.votingSystem.Add(addressVote)
 	if err != nil {
-		log.Warn("Failed to add own vote to voting table", "err", err)
+		log.Error("Failed to add own vote to voting table",
+			"err", err, "blockHash", addressVote.Vote().BlockHash(), "hash", addressVote.Vote().Hash())
 	}
 }
 

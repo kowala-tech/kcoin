@@ -524,7 +524,7 @@ func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
-	list := make([]*peer, 0, len(ps.peers))
+	var list []*peer
 	for _, p := range ps.peers {
 		if !p.knownVotes.Has(hash) {
 			list = append(list, p)
