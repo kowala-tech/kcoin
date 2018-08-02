@@ -134,6 +134,11 @@ var (
 		Usage: "Document Root for HTTPClient file scheme",
 		Value: DirectoryString{homeDir()},
 	}
+	VersionRepository = cli.StringFlag{
+		Name:  "repository",
+		Usage: "Version repository url",
+		Value: "https://s3.amazonaws.com/releases.kowala.io",
+	}
 	FastSyncFlag = cli.BoolFlag{
 		Name:  "fast",
 		Usage: "Enable fast syncing through state downloads (replaced by --syncmode)",

@@ -9,17 +9,34 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/params"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/kowala-tech/kcoin/client/version"
 )
 
 var (
 	versionCommand = cli.Command{
-		Action:    utils.MigrateFlags(version),
+		Action:    utils.MigrateFlags(versionPrint),
 		Name:      "version",
 		Usage:     "Print version numbers",
 		ArgsUsage: " ",
 		Category:  "MISCELLANEOUS COMMANDS",
+		Flags: []cli.Flag{
+			utils.VersionRepository,
+		},
 		Description: `
 The output of this command is supposed to be machine-readable.
+`,
+	}
+	updateCommand = cli.Command{
+		Action:    utils.MigrateFlags(latest),
+		Name:      "update",
+		Usage:     "Update binary to latest version",
+		ArgsUsage: " ",
+		Category:  "MISCELLANEOUS COMMANDS",
+		Flags: []cli.Flag{
+			utils.VersionRepository,
+		},
+		Description: `
+This should update binary to latest version.
 `,
 	}
 	licenseCommand = cli.Command{
@@ -31,9 +48,18 @@ The output of this command is supposed to be machine-readable.
 	}
 )
 
-func version(ctx *cli.Context) error {
+func versionPrint(ctx *cli.Context) error {
 	fmt.Println(strings.Title(clientIdentifier))
 	fmt.Println("Version:", params.Version)
+
+	// print latest version for this platform if available
+	repository := ctx.GlobalString(utils.VersionRepository.Name)
+	finder := version.NewFinder(repository)
+	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
+	if err == nil {
+		fmt.Println("Latest Version Available:", latest.Semver().String())
+	}
+
 	if params.Commit != "" {
 		fmt.Println("Git Commit:", params.Commit)
 	}
@@ -61,5 +87,22 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with knode. If not, see <http://www.gnu.org/licenses/>.
 `)
+	return nil
+}
+
+func latest(ctx *cli.Context) error {
+	repository := ctx.GlobalString(utils.VersionRepository.Name)
+
+	finder := version.NewFinder(repository)
+	assets, err := finder.All()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Assets Found (%s):\n", repository)
+	for _, asset := range assets {
+		fmt.Printf("Version: %s, os: %s, Architeture: %s, File: %s\n", asset.Semver().String(), asset.Os(), asset.Arch(), asset.Path())
+	}
+
 	return nil
 }
