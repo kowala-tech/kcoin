@@ -32,6 +32,13 @@ func (contract *contract) AsGenesisAccount() core.GenesisAccount {
 	}
 }
 
+var UpgradeabilityProxyFactoryContract = &contract{
+	name: "UpgradeabilityProxyFactoryContract",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		return nil
+	},
+}
+
 var MultiSigContract = &contract{
 	name: "MultiSigWallet",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
