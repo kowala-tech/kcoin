@@ -85,6 +85,7 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 	return genesis, nil
 }
 
+//genesisAllocFromOptions changes alloc property based on valid Genesis Options.
 func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 	if err := gen.deployContracts(opts); err != nil {
 		return err
