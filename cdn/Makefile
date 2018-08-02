@@ -7,9 +7,7 @@ build: clean install build-font-icons copy-fonts build-css copy-images copy-pdfs
 install:
 	@npm install
 
-watch: build watch-css
-
-serve:
+serve: build
 	@npm run serve
 
 build-font-icons:
@@ -23,7 +21,7 @@ watch-css:
 	@sass --style $(SASS_STYLE) $(SASS_INCLUDES) --watch $(SASS_PATHS) -E "UTF-8"
 
 copy-fonts:
-	@cp -r fonts/Poppins/ assets/fonts/
+	@cp -r fonts/ assets/fonts/
 
 copy-images:
 	@cp -r images/ assets/
@@ -38,7 +36,7 @@ docker:
 	docker build -t cdn .
 
 docker-build: docker
-	docker run --rm -v $(shell pwd):/cdn -it cdn make
+	docker run --rm -v $(shell pwd):/cdn -it cdn make build
 
 docker-serve: docker
 	docker run --rm -v $(shell pwd):/cdn -p 9090:9090 -it cdn make serve
