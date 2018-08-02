@@ -1,13 +1,21 @@
-FROM node:8-alpine
-
-RUN apk add --update git
+FROM node:latest
 
 WORKDIR /kusd-netstats
-ADD netstats/ .
+ADD . .
 
-RUN npm install
-RUN npm install -g grunt-cli
-RUN grunt
+ARG URL
+ARG CDN_URL
+ARG EXPLORER_URL
+ARG FAUCET_URL
+ARG WS_SECRET
+
+ENV URL $URL
+ENV CDN_URL $CDN_URL
+ENV EXPLORER_URL $EXPLORER_URL
+ENV FAUCET_URL $FAUCET_URL
+ENV WS_SECRET $WS_SECRET
+
+RUN npm install && npm audit fix
 
 EXPOSE 3000
 
