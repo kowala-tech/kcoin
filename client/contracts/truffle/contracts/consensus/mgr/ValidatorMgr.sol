@@ -91,7 +91,7 @@ contract ValidatorMgr is Pausable {
 
     /**
      * @dev Checks if given address is Validator
-     * @param code Address of an Validator.
+     * @param code Address of a Validator to check.
      */
     function isValidator(address code) public view returns (bool isIndeed) {
         return validatorRegistry[code].isValidator;
@@ -99,7 +99,7 @@ contract ValidatorMgr is Pausable {
 
     /**
      * @dev Checks if given address is super node
-     * @param code Address of an super node.
+     * @param code Address of a supernode to check.
      */
     function isSuperNode(address code) public view returns (bool isIndeed) {
         if (!isValidator(code)) return false;
@@ -152,7 +152,7 @@ contract ValidatorMgr is Pausable {
 
     /**
      * @dev Add new validator
-     * @param code
+     * @param code Address of an Validator.
      * @param deposit amount to deposit
      */
     function _insertValidator(address code, uint deposit) private {
@@ -258,7 +258,7 @@ contract ValidatorMgr is Pausable {
 
     /**
      * @dev remove deposit
-     * @param code
+     * @param code address of a Validator
      * @param index index of a deposit
      */
     function _removeDeposits(address code, uint index) private {
@@ -302,9 +302,9 @@ contract ValidatorMgr is Pausable {
     
      /**
      * @dev Register Validator
-     * @param _from
-     * @param _value
-     * @param _data
+     * @param _from from address
+     * @param _value value to send
+     * @param _data data to sent
      */
     function registerValidator(address _from, uint _value, bytes _data) public {
         //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
