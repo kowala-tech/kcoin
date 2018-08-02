@@ -1,7 +1,7 @@
-IMAGE_NAME 			?= kowalatech/netstats
-URL			        ?= "https://stats.kowala.io"
-EXPLORER_URL		?= "https://explorer.zygote.kowala.io"
-FAUCET_URL			?= "https://faucet.zygote.kowala.io"
+IMAGE_NAME      ?= kowalatech/netstats
+URL             ?= "https://zygote.kowala.tech"
+EXPLORER_URL    ?= "https://explorer.zygote.kowala.tech"
+FAUCET_URL      ?= "https://faucet.zygote.kowala.tech"
 CDN_URL         ?= "https://cdn.kowala.io"
 WS_SECRET       ?= "abc123"
 
