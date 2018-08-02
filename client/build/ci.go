@@ -127,7 +127,6 @@ var (
 	stablePackages = []string{
 		"./consensus",
 		"./consensus/tendermint",
-		"./knode/validator",
 		"./knode/genesis",
 		"./kcoinclient",
 		"./accounts",
@@ -138,6 +137,7 @@ var (
 		"./contracts/bindings/ownership",
 		"./contracts/bindings/oracle",
 		"./contracts/bindings/consensus",
+		"./version",
 		// "../e2e/cluster",
 		// "../e2e/impl",
 	}
