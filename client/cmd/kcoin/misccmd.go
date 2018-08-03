@@ -52,13 +52,7 @@ func versionPrint(ctx *cli.Context) error {
 	fmt.Println(strings.Title(clientIdentifier))
 	fmt.Println("Version:", params.Version)
 
-	// print latest version for this platform if available
-	repository := ctx.GlobalString(utils.VersionRepository.Name)
-	finder := version.NewFinder(repository)
-	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
-	if err == nil {
-		fmt.Println("Latest Version Available:", latest.Semver().String())
-	}
+	printLatestIfAvailable(ctx)
 
 	if params.Commit != "" {
 		fmt.Println("Git Commit:", params.Commit)
@@ -71,6 +65,15 @@ func versionPrint(ctx *cli.Context) error {
 	fmt.Println("Go Version:", runtime.Version())
 	fmt.Println("Operating System:", runtime.GOOS)
 	return nil
+}
+
+func printLatestIfAvailable(ctx *cli.Context) {
+	repository := ctx.GlobalString(utils.VersionRepository.Name)
+	finder := version.NewFinder(repository)
+	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
+	if err == nil {
+		fmt.Println("Latest Version Available:", latest.Semver().String())
+	}
 }
 
 func license(_ *cli.Context) error {
