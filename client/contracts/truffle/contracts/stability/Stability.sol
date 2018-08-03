@@ -10,7 +10,7 @@ contract Stability is Pausable {
 
     uint constant ONE = 1 ether;
     
-    uint minDeposit;
+    uint public minDeposit;
     PriceProvider priceProvider;
     
     struct Subscription {
