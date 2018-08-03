@@ -209,4 +209,12 @@ contract OracleMgr is Pausable {
     function addPrice(uint _price) public whenNotPaused onlyOracle onlyValidPrice(_price) {
         price = _price;
     }
+
+    function getValidatorAddress() onlyOwner public view returns(address){
+        return validatorMgr;
+    }
+
+    function changeValidator(address _validatorMgrAddr) onlyOwner public {
+        validatorMgr = ValidatorMgr(_validatorMgrAddr);
+    }
 }
