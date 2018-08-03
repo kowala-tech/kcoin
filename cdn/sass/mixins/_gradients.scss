@@ -1,0 +1,20 @@
+@import "colours";
+
+@mixin gradient-bg {
+  background: colour(blue);
+  background: -moz-linear-gradient(bottom, colour(blue), colour(blue, light));
+  /* FF3.6-15 */
+  background: -webkit-linear-gradient(bottom, colour(blue), colour(blue, light));
+  /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to top, colour(blue), colour(blue, light));
+  /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+}
+@mixin gradient-bg-green {
+  background: colour(green);
+  background: -moz-linear-gradient(bottom, colour(green), colour(green, light));
+  /* FF3.6-15 */
+  background: -webkit-linear-gradient(bottom, colour(green), colour(green, light));
+  /* Chrome10-25,Safari5.1-6 */
+  background: linear-gradient(to top, colour(green), colour(green, light));
+  /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+}
