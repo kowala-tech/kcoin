@@ -63,7 +63,6 @@ contract OracleMgr is Pausable {
     }
 
     function OracleMgr(
-        uint _initialPrice, 
         uint _baseDeposit,
         uint _maxNumOracles,
         uint _freezePeriod,
