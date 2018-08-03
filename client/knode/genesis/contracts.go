@@ -89,7 +89,7 @@ var StabilityContract = &contract{
 
 		runtimeCfg := contract.runtimeCfg
 		runtimeCfg.Origin = args.owner
-		contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(sysvars.StabilityBin), StabilityParams...), runtimeCfg)
+		contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(stability.StabilityBin), stabilityParams...), runtimeCfg)
 		if err != nil {
 			return err
 		}
@@ -131,8 +131,8 @@ var MultiSigContract = &contract{
 		opts.miningToken.owner = contractAddr
 		opts.validatorMgr.owner = contractAddr
 		opts.oracleMgr.owner = contractAddr
-		opts.sysvars.owner = contract
-		opts.stability.owner = contract
+		opts.sysvars.owner = contractAddr
+		opts.stability.owner = contractAddr
 
 		return nil
 	},
