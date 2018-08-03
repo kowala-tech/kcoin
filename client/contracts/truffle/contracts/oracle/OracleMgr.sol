@@ -175,4 +175,12 @@ contract OracleMgr is Pausable {
         oracleRegistry[msg.sender].hasSubmittedPrice = true;
         prices.push(OraclePrice({price: _price, oracle: msg.sender}));
     }
+
+    function getValidatorAddress() onlyOwner public view returns(address){
+        return validatorMgr;
+    }
+
+    function changeValidator(address _validatorMgrAddr) onlyOwner public {
+        validatorMgr = ValidatorMgr(_validatorMgrAddr);
+    }
 }
