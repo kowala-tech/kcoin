@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "../sysvars/SystemVars.sol";
+import "./PriceProvider.sol";
 
 /**
  * @title Stability contract supports network utility
@@ -11,7 +11,7 @@ contract Stability is Pausable {
     uint constant ONE = 1 ether;
     
     uint minDeposit;
-    SystemVars sysvars;
+    PriceProvider priceProvider;
     
     struct Subscription {
         uint index;
@@ -34,18 +34,18 @@ contract Stability is Pausable {
     }
 
     modifier whenPriceGreaterEqualOne {
-        require(sysvars.price() >= ONE);
+        require(priceProvider.price() >= ONE);
         _;
     }
 
     /**
      * Constructor
      * @param _minDeposit minimum deposit required to subscribe to the service
-     * @param _systemVarsAddr address of system variables contract
+     * @param _priceProviderAddr address of system variables contract
      */
-    function Stability(uint _minDeposit, address _systemVarsAddr) public {
+    function Stability(uint _minDeposit, address _priceProviderAddr) public {
         minDeposit = _minDeposit;
-        sysvars = SystemVars(_systemVarsAddr);
+        priceProvider = PriceProvider(_priceProviderAddr);
     }
 
     function _hasSubscription(address identity) private view returns (bool isIndeed) {
