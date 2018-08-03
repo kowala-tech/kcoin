@@ -123,6 +123,10 @@ wallet_backend_dep: dep
 
 # Cross Compilation Targets (xgo)
 
+.PHONY: repository_index
+repository_index:
+	@aws s3 ls releases.kowala.io | cut -b32- - > index.txt
+
 .PHONY: kcoin_cross
 kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename
 	@echo "Full cross compilation done."
