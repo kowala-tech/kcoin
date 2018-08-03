@@ -1,15 +1,15 @@
 package version
 
 import (
+	"archive/zip"
+	"fmt"
 	"github.com/blang/semver"
 	"github.com/kowala-tech/kcoin/client/params"
-	"runtime"
+	"io"
 	"net/http"
 	"os"
-	"io"
-	"fmt"
-	"archive/zip"
 	"path/filepath"
+	"runtime"
 )
 
 type Updater interface {

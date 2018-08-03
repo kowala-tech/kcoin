@@ -99,7 +99,7 @@ func latest(ctx *cli.Context) error {
 
 	updater, err := version.NewUpdater(repository)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return updater.Update()
