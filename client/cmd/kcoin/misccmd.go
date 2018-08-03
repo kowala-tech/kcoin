@@ -74,6 +74,7 @@ func printLatestIfAvailable(ctx *cli.Context) {
 	if err == nil {
 		fmt.Println("Latest Version Available:", latest.Semver().String())
 	}
+	// ignore error, we don't print latest version available
 }
 
 func license(_ *cli.Context) error {

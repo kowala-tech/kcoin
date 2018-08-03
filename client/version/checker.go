@@ -42,7 +42,7 @@ func (c *checker) check() {
 }
 
 func (c *checker) isNewVersionAvailable() bool {
-	log.Debug("checking repository" + c.repository)
+	log.Debug("Checking repository " + c.repository)
 
 	latest, err := c.getLatest()
 	if err != nil {
