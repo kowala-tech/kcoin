@@ -5,8 +5,12 @@ import "github.com/kowala-tech/kcoin/client/knode"
 var Networks = map[string]map[string]Options{
 	knode.KUSD: {
 		MainNetwork: Options{
-			Network:   MainNetwork,
-			ExtraData: "Kowala's first block",
+			Network:     MainNetwork,
+			BlockNumber: 0,
+			ExtraData:   "Kowala's first block",
+			SystemVars: &SystemVarsOpts{
+				InitialPrice: 1,
+			},
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
@@ -18,7 +22,7 @@ var Networks = map[string]map[string]Options{
 			},
 			Consensus: &ConsensusOpts{
 				Engine:           TendermintConsensus,
-				MaxNumValidators: 100,
+				MaxNumValidators: 500,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
 				SuperNodeAmount:  6000000,
@@ -41,12 +45,14 @@ var Networks = map[string]map[string]Options{
 					},
 				},
 			},
+			StabilityContract: &StabilityContractOpts{
+				MinDeposit: 50,
+			},
 			DataFeedSystem: &DataFeedSystemOpts{
 				MaxNumOracles: 1000,
 				FreezePeriod:  1,
 				BaseDeposit:   10,
 				Price: PriceOpts{
-					InitialPrice:  1,
 					SyncFrequency: 600,
 					UpdatePeriod:  30,
 				},
@@ -71,8 +77,12 @@ var Networks = map[string]map[string]Options{
 			},
 		},
 		TestNetwork: Options{
-			Network:   TestNetwork,
-			ExtraData: "Kowala's first block",
+			Network:     TestNetwork,
+			BlockNumber: 0,
+			ExtraData:   "Kowala's first block",
+			SystemVars: &SystemVarsOpts{
+				InitialPrice: 1,
+			},
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
@@ -84,7 +94,7 @@ var Networks = map[string]map[string]Options{
 			},
 			Consensus: &ConsensusOpts{
 				Engine:           TendermintConsensus,
-				MaxNumValidators: 100,
+				MaxNumValidators: 500,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
 				SuperNodeAmount:  6000000,
@@ -107,12 +117,14 @@ var Networks = map[string]map[string]Options{
 					},
 				},
 			},
+			StabilityContract: &StabilityContractOpts{
+				MinDeposit: 50,
+			},
 			DataFeedSystem: &DataFeedSystemOpts{
 				MaxNumOracles: 1000,
 				FreezePeriod:  1,
 				BaseDeposit:   10,
 				Price: PriceOpts{
-					InitialPrice:  1,
 					SyncFrequency: 600,
 					UpdatePeriod:  30,
 				},

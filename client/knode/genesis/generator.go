@@ -52,6 +52,8 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(MiningTokenContract)
 	gen.AddContract(ValidatorMgrContract)
 	gen.AddContract(OracleMgrContract)
+	gen.AddContract(SystemVarsContract)
+	gen.AddContract(StabilityContract)
 
 	return gen.Generate(opts)
 }
@@ -67,6 +69,7 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 	}
 
 	genesis := &core.Genesis{
+		Number:    validOptions.blockNumber,
 		Timestamp: uint64(genesisTimestamp),
 		GasLimit:  4700000,
 		Alloc:     gen.alloc,
@@ -91,7 +94,8 @@ func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 	}
 
 	gen.prefundAccounts(opts.prefundedAccounts)
-	gen.addBatchOfPrefundedAccountsIntoGenesis()
+	// @TODO (rgeraldes) - is this necessary?
+	//gen.addBatchOfPrefundedAccountsIntoGenesis()
 
 	return nil
 }
