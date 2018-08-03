@@ -1,10 +1,10 @@
 package version
 
 import (
-	"time"
+	"github.com/blang/semver"
 	"github.com/kowala-tech/kcoin/client/log"
 	"runtime"
-	"github.com/blang/semver"
+	"time"
 
 	"github.com/kowala-tech/kcoin/client/params"
 )
