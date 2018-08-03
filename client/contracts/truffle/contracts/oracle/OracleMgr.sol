@@ -272,6 +272,10 @@ contract OracleMgr is Pausable {
         return validatorMgr;
     }
 
+    /**
+     * @dev Changes address of a ValidatorMgr
+     * @param _validatorMgrAddr Address of a new ValidatorMgr
+     */
     function changeValidator(address _validatorMgrAddr) onlyOwner public {
         validatorMgr = ValidatorMgr(_validatorMgrAddr);
     }
