@@ -1,0 +1,8 @@
+@import mixins/colours
+
+@each $num, $colour in $colours
+  @each $colour_tone, $colour_code in $colour
+    .#{$colour_tone}-#{"" + $num}-background
+      background: $colour_code
+    .#{$colour_tone}-#{"" + $num}-text
+      color: $colour_code

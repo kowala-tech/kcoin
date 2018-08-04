@@ -1,0 +1,74 @@
+//
+// Icon Font: kowala-icons
+//
+
+@font-face {
+  font-family: "kowala-icons";
+  src: url("/fonts/kowala-icons_9ede838fe939cacf8f264653574a29ba.eot");
+  src: url("/fonts/kowala-icons_9ede838fe939cacf8f264653574a29ba.eot?#iefix") format("embedded-opentype"),
+       url("/fonts/kowala-icons_9ede838fe939cacf8f264653574a29ba.woff2") format("woff2"),
+       url("/fonts/kowala-icons_9ede838fe939cacf8f264653574a29ba.woff") format("woff"),
+       url("/fonts/kowala-icons_9ede838fe939cacf8f264653574a29ba.ttf") format("truetype"),
+       url("/fonts/kowala-icons_9ede838fe939cacf8f264653574a29ba.svg#kowala-icons") format("svg");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+  @font-face {
+    font-family: "kowala-icons";
+    src: url("/fonts/kowala-icons_9ede838fe939cacf8f264653574a29ba.svg#kowala-icons") format("svg");
+  }
+}
+
+[data-icon]:before { content: attr(data-icon); }
+
+[data-icon]:before,
+.i-document:before,
+.i-documents:before,
+.i-double-arrow-down:before,
+.i-facebook:before,
+.i-github:before,
+.i-linked-in:before,
+.i-logo:before,
+.i-plus:before,
+.i-telegram:before,
+.i-twitter:before,
+.i-video:before {
+  display: inline-block;
+  font-family: "kowala-icons";
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  line-height: 1;
+  text-decoration: inherit;
+  text-rendering: optimizeLegibility;
+  text-transform: none;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  font-smoothing: antialiased;
+}
+
+.i-document:before { content: "\f100"; }
+.i-documents:before { content: "\f101"; }
+.i-double-arrow-down:before { content: "\f102"; }
+.i-facebook:before { content: "\f103"; }
+.i-github:before { content: "\f104"; }
+.i-linked-in:before { content: "\f105"; }
+.i-logo:before { content: "\f106"; }
+.i-plus:before { content: "\f107"; }
+.i-telegram:before { content: "\f108"; }
+.i-twitter:before { content: "\f109"; }
+.i-video:before { content: "\f10a"; }
+
+$font-kowala-icons-document: "\f100";
+$font-kowala-icons-documents: "\f101";
+$font-kowala-icons-double-arrow-down: "\f102";
+$font-kowala-icons-facebook: "\f103";
+$font-kowala-icons-github: "\f104";
+$font-kowala-icons-linked-in: "\f105";
+$font-kowala-icons-logo: "\f106";
+$font-kowala-icons-plus: "\f107";
+$font-kowala-icons-telegram: "\f108";
+$font-kowala-icons-twitter: "\f109";
+$font-kowala-icons-video: "\f10a";
