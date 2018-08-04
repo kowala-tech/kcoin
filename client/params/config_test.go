@@ -14,12 +14,12 @@ func TestCheckCompatible(t *testing.T) {
 	}
 	tests := []test{
 		{
-			stored:  AllTendermintProtocolChanges,
-			new:     AllTendermintProtocolChanges,
+			stored:  AllKonsensusProtocolChanges,
+			new:     AllKonsensusProtocolChanges,
 			wantErr: nil,
 		},
 		{
-			stored: AllTendermintProtocolChanges,
+			stored: AllKonsensusProtocolChanges,
 			new:    MainnetChainConfig,
 			wantErr: &ConfigCompatError{
 				What:         "Chain ID",
