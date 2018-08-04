@@ -21,7 +21,7 @@ contract Stability is Pausable {
 
     mapping (address => Subscription) private subscriptionRegistry;
 
-    address[] private subscriptionPool;
+    address[] private subscriptions;
 
     modifier onlySubscriber {
         require(_hasSubscription(msg.sender));
@@ -48,13 +48,23 @@ contract Stability is Pausable {
         priceProvider = PriceProvider(_priceProviderAddr);
     }
 
+    function getSubscriptionCount() public view returns (uint count) {
+        return subscriptions.length;
+    }
+
+    function getSubscriptionAtIndex(uint index) public view returns (address code, uint deposit) {
+        code = subscriptions[index];
+        Subscription subs = subscriptionRegistry[code];
+        deposit = subs.deposit;
+    }
+
     function _hasSubscription(address identity) private view returns (bool isIndeed) {
         return subscriptionRegistry[identity].hasSubscription;
     }
 
     function _insertSubscription() private onlyWithMinDeposit {
         Subscription subs = subscriptionRegistry[msg.sender];
-        subs.index = subscriptionPool.push(msg.sender) - 1;
+        subs.index = subscriptions.push(msg.sender) - 1;
         subs.hasSubscription = true;
         subs.deposit = msg.value;
     }
@@ -77,8 +87,14 @@ contract Stability is Pausable {
      */
     function unsubscribe() public onlySubscriber whenPriceGreaterEqualOne {
         Subscription subs = subscriptionRegistry[msg.sender];
+        uint rowToDelete = subs.index;
         msg.sender.transfer(subs.deposit);
-        subs.deposit = 0;
-        subs.hasSubscription = false;
+        delete subscriptionRegistry[msg.sender];
+
+        // replace the deprecated record with the last element
+        address keyToMove = subscriptions[subscriptions.length-1]; 
+        subscriptions[rowToDelete] = keyToMove;
+        subscriptionRegistry[keyToMove].index = rowToDelete;
+        subscriptions.length--;
     }
 }
