@@ -1,0 +1,50 @@
+@import foundation
+@import mixins/colours
+@import mixins/shapes
+@import mixins/gradients
+@import settings/hover_settings
+@import ../node_modules/hover.css/scss/effects/border-transitions/underline-reveal
+
+footer
+  +gradient-bg
+  +curve
+  color: colour(white)
+  padding-top: 6em
+  padding-bottom: 2em
+
+  .container
+    +xy-grid-container
+    position: relative
+    z-index: 999
+    text-align: center
+    h5
+      font-size: 1.2em
+      text-align: center
+    +breakpoint(medium)
+      text-align: left
+      h5
+        text-align: left
+    a
+      +underline-reveal
+      color: colour(white)
+    #copyright
+      text-align: center
+    .section
+      +xy-cell(12)
+      margin-bottom: 2em
+      margin-top: 0
+
+      p
+        font-size: 1em
+        color: colour(white)
+      +breakpoint(medium)
+        +xy-cell(6)
+
+      +breakpoint(large)
+        +xy-cell(1 of 4)
+      ul
+        margin-left: 0
+      li
+        list-style: none
+        .icon
+          margin-right: 0.5em

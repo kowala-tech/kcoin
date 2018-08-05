@@ -3,6 +3,9 @@ pragma solidity 0.4.24;
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./Consensus.sol";
 
+/**
+* @title Oracle Manager contract
+*/
 contract OracleMgr is Pausable {
      
     uint public maxNumOracles;
@@ -49,6 +52,12 @@ contract OracleMgr is Pausable {
         _;
     }
 
+    /**
+     * Constructor.
+     * @param _maxNumOracles Maximum numbers of Oracles.
+     * @param _syncFrequency Synchronize frequency for Oracles.
+     * @param _updatePeriod Update period.
+     */
     function OracleMgr(
         uint _maxNumOracles,
         uint _syncFrequency,
@@ -68,14 +77,25 @@ contract OracleMgr is Pausable {
         consensus = Consensus(_consensusAddr);
     }
 
+    /**
+     * @dev Checks if given address is Oracle
+     * @param identity Address of an Oracle.
+     */
     function isOracle(address identity) public view returns (bool isIndeed) {
         return oracleRegistry[identity].isOracle;
     }
 
+    /**
+     * @dev Checks availability of OraclePool
+     */
     function _hasAvailability() private view returns (bool available) {
         return (maxNumOracles - oraclePool.length) > 0;
     }
 
+    /**
+     * @dev Deletes given oracle
+     * @param identity Address of an Oracle.
+     */
     function _deleteOracle(address identity) private {
         Oracle oracle = oracleRegistry[identity];
         uint rowToDelete = oracle.index;
@@ -88,42 +108,69 @@ contract OracleMgr is Pausable {
         oraclePool.length--;       
     }
 
+    /**
+     * @dev Inserts oracle
+     * @param identity Address of an Oracle.
+     * @param deposit Deposit ammount
+     */
     function _insertOracle(address identity, uint deposit) private {
         Oracle oracle = oracleRegistry[identity];
         oracle.index = oraclePool.push(identity) - 1;
         oracle.isOracle = true;
     }
 
+    /**
+     * @dev Get Oracle count
+     */
     function getOracleCount() public view returns (uint count) {
         return oraclePool.length;
     }
 
+    /**
+     * @dev Get Oracle information
+     * @param index index of an Oracle to check.
+     */
     function getOracleAtIndex(uint index) public view returns (address code) {
         code = oraclePool[index];
         Oracle oracle = oracleRegistry[code];
     }
 
+    /**
+     * @dev Get submissions count
+     */
     function getPriceCount() public view returns (uint count) {
         return prices.length;
     }
 
+    /**
+     * @dev Get submissions information
+     * @param index index of a submission to check.
+     */
     function getPriceAtIndex(uint index) public view returns (uint price, address oracle) {
         OraclePrice oraclePrice = prices[index];
         price = oraclePrice.price;
         oracle = oraclePrice.oracle;
     }
 
-    // registerOracle registers a new candidate as oracle
+    /**
+     * @dev Registers a new candidate as oracle
+     */
     function registerOracle() public payable whenNotPaused onlyNewCandidate onlySuperNode {
         require(_hasAvailability());
         _insertOracle(msg.sender, msg.value);
     }
 
-    // deregisterOracle deregisters the msg sender from the oracle set
+    /**
+     * @dev Deregisters the msg sender from the oracle set
+     */
     function deregisterOracle() public whenNotPaused onlyOracle {
         _deleteOracle(msg.sender);
     }
 
+    /**
+     * @dev Adds price
+     * @param _price price
+     */
     function submitPrice(uint _price) public whenNotPaused onlyOracle onlyOnce {
         oracleRegistry[msg.sender].hasSubmittedPrice = true;
         prices.push(OraclePrice({price: _price, oracle: msg.sender}));

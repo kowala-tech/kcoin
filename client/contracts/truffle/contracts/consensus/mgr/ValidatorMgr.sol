@@ -5,6 +5,9 @@ import "../../token/ERC223.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
 //import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
 
+/**
+ * @title Validator Manager for PoS consensus
+ */
 contract ValidatorMgr is Pausable {
     uint public baseDeposit;       
     uint public maxNumValidators;
@@ -60,6 +63,14 @@ contract ValidatorMgr is Pausable {
         _;
     }
 
+    /**
+     * Constructor.
+     * @param _baseDeposit base deposit for Validator
+     * @param _maxNumValidators Maximum numbers of Validators.
+     * @param _freezePeriod Freeze period for Validator's deposits.
+     * @param _miningTokenAddr Address of mining token.
+     * @param _superNodeAmount Amount required to be considered a super node.
+     */
     function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _miningTokenAddr, uint _superNodeAmount) public {
         require(_maxNumValidators >= 1);
 
@@ -70,14 +81,26 @@ contract ValidatorMgr is Pausable {
         superNodeAmount = _superNodeAmount;
     }
 
+    /**
+     * @dev Checks if given address is Genesis Validator
+     * @param code Address of an Validator.
+     */
     function isGenesisValidator(address code) public view returns (bool isIndeed) {
         return validatorRegistry[code].isGenesis;
     }
 
+    /**
+     * @dev Checks if given address is Validator
+     * @param code Address of a Validator to check.
+     */
     function isValidator(address code) public view returns (bool isIndeed) {
         return validatorRegistry[code].isValidator;
     }
 
+    /**
+     * @dev Checks if given address is super node
+     * @param code Address of a supernode to check.
+     */
     function isSuperNode(address code) public view returns (bool isIndeed) {
         if (!isValidator(code)) return false;
 
@@ -85,10 +108,17 @@ contract ValidatorMgr is Pausable {
         return deposits[deposits.length - 1].amount >= superNodeAmount;
     }
 
+    /**
+     * @dev Get Validator count
+     */
     function getValidatorCount() public view returns (uint count) {
         return validatorPool.length;
     }
 
+    /**
+     * @dev Get Validator information
+     * @param index index of an Validator to check.
+     */
     function getValidatorAtIndex(uint index) public view returns (address code, uint deposit) {
         code = validatorPool[index];
         Validator validator = validatorRegistry[code];
@@ -99,8 +129,10 @@ contract ValidatorMgr is Pausable {
         return (maxNumValidators - validatorPool.length) > 0;
     }
 
-    // getMinimumDeposit returns the base deposit if there are positions available or
-    // the current smallest deposit required if there aren't positions availabe.
+    /**
+     * @dev returns the base deposit if there are positions available or
+            the current smallest deposit required if there aren't positions available.
+     */
     function getMinimumDeposit() public view returns (uint deposit) {
         // there are positions for validator available
         if (_hasAvailability()) {
@@ -111,10 +143,18 @@ contract ValidatorMgr is Pausable {
         }
     }
 
+    /**
+     * @dev updates the checksum
+     */
     function _updateChecksum() private {
         validatorsChecksum = keccak256(validatorPool);
     }
 
+    /**
+     * @dev Add new validator
+     * @param code Address of an Validator.
+     * @param deposit amount to deposit
+     */
     function _insertValidator(address code, uint deposit) private {
         Validator sender = validatorRegistry[code];
         sender.index = validatorPool.push(code) - 1;
@@ -138,10 +178,17 @@ contract ValidatorMgr is Pausable {
         _updateChecksum();
     }
 
+    /**
+     * @dev Set new base deposit for Validators
+     */
     function setBaseDeposit(uint deposit) public onlyOwner {
         baseDeposit = deposit;
     }
 
+    /**
+     * @dev Set maximum numbers of Validators
+     * @param max number of max Validators
+     */
     function setMaxValidators(uint max) public onlyOwner { 
         if (max < validatorPool.length) {
             uint toRemove = validatorPool.length - max;
@@ -152,6 +199,10 @@ contract ValidatorMgr is Pausable {
         maxNumValidators = max;   
     }
 
+    /**
+     * @dev Delete Validator
+     * @param account address of a Validator
+     */
     function _deleteValidator(address account) private {
         Validator validator = validatorRegistry[account];
         for (uint index = validator.index; index < validatorPool.length - 1; index++) {
@@ -165,20 +216,32 @@ contract ValidatorMgr is Pausable {
         _updateChecksum();
     }
 
-    // _deleteSmallestBidder removes the validator with the smallest deposit
+    /**
+     * @dev removes the Validator with the smallest deposit
+     */
     function _deleteSmallestBidder() private {
         _deleteValidator(validatorPool[validatorPool.length - 1]);
     }
-
+    
+    /**
+     * @dev Get deposit count
+     */
     function getDepositCount() public view returns (uint count) {
         return validatorRegistry[msg.sender].deposits.length; 
     }
 
+    /**
+     * @dev Get deposit at given index
+     * @param index index of a Validator to get deposit
+     */
     function getDepositAtIndex(uint index) public view returns (uint amount, uint availableAt) {
         Deposit deposit = validatorRegistry[msg.sender].deposits[index];
         return (deposit.amount, deposit.availableAt);
     }
 
+    /**
+     * @dev Register new Validator
+     */
     function _registerValidator() private whenNotPaused onlyNewCandidate onlyWithMinDeposit {
         if (!_hasAvailability()) {
             _deleteSmallestBidder();
@@ -186,10 +249,18 @@ contract ValidatorMgr is Pausable {
         _insertValidator(tkn.sender, tkn.value);
     }
 
+    /**
+     * @dev deregister Validator
+     */
     function deregisterValidator() public whenNotPaused onlyValidator {
         _deleteValidator(msg.sender);
     }
 
+    /**
+     * @dev remove deposit
+     * @param code address of a Validator
+     * @param index index of a deposit
+     */
     function _removeDeposits(address code, uint index) private {
         if (index == 0) return;
 
@@ -204,8 +275,9 @@ contract ValidatorMgr is Pausable {
         validator.deposits.length = lo;
     }
 
-    // releaseDeposits transfers locked deposit(s) back the user account if they
-    // are past the freeze period
+    /**
+     * @dev transfers locked deposit(s) back the user account if they are past the freeze period
+     */
     function releaseDeposits() public whenNotPaused {
         uint refund = 0;
         uint i = 0;
@@ -227,7 +299,13 @@ contract ValidatorMgr is Pausable {
             mtoken.transfer(msg.sender, refund);
         }
     }
-
+    
+     /**
+     * @dev Register Validator
+     * @param _from from address
+     * @param _value value to send
+     * @param _data data to sent
+     */
     function registerValidator(address _from, uint _value, bytes _data) public {
         //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
         // SSTORE problem - expensive

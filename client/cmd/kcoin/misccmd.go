@@ -52,13 +52,7 @@ func versionPrint(ctx *cli.Context) error {
 	fmt.Println(strings.Title(clientIdentifier))
 	fmt.Println("Version:", params.Version)
 
-	// print latest version for this platform if available
-	repository := ctx.GlobalString(utils.VersionRepository.Name)
-	finder := version.NewFinder(repository)
-	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
-	if err == nil {
-		fmt.Println("Latest Version Available:", latest.Semver().String())
-	}
+	printLatestIfAvailable(ctx)
 
 	if params.Commit != "" {
 		fmt.Println("Git Commit:", params.Commit)
@@ -71,6 +65,16 @@ func versionPrint(ctx *cli.Context) error {
 	fmt.Println("Go Version:", runtime.Version())
 	fmt.Println("Operating System:", runtime.GOOS)
 	return nil
+}
+
+func printLatestIfAvailable(ctx *cli.Context) {
+	repository := ctx.GlobalString(utils.VersionRepository.Name)
+	finder := version.NewFinder(repository)
+	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
+	if err == nil {
+		fmt.Println("Latest Version Available:", latest.Semver().String())
+	}
+	// ignore error, we don't print latest version available
 }
 
 func license(_ *cli.Context) error {
@@ -93,16 +97,10 @@ along with knode. If not, see <http://www.gnu.org/licenses/>.
 func latest(ctx *cli.Context) error {
 	repository := ctx.GlobalString(utils.VersionRepository.Name)
 
-	finder := version.NewFinder(repository)
-	assets, err := finder.All()
+	updater, err := version.NewUpdater(repository)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Assets Found (%s):\n", repository)
-	for _, asset := range assets {
-		fmt.Printf("Version: %s, os: %s, Architeture: %s, File: %s\n", asset.Semver().String(), asset.Os(), asset.Arch(), asset.Path())
-	}
-
-	return nil
+	return updater.Update()
 }

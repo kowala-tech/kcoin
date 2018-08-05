@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+    <msapplication>
+        <tile>
+            <square150x150logo src="https://cdn.kowala.tech/images/meta/mstile-150x150.png?v=69Pwvmj0bL"/>
+            <TileColor>#1d6986</TileColor>
+        </tile>
+    </msapplication>
+</browserconfig>
