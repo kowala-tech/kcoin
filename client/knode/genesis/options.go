@@ -98,8 +98,6 @@ type PriceOpts struct {
 
 type DataFeedSystemOpts struct {
 	MaxNumOracles uint64
-	FreezePeriod  uint64 // in days
-	BaseDeposit   uint64 // in kUSD
 	Price         PriceOpts
 }
 
@@ -135,8 +133,6 @@ type validPriceOpts struct {
 
 type validOracleMgrOpts struct {
 	maxNumOracles    *big.Int
-	freezePeriod     *big.Int
-	baseDeposit      *big.Int
 	price            validPriceOpts
 	validatorMgrAddr common.Address
 	owner            common.Address
@@ -251,8 +247,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// data feed system
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
-	oracleBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
-	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
 	syncFrequency := new(big.Int).SetUint64(options.DataFeedSystem.Price.SyncFrequency)
 	updatePeriod := new(big.Int).SetUint64(options.DataFeedSystem.Price.UpdatePeriod)
 
@@ -300,8 +294,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		},
 		oracleMgr: &validOracleMgrOpts{
 			maxNumOracles: maxNumOracles,
-			freezePeriod:  oracleFreezePeriod,
-			baseDeposit:   oracleBaseDeposit,
 			price: validPriceOpts{
 				syncFrequency: syncFrequency,
 				updatePeriod:  updatePeriod,

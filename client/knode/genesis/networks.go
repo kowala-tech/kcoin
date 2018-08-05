@@ -49,9 +49,7 @@ var Networks = map[string]map[string]Options{
 				MinDeposit: 50,
 			},
 			DataFeedSystem: &DataFeedSystemOpts{
-				MaxNumOracles: 1000,
-				FreezePeriod:  1,
-				BaseDeposit:   10,
+				MaxNumOracles: 50,
 				Price: PriceOpts{
 					SyncFrequency: 600,
 					UpdatePeriod:  30,
@@ -121,9 +119,7 @@ var Networks = map[string]map[string]Options{
 				MinDeposit: 50,
 			},
 			DataFeedSystem: &DataFeedSystemOpts{
-				MaxNumOracles: 1000,
-				FreezePeriod:  1,
-				BaseDeposit:   10,
+				MaxNumOracles: 50,
 				Price: PriceOpts{
 					SyncFrequency: 600,
 					UpdatePeriod:  30,

@@ -16,18 +16,18 @@ import (
 )
 
 // OracleMgrABI is the input ABI used to generate the binding from.
-const OracleMgrABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"maxNumOracles\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getMinimumDeposit\",\"outputs\":[{\"name\":\"deposit\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getOracleAtIndex\",\"outputs\":[{\"name\":\"code\",\"type\":\"address\"},{\"name\":\"deposit\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"freezePeriod\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"registerOracle\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getDepositAtIndex\",\"outputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"availableAt\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getOracleCount\",\"outputs\":[{\"name\":\"count\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"baseDeposit\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getDepositCount\",\"outputs\":[{\"name\":\"count\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_price\",\"type\":\"uint256\"}],\"name\":\"submitPrice\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"updatePeriod\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"identity\",\"type\":\"address\"}],\"name\":\"isOracle\",\"outputs\":[{\"name\":\"isIndeed\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"releaseDeposits\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getPriceCount\",\"outputs\":[{\"name\":\"count\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getPriceAtIndex\",\"outputs\":[{\"name\":\"price\",\"type\":\"uint256\"},{\"name\":\"oracle\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"syncFrequency\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"deregisterOracle\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_baseDeposit\",\"type\":\"uint256\"},{\"name\":\"_maxNumOracles\",\"type\":\"uint256\"},{\"name\":\"_freezePeriod\",\"type\":\"uint256\"},{\"name\":\"_syncFrequency\",\"type\":\"uint256\"},{\"name\":\"_updatePeriod\",\"type\":\"uint256\"},{\"name\":\"_validatorMgrAddr\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Pause\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Unpause\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"}],\"name\":\"OwnershipRenounced\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"}]"
+const OracleMgrABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"maxNumOracles\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getOracleAtIndex\",\"outputs\":[{\"name\":\"code\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"registerOracle\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getOracleCount\",\"outputs\":[{\"name\":\"count\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_price\",\"type\":\"uint256\"}],\"name\":\"submitPrice\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"updatePeriod\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"identity\",\"type\":\"address\"}],\"name\":\"isOracle\",\"outputs\":[{\"name\":\"isIndeed\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getPriceCount\",\"outputs\":[{\"name\":\"count\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getPriceAtIndex\",\"outputs\":[{\"name\":\"price\",\"type\":\"uint256\"},{\"name\":\"oracle\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"syncFrequency\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"deregisterOracle\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_maxNumOracles\",\"type\":\"uint256\"},{\"name\":\"_syncFrequency\",\"type\":\"uint256\"},{\"name\":\"_updatePeriod\",\"type\":\"uint256\"},{\"name\":\"_consensusAddr\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Pause\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Unpause\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"}],\"name\":\"OwnershipRenounced\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"}]"
 
 // OracleMgrBin is the compiled bytecode used for deploying new contracts.
-const OracleMgrBin = `608060405260008060146101000a81548160ff02191690831515021790555034801561002a57600080fd5b5060405160c0806119d3833981018060405281019080805190602001909291908051906020019092919080519060200190929190805190602001909291908051906020019092919080519060200190929190505050336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506000851115156100ce57600080fd5b600083101515156100de57600080fd5b6000831115610103576000821180156100f75750828211155b151561010257600080fd5b5b8560018190555084600281905550620151808402600381905550826004819055508160058190555080600660006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550505050505050611852806101816000396000f300608060405260043610610132576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168062fe7b1114610137578063035cf1421461016257806309fe9d391461018d5780630a3cb66314610201578063339d25901461022c5780633ed0a373146102365780633f4ba83a1461027e5780633f4e4251146102955780635c975abb146102c057806369474625146102ef578063715018a61461031a5780638456cb59146103315780638da5cb5b146103485780639363a1411461039f578063986fcbe9146103ca578063a83627de146103f7578063a97e5c9314610422578063aded41ec1461047d578063c48c1a7114610494578063c8104e01146104bf578063cdee7e0714610533578063f2fde38b1461055e578063f93a2eb2146105a1575b600080fd5b34801561014357600080fd5b5061014c6105b8565b6040518082815260200191505060405180910390f35b34801561016e57600080fd5b506101776105be565b6040518082815260200191505060405180910390f35b34801561019957600080fd5b506101b860048036038101908080359060200190929190505050610691565b604051808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018281526020019250505060405180910390f35b34801561020d57600080fd5b50610216610748565b6040518082815260200191505060405180910390f35b61023461074e565b005b34801561024257600080fd5b50610261600480360381019080803590602001909291905050506108bb565b604051808381526020018281526020019250505060405180910390f35b34801561028a57600080fd5b50610293610933565b005b3480156102a157600080fd5b506102aa6109f1565b6040518082815260200191505060405180910390f35b3480156102cc57600080fd5b506102d56109fe565b604051808215151515815260200191505060405180910390f35b3480156102fb57600080fd5b50610304610a11565b6040518082815260200191505060405180910390f35b34801561032657600080fd5b5061032f610a17565b005b34801561033d57600080fd5b50610346610b19565b005b34801561035457600080fd5b5061035d610bd9565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b3480156103ab57600080fd5b506103b4610bfe565b6040518082815260200191505060405180910390f35b3480156103d657600080fd5b506103f560048036038101908080359060200190929190505050610c4b565b005b34801561040357600080fd5b5061040c610de1565b6040518082815260200191505060405180910390f35b34801561042e57600080fd5b50610463600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050610de7565b604051808215151515815260200191505060405180910390f35b34801561048957600080fd5b50610492610e40565b005b3480156104a057600080fd5b506104a9610fa2565b6040518082815260200191505060405180910390f35b3480156104cb57600080fd5b506104ea60048036038101908080359060200190929190505050610faf565b604051808381526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019250505060405180910390f35b34801561053f57600080fd5b50610548611007565b6040518082815260200191505060405180910390f35b34801561056a57600080fd5b5061059f600480360381019080803573ffffffffffffffffffffffffffffffffffffffff16906020019092919050505061100d565b005b3480156105ad57600080fd5b506105b6611074565b005b60025481565b6000806105c96110af565b156105d857600154915061068d565b6007600060086001600880549050038154811015156105f357fe5b9060005260206000200160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000209050600181600201600183600201805490500381548110151561067757fe5b9060005260206000209060020201600001540191505b5090565b60008060006008848154811015156106a557fe5b9060005260206000200160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff169250600760008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020905080600201600182600201805490500381548110151561072e57fe5b906000526020600020906002020160000154915050915091565b60035481565b600060149054906101000a900460ff1615151561076a57600080fd5b61077333610de7565b15151561077f57600080fd5b6107876105be565b341015151561079557600080fd5b600660009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16637d0e81bf336040518263ffffffff167c0100000000000000000000000000000000000000000000000000000000028152600401808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001915050602060405180830381600087803b15801561085257600080fd5b505af1158015610866573d6000803e3d6000fd5b505050506040513d602081101561087c57600080fd5b8101908080519060200190929190505050151561089857600080fd5b6108a06110af565b15156108af576108ae6110c2565b5b6108b9333461110e565b565b6000806000600760003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206002018481548110151561090f57fe5b90600052602060002090600202019050806000015481600101549250925050915091565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614151561098e57600080fd5b600060149054906101000a900460ff1615156109a957600080fd5b60008060146101000a81548160ff0219169083151502179055507f7805862f689e2f13df9f062ff482ad3ad112aca9e0847911ed832e158c525b3360405160405180910390a1565b6000600880549050905090565b600060149054906101000a900460ff1681565b60015481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16141515610a7257600080fd5b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff167ff8df31144d9c2f0f6b59d69b8b98abd5459d07f2742c4df920b25aae33c6482060405160405180910390a260008060006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16141515610b7457600080fd5b600060149054906101000a900460ff16151515610b9057600080fd5b6001600060146101000a81548160ff0219169083151502179055507f6985a02210a168e66602d3235cb6db0e70f92b3ba4d376a33c0f3d9434bff62560405160405180910390a1565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6000600760003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060020180549050905090565b600060149054906101000a900460ff16151515610c6757600080fd5b610c7033610de7565b1515610c7b57600080fd5b600760003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060010160019054906101000a900460ff16151515610cd757600080fd5b6001600760003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060010160016101000a81548160ff021916908315150217905550600960408051908101604052808381526020013373ffffffffffffffffffffffffffffffffffffffff16815250908060018154018082558091505090600182039060005260206000209060020201600090919290919091506000820151816000015560208201518160010160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050505050565b60055481565b6000600760008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060010160009054906101000a900460ff169050919050565b60008060008060149054906101000a900460ff16151515610e6057600080fd5b6000925060009150600760003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060020190505b808054905082108015610ee0575060008183815481101515610ecb57fe5b90600052602060002090600202016001015414155b15610f42578082815481101515610ef357fe5b906000526020600020906002020160010154421015610f1157610f42565b8082815481101515610f1f57fe5b906000526020600020906002020160000154830192508180600101925050610ead565b610f4c3383611423565b6000831115610f9d573373ffffffffffffffffffffffffffffffffffffffff166108fc849081150290604051600060405180830381858888f19350505050158015610f9b573d6000803e3d6000fd5b505b505050565b6000600980549050905090565b6000806000600984815481101515610fc357fe5b90600052602060002090600202019050806000015492508060010160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff16915050915091565b60045481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614151561106857600080fd5b61107181611510565b50565b600060149054906101000a900460ff1615151561109057600080fd5b61109933610de7565b15156110a457600080fd5b6110ad3361160a565b565b6000806008805490506002540311905090565b61110c60086001600880549050038154811015156110dc57fe5b9060005260206000200160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1661160a565b565b600080600080600760008773ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000209350600160088790806001815401808255809150509060018203906000526020600020016000909192909190916101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555003846000018190555060018460010160006101000a81548160ff0219169083151502179055508360020160408051908101604052808781526020016000815250908060018154018082558091505090600182039060005260206000209060020201600090919290919091506000820151816000015560208201518160010155505050836000015492505b600083111561141b576007600060086001860381548110151561126557fe5b9060005260206000200160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002091508160020160018360020180549050038154811015156112e757fe5b906000526020600020906002020190508060000154851115156113095761141b565b60086001840381548110151561131b57fe5b9060005260206000200160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1660088481548110151561135557fe5b9060005260206000200160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550856008600185038154811015156113b057fe5b9060005260206000200160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550828260000181905550600183038460000181905550828060019003935050611246565b505050505050565b60008060008084141561143557611509565b600760008673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000209250600091508390505b82600201805490508110156114f757826002018181548110151561149e57fe5b906000526020600020906002020183600201838154811015156114bd57fe5b906000526020600020906002020160008201548160000155600182015481600101559050508180600101925050808060010191505061147e565b8183600201816115079190611774565b505b5050505050565b600073ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff161415151561154c57600080fd5b8073ffffffffffffffffffffffffffffffffffffffff166000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a3806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050565b600080600760008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000209150816000015490505b6001600880549050038110156117075760086001820181548110151561167857fe5b9060005260206000200160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff166008828154811015156116b257fe5b9060005260206000200160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508080600101915050611656565b600880548091906001900361171c91906117a6565b5060008260010160006101000a81548160ff021916908315150217905550600354420182600201600184600201805490500381548110151561175a57fe5b906000526020600020906002020160010181905550505050565b8154818355818111156117a1576002028160020283600052602060002091820191016117a091906117d2565b5b505050565b8154818355818111156117cd578183600052602060002091820191016117cc9190611801565b5b505050565b6117fe91905b808211156117fa576000808201600090556001820160009055506002016117d8565b5090565b90565b61182391905b8082111561181f576000816000905550600101611807565b5090565b905600a165627a7a723058205f8da47322a49bd9d539e7358e428f779703465bd16a0e6c9f5469ac8843d1bf0029`
+const OracleMgrBin = `608060405260008060146101000a81548160ff02191690831515021790555034801561002a57600080fd5b5060405160808061116f83398101806040528101908080519060200190929190805190602001909291908051906020019092919080519060200190929190505050336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506000841115156100ba57600080fd5b60008311156100df576000821180156100d35750828211155b15156100de57600080fd5b5b83600181905550826002819055508160038190555080600460006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050505050611027806101486000396000f3006080604052600436106100f0576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168062fe7b11146100f557806309fe9d3914610120578063339d25901461018d5780633f4ba83a146101975780633f4e4251146101ae5780635c975abb146101d9578063715018a6146102085780638456cb591461021f5780638da5cb5b14610236578063986fcbe91461028d578063a83627de146102ba578063a97e5c93146102e5578063c48c1a7114610340578063c8104e011461036b578063cdee7e07146103df578063f2fde38b1461040a578063f93a2eb21461044d575b600080fd5b34801561010157600080fd5b5061010a610464565b6040518082815260200191505060405180910390f35b34801561012c57600080fd5b5061014b6004803603810190808035906020019092919050505061046a565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b6101956104f0565b005b3480156101a357600080fd5b506101ac610643565b005b3480156101ba57600080fd5b506101c3610701565b6040518082815260200191505060405180910390f35b3480156101e557600080fd5b506101ee61070e565b604051808215151515815260200191505060405180910390f35b34801561021457600080fd5b5061021d610721565b005b34801561022b57600080fd5b50610234610823565b005b34801561024257600080fd5b5061024b6108e3565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b34801561029957600080fd5b506102b860048036038101908080359060200190929190505050610908565b005b3480156102c657600080fd5b506102cf610a9e565b6040518082815260200191505060405180910390f35b3480156102f157600080fd5b50610326600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050610aa4565b604051808215151515815260200191505060405180910390f35b34801561034c57600080fd5b50610355610afd565b6040518082815260200191505060405180910390f35b34801561037757600080fd5b5061039660048036038101908080359060200190929190505050610b0a565b604051808381526020018273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019250505060405180910390f35b3480156103eb57600080fd5b506103f4610b62565b6040518082815260200191505060405180910390f35b34801561041657600080fd5b5061044b600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050610b68565b005b34801561045957600080fd5b50610462610bcf565b005b60015481565b60008060068381548110151561047c57fe5b9060005260206000200160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff169150600560008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020905050919050565b600060149054906101000a900460ff1615151561050c57600080fd5b61051533610aa4565b15151561052157600080fd5b600460009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16637d0e81bf336040518263ffffffff167c0100000000000000000000000000000000000000000000000000000000028152600401808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001915050602060405180830381600087803b1580156105de57600080fd5b505af11580156105f2573d6000803e3d6000fd5b505050506040513d602081101561060857600080fd5b8101908080519060200190929190505050151561062457600080fd5b61062c610c0a565b151561063757600080fd5b6106413334610c1d565b565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614151561069e57600080fd5b600060149054906101000a900460ff1615156106b957600080fd5b60008060146101000a81548160ff0219169083151502179055507f7805862f689e2f13df9f062ff482ad3ad112aca9e0847911ed832e158c525b3360405160405180910390a1565b6000600680549050905090565b600060149054906101000a900460ff1681565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614151561077c57600080fd5b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff167ff8df31144d9c2f0f6b59d69b8b98abd5459d07f2742c4df920b25aae33c6482060405160405180910390a260008060006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff1614151561087e57600080fd5b600060149054906101000a900460ff1615151561089a57600080fd5b6001600060146101000a81548160ff0219169083151502179055507f6985a02210a168e66602d3235cb6db0e70f92b3ba4d376a33c0f3d9434bff62560405160405180910390a1565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b600060149054906101000a900460ff1615151561092457600080fd5b61092d33610aa4565b151561093857600080fd5b600560003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060010160019054906101000a900460ff1615151561099457600080fd5b6001600560003373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060010160016101000a81548160ff021916908315150217905550600760408051908101604052808381526020013373ffffffffffffffffffffffffffffffffffffffff16815250908060018154018082558091505090600182039060005260206000209060020201600090919290919091506000820151816000015560208201518160010160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050505050565b60035481565b6000600560008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060010160009054906101000a900460ff169050919050565b6000600780549050905090565b6000806000600784815481101515610b1e57fe5b90600052602060002090600202019050806000015492508060010160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff16915050915091565b60025481565b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16141515610bc357600080fd5b610bcc81610cf2565b50565b600060149054906101000a900460ff16151515610beb57600080fd5b610bf433610aa4565b1515610bff57600080fd5b610c0833610dec565b565b6000806006805490506001540311905090565b6000600560008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000209050600160068490806001815401808255809150509060018203906000526020600020016000909192909190916101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555003816000018190555060018160010160006101000a81548160ff021916908315150217905550505050565b600073ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff1614151515610d2e57600080fd5b8073ffffffffffffffffffffffffffffffffffffffff166000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a3806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050565b6000806000600560008573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020925082600001549150600560008573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000808201600090556001820160006101000a81549060ff02191690556001820160016101000a81549060ff021916905550506006600160068054905003815481101515610ec257fe5b9060005260206000200160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905080600683815481101515610eff57fe5b9060005260206000200160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555081600560008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600001819055506006805480919060019003610fa39190610faa565b5050505050565b815481835581811115610fd157818360005260206000209182019101610fd09190610fd6565b5b505050565b610ff891905b80821115610ff4576000816000905550600101610fdc565b5090565b905600a165627a7a72305820bf6cdba68faea5c4b530e800a6994f1d46f6c0b6d98a300dafbd9acfeae00a3a0029`
 
 // DeployOracleMgr deploys a new Kowala contract, binding an instance of OracleMgr to it.
-func DeployOracleMgr(auth *bind.TransactOpts, backend bind.ContractBackend, _baseDeposit *big.Int, _maxNumOracles *big.Int, _freezePeriod *big.Int, _syncFrequency *big.Int, _updatePeriod *big.Int, _validatorMgrAddr common.Address) (common.Address, *types.Transaction, *OracleMgr, error) {
+func DeployOracleMgr(auth *bind.TransactOpts, backend bind.ContractBackend, _maxNumOracles *big.Int, _syncFrequency *big.Int, _updatePeriod *big.Int, _consensusAddr common.Address) (common.Address, *types.Transaction, *OracleMgr, error) {
 	parsed, err := abi.JSON(strings.NewReader(OracleMgrABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(OracleMgrBin), backend, _baseDeposit, _maxNumOracles, _freezePeriod, _syncFrequency, _updatePeriod, _validatorMgrAddr)
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(OracleMgrBin), backend, _maxNumOracles, _syncFrequency, _updatePeriod, _consensusAddr)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -176,179 +176,29 @@ func (_OracleMgr *OracleMgrTransactorRaw) Transact(opts *bind.TransactOpts, meth
 	return _OracleMgr.Contract.contract.Transact(opts, method, params...)
 }
 
-// BaseDeposit is a free data retrieval call binding the contract method 0x69474625.
-//
-// Solidity: function baseDeposit() constant returns(uint256)
-func (_OracleMgr *OracleMgrCaller) BaseDeposit(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _OracleMgr.contract.Call(opts, out, "baseDeposit")
-	return *ret0, err
-}
-
-// BaseDeposit is a free data retrieval call binding the contract method 0x69474625.
-//
-// Solidity: function baseDeposit() constant returns(uint256)
-func (_OracleMgr *OracleMgrSession) BaseDeposit() (*big.Int, error) {
-	return _OracleMgr.Contract.BaseDeposit(&_OracleMgr.CallOpts)
-}
-
-// BaseDeposit is a free data retrieval call binding the contract method 0x69474625.
-//
-// Solidity: function baseDeposit() constant returns(uint256)
-func (_OracleMgr *OracleMgrCallerSession) BaseDeposit() (*big.Int, error) {
-	return _OracleMgr.Contract.BaseDeposit(&_OracleMgr.CallOpts)
-}
-
-// FreezePeriod is a free data retrieval call binding the contract method 0x0a3cb663.
-//
-// Solidity: function freezePeriod() constant returns(uint256)
-func (_OracleMgr *OracleMgrCaller) FreezePeriod(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _OracleMgr.contract.Call(opts, out, "freezePeriod")
-	return *ret0, err
-}
-
-// FreezePeriod is a free data retrieval call binding the contract method 0x0a3cb663.
-//
-// Solidity: function freezePeriod() constant returns(uint256)
-func (_OracleMgr *OracleMgrSession) FreezePeriod() (*big.Int, error) {
-	return _OracleMgr.Contract.FreezePeriod(&_OracleMgr.CallOpts)
-}
-
-// FreezePeriod is a free data retrieval call binding the contract method 0x0a3cb663.
-//
-// Solidity: function freezePeriod() constant returns(uint256)
-func (_OracleMgr *OracleMgrCallerSession) FreezePeriod() (*big.Int, error) {
-	return _OracleMgr.Contract.FreezePeriod(&_OracleMgr.CallOpts)
-}
-
-// GetDepositAtIndex is a free data retrieval call binding the contract method 0x3ed0a373.
-//
-// Solidity: function getDepositAtIndex(index uint256) constant returns(amount uint256, availableAt uint256)
-func (_OracleMgr *OracleMgrCaller) GetDepositAtIndex(opts *bind.CallOpts, index *big.Int) (struct {
-	Amount      *big.Int
-	AvailableAt *big.Int
-}, error) {
-	ret := new(struct {
-		Amount      *big.Int
-		AvailableAt *big.Int
-	})
-	out := ret
-	err := _OracleMgr.contract.Call(opts, out, "getDepositAtIndex", index)
-	return *ret, err
-}
-
-// GetDepositAtIndex is a free data retrieval call binding the contract method 0x3ed0a373.
-//
-// Solidity: function getDepositAtIndex(index uint256) constant returns(amount uint256, availableAt uint256)
-func (_OracleMgr *OracleMgrSession) GetDepositAtIndex(index *big.Int) (struct {
-	Amount      *big.Int
-	AvailableAt *big.Int
-}, error) {
-	return _OracleMgr.Contract.GetDepositAtIndex(&_OracleMgr.CallOpts, index)
-}
-
-// GetDepositAtIndex is a free data retrieval call binding the contract method 0x3ed0a373.
-//
-// Solidity: function getDepositAtIndex(index uint256) constant returns(amount uint256, availableAt uint256)
-func (_OracleMgr *OracleMgrCallerSession) GetDepositAtIndex(index *big.Int) (struct {
-	Amount      *big.Int
-	AvailableAt *big.Int
-}, error) {
-	return _OracleMgr.Contract.GetDepositAtIndex(&_OracleMgr.CallOpts, index)
-}
-
-// GetDepositCount is a free data retrieval call binding the contract method 0x9363a141.
-//
-// Solidity: function getDepositCount() constant returns(count uint256)
-func (_OracleMgr *OracleMgrCaller) GetDepositCount(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _OracleMgr.contract.Call(opts, out, "getDepositCount")
-	return *ret0, err
-}
-
-// GetDepositCount is a free data retrieval call binding the contract method 0x9363a141.
-//
-// Solidity: function getDepositCount() constant returns(count uint256)
-func (_OracleMgr *OracleMgrSession) GetDepositCount() (*big.Int, error) {
-	return _OracleMgr.Contract.GetDepositCount(&_OracleMgr.CallOpts)
-}
-
-// GetDepositCount is a free data retrieval call binding the contract method 0x9363a141.
-//
-// Solidity: function getDepositCount() constant returns(count uint256)
-func (_OracleMgr *OracleMgrCallerSession) GetDepositCount() (*big.Int, error) {
-	return _OracleMgr.Contract.GetDepositCount(&_OracleMgr.CallOpts)
-}
-
-// GetMinimumDeposit is a free data retrieval call binding the contract method 0x035cf142.
-//
-// Solidity: function getMinimumDeposit() constant returns(deposit uint256)
-func (_OracleMgr *OracleMgrCaller) GetMinimumDeposit(opts *bind.CallOpts) (*big.Int, error) {
-	var (
-		ret0 = new(*big.Int)
-	)
-	out := ret0
-	err := _OracleMgr.contract.Call(opts, out, "getMinimumDeposit")
-	return *ret0, err
-}
-
-// GetMinimumDeposit is a free data retrieval call binding the contract method 0x035cf142.
-//
-// Solidity: function getMinimumDeposit() constant returns(deposit uint256)
-func (_OracleMgr *OracleMgrSession) GetMinimumDeposit() (*big.Int, error) {
-	return _OracleMgr.Contract.GetMinimumDeposit(&_OracleMgr.CallOpts)
-}
-
-// GetMinimumDeposit is a free data retrieval call binding the contract method 0x035cf142.
-//
-// Solidity: function getMinimumDeposit() constant returns(deposit uint256)
-func (_OracleMgr *OracleMgrCallerSession) GetMinimumDeposit() (*big.Int, error) {
-	return _OracleMgr.Contract.GetMinimumDeposit(&_OracleMgr.CallOpts)
-}
-
 // GetOracleAtIndex is a free data retrieval call binding the contract method 0x09fe9d39.
 //
-// Solidity: function getOracleAtIndex(index uint256) constant returns(code address, deposit uint256)
-func (_OracleMgr *OracleMgrCaller) GetOracleAtIndex(opts *bind.CallOpts, index *big.Int) (struct {
-	Code    common.Address
-	Deposit *big.Int
-}, error) {
-	ret := new(struct {
-		Code    common.Address
-		Deposit *big.Int
-	})
-	out := ret
+// Solidity: function getOracleAtIndex(index uint256) constant returns(code address)
+func (_OracleMgr *OracleMgrCaller) GetOracleAtIndex(opts *bind.CallOpts, index *big.Int) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
 	err := _OracleMgr.contract.Call(opts, out, "getOracleAtIndex", index)
-	return *ret, err
+	return *ret0, err
 }
 
 // GetOracleAtIndex is a free data retrieval call binding the contract method 0x09fe9d39.
 //
-// Solidity: function getOracleAtIndex(index uint256) constant returns(code address, deposit uint256)
-func (_OracleMgr *OracleMgrSession) GetOracleAtIndex(index *big.Int) (struct {
-	Code    common.Address
-	Deposit *big.Int
-}, error) {
+// Solidity: function getOracleAtIndex(index uint256) constant returns(code address)
+func (_OracleMgr *OracleMgrSession) GetOracleAtIndex(index *big.Int) (common.Address, error) {
 	return _OracleMgr.Contract.GetOracleAtIndex(&_OracleMgr.CallOpts, index)
 }
 
 // GetOracleAtIndex is a free data retrieval call binding the contract method 0x09fe9d39.
 //
-// Solidity: function getOracleAtIndex(index uint256) constant returns(code address, deposit uint256)
-func (_OracleMgr *OracleMgrCallerSession) GetOracleAtIndex(index *big.Int) (struct {
-	Code    common.Address
-	Deposit *big.Int
-}, error) {
+// Solidity: function getOracleAtIndex(index uint256) constant returns(code address)
+func (_OracleMgr *OracleMgrCallerSession) GetOracleAtIndex(index *big.Int) (common.Address, error) {
 	return _OracleMgr.Contract.GetOracleAtIndex(&_OracleMgr.CallOpts, index)
 }
 
@@ -657,27 +507,6 @@ func (_OracleMgr *OracleMgrSession) RegisterOracle() (*types.Transaction, error)
 // Solidity: function registerOracle() returns()
 func (_OracleMgr *OracleMgrTransactorSession) RegisterOracle() (*types.Transaction, error) {
 	return _OracleMgr.Contract.RegisterOracle(&_OracleMgr.TransactOpts)
-}
-
-// ReleaseDeposits is a paid mutator transaction binding the contract method 0xaded41ec.
-//
-// Solidity: function releaseDeposits() returns()
-func (_OracleMgr *OracleMgrTransactor) ReleaseDeposits(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _OracleMgr.contract.Transact(opts, "releaseDeposits")
-}
-
-// ReleaseDeposits is a paid mutator transaction binding the contract method 0xaded41ec.
-//
-// Solidity: function releaseDeposits() returns()
-func (_OracleMgr *OracleMgrSession) ReleaseDeposits() (*types.Transaction, error) {
-	return _OracleMgr.Contract.ReleaseDeposits(&_OracleMgr.TransactOpts)
-}
-
-// ReleaseDeposits is a paid mutator transaction binding the contract method 0xaded41ec.
-//
-// Solidity: function releaseDeposits() returns()
-func (_OracleMgr *OracleMgrTransactorSession) ReleaseDeposits() (*types.Transaction, error) {
-	return _OracleMgr.Contract.ReleaseDeposits(&_OracleMgr.TransactOpts)
 }
 
 // RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.

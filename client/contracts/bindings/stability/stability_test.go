@@ -31,11 +31,14 @@ func TestStabilityContractSuite(t *testing.T) {
 }
 
 func (suite *StabilityContractSuite) BeforeTest(suiteName, testName string) {
+	req := suite.Require()
+
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
 		crypto.PubkeyToAddress(owner.PublicKey): core.GenesisAccount{
 			Balance: initialBalance,
 		},
 	})
+	req.NotNil(backend)
 	suite.backend = backend
 }
 

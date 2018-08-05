@@ -216,9 +216,7 @@ var OracleMgrContract = &contract{
 
 		managerParams, err := managerABI.Pack(
 			"",
-			args.baseDeposit,
 			args.maxNumOracles,
-			args.freezePeriod,
 			args.price.syncFrequency,
 			args.price.updatePeriod,
 			args.validatorMgrAddr,
