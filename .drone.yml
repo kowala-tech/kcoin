@@ -9,7 +9,7 @@ clone:
     tags: true
 
 pipeline:
-  go-generate:
+  go_generate:
     image: kowalatech/go:1.0.11
     commands:
     - make go_generate
@@ -57,14 +57,6 @@ pipeline:
     commands:
       - make -j 4 dev_docker_images
       - make e2e
-    when:
-      event: [pull_request]
-
-  test_wallet_app:
-    group: testing
-    image: node:9
-    commands:
-      - make wallet_app_tests
     when:
       event: [pull_request]
 
@@ -375,30 +367,6 @@ pipeline:
       event: [push,tag]
       branch: [master,dev]
 
-  build_wallet_app_dev:
-    group: build_artifacts
-    image: node:9
-    environment:
-      - KOWALA_NETWORK="kusd-zygote"
-    commands:
-      - cd wallet-app
-      - make build
-    when:
-      event: [push,tag]
-      branch: [dev]
-
-  build_wallet_app_production:
-    group: build_artifacts
-    image: node:9
-    environment:
-      - KOWALA_NETWORK="kusd-zygote"
-    commands:
-      - cd wallet-app
-      - make build
-    when:
-      event: [push,tag]
-      branch: [master]
-
   build_cdn:
     group: build_artifacts
     image: kowalatech/hugo-dev:1.0.4
@@ -462,34 +430,6 @@ pipeline:
     target: /
     when:
       event: [push, tag]
-      branch: [dev]
-
-  upload_wallet_zygote_dev:
-    group: asset_deployment
-    image: plugins/s3
-    region: us-east-1
-    acl: public-read
-    encryption: AES256
-    bucket: "wallet.zygote.kowala.tech"
-    source: wallet-app/dist/**/*
-    strip_prefix: wallet-app/dist
-    target: /
-    when:
-      event: [push]
-      branch: [dev]
-
-  upload_wallet_zygote_prod:
-    group: asset_deployment
-    image: plugins/s3
-    region: us-east-1
-    acl: public-read
-    encryption: AES256
-    bucket: "wallet.kowala.tech"
-    source: wallet-app/dist/**/*
-    strip_prefix: wallet-app/dist
-    target: /
-    when:
-      event: [tag]
       branch: [dev]
 
   upload_dev_docs_to_s3:
