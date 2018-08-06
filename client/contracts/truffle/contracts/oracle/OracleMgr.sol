@@ -1,7 +1,10 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
+<<<<<<< HEAD
 import "./Consensus.sol";
+=======
+>>>>>>> d158c65f56f1564edd5ee4f1475eab0bd8888b60
 import "../kns/KNSRegistry.sol";
 import "../kns/PublicResolver.sol";
 import "../consensus/mgr/ValidatorMgr.sol";
@@ -72,6 +75,7 @@ contract OracleMgr is Pausable {
         uint _syncFrequency,
         uint _updatePeriod,
         address _consensusAddr,
+        address _validatorMgrAddr,
         address _knsAddr) 
     public {
         require(_maxNumOracles > 0);
@@ -187,6 +191,13 @@ contract OracleMgr is Pausable {
     function submitPrice(uint _price) public whenNotPaused onlyOracle onlyOnce {
         oracleRegistry[msg.sender].hasSubmittedPrice = true;
         prices.push(OraclePrice({price: _price, oracle: msg.sender}));
+    }
+
+    /**
+     * @dev address of a Validator
+     */
+    function getValidatorAddress() onlyOwner public view returns(address){
+        return validatorMgr;
     }
 
     /**
