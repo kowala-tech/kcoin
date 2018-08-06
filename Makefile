@@ -109,7 +109,7 @@ docker_go_generate:
 .PHONY: assert_no_changes
 assert_no_changes:
 	git status
-	@if ! git diff-index --quiet HEAD; then echo "There are uncommited go generate files.\nRun `make docker_go_generate` to regenerate all of them."; exit 1; fi
+	@if ! git diff-index --quiet HEAD; then echo 'There are uncommited go generate files.\nRun `make docker_go_generate` to regenerate all of them.'; exit 1; fi
 
 .PHONY: notifications_dep
 notifications_dep: dep
