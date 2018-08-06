@@ -64,4 +64,8 @@ const (
 	PreCommitDuration      uint64 = 200
 	PreCommitDeltaDuration uint64 = 25
 	BlockTime              uint64 = 1000
+
+	// Oracle
+	OracleEpochDuration uint64 = 900
+	OracleUpdatePeriod  uint64 = 10
 )

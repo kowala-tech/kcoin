@@ -7,6 +7,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/knode"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/rpc"
 	"github.com/pkg/errors"
@@ -26,6 +27,7 @@ type Service struct {
 	fullNode  *knode.Kowala
 	oracleMgr oracle.Manager
 	reporting int32
+	doneCh    chan struct{}
 }
 
 // New returns a price reporting service
@@ -46,31 +48,35 @@ func New(fullNode *knode.Kowala) (*Service, error) {
 func (s *Service) Protocols() []p2p.Protocol { return nil }
 
 // APIs implements node.Service, returning the RPC API endpoints provided by the
-// stats service (nil as it doesn't provide any user callable APIs).
-func (s *Service) APIs() []rpc.API { return nil }
+// oracle service
+func (s *Service) APIs() []rpc.API {
+	return []rpc.API{
+		{
+			Namespace: "oracle",
+			Version:   "1.0",
+			Service:   NewPrivateOracleAPI(s),
+			Public:    false,
+		},
+	}
+}
 
 // Start implements node.Service, starting up the monitoring and reporting daemon.
 func (s *Service) Start(server *p2p.Server) error {
-	/*
-		s.server = server
-		go s.updatePriceLoop()
+	s.doneCh = make(chan struct{})
+	log.Info("Oracle deamon started")
 
-		log.Info("Oracle deamon started")
-		return nil
-	*/
 	return nil
 }
 
 // Stop implements node.Service, terminating the price.
 func (s *Service) Stop() error {
-	/*
-		log.Info("Oracle deamon stopped")
-		return nil
-	*/
+	s.StopReporting()
+	log.Info("Oracle deamon stopped")
+
 	return nil
 }
 
-func (s *Service) updatePriceLoop() {
+func (s *Service) reportPriceLoop() {
 	blockChain := s.fullNode.BlockChain()
 	chainHeadCh := make(chan core.ChainHeadEvent, chainHeadChanSize)
 	headSub := blockChain.SubscribeChainHeadEvent(chainHeadCh)
@@ -78,7 +84,10 @@ func (s *Service) updatePriceLoop() {
 
 	for {
 		select {
+		case <-s.doneCh:
+			return
 		case <-chainHeadCh:
+			// head.Block.Number()
 			// update price if inside update Period
 		}
 	}
@@ -86,14 +95,17 @@ func (s *Service) updatePriceLoop() {
 
 func (s *Service) StartReporting() error {
 	atomic.StoreInt32(&s.reporting, 1)
-	go s.updatePriceLoop()
+	go s.reportPriceLoop()
 	return nil
 }
 
 func (s *Service) StopReporting() {
 	atomic.StoreInt32(&s.reporting, 0)
+	s.doneCh <- struct{}{}
 }
 
 func (s *Service) IsReporting() bool {
 	return atomic.LoadInt32(&s.reporting) > 0
+	close(s.doneCh)
+	return true
 }

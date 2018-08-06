@@ -23,3 +23,8 @@ func (api *PrivateOracleAPI) Stop() bool {
 	api.oracleServ.StopReporting()
 	return true
 }
+
+// IsReporting returns whether the oracle is currently reporting prices or not
+func (api *PrivateOracleAPI) IsReporting() bool {
+	return api.oracleServ.IsReporting()
+}
