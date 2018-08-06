@@ -16,8 +16,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const secondsPerDay = 86400
-
 var (
 	owner, _       = crypto.GenerateKey()
 	user, _        = crypto.GenerateKey()
@@ -367,9 +365,4 @@ func (suite *OracleMgrSuite) TestSubmitPrice_NotPaused_Oracle_SubmitPriceTwiceSa
 	// submit price
 	_, err = suite.oracleMgr.SubmitPrice(priceOpts, common.Big2)
 	req.Error(err, "cannot submit a price twice in the same round")
-}
-
-// dtos converts days to seconds
-func dtos(days *big.Int) *big.Int {
-	return new(big.Int).Mul(days, new(big.Int).SetUint64(secondsPerDay))
 }
