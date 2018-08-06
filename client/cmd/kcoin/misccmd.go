@@ -97,16 +97,10 @@ along with knode. If not, see <http://www.gnu.org/licenses/>.
 func latest(ctx *cli.Context) error {
 	repository := ctx.GlobalString(utils.VersionRepository.Name)
 
-	finder := version.NewFinder(repository)
-	assets, err := finder.All()
+	updater, err := version.NewUpdater(repository)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Assets Found (%s):\n", repository)
-	for _, asset := range assets {
-		fmt.Printf("Version: %s, os: %s, Architeture: %s, File: %s\n", asset.Semver().String(), asset.Os(), asset.Arch(), asset.Path())
-	}
-
-	return nil
+	return updater.Update()
 }
