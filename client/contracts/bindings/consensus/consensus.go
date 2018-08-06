@@ -32,19 +32,19 @@ var (
 )
 
 var mapValidatorMgrToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x927C9AF9CF36a9d43d3160576e750612bc9e63e9"),
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xf848f52CE914E22f68335740869E4fdA83064A3F"),
 }
 
 var mapMiningTokenToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xDfA58b86D285cF07E15ceEc0BaAb89e1D26305d7"),
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xe3319f35e571E85b8d89710b23CB4055440D0155"),
 }
 
 var mapOracleToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x577baB773e23327B0Ab7081E2a1ffcd186514d75"),
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xD91A94E92ed798443ab8ADA1B7D6425525C05Cea"),
 }
 
 var mapMultiSigWalletToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x1582aEd4A8156325e28ef9eF075Da1E1D44AA56E"),
+	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x75AD571eFAcC241B23099c724c4A71FE30659145"),
 }
 
 // ValidatorsChecksum lets a validator know if there are changes in the validator set
