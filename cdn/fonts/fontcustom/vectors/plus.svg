@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="63.75703"
+   height="63.761951"
+   viewBox="0 0 16.869047 16.870349"
+   version="1.1"
+   id="svg4565"
+   sodipodi:docname="plus.svg"
+   inkscape:version="0.92.2 5c3e80d, 2017-08-06">
+  <defs
+     id="defs4559" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="6.4900992"
+     inkscape:cx="5.9316487"
+     inkscape:cy="21.501892"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:pagecheckerboard="true"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     units="px"
+     inkscape:window-width="3840"
+     inkscape:window-height="2079"
+     inkscape:window-x="7680"
+     inkscape:window-y="2200"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata4562">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-86.885232,-144.69449)">
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#f90054;fill-opacity:1;stroke-width:0.67192745"
+       d="m 95.319756,144.69449 a 8.4347061,8.4347061 0 0 0 -8.434524,8.43584 8.4347061,8.4347061 0 0 0 8.434524,8.43451 8.4347061,8.4347061 0 0 0 8.434524,-8.43451 8.4347061,8.4347061 0 0 0 -8.434524,-8.43584 z m -0.935711,4.87536 h 1.871426 v 2.67986 h 2.624715 v 1.77302 h -2.624715 v 2.66668 h -1.871426 v -2.66668 h -2.624718 v -1.77302 h 2.624718 z"
+       id="circle2945" />
+  </g>
+</svg>

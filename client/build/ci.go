@@ -137,6 +137,7 @@ var (
 		"./contracts/bindings/ownership",
 		"./contracts/bindings/oracle",
 		"./contracts/bindings/consensus",
+		"./version",
 		// "../e2e/cluster",
 		// "../e2e/impl",
 	}

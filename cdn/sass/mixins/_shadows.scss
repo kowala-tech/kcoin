@@ -1,0 +1,15 @@
+@import "colours";
+
+@mixin shadow {
+  -webkit-box-shadow: 0 0 2em 0 colour(blue, dark);
+  -moz-box-shadow: 0 0 2em 0 colour(blue), dark;
+  box-shadow: 0 0 2em 0 colour(blue, dark);
+}
+@mixin text-shadow {
+  -webkit-text-shadow: 1px 1px 10px rgba(0,0,0,0.75);
+  -moz-text-shadow: 1px 1px 10px rgba(0,0,0,0.75);
+  text-shadow: 1px 1px 10px rgba(0,0,0,0.75);
+}
+@mixin text-shadow-light {
+  -webkit-text-shadow: 2px 2px 10px rgba(0,0,0,0.25);
+}

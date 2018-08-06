@@ -109,7 +109,7 @@ docker_go_generate:
 .PHONY: assert_no_changes
 assert_no_changes:
 	git status
-	@if ! git diff-index --quiet HEAD; then echo "There are uncommited go generate files.\nRun `make docker_go_generate` to regenerate all of them."; exit 1; fi
+	@if ! git diff-index --quiet HEAD; then echo 'There are uncommited go generate files.\nRun `make docker_go_generate` to regenerate all of them.'; exit 1; fi
 
 .PHONY: notifications_dep
 notifications_dep: dep
@@ -122,6 +122,10 @@ wallet_backend_dep: dep
 	$(GOPATH)/bin/dep ensure --vendor-only
 
 # Cross Compilation Targets (xgo)
+
+.PHONY: repository_index
+repository_index:
+	@aws s3 ls releases.kowala.io | cut -b32- - > index.txt
 
 .PHONY: kcoin_cross
 kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename

@@ -24,6 +24,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/metrics"
 	"github.com/kowala-tech/kcoin/client/node"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/kowala-tech/kcoin/client/version"
 )
 
 const (
@@ -61,6 +62,7 @@ var (
 		utils.LightServFlag,
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
+		utils.VersionRepository,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
 		utils.CacheGCFlag,
@@ -147,6 +149,7 @@ func init() {
 		javascriptCommand,
 		// See misccmd.go:
 		versionCommand,
+		updateCommand,
 		bugCommand,
 		licenseCommand,
 		// See config.go
@@ -186,6 +189,8 @@ func init() {
 
 		// Start system runtime metrics collection
 		go metrics.CollectProcessMetrics(3*time.Second, ctx.GlobalString(utils.MetricsPrometheusAddressFlag.Name), ctx.GlobalString(utils.MetricsPrometheusSubsystemFlag.Name))
+
+		go version.Checker(ctx.GlobalString(utils.VersionRepository.Name))
 
 		utils.SetupNetwork(ctx)
 		return nil

@@ -51,6 +51,12 @@
 			"revisionTime": "2018-03-21T16:47:47Z"
 		},
 		{
+			"checksumSHA1": "f423Rwr9K0TMRFwPgJgjojAmZd8=",
+			"path": "github.com/blang/semver",
+			"revision": "3c1074078d32d767e08ab2c8564867292da86926",
+			"revisionTime": "2018-07-15T01:52:53Z"
+		},
+		{
 			"checksumSHA1": "fIpm6Vr5a8kgr22gWkQx7vKUTyU=",
 			"path": "github.com/btcsuite/btcd/btcec",
 			"revision": "d06c0bb181529331be8f8d9350288c420d9e60e4",
