@@ -49,7 +49,7 @@ type PrivateValidatorAPI struct {
 	kcoin *Kowala
 }
 
-// NewPrivateValidatorAPI create a new RPC service which controls the validator of this node.
+// NewPrivateValidatorAPI creates a new RPC service which controls the validator of this node.
 func NewPrivateValidatorAPI(kcoin *Kowala) *PrivateValidatorAPI {
 	return &PrivateValidatorAPI{kcoin: kcoin}
 }
