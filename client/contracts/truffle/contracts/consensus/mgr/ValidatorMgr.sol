@@ -72,7 +72,7 @@ contract ValidatorMgr is Pausable {
      * @param _superNodeAmount Amount required to be considered a super node.
      */
     function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _miningTokenAddr, uint _superNodeAmount) public {
-        require(_maxNumValidators >= 1);
+        require(_maxNumValidators > 0);
 
         baseDeposit = _baseDeposit;
         maxNumValidators = _maxNumValidators;
