@@ -9,7 +9,7 @@ clone:
     tags: true
 
 pipeline:
-  go-generate:
+  go_generate:
     image: kowalatech/go:1.0.11
     commands:
     - make go_generate
