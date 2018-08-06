@@ -50,6 +50,7 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen := NewGenerator()
 	gen.AddContract(UpgradeabilityProxyFactoryContract)
 	gen.AddContract(KNSRegistry)
+	gen.AddContract(ProxiedKNSRegistry)
 	gen.AddContract(MultiSigContract)
 	gen.AddContract(MiningTokenContract)
 	gen.AddContract(ValidatorMgrContract)

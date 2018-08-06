@@ -53,6 +53,40 @@ var KNSRegistry = &contract{
 	},
 }
 
+var ProxiedKNSRegistry = &contract{
+	name: "ProxiedKNSRegistry",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+
+		proxyABI, err := abi.JSON(strings.NewReader(proxy.UpgradeabilityProxyFactoryABI))
+		if err != nil {
+			return err
+		}
+
+		createProxyArgs, err := proxyABI.Pack(
+			"createProxy",
+			*args.multiSigCreator,
+			common.HexToAddress("0x1582aEd4A8156325e28ef9eF075Da1E1D44AA56E"),
+		)
+		if err != nil{
+			return err
+		}
+
+		ret, _, err := runtime.Call(common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"), createProxyArgs, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to create proxy for KNS", err)
+		}
+
+		knsProxiedAddress := common.BytesToAddress(ret)
+		contract.address = knsProxiedAddress
+
+		return nil
+	},
+}
+
 var UpgradeabilityProxyFactoryContract = &contract{
 	name: "UpgradeabilityProxyFactoryContract",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
