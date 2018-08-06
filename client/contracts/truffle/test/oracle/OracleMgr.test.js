@@ -12,58 +12,35 @@ require('chai')
 
 const OracleMgr = artifacts.require('OracleMgr.sol');
 const ValidatorMgr = artifacts.require('ValidatorMgr.sol');
+const PublicResolver = artifacts.require('PublicResolver.sol');
+const KNS = artifacts.require('KNSRegistry.sol');
+const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
+const namehash = require('eth-ens-namehash');
 const { EVMError } = require('../helpers/testUtils.js');
 
 contract('Oracle Manager', ([_, owner, newOwner, notOwner]) => {
   beforeEach(async () => {
     this.validator = await ValidatorMgr.new(1, 2, 3, '0x1234', 1);
-    this.oracle = await OracleMgr.new(1, 1, 1, 1, 1, 1, this.validator.address, { from: owner });
+    this.kns = await KNS.new({ from: owner });
+    this.registrar = await FIFSRegistrar.new(this.kns.address, namehash('kowala'));
+    this.resolver = await PublicResolver.new(this.kns.address);
+    await this.kns.setSubnodeOwner(0, web3.sha3('kowala'), this.registrar.address, { from: owner });
+    await this.registrar.register(web3.sha3('validator'), owner, { from: owner });
+    await this.kns.setResolver(namehash('validator.kowala'), this.resolver.address, { from: owner });
+    await this.resolver.setAddr(namehash('validator.kowala'), this.validator.address, { from: owner });
+    this.oracle = await OracleMgr.new(1, 1, 1, 1, 1, 1, this.validator.address, this.kns.address, { from: owner });
   });
 
-  it('should set Oracle owner during creation', async () => {
-    // when
-    const oracleOwner = await this.oracle.owner();
-
-    // then
-    await oracleOwner.should.be.equal(owner);
-  });
-
-  it('should transfer ownership by a owner', async () => {
-    // when
-    await this.oracle.transferOwnership(newOwner, { from: owner });
-    const oracleOwner = await this.oracle.owner();
-    // then
-    await oracleOwner.should.be.equal(newOwner);
-  });
-
-  it('should not transfer ownership by not a owner', async () => {
-    // when
-    const onwershipTransfer = this.oracle.transferOwnership(newOwner);
-
-    // then
-    await onwershipTransfer.should.eventually.be.rejectedWith(EVMError('revert'));
-  });
-
-  it('should change validator address by a owner', async () => {
+  it('should set ValidatorMgr address using KNS', async () => {
     // given
-    const newValidator = await ValidatorMgr.new(1, 2, 3, '0x1234', 1);
+    const knsResolverAddr = await this.oracle.knsResolver();
+    const resolver = await PublicResolver.at(knsResolverAddr);
 
     // when
-    await this.oracle.changeValidator(newValidator.address, { from: owner });
-
-    // then
     const validatorAddress = await this.oracle.getValidatorAddress({ from: owner });
-    await validatorAddress.should.be.equal(newValidator.address);
-  });
-
-  it('should not change validator address by not a owner', async () => {
-    // given
-    const newValidator = await ValidatorMgr.new(1, 2, 3, '0x1234', 1);
-
-    // when
-    const changeValidator = this.oracle.changeValidator(newValidator.address, { from: notOwner });
 
     // then
-    await changeValidator.should.be.eventually.rejectedWith(EVMError('revert'));
+    const validatorAddrFromResolver = await resolver.addr(namehash('validator.kowala'));
+    await validatorAddress.should.be.equal(validatorAddrFromResolver);
   });
 });
