@@ -312,13 +312,4 @@ contract ValidatorMgr is Pausable {
         tkn = TKN(_from, _value/*, _data, bytes4(u)*/);
         _registerValidator();
     }
-
-    /**
-     * @dev Changes address of a mining token
-     * @param _miningTokenAddr Address of a new minning token
-     */
-    function changeAddresOfMiningToken(address _miningTokenAddr) onlyOwner public {
-        miningTokenAddr = _miningTokenAddr;
-    }
-    
 }

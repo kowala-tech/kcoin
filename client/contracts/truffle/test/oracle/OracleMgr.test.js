@@ -40,7 +40,7 @@ contract('Oracle Manager', ([_, admin, owner, newOwner, notOwner]) => {
     await this.kns.setResolver(namehash('validator.kowala'), this.resolver.address, { from: owner });
     this.validator = await ValidatorMgr.new(1, 2, 3, '0x1234', 1);
     await this.resolver.setAddr(namehash('validator.kowala'), this.validator.address, { from: owner });
-    this.oracle = await OracleMgr.new(1, 1, 1, 1, 1, 1, this.validator.address, this.knsProxyAddress, { from: owner });
+    this.oracle = await OracleMgr.new(1, 1, 1, 1, 1, 1, this.knsProxyAddress, { from: owner });
   });
 
   it('should set ValidatorMgr address using KNS', async () => {

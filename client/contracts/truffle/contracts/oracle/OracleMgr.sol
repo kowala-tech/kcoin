@@ -71,7 +71,7 @@ contract OracleMgr is Pausable {
         uint _maxNumOracles,
         uint _syncFrequency,
         uint _updatePeriod,
-        address _consensusAddr
+        address _consensusAddr,
         address _knsAddr) 
     public {
         require(_maxNumOracles > 0);
