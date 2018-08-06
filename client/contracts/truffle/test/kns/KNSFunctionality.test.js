@@ -36,6 +36,7 @@ contract('KNS Functionality', (accounts) => {
     // when
     await this.kns.setResolver(namehash('validator.kowala'), this.resolver.address);
     const resolver = await this.kns.resolver(namehash('validator.kowala'));
+    console.log(resolver);
 
     // then
     await resolver.should.be.equal(this.resolver.address);

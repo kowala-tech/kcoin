@@ -2,6 +2,10 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./Consensus.sol";
+import "../kns/KNSRegistry.sol";
+import "../kns/PublicResolver.sol";
+import "../consensus/mgr/ValidatorMgr.sol";
+import {NameHash} from "../utils/NameHash.sol";
 
 /**
 * @title Oracle Manager contract
@@ -12,6 +16,11 @@ contract OracleMgr is Pausable {
     uint public syncFrequency;
     uint public updatePeriod;
     Consensus consensus;
+    uint public price;
+    ValidatorMgr validatorMgr;
+    KNSRegistry public kns;
+    PublicResolver public knsResolver;
+    bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
     struct OraclePrice {
         uint price;
@@ -62,7 +71,8 @@ contract OracleMgr is Pausable {
         uint _maxNumOracles,
         uint _syncFrequency,
         uint _updatePeriod,
-        address _consensusAddr) 
+        address _consensusAddr
+        address _knsAddr) 
     public {
         require(_maxNumOracles > 0);
 
@@ -75,6 +85,9 @@ contract OracleMgr is Pausable {
         syncFrequency = _syncFrequency;
         updatePeriod = _updatePeriod;
         consensus = Consensus(_consensusAddr);
+        kns = KNSRegistry(_knsAddr);
+        knsResolver = PublicResolver(kns.resolver(NameHash.namehash("validator.kowala")));
+        validatorMgr = ValidatorMgr(knsResolver.addr(NameHash.namehash("validator.kowala")));
     }
 
     /**
@@ -176,15 +189,10 @@ contract OracleMgr is Pausable {
         prices.push(OraclePrice({price: _price, oracle: msg.sender}));
     }
 
+    /**
+     * @dev address of a Validator
+     */
     function getValidatorAddress() onlyOwner public view returns(address){
         return validatorMgr;
-    }
-
-    /**
-     * @dev Changes address of a ValidatorMgr
-     * @param _validatorMgrAddr Address of a new ValidatorMgr
-     */
-    function changeValidator(address _validatorMgrAddr) onlyOwner public {
-        validatorMgr = ValidatorMgr(_validatorMgrAddr);
     }
 }
