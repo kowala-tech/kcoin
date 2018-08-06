@@ -10,25 +10,37 @@ require('chai')
   .use(require('chai-bignumber')(web3.BigNumber))
   .should();
 
+const { Contracts } = require('zos-lib');
+
 const OracleMgr = artifacts.require('OracleMgr.sol');
 const ValidatorMgr = artifacts.require('ValidatorMgr.sol');
 const PublicResolver = artifacts.require('PublicResolver.sol');
 const KNS = artifacts.require('KNSRegistry.sol');
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
+const UpgradeabilityProxy = Contracts.getFromNodeModules('zos-lib', 'UpgradeabilityProxyFactory');
+const AdminUpgradeabilityProxy = Contracts.getFromNodeModules('zos-lib', 'AdminUpgradeabilityProxy');
 const namehash = require('eth-ens-namehash');
 const { EVMError } = require('../helpers/testUtils.js');
 
-contract('Oracle Manager', ([_, owner, newOwner, notOwner]) => {
+contract('Oracle Manager', ([_, admin, owner, newOwner, notOwner]) => {
   beforeEach(async () => {
-    this.validator = await ValidatorMgr.new(1, 2, 3, '0x1234', 1);
-    this.kns = await KNS.new({ from: owner });
-    this.registrar = await FIFSRegistrar.new(this.kns.address, namehash('kowala'));
-    this.resolver = await PublicResolver.new(this.kns.address);
+    this.proxyFactory = await UpgradeabilityProxy.new();
+    this.knsContract = await KNS.new({ from: owner });
+    this.logs = await this.proxyFactory.createProxy(admin, this.knsContract.address, { from: admin });
+    this.logs1 = this.logs.logs;
+    this.knsProxyAddress = this.logs1.find(l => l.event === 'ProxyCreated').args.proxy;
+    this.knsProxy = await AdminUpgradeabilityProxy.at(this.knsProxyAddress);
+    this.kns = new KNS(this.knsProxyAddress);
+    await this.kns.initialize(owner);
+    this.registrar = await FIFSRegistrar.new(this.knsProxyAddress, namehash('kowala'));
+    this.resolver = await PublicResolver.new(this.knsProxyAddress);
+
     await this.kns.setSubnodeOwner(0, web3.sha3('kowala'), this.registrar.address, { from: owner });
     await this.registrar.register(web3.sha3('validator'), owner, { from: owner });
     await this.kns.setResolver(namehash('validator.kowala'), this.resolver.address, { from: owner });
+    this.validator = await ValidatorMgr.new(1, 2, 3, '0x1234', 1);
     await this.resolver.setAddr(namehash('validator.kowala'), this.validator.address, { from: owner });
-    this.oracle = await OracleMgr.new(1, 1, 1, 1, 1, 1, this.validator.address, this.kns.address, { from: owner });
+    this.oracle = await OracleMgr.new(1, 1, 1, 1, 1, 1, this.validator.address, this.knsProxyAddress, { from: owner });
   });
 
   it('should set ValidatorMgr address using KNS', async () => {
