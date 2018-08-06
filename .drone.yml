@@ -82,13 +82,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/kusd
     dockerfile: client/release/kcoin.Dockerfile
@@ -104,13 +104,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/bootnode
     dockerfile: client/release/bootnode.Dockerfile
@@ -126,13 +126,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/faucet
     dockerfile: client/release/faucet.Dockerfile
@@ -148,13 +148,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/backend_api
     dockerfile: notifications/api.Dockerfile
@@ -170,13 +170,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/emailer
     dockerfile: notifications/emailer.Dockerfile
@@ -192,13 +192,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/transactions_persistance
     dockerfile: notifications/transactions_db_synchronize.Dockerfile
@@ -214,13 +214,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/netstats
     dockerfile: netstats/Dockerfile
@@ -255,13 +255,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/kexplorer
     dockerfile: explorer/web.Dockerfile
@@ -277,13 +277,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/kexplorersync
     dockerfile: explorer/sync.Dockerfile
@@ -299,13 +299,13 @@ pipeline:
     group: docker_deployment
     image: kowalatech/drone-docker
     build_args:
-      - CI 
-      - DRONE 
-      - DRONE_REPO 
-      - DRONE_COMMIT_SHA 
-      - DRONE_COMMIT_BRANCH 
-      - DRONE_TAG 
-      - DRONE_BUILD_NUMBER 
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
     repo: kowalatech/transactions_publisher
     dockerfile: notifications/transactions_publisher.Dockerfile
@@ -316,6 +316,36 @@ pipeline:
     when:
       branch: [dev, master]
       event: [push, tag]
+
+  docker_wallet_tools_dev:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/wallet-tools
+    dockerfile: wallet-tools/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    build_args:
+      - APP_URL=https://wallet-tools.zygote.kowala.io
+      - CDN_URL=https://cdn.kowala.io
+    when:
+      branch: [dev]
+      event: [push]
+
+  docker_wallet_tools_prod:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/wallet-tools
+    dockerfile: wallet-tools/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [master]
+      event: [push, tag]
+
 
   build_artifacts:
     group: build_artifacts
@@ -369,6 +399,44 @@ pipeline:
       event: [push,tag]
       branch: [master]
 
+  build_cdn:
+    group: build_artifacts
+    image: kowalatech/hugo-dev:1.0.4
+    commands:
+      - cd cdn
+      - make build
+    when:
+      branch: [develop, master]
+      event: [push,tag,test]
+
+  upload_cdn_to_s3_dev:
+    group: build_artifacts
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "cdn.kowala.io"
+    source: cdn/assets/**/*
+    strip_prefix: cdn/assets/
+    target: /
+    encryption: AES256
+    when:
+      branch: [dev]
+      event: [push,tag]
+
+  upload_cdn_to_s3_production:
+    group: build_artifacts
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "cdn.kowala.tech"
+    source: cdn/assets/**/*
+    strip_prefix: cdn/assets/
+    target: /
+    encryption: AES256
+    when:
+      branch: [master]
+      event: [push,tag]
+
   upload_gource_mp4_to_s3:
     group: asset_deployment
     image: plugins/s3
@@ -380,7 +448,7 @@ pipeline:
     target: /kowala-kcoin-development-history.mp4
     when:
       branch: [dev]
-      event: [push]
+      event: [push,tag]
 
   upload_binary_assets_to_s3:
     group: asset_deployment
