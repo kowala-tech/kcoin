@@ -13,6 +13,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
 )
 
 type contract struct {
@@ -31,6 +32,25 @@ func (contract *contract) AsGenesisAccount() core.GenesisAccount {
 		Storage: contract.storage,
 		Balance: new(big.Int),
 	}
+}
+
+var KNSRegistry = &contract{
+	name: "KNSRegistry",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.KNSRegistryBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
 }
 
 var UpgradeabilityProxyFactoryContract = &contract{
