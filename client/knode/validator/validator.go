@@ -587,12 +587,16 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 	if !val.Validating() {
 		return ErrCantAddBlockFragmentNotValidating
 	}
-	val.blockFragments.Add(fragment)
+
+	if err := val.blockFragments.Add(fragment); err != nil {
+		log.Error("error while adding a new block fragment", "err", err, "round", round, "block", blockNumber, "fragment", fragment)
+		return err
+	}
 
 	if val.blockFragments.HasAll() {
 		block, err := val.blockFragments.Assemble()
 		if err != nil {
-			log.Crit("Failed to assemble the block", "err", err)
+			log.Error("Failed to assemble the block", "err", err)
 		}
 
 		// Start the parallel header verifier
@@ -615,7 +619,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		// Process block using the parent state as reference point.
 		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
 		if err != nil {
-			log.Crit("Failed to process the block", "err", err)
+			log.Error("Failed to process the block", "err", err)
 		}
 
 		// guarded section
@@ -626,7 +630,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
 		if err != nil {
 			val.handleMutex.Unlock()
-			log.Crit("Failed to validate the state", "err", err)
+			log.Error("Failed to validate the state", "err", err)
 		}
 
 		val.block = block
