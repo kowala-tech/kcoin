@@ -14,9 +14,8 @@ func TestFilenameParser(t *testing.T) {
 	}{
 		{"kcoin-1.0.11-linux-amd64.zip", "1.0.11", "linux", "amd64"},
 		{"kcoin-1.0.14-linux-amd64.zip", "1.0.14", "linux", "amd64"},
-		{"kcoin-1.0.0-windows-4.0-amd64.zip", "1.0.0", "windows-4.0", "amd64"},
-		{"kcoin-1.0.0-windows-4.0-amd64.exe.zip", "1.0.0", "windows-4.0", "amd64"},
-		{"kcoin-1.0.0-osx-10.6-amd64.zip", "1.0.0", "osx-10.6", "amd64"},
+		{"kcoin-1.0.0-windows-amd64.exe.zip", "1.0.0", "windows", "amd64"},
+		{"kcoin-1.0.0-darwin-amd64.zip", "1.0.0", "darwin", "amd64"},
 	}
 	for _, bm := range filenames {
 		t.Run(bm.filename, func(t *testing.T) {
