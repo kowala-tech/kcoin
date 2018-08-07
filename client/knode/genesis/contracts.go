@@ -95,13 +95,49 @@ var FIFSRegistrar = &contract{
 
 		runtimeCfg := contract.runtimeCfg
 		runtimeCfg.Origin = *args.multiSigCreator
-		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.KNSRegistryBin), runtimeCfg)
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.FIFSRegistrarBin), runtimeCfg)
 		if err != nil {
 			return err
 		}
 
 		contract.code = contractCode
 		contract.address = contractAddr
+
+		return nil
+	},
+}
+
+var ProxiedFIFSRegistrar = &contract{
+	name: "FIFSRegistrar",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+
+		proxyABI, err := abi.JSON(strings.NewReader(proxy.UpgradeabilityProxyFactoryABI))
+		if err != nil {
+			return err
+		}
+
+		createProxyArgs, err := proxyABI.Pack(
+			"createProxy",
+			*args.multiSigCreator,
+			common.HexToAddress("0x75AD571eFAcC241B23099c724c4A71FE30659145"),
+		)
+		if err != nil{
+			return err
+		}
+
+		proxyFactoryAddr := common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62")
+		ret, _, err := runtime.Call(proxyFactoryAddr, createProxyArgs, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to create proxy for FIFSRegistrar", err)
+		}
+
+		registrarProxiedAddr := common.BytesToAddress(ret)
+		contract.address = registrarProxiedAddr
+		contract.code = contract.runtimeCfg.State.GetCode(registrarProxiedAddr)
 
 		return nil
 	},
