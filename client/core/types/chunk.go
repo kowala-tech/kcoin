@@ -2,11 +2,13 @@ package types
 
 import (
 	"bytes"
+	"sync"
+
+	"github.com/pkg/errors"
+
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
-	"sync"
-		"github.com/pkg/errors"
 )
 
 // @TODO (rgeraldes) - review uint64/int
@@ -41,7 +43,7 @@ type DataSet struct {
 	count      uint             // number of current data chunks
 	data       []*Chunk         // stores data chunks
 	membership *common.BitArray // indicates whether a data unit is present or not
-	l 		   sync.RWMutex
+	l          sync.RWMutex
 }
 
 // Metadata represents the content specifications
