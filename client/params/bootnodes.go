@@ -2,11 +2,7 @@ package params
 
 // MainnetBootnodes are the enode URLs of the P2P bootstrap nodes running on
 // the main Kowala network.
-var MainnetBootnodes = []string{
-	"enode://49bb43d743fef3f8b96c522316504c78a126dde087db975986202e098ee43bdaf550ca3df3a1512210c94b2a33c2821a7afb68fad025259ef24910005f3c0a50@54.197.186.25:32233",
-	"enode://beb55d4909fc62b99505593e421aef2cfc596ea41757f4ee1524c418399e29876ef38f89e70b0308c3609839f1b4a28d4c375aba4573cf7c1885146328405760@52.8.177.228:32233",
-	"enode://a8745bd94d63f85d2ee38bca0d6bf7672688c5b7cda5060ca7dd5decbbf179e7ad312e53e71f0f5b980037f5b6e6e8ea4a521b9b3cb1844f0654bba519eb8dbd@35.176.220.151:32233",
-}
+var MainnetBootnodes = []string{}
 
 // TestnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // test network.
@@ -19,4 +15,8 @@ var TestnetDiscoveryV5Bootnodes = []string{
 	"enode://ae54a310873b252daaa9203c1995dc9e89f8afb2c70b255c44d005cbb79714a553b101b913eff128b197b6e0e24ea4991ea9528fca94621f4438bf4aa211a08e@54.175.98.140:32233",
 }
 
-var MainnetDiscoveryV5Bootnodes = []string{}
+var MainnetDiscoveryV5Bootnodes = []string{
+	"enode://49bb43d743fef3f8b96c522316504c78a126dde087db975986202e098ee43bdaf550ca3df3a1512210c94b2a33c2821a7afb68fad025259ef24910005f3c0a50@54.88.144.169:32233",  // Virginia
+	"enode://beb55d4909fc62b99505593e421aef2cfc596ea41757f4ee1524c418399e29876ef38f89e70b0308c3609839f1b4a28d4c375aba4573cf7c1885146328405760@54.183.81.168:32233",  // California
+	"enode://a8745bd94d63f85d2ee38bca0d6bf7672688c5b7cda5060ca7dd5decbbf179e7ad312e53e71f0f5b980037f5b6e6e8ea4a521b9b3cb1844f0654bba519eb8dbd@35.177.171.222:32233", // London
+}
