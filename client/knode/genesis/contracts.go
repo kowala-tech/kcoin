@@ -15,6 +15,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
 	kns2 "github.com/kowala-tech/kcoin/client/kns"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 var ProxyFactoryAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
@@ -115,6 +116,21 @@ var ProxiedKNSRegistry = &contract{
 			return fmt.Errorf("%s:%s", "Failed to initialize KNSRegistry.", err)
 		}
 
+		// call setSubnodeOwner
+		subnodeOwnerParams, err := abi.Pack(
+			"setSubnodeOwner",
+			0,
+			crypto.Keccak256Hash([]byte("kowala")),
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, subnodeOwnerParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to set subnode owner in KNSRegistry.", err)
+		}
+
 		return nil
 	},
 }
@@ -186,7 +202,7 @@ var ProxiedFIFSRegistrar = &contract{
 		initKnsParams, err := abi.Pack(
 			"initialize",
 			common.HexToAddress(ProxyKNSRegistryAddr),
-			kns2.NameHash("tech"),
+			kns2.NameHash("kowala"),
 		)
 		if err != nil {
 			return err
