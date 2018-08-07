@@ -1,14 +1,7 @@
 // package oracle implements the network price reporting service
 package oracle
 
-/*
-#include "./App/App.h"
-#cgo LDFLAGS: -I./App -L. -loracle
-*/
-
 import (
-	"context"
-	"C"
 	"sync"
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
@@ -36,6 +29,7 @@ type Service struct {
 	reportingMu sync.RWMutex
 	reporting   bool
 	doneCh      chan struct{}
+	sgx         *SGX
 }
 
 // New returns a price reporting service
@@ -48,6 +42,7 @@ func New(fullNode *knode.Kowala) (*Service, error) {
 	return &Service{
 		fullNode:  fullNode,
 		oracleMgr: oracleMgr,
+		sgx:       new(SGX),
 	}, nil
 }
 
@@ -71,7 +66,7 @@ func (s *Service) APIs() []rpc.API {
 // Start implements node.Service, starting up the monitoring and reporting daemon.
 func (s *Service) Start(server *p2p.Server) error {
 	s.doneCh = make(chan struct{})
-	C.initSGX()
+	s.sgx.init()
 	log.Info("Oracle deamon started")
 
 	return nil
@@ -81,7 +76,7 @@ func (s *Service) Start(server *p2p.Server) error {
 func (s *Service) Stop() error {
 	close(s.doneCh)
 	s.StopReporting()
-	C.destroySGX()
+	s.sgx.free()
 	log.Info("Oracle deamon stopped")
 
 	return nil
@@ -98,9 +93,7 @@ func (s *Service) reportPriceLoop() {
 		case <-s.doneCh:
 			return
 		case <-chainHeadCh:
-			C.price_tx()
-			// head.Block.Number()
-			// update price if inside update Period
+			rawTx := s.sgx.assemblePriceTx()
 		}
 	}
 }
@@ -126,10 +119,12 @@ func (s *Service) StartReporting() error {
 			return err
 		}
 
-		receipt, err := bind.WaitMined(context.TODO(), s.fullNode.APIBackend(), tx)
-		if err != nil {
-			return err
-		}
+		/*
+			receipt, err := bind.WaitMined(context.TODO(), s.fullNode.APIBackend(), tx)
+			if err != nil {
+				return err
+			}
+		*/
 
 		// @TODO - receipt status
 	}
@@ -160,10 +155,12 @@ func (s *Service) StopReporting() error {
 			return err
 		}
 
-		receipt, err := bind.WaitMined(context.TODO(), s.fullNode.APIBackend(), tx)
-		if err != nil {
-			return err
-		}
+		/*
+			receipt, err := bind.WaitMined(context.TODO(), knode.NewContractBackend(fullNode.APIBackend()), tx)
+			if err != nil {
+				return err
+			}
+		*/
 
 		// @TODO - receipt status
 

@@ -23,8 +23,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/metrics"
 	"github.com/kowala-tech/kcoin/client/node"
-	"gopkg.in/urfave/cli.v1"
 	"github.com/kowala-tech/kcoin/client/version"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -89,6 +89,7 @@ var (
 		utils.RPCVirtualHostsFlag,
 		utils.ShipLogzioFlag,
 		utils.KowalaStatsURLFlag,
+		utils.KowalaOracleFlag,
 		utils.MetricsEnabledFlag,
 		utils.MetricsPrometheusAddressFlag,
 		utils.MetricsPrometheusSubsystemFlag,
