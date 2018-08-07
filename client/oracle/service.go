@@ -1,9 +1,17 @@
 // package oracle implements the network price reporting service
 package oracle
 
-import (
-	"sync/atomic"
+/*
+#include "./App/App.h"
+#cgo LDFLAGS: -I./App -L. -loracle
+*/
 
+import (
+	"context"
+	"C"
+	"sync"
+
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/knode"
@@ -12,8 +20,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/rpc"
 	"github.com/pkg/errors"
 )
-
-// @TODO (rgeraldes) - add api
 
 const (
 	// chainHeadChanSize is the size of the channel listening to ChainHeadEvent
@@ -26,8 +32,10 @@ const (
 type Service struct {
 	fullNode  *knode.Kowala
 	oracleMgr oracle.Manager
-	reporting int32
-	doneCh    chan struct{}
+
+	reportingMu sync.RWMutex
+	reporting   bool
+	doneCh      chan struct{}
 }
 
 // New returns a price reporting service
@@ -63,6 +71,7 @@ func (s *Service) APIs() []rpc.API {
 // Start implements node.Service, starting up the monitoring and reporting daemon.
 func (s *Service) Start(server *p2p.Server) error {
 	s.doneCh = make(chan struct{})
+	C.initSGX()
 	log.Info("Oracle deamon started")
 
 	return nil
@@ -70,7 +79,9 @@ func (s *Service) Start(server *p2p.Server) error {
 
 // Stop implements node.Service, terminating the price.
 func (s *Service) Stop() error {
+	close(s.doneCh)
 	s.StopReporting()
+	C.destroySGX()
 	log.Info("Oracle deamon stopped")
 
 	return nil
@@ -87,6 +98,7 @@ func (s *Service) reportPriceLoop() {
 		case <-s.doneCh:
 			return
 		case <-chainHeadCh:
+			C.price_tx()
 			// head.Block.Number()
 			// update price if inside update Period
 		}
@@ -94,18 +106,77 @@ func (s *Service) reportPriceLoop() {
 }
 
 func (s *Service) StartReporting() error {
-	atomic.StoreInt32(&s.reporting, 1)
+	s.reportingMu.Lock()
+	defer s.reportingMu.Unlock()
+
+	coinbase, err := s.fullNode.Coinbase()
+	if err != nil {
+		return err
+	}
+
+	// register oracle
+	isOracle, err := s.oracleMgr.IsOracle(coinbase)
+	if err != nil {
+		return err
+	}
+
+	if !isOracle {
+		tx, err := s.oracleMgr.RegisterOracle(bind.NewKeyedTransactor(nil))
+		if err != nil {
+			return err
+		}
+
+		receipt, err := bind.WaitMined(context.TODO(), s.fullNode.APIBackend(), tx)
+		if err != nil {
+			return err
+		}
+
+		// @TODO - receipt status
+	}
+
 	go s.reportPriceLoop()
+	s.reporting = true
+
 	return nil
 }
 
-func (s *Service) StopReporting() {
-	atomic.StoreInt32(&s.reporting, 0)
-	s.doneCh <- struct{}{}
+func (s *Service) StopReporting() error {
+	s.reportingMu.Lock()
+	defer s.reportingMu.Unlock()
+
+	coinbase, err := s.fullNode.Coinbase()
+	if err != nil {
+		return err
+	}
+
+	isOracle, err := s.oracleMgr.IsOracle(coinbase)
+	if err != nil {
+		return nil
+	}
+
+	if isOracle {
+		tx, err := s.oracleMgr.DeregisterOracle(bind.NewKeyedTransactor(nil))
+		if err != nil {
+			return err
+		}
+
+		receipt, err := bind.WaitMined(context.TODO(), s.fullNode.APIBackend(), tx)
+		if err != nil {
+			return err
+		}
+
+		// @TODO - receipt status
+
+		s.doneCh <- struct{}{}
+		s.reporting = false
+	}
+
+	return nil
 }
 
 func (s *Service) IsReporting() bool {
-	return atomic.LoadInt32(&s.reporting) > 0
-	close(s.doneCh)
-	return true
+	s.reportingMu.RLock()
+	defer s.reportingMu.RUnlock()
+
+	return s.reporting
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
+	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -17,8 +18,11 @@ var mapOracleMgrToAddr = map[uint64]common.Address{
 }
 
 type Manager interface {
+	RegisterOracle(opts *bind.TransactOpts) (*types.Transaction, error)
+	DeregisterOracle(opts *bind.TransactOpts) (*types.Transaction, error)
 	Price() (*big.Int, error)
 	GetOracleCount() (*big.Int, error)
+	IsOracle(identity common.Address) (bool, error)
 }
 
 // Binding returns a binding to the current oracle mgr
