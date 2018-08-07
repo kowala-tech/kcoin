@@ -9,6 +9,7 @@ import (
 	"github.com/DATA-DOG/godog/gherkin"
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -155,30 +156,34 @@ func (vctx *ValidationContext) IHaveTheFollowingAccounts(accountsDataTable *gher
 	for _, accountData := range accountsData {
 		acct, err := ctx.createAccount(accountData.AccountName, accountData.AccountPassword)
 		if err != nil {
-			return err
+			return accountError(accountData, err)
 		}
 
 		if accountData.Validating {
 			if err := vctx.IHaveMyNodeRunning(accountData.AccountName); err != nil {
-				return err
+				return accountError(accountData, err)
 			}
 			if err := vctx.MyNodeIsAlreadySynchronised(); err != nil {
-				return err
+				return accountError(accountData, err)
 			}
 		}
 
 		if accountData.Funds != 0 {
 			if _, err := ctx.sendFundsAndWait(ctx.kusdSeederAccount, acct, accountData.Funds); err != nil {
-				return err
+				return accountError(accountData, err)
 			}
 		}
 
 		if accountData.Tokens != 0 {
 			if err := vctx.sendTokensAndWait(ctx.mtokensSeederAccount, acct, accountData.Tokens); err != nil {
-				return err
+				return accountError(accountData, err)
 			}
 		}
 	}
 
 	return nil
+}
+
+func accountError(accountData *AccountEntry, err error) error {
+	return errors.Wrapf(err, "account %q failed with the error", accountData.AccountName)
 }
