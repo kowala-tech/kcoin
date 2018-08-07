@@ -134,7 +134,8 @@ kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename
 .PHONY: kcoin_cross_build
 kcoin_cross_build:
 	cd client; build/env.sh go run build/ci.go xgo -- --go=latest --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
-	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-osx-10.6-amd64
+	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-dawin-amd64
+	mv client/build/bin/kcoin-windows-4-amd64 client/build/bin/kcoin-windows-amd64
 
 .PHONY: kcoin_cross_compress
 kcoin_cross_compress:

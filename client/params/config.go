@@ -15,17 +15,17 @@ var (
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:    big.NewInt(1),
-		Tendermint: new(TendermintConfig),
+		ChainID:   big.NewInt(1),
+		Konsensus: new(KonsensusConfig),
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID:    big.NewInt(2),
-		Tendermint: new(TendermintConfig),
+		ChainID:   big.NewInt(2),
+		Konsensus: new(KonsensusConfig),
 	}
 
-	// AllTendermintProtocolChanges contains every protocol change (EIPs)
+	// AllKonsensusProtocolChanges contains every protocol change (EIPs)
 	// introduced and accepted by the Kowala core developers.
 	//
 	// This configuration is intentionally not using keyed fields.
@@ -33,9 +33,9 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllTendermintProtocolChanges = &ChainConfig{big.NewInt(1337), new(TendermintConfig)}
-	TestChainConfig              = &ChainConfig{big.NewInt(1), new(TendermintConfig)}
-	TestRules                    = TestChainConfig.Rules(new(big.Int))
+	AllKonsensusProtocolChanges = &ChainConfig{big.NewInt(1337), new(KonsensusConfig)}
+	TestChainConfig             = &ChainConfig{big.NewInt(1), new(KonsensusConfig)}
+	TestRules                   = TestChainConfig.Rules(new(big.Int))
 )
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -47,23 +47,23 @@ type ChainConfig struct {
 	ChainID *big.Int `json:"chainID"` // Chain id identifies the current chain and is used for replay protection
 
 	// Various consensus engines
-	Tendermint *TendermintConfig `json:"tendermint,omitempty"`
+	Konsensus *KonsensusConfig `json:"konsensus,omitempty"`
 }
 
-// TendermintConfig is the consensus engine configs for proof-of-stake based sealing.
-type TendermintConfig struct{}
+// KonsensusConfig is the consensus engine configs for proof-of-stake based sealing.
+type KonsensusConfig struct{}
 
 // String implements the stringer interface, returning the consensus engine details.
-func (c *TendermintConfig) String() string {
-	return "tendermint"
+func (c *KonsensusConfig) String() string {
+	return "konsensus"
 }
 
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
 	switch {
-	case c.Tendermint != nil:
-		engine = c.Tendermint
+	case c.Konsensus != nil:
+		engine = c.Konsensus
 	default:
 		engine = "unknown"
 	}
