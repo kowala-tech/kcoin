@@ -162,6 +162,42 @@ var PublicResolver = &contract{
 	},
 }
 
+var ProxiedPublicResolver = &contract{
+	name: "ProxiedPublicResolver",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+
+		proxyABI, err := abi.JSON(strings.NewReader(proxy.UpgradeabilityProxyFactoryABI))
+		if err != nil {
+			return err
+		}
+
+		createProxyArgs, err := proxyABI.Pack(
+			"createProxy",
+			*args.multiSigCreator,
+			common.HexToAddress("0x2A4443ec27BF5F849B2Da15eB697d3Ef5302f186"),
+		)
+		if err != nil{
+			return err
+		}
+
+		proxyFactoryAddr := common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62")
+		ret, _, err := runtime.Call(proxyFactoryAddr, createProxyArgs, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to create proxy for PublicResolver", err)
+		}
+
+		registrarProxiedAddr := common.BytesToAddress(ret)
+		contract.address = registrarProxiedAddr
+		contract.code = contract.runtimeCfg.State.GetCode(registrarProxiedAddr)
+
+		return nil
+	},
+}
+
 var UpgradeabilityProxyFactoryContract = &contract{
 	name: "UpgradeabilityProxyFactoryContract",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {

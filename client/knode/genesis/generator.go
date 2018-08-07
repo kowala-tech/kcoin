@@ -54,6 +54,7 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(FIFSRegistrar)
 	gen.AddContract(ProxiedFIFSRegistrar)
 	gen.AddContract(PublicResolver)
+	gen.AddContract(ProxiedPublicResolver)
 	gen.AddContract(MultiSigContract)
 	gen.AddContract(MiningTokenContract)
 	gen.AddContract(ValidatorMgrContract)
