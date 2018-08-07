@@ -1,7 +1,7 @@
 FROM node:latest
 
 WORKDIR /kusd-netstats
-ADD . .
+ADD netstats/ .
 
 ARG URL
 ARG CDN_URL
