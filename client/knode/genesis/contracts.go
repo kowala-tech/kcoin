@@ -20,6 +20,8 @@ import (
 
 var ProxyFactoryAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
 var ProxyKNSRegistryAddr = "0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"
+var ProxyRegistrarAddr = "0x80eDa603028fe504B57D14d947c8087c1798D800"
+var ProxyResolverAddr = "0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"
 
 type contract struct {
 	name       string
@@ -119,8 +121,9 @@ var ProxiedKNSRegistry = &contract{
 		// call setSubnodeOwner
 		subnodeOwnerParams, err := abi.Pack(
 			"setSubnodeOwner",
-			0,
+			[32]byte{},
 			crypto.Keccak256Hash([]byte("kowala")),
+			common.HexToAddress(ProxyRegistrarAddr),
 		)
 		if err != nil {
 			return err
@@ -211,6 +214,20 @@ var ProxiedFIFSRegistrar = &contract{
 		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
 		if err != nil {
 			return fmt.Errorf("%s:%s", "Failed to initialize KNSRegistry.", err)
+		}
+
+		registerParams, err := abi.Pack(
+			"register",
+			crypto.Keccak256Hash([]byte("coinbase")),
+			*validatorAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, registerParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to register domain in FIFSRegistrar.", err)
 		}
 
 		return nil
