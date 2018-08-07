@@ -17,6 +17,7 @@ import (
 )
 
 var ProxyFactoryAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
+var ProxyKNSRegistryAddr = "0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"
 
 type contract struct {
 	name       string
@@ -169,6 +170,33 @@ var ProxiedFIFSRegistrar = &contract{
 
 		return nil
 	},
+	//postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+	//	validatorAddr := opts.prefundedAccounts[0].accountAddress
+	//
+	//	runtimeCfg := contract.runtimeCfg
+	//	runtimeCfg.Origin = *validatorAddr
+	//
+	//	abi, err := abi.JSON(strings.NewReader(kns.FIFSRegistrarABI))
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	//TODO (jgimeno) for now is the validator coming from the testnet.
+	//	initKnsParams, err := abi.Pack(
+	//		"initialize",
+	//		common.HexToAddress(ProxyKNSRegistryAddr),
+	//	)
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+	//	if err != nil {
+	//		return fmt.Errorf("%s:%s", "Failed to initialize KNSRegistry.", err)
+	//	}
+	//
+	//	return nil
+	//},
 }
 
 var PublicResolver = &contract{
