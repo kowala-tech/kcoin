@@ -82,6 +82,26 @@ var ProxiedKNSRegistry = &contract{
 
 		knsProxiedAddress := common.BytesToAddress(ret)
 		contract.address = knsProxiedAddress
+		contract.code = contract.runtimeCfg.State.GetCode(knsProxiedAddress)
+
+		return nil
+	},
+}
+
+var FIFSRegistrar = &contract{
+	name: "FIFSRegistrar",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.KNSRegistryBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+
+		contract.code = contractCode
+		contract.address = contractAddr
 
 		return nil
 	},
