@@ -16,6 +16,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
 )
 
+var ProxyFactoryAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
+
 type contract struct {
 	name       string
 	runtimeCfg *runtime.Config
@@ -75,7 +77,7 @@ var ProxiedKNSRegistry = &contract{
 			return err
 		}
 
-		ret, _, err := runtime.Call(common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"), createProxyArgs, runtimeCfg)
+		ret, _, err := runtime.Call(common.HexToAddress(ProxyFactoryAddr), createProxyArgs, runtimeCfg)
 		if err != nil {
 			return fmt.Errorf("%s:%s", "Failed to create proxy for KNS", err)
 		}
@@ -83,6 +85,33 @@ var ProxiedKNSRegistry = &contract{
 		knsProxiedAddress := common.BytesToAddress(ret)
 		contract.address = knsProxiedAddress
 		contract.code = contract.runtimeCfg.State.GetCode(knsProxiedAddress)
+
+		return nil
+	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		validatorAddr := opts.prefundedAccounts[0].accountAddress
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *validatorAddr
+
+		abi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
+		if err != nil {
+			return err
+		}
+
+		//TODO (jgimeno) for now is the validator coming from the testnet.
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			*validatorAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize KNSRegistry.", err)
+		}
 
 		return nil
 	},
@@ -129,8 +158,7 @@ var ProxiedFIFSRegistrar = &contract{
 			return err
 		}
 
-		proxyFactoryAddr := common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62")
-		ret, _, err := runtime.Call(proxyFactoryAddr, createProxyArgs, runtimeCfg)
+		ret, _, err := runtime.Call(common.HexToAddress(ProxyFactoryAddr), createProxyArgs, runtimeCfg)
 		if err != nil {
 			return fmt.Errorf("%s:%s", "Failed to create proxy for FIFSRegistrar", err)
 		}
@@ -184,8 +212,7 @@ var ProxiedPublicResolver = &contract{
 			return err
 		}
 
-		proxyFactoryAddr := common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62")
-		ret, _, err := runtime.Call(proxyFactoryAddr, createProxyArgs, runtimeCfg)
+		ret, _, err := runtime.Call(common.HexToAddress(ProxyFactoryAddr), createProxyArgs, runtimeCfg)
 		if err != nil {
 			return fmt.Errorf("%s:%s", "Failed to create proxy for PublicResolver", err)
 		}
