@@ -108,7 +108,7 @@ var FIFSRegistrar = &contract{
 }
 
 var ProxiedFIFSRegistrar = &contract{
-	name: "FIFSRegistrar",
+	name: "ProxiedFIFSRegistrar",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
 		args := opts.multiSig
 
@@ -138,6 +138,25 @@ var ProxiedFIFSRegistrar = &contract{
 		registrarProxiedAddr := common.BytesToAddress(ret)
 		contract.address = registrarProxiedAddr
 		contract.code = contract.runtimeCfg.State.GetCode(registrarProxiedAddr)
+
+		return nil
+	},
+}
+
+var PublicResolver = &contract{
+	name: "PublicResolver",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.PublicResolverBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+
+		contract.code = contractCode
+		contract.address = contractAddr
 
 		return nil
 	},
