@@ -26,10 +26,10 @@ type Service struct {
 	fullNode  *knode.Kowala
 	oracleMgr oracle.Manager
 
-	reportingMu sync.RWMutex
-	reporting   bool
-	doneCh      chan struct{}
-	sgx         *SGX
+	reportingMu   sync.RWMutex
+	reporting     bool
+	doneCh        chan struct{}
+	priceProvider SecurePriceProvider
 }
 
 // New returns a price reporting service
@@ -40,9 +40,9 @@ func New(fullNode *knode.Kowala) (*Service, error) {
 	}
 
 	return &Service{
-		fullNode:  fullNode,
-		oracleMgr: oracleMgr,
-		sgx:       new(SGX),
+		fullNode:      fullNode,
+		oracleMgr:     oracleMgr,
+		priceProvider: new(sgx),
 	}, nil
 }
 
@@ -66,7 +66,7 @@ func (s *Service) APIs() []rpc.API {
 // Start implements node.Service, starting up the monitoring and reporting daemon.
 func (s *Service) Start(server *p2p.Server) error {
 	s.doneCh = make(chan struct{})
-	s.sgx.init()
+	s.priceProvider.Init()
 	log.Info("Oracle deamon started")
 
 	return nil
@@ -76,7 +76,7 @@ func (s *Service) Start(server *p2p.Server) error {
 func (s *Service) Stop() error {
 	close(s.doneCh)
 	s.StopReporting()
-	s.sgx.free()
+	s.priceProvider.Free()
 	log.Info("Oracle deamon stopped")
 
 	return nil
@@ -93,7 +93,7 @@ func (s *Service) reportPriceLoop() {
 		case <-s.doneCh:
 			return
 		case <-chainHeadCh:
-			rawTx := s.sgx.assemblePriceTx()
+			rawTx := s.priceProvider.GetPrice()
 		}
 	}
 }

@@ -1,0 +1,63 @@
+[
+  {
+    "name": "eth_sendRawTransaction",
+    "params": [
+      ""
+    ],
+    "returns": ""
+  },
+  {
+    "name": "eth_chainId",
+    "params": [],
+    "returns": ""
+  },
+  {
+    "name": "eth_blockNumber",
+    "params": [],
+    "returns": ""
+  },
+  {
+    "name": "eth_getBalance",
+    "params": [
+      "",
+      ""
+    ],
+    "returns": ""
+  },
+  {
+    "name": "eth_call",
+    "params": [
+      {},
+      ""
+    ],
+    "returns": ""
+  },
+  {
+    "name": "eth_getStorageAt",
+    "params": [
+      "",
+      "",
+      ""
+    ],
+    "returns": ""
+  },
+  {
+    "name": "eth_getTransactionReceipt",
+    "params": [
+      ""
+    ],
+    "returns": {}
+  },
+  {
+    "name": "eth_estimateGas",
+    "params": [
+      {}
+    ],
+    "returns": ""
+  },
+  {
+    "name": "eth_gasPrice",
+    "params": [],
+    "returns": ""
+  }
+]

@@ -1,0 +1,21 @@
+enclave {
+    from "mbedtls_SGX-2.6.0/lib/mbedtls_SGX.edl" import *;
+    
+    include "sgx_tseal.h"
+
+    trusted {
+        
+        public int ecall_sgx_select_account(
+            [in,size=secret_len] const uint8_t *secret,
+            size_t secret_len);
+        
+        public int ecall_sgx_new_account(
+            [user_check] unsigned char *sealed_key,
+            [in,out] size_t *sealed_key_len,
+            [user_check] unsigned char *addr);
+        
+        public int ecall_currency_value_raw_tx(
+            [user_check] uint8_t *raw_tx,
+            [out] size_t *raw_tx_len);
+    };
+};
