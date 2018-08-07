@@ -253,6 +253,33 @@ var ProxiedPublicResolver = &contract{
 
 		return nil
 	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		validatorAddr := opts.prefundedAccounts[0].accountAddress
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *validatorAddr
+
+		abi, err := abi.JSON(strings.NewReader(kns.PublicResolverABI))
+		if err != nil {
+			return err
+		}
+
+		//TODO (jgimeno) for now is the validator coming from the testnet.
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			common.HexToAddress(ProxyKNSRegistryAddr),
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize PublicResolver.", err)
+		}
+
+		return nil
+	},
 }
 
 var UpgradeabilityProxyFactoryContract = &contract{
