@@ -1,13 +1,9 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
-<<<<<<< HEAD
 import "./Consensus.sol";
-=======
->>>>>>> d158c65f56f1564edd5ee4f1475eab0bd8888b60
 import "../kns/KNSRegistry.sol";
 import "../kns/PublicResolver.sol";
-import "../consensus/mgr/ValidatorMgr.sol";
 import {NameHash} from "../utils/NameHash.sol";
 
 /**
@@ -20,7 +16,6 @@ contract OracleMgr is Pausable {
     uint public updatePeriod;
     Consensus consensus;
     uint public price;
-    ValidatorMgr validatorMgr;
     KNSRegistry public kns;
     PublicResolver public knsResolver;
     bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
@@ -75,7 +70,6 @@ contract OracleMgr is Pausable {
         uint _syncFrequency,
         uint _updatePeriod,
         address _consensusAddr,
-        address _validatorMgrAddr,
         address _knsAddr) 
     public {
         require(_maxNumOracles > 0);
@@ -88,10 +82,9 @@ contract OracleMgr is Pausable {
         maxNumOracles = _maxNumOracles;
         syncFrequency = _syncFrequency;
         updatePeriod = _updatePeriod;
-        consensus = Consensus(_consensusAddr);
         kns = KNSRegistry(_knsAddr);
         knsResolver = PublicResolver(kns.resolver(NameHash.namehash("validator.kowala")));
-        validatorMgr = ValidatorMgr(knsResolver.addr(NameHash.namehash("validator.kowala")));
+        consensus = Consensus(knsResolver.addr(NameHash.namehash("validator.kowala")));
     }
 
     /**
@@ -191,19 +184,5 @@ contract OracleMgr is Pausable {
     function submitPrice(uint _price) public whenNotPaused onlyOracle onlyOnce {
         oracleRegistry[msg.sender].hasSubmittedPrice = true;
         prices.push(OraclePrice({price: _price, oracle: msg.sender}));
-    }
-
-    /**
-     * @dev address of a Validator
-     */
-    function getValidatorAddress() onlyOwner public view returns(address){
-        return validatorMgr;
-    }
-
-    /**
-     * @dev address of a Validator
-     */
-    function getValidatorAddress() onlyOwner public view returns(address){
-        return validatorMgr;
     }
 }
