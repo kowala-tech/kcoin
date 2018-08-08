@@ -641,11 +641,12 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&vote); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+
+		p.MarkVote(vote.Hash())
 		if err := pm.validator.AddVote(&vote); err != nil {
 			// ignore
 			break
 		}
-		p.MarkVote(vote.Hash())
 
 	case msg.Code == BlockFragmentMsg:
 		if !pm.validator.Validating() {
@@ -657,12 +658,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+
+		p.MarkFragment(request.Data.Proof)
 		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data); err != nil {
+			log.Error("error while adding a new block fragment", "err", err, "round", request.Round, "block", request.BlockNumber, "fragment", request.Data)
 			// ignore
 			break
 		}
-		p.MarkFragment(request.Data.Proof)
-		pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data)
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
