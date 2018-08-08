@@ -334,12 +334,12 @@ var ProxiedPublicResolver = &contract{
 		runtimeCfg := contract.runtimeCfg
 		runtimeCfg.Origin = *validatorAddr
 
-		registryAbi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
+		registryABI, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
 		if err != nil {
 			return err
 		}
 
-		setResolverParams, err := registryAbi.Pack(
+		setResolverParams, err := registryABI.Pack(
 			"setResolver",
 			kns2.NameHash("coinbase.kowala"),
 			common.HexToAddress(ProxyResolverAddr),
@@ -351,6 +351,26 @@ var ProxiedPublicResolver = &contract{
 		_, _, err = runtime.Call(common.HexToAddress(ProxyKNSRegistryAddr), setResolverParams, runtimeCfg)
 		if err != nil {
 			return fmt.Errorf("%s:%s", "Failed to set resolver in PublicResolver.", err)
+		}
+
+		// Set address
+		resolverABI, err := abi.JSON(strings.NewReader(kns.PublicResolverABI))
+		if err != nil {
+			return err
+		}
+
+		setAddrParams, err := resolverABI.Pack(
+			"setAddr",
+			kns2.NameHash("coinbase.kowala"),
+			*validatorAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, setAddrParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to set domain in resolver.", err)
 		}
 
 		return nil
