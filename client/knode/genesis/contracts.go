@@ -197,33 +197,6 @@ var ProxiedFIFSRegistrar = &contract{
 
 		return nil
 	},
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		validatorAddr := opts.prefundedAccounts[0].accountAddress
-
-		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = *validatorAddr
-
-		abi, err := abi.JSON(strings.NewReader(kns.FIFSRegistrarABI))
-		if err != nil {
-			return err
-		}
-
-		registerParams, err := abi.Pack(
-			"register",
-			crypto.Keccak256Hash([]byte("coinbase")),
-			*validatorAddr,
-		)
-		if err != nil {
-			return err
-		}
-
-		_, _, err = runtime.Call(contract.address, registerParams, runtimeCfg)
-		if err != nil {
-			return fmt.Errorf("%s:%s", "Failed to register domain in FIFSRegistrar.", err)
-		}
-
-		return nil
-	},
 }
 
 var PublicResolver = &contract{
@@ -285,53 +258,6 @@ var ProxiedPublicResolver = &contract{
 		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
 		if err != nil {
 			return fmt.Errorf("%s:%s", "Failed to initialize PublicResolver.", err)
-		}
-
-		return nil
-	},
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		validatorAddr := opts.prefundedAccounts[0].accountAddress
-
-		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = *validatorAddr
-
-		registryABI, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
-		if err != nil {
-			return err
-		}
-
-		setResolverParams, err := registryABI.Pack(
-			"setResolver",
-			kns2.NameHash("coinbase.kowala"),
-			common.HexToAddress(ProxyResolverAddr),
-		)
-		if err != nil {
-			return err
-		}
-
-		_, _, err = runtime.Call(common.HexToAddress(ProxyKNSRegistryAddr), setResolverParams, runtimeCfg)
-		if err != nil {
-			return fmt.Errorf("%s:%s", "Failed to set resolver in PublicResolver.", err)
-		}
-
-		// Set address
-		resolverABI, err := abi.JSON(strings.NewReader(kns.PublicResolverABI))
-		if err != nil {
-			return err
-		}
-
-		setAddrParams, err := resolverABI.Pack(
-			"setAddr",
-			kns2.NameHash("coinbase.kowala"),
-			*validatorAddr,
-		)
-		if err != nil {
-			return err
-		}
-
-		_, _, err = runtime.Call(contract.address, setAddrParams, runtimeCfg)
-		if err != nil {
-			return fmt.Errorf("%s:%s", "Failed to set domain in resolver.", err)
 		}
 
 		return nil
