@@ -18,7 +18,7 @@ type VotingTable interface {
 type votingTable struct {
 	voteType types.VoteType
 	voters   types.Voters
-	votes    types.Votes
+	votes    *types.VotesSet
 	quorum   QuorumFunc
 	majority QuorumReachedFunc
 }
@@ -31,22 +31,25 @@ func NewVotingTable(voteType types.VoteType, voters types.Voters, majority Quoru
 	return &votingTable{
 		voteType: voteType,
 		voters:   voters,
-		votes:    types.Votes{},
+		votes:    types.NewVotesSet(),
 		quorum:   TwoThirdsPlusOneVoteQuorum,
 		majority: majority,
 	}, nil
 }
 
-func (table *votingTable) Add(vote types.AddressVote) error {
-	if !table.isVoter(vote.Address()) {
-		return fmt.Errorf("voter address not found in voting table: %#x", vote.Address().Hash())
+func (table *votingTable) Add(voteAddressed types.AddressVote) error {
+	if !table.isVoter(voteAddressed.Address()) {
+		return fmt.Errorf("voter address not found in voting table: 0x%x", voteAddressed.Address().Hash())
 	}
 
-	if table.isDuplicate(vote.Vote()) {
+	vote := voteAddressed.Vote()
+	if table.isDuplicate(vote) {
+		log.Error(fmt.Sprintf("a duplicate vote in voting table %v; blockHash %v; voteHash %v. Error: %s",
+			table.voteType, vote.BlockHash(), vote.Hash(), vote.String()))
 		return ErrDuplicateVote
 	}
 
-	table.votes = append(table.votes, vote.Vote())
+	table.votes.Add(vote)
 
 	if table.hasQuorum() {
 		table.majority()
@@ -56,14 +59,7 @@ func (table *votingTable) Add(vote types.AddressVote) error {
 }
 
 func (table *votingTable) isDuplicate(vote *types.Vote) bool {
-	voteHash := vote.Hash()
-	for _, tableVote := range table.votes {
-		if tableVote.Hash() == voteHash {
-			log.Error(fmt.Sprintf("a duplicate vote in voting table %v. Error: %s", table.voteType, vote.String()))
-			return true
-		}
-	}
-	return false
+	return table.votes.Contains(vote.Hash())
 }
 
 func (table *votingTable) isVoter(address common.Address) bool {
@@ -71,7 +67,7 @@ func (table *votingTable) isVoter(address common.Address) bool {
 }
 
 func (table *votingTable) hasQuorum() bool {
-	return table.quorum(len(table.votes), table.voters.Len())
+	return table.quorum(table.votes.Len(), table.voters.Len())
 }
 
 type QuorumReachedFunc func()

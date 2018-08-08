@@ -45,7 +45,7 @@ func TestVotingTable_Add_CheckIsVoterAndVoteNotSeen_CallsQuorum(t *testing.T) {
 	quorum := false
 	voterAddress := common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 
-	voter := types.NewVoter(voterAddress, 0, big.NewInt(1))
+	voter := types.NewVoter(voterAddress, common.Big0, big.NewInt(1))
 	voters, err := types.NewVoters([]*types.Voter{voter})
 	require.NoError(t, err)
 
@@ -66,14 +66,14 @@ func TestVotingTable_Add_CheckIsVoterAndVoteNotSeen_CallsQuorum(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, voters, votingTable.voters)
-	assert.Equal(t, 1, len(votingTable.votes))
+	assert.Equal(t, 1, votingTable.votes.Len())
 	assert.True(t, quorum)
 }
 
 func TestVotingTable_Add_DoubleVoteFromAddressReturnsError(t *testing.T) {
 	voterAddress := common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 
-	voter := types.NewVoter(voterAddress, 0, big.NewInt(1))
+	voter := types.NewVoter(voterAddress, common.Big0, big.NewInt(1))
 	voters, err := types.NewVoters([]*types.Voter{voter})
 	require.NoError(t, err)
 
@@ -95,14 +95,14 @@ func TestVotingTable_Add_DoubleVoteFromAddressReturnsError(t *testing.T) {
 
 	assert.EqualError(t, err, "duplicate vote")
 	assert.Equal(t, voters, votingTable.voters)
-	assert.Equal(t, 1, len(votingTable.votes))
+	assert.Equal(t, 1, votingTable.votes.Len())
 }
 
 func TestVotingTable_Add_VoteFromNonVoterReturnsError(t *testing.T) {
 	voterAddress := common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 	nonVoterAddress := common.HexToAddress("0x6aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 
-	voter := types.NewVoter(voterAddress, 0, big.NewInt(1))
+	voter := types.NewVoter(voterAddress, common.Big0, big.NewInt(1))
 	voters, err := types.NewVoters([]*types.Voter{voter})
 	require.NoError(t, err)
 
@@ -123,5 +123,5 @@ func TestVotingTable_Add_VoteFromNonVoterReturnsError(t *testing.T) {
 
 	assert.EqualError(t, err, "voter address not found in voting table: 0x0000000000000000000000006aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 	assert.Equal(t, voters, votingTable.voters)
-	assert.Equal(t, 0, len(votingTable.votes))
+	assert.Equal(t, 0, votingTable.votes.Len())
 }
