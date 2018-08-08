@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
 import "./TokenReceiver.sol";
-import "./ERC223.sol";
+import "./KRC223.sol";
 
 library SafeMath {
 
@@ -45,7 +45,7 @@ library SafeMath {
     }
 }
  
-contract Token is ERC223  {
+contract Token is KRC223  {
     using SafeMath for uint256;
 
     mapping(address => uint) balances;

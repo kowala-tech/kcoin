@@ -11,57 +11,36 @@ require('chai')
   .should();
 
 const ValidatorMgr = artifacts.require('ValidatorMgr.sol');
+const PublicResolver = artifacts.require('PublicResolver.sol');
+const KNS = artifacts.require('KNSRegistry.sol');
+const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
+const MiningTokenMock = artifacts.require('TokenMock.sol');
+const namehash = require('eth-ens-namehash');
 const { EVMError } = require('../helpers/testUtils.js');
 
 contract('Validator Manager', ([_, owner, newOwner, notOwner]) => {
   beforeEach(async () => {
-    this.validator = await ValidatorMgr.new(1, 2, 3, '0x1234', 1, { from: owner });
+    this.kns = await KNS.new({ from: owner });
+    this.registrar = await FIFSRegistrar.new(this.kns.address, namehash('kowala'));
+    this.resolver = await PublicResolver.new(this.kns.address);
+
+    await this.kns.setSubnodeOwner(0, web3.sha3('kowala'), this.registrar.address, { from: owner });
+    await this.registrar.register(web3.sha3('miningtoken'), owner, { from: owner });
+    await this.kns.setResolver(namehash('miningtoken.kowala'), this.resolver.address, { from: owner });
+    this.miningToken = await MiningTokenMock.new();
+    await this.resolver.setAddr(namehash('miningtoken.kowala'), this.miningToken.address, { from: owner });
+    this.validator = await ValidatorMgr.new(1, 2, 3, 1, this.kns.address, { from: owner });
   });
 
-  it('should set Validator owner during creation', async () => {
-    // when
-    const validatorOwner = await this.validator.owner();
-
-    // then
-    await validatorOwner.should.be.equal(owner);
-  });
-
-  it('should transfer ownership by a owner', async () => {
-    // when
-    await this.validator.transferOwnership(newOwner, { from: owner });
-    const validatorOwner = await this.validator.owner();
-    // then
-    await validatorOwner.should.be.equal(newOwner);
-  });
-
-  it('should not transfer ownership by not a owner', async () => {
-    // when
-    const onwershipTransfer = this.validator.transferOwnership(newOwner);
-
-    // then
-    await onwershipTransfer.should.eventually.be.rejectedWith(EVMError('revert'));
-  });
-
-  it('should change mining token address by a owner', async () => {
+  it('should set MiningToken Address from KNS during creation', async () => {
     // given
-    const newAddress = '0x0987';
+    const knsResolverAddr = await this.validator.knsResolver();
+    const resolver = await PublicResolver.at(knsResolverAddr);
 
     // when
-    await this.validator.changeAddresOfMiningToken(newAddress, { from: owner });
-
-    // then
-    const miningTokenAddr = await this.validator.miningTokenAddr({ from: owner });
-    await miningTokenAddr.should.be.equal('0x0000000000000000000000000000000000000987');
-  });
-
-  it('should not change mining token address by not a owner', async () => {
-    // given
-    const newAddress = '0x0987';
+    const miningTokenAddr = await resolver.addr(namehash('miningtoken.kowala'));
     
-    // when
-    const miningTokenAddr = this.validator.changeAddresOfMiningToken(newAddress, { from: notOwner });
-
     // then
-    await miningTokenAddr.should.be.eventually.rejectedWith(EVMError('revert'));
+    await miningTokenAddr.should.be.equal(this.miningToken.address);
   });
 });
