@@ -302,12 +302,9 @@ var ProxiedPublicResolver = &contract{
 		contract.address = registrarProxiedAddr
 		contract.code = contract.runtimeCfg.State.GetCode(registrarProxiedAddr)
 
-		return nil
-	},
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		// Init
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
 
-		runtimeCfg := contract.runtimeCfg
 		runtimeCfg.Origin = *validatorAddr
 
 		abi, err := abi.JSON(strings.NewReader(kns.PublicResolverABI))
