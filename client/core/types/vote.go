@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"sync"
 	"sync/atomic"
 
 	"github.com/kowala-tech/kcoin/client/common"
@@ -217,3 +218,39 @@ func (vote *Vote) String() string {
 }
 
 type Votes []*Vote
+
+type VotesSet struct {
+	m map[common.Hash]*Vote
+	l sync.RWMutex
+}
+
+func NewVotesSet() *VotesSet {
+	return &VotesSet{m: make(map[common.Hash]*Vote)}
+}
+
+func (v *VotesSet) Add(vote *Vote) {
+	v.l.Lock()
+	v.m[vote.Hash()] = vote
+	v.l.Unlock()
+}
+
+func (v *VotesSet) Contains(h common.Hash) bool {
+	v.l.RLock()
+	_, res := v.m[h]
+	v.l.RUnlock()
+	return res
+}
+
+func (v *VotesSet) Len() int {
+	v.l.RLock()
+	res := len(v.m)
+	v.l.RUnlock()
+	return res
+}
+
+func (v *VotesSet) Get(h common.Hash) (*Vote, bool) {
+	v.l.RLock()
+	vote, ok := v.m[h]
+	v.l.RUnlock()
+	return vote, ok
+}
