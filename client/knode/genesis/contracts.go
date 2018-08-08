@@ -328,6 +328,33 @@ var ProxiedPublicResolver = &contract{
 
 		return nil
 	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		validatorAddr := opts.prefundedAccounts[0].accountAddress
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *validatorAddr
+
+		registryAbi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
+		if err != nil {
+			return err
+		}
+
+		setResolverParams, err := registryAbi.Pack(
+			"setResolver",
+			kns2.NameHash("coinbase.kowala"),
+			common.HexToAddress(ProxyResolverAddr),
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(common.HexToAddress(ProxyKNSRegistryAddr), setResolverParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to set resolver in PublicResolver.", err)
+		}
+
+		return nil
+	},
 }
 
 var UpgradeabilityProxyFactoryContract = &contract{
