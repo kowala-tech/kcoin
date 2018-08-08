@@ -66,41 +66,28 @@ var ProxiedKNSRegistry = &contract{
 		args := opts.multiSig
 
 		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = *args.multiSigCreator
 
-		proxyABI, err := abi.JSON(strings.NewReader(proxy.UpgradeabilityProxyFactoryABI))
-		if err != nil {
-			return err
-		}
-
-		createProxyArgs, err := proxyABI.Pack(
-			"createProxy",
-			*args.multiSigCreator,
+		proxyContractAddr, code, err := createProxyFromContract(
 			common.HexToAddress("0x1582aEd4A8156325e28ef9eF075Da1E1D44AA56E"),
+			*args.multiSigCreator,
+			runtimeCfg,
 		)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 
-		ret, _, err := runtime.Call(common.HexToAddress(ProxyFactoryAddr), createProxyArgs, runtimeCfg)
-		if err != nil {
-			return fmt.Errorf("%s:%s", "Failed to create proxy for KNS", err)
-		}
-
-		knsProxiedAddress := common.BytesToAddress(ret)
-		contract.address = knsProxiedAddress
-		contract.code = contract.runtimeCfg.State.GetCode(knsProxiedAddress)
+		contract.address = *proxyContractAddr
+		contract.code = code
 
 		// Init Registry
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
-		runtimeCfg.Origin = *validatorAddr
 
+		runtimeCfg.Origin = *validatorAddr
 		abi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
 		if err != nil {
 			return err
 		}
 
-		//TODO (jgimeno) for now is the validator coming from the testnet.
 		initKnsParams, err := abi.Pack(
 			"initialize",
 			*validatorAddr,
@@ -174,31 +161,19 @@ var ProxiedFIFSRegistrar = &contract{
 		runtimeCfg := contract.runtimeCfg
 		runtimeCfg.Origin = *args.multiSigCreator
 
-		proxyABI, err := abi.JSON(strings.NewReader(proxy.UpgradeabilityProxyFactoryABI))
-		if err != nil {
-			return err
-		}
-
-		createProxyArgs, err := proxyABI.Pack(
-			"createProxy",
-			*args.multiSigCreator,
+		proxyContractAddr, code, err := createProxyFromContract(
 			common.HexToAddress("0x75AD571eFAcC241B23099c724c4A71FE30659145"),
+			*args.multiSigCreator,
+			runtimeCfg,
 		)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 
-		ret, _, err := runtime.Call(common.HexToAddress(ProxyFactoryAddr), createProxyArgs, runtimeCfg)
-		if err != nil {
-			return fmt.Errorf("%s:%s", "Failed to create proxy for FIFSRegistrar", err)
-		}
-
-		registrarProxiedAddr := common.BytesToAddress(ret)
-		contract.address = registrarProxiedAddr
-		contract.code = contract.runtimeCfg.State.GetCode(registrarProxiedAddr)
+		contract.address = *proxyContractAddr
+		contract.code = code
 
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
-
 		runtimeCfg.Origin = *validatorAddr
 
 		abi, err := abi.JSON(strings.NewReader(kns.FIFSRegistrarABI))
@@ -277,30 +252,18 @@ var ProxiedPublicResolver = &contract{
 		args := opts.multiSig
 
 		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = *args.multiSigCreator
 
-		proxyABI, err := abi.JSON(strings.NewReader(proxy.UpgradeabilityProxyFactoryABI))
-		if err != nil {
-			return err
-		}
-
-		createProxyArgs, err := proxyABI.Pack(
-			"createProxy",
-			*args.multiSigCreator,
+		proxyContractAddr, code, err := createProxyFromContract(
 			common.HexToAddress("0x2A4443ec27BF5F849B2Da15eB697d3Ef5302f186"),
+			*args.multiSigCreator,
+			runtimeCfg,
 		)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 
-		ret, _, err := runtime.Call(common.HexToAddress(ProxyFactoryAddr), createProxyArgs, runtimeCfg)
-		if err != nil {
-			return fmt.Errorf("%s:%s", "Failed to create proxy for PublicResolver", err)
-		}
-
-		registrarProxiedAddr := common.BytesToAddress(ret)
-		contract.address = registrarProxiedAddr
-		contract.code = contract.runtimeCfg.State.GetCode(registrarProxiedAddr)
+		contract.address = *proxyContractAddr
+		contract.code = code
 
 		// Init
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
@@ -394,6 +357,33 @@ var UpgradeabilityProxyFactoryContract = &contract{
 
 		return nil
 	},
+}
+
+func createProxyFromContract(contractAddr common.Address, accountCreator common.Address, runtimeCfg *runtime.Config) (proxyContractAddr *common.Address, code []byte, err error) {
+	runtimeCfg.Origin = accountCreator
+
+	proxyABI, err := abi.JSON(strings.NewReader(proxy.UpgradeabilityProxyFactoryABI))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	createProxyArgs, err := proxyABI.Pack(
+		"createProxy",
+		accountCreator,
+		contractAddr,
+	)
+	if err != nil{
+		return nil, nil, err
+	}
+
+	ret, _, err := runtime.Call(common.HexToAddress(ProxyFactoryAddr), createProxyArgs, runtimeCfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s:%s", "Failed to create proxy for KNS", err)
+	}
+
+	knsProxiedAddress := common.BytesToAddress(ret)
+
+	return &knsProxiedAddress, runtimeCfg.State.GetCode(knsProxiedAddress), nil
 }
 
 var MultiSigContract = &contract{
