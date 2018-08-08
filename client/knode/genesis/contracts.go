@@ -197,12 +197,8 @@ var ProxiedFIFSRegistrar = &contract{
 		contract.address = registrarProxiedAddr
 		contract.code = contract.runtimeCfg.State.GetCode(registrarProxiedAddr)
 
-		return nil
-	},
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
 
-		runtimeCfg := contract.runtimeCfg
 		runtimeCfg.Origin = *validatorAddr
 
 		abi, err := abi.JSON(strings.NewReader(kns.FIFSRegistrarABI))
@@ -223,6 +219,19 @@ var ProxiedFIFSRegistrar = &contract{
 		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
 		if err != nil {
 			return fmt.Errorf("%s:%s", "Failed to initialize KNSRegistry.", err)
+		}
+
+		return nil
+	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		validatorAddr := opts.prefundedAccounts[0].accountAddress
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *validatorAddr
+
+		abi, err := abi.JSON(strings.NewReader(kns.FIFSRegistrarABI))
+		if err != nil {
+			return err
 		}
 
 		registerParams, err := abi.Pack(
