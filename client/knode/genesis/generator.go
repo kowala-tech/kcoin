@@ -48,6 +48,7 @@ func (gen *generator) AddContract(contract *contract) {
 
 func Generate(opts Options) (*core.Genesis, error) {
 	gen := NewGenerator()
+	gen.AddContract(MultiSigContract)
 	gen.AddContract(UpgradeabilityProxyFactoryContract)
 	gen.AddContract(KNSRegistry)
 	gen.AddContract(ProxiedKNSRegistry)
@@ -55,7 +56,6 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(ProxiedFIFSRegistrar)
 	gen.AddContract(PublicResolver)
 	gen.AddContract(ProxiedPublicResolver)
-	gen.AddContract(MultiSigContract)
 	gen.AddContract(MiningTokenContract)
 	gen.AddContract(ValidatorMgrContract)
 	gen.AddContract(OracleMgrContract)

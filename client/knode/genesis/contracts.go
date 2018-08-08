@@ -18,9 +18,9 @@ import (
 	kns2 "github.com/kowala-tech/kcoin/client/kns"
 )
 
-var ProxyFactoryAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
-var ProxyKNSRegistryAddr = "0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"
-var ProxyRegistrarAddr = "0x80eDa603028fe504B57D14d947c8087c1798D800"
+var ProxyFactoryAddr = "0x1582aEd4A8156325e28ef9eF075Da1E1D44AA56E"
+var ProxyKNSRegistryAddr = "0xDfA58b86D285cF07E15ceEc0BaAb89e1D26305d7"
+var ProxyRegistrarAddr = "0x927C9AF9CF36a9d43d3160576e750612bc9e63e9"
 var ProxyResolverAddr = "0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"
 
 type contract struct {
@@ -68,7 +68,7 @@ var ProxiedKNSRegistry = &contract{
 		runtimeCfg := contract.runtimeCfg
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0x1582aEd4A8156325e28ef9eF075Da1E1D44AA56E"),
+			common.HexToAddress("0x75AD571eFAcC241B23099c724c4A71FE30659145"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -162,7 +162,7 @@ var ProxiedFIFSRegistrar = &contract{
 		runtimeCfg.Origin = *args.multiSigCreator
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0x75AD571eFAcC241B23099c724c4A71FE30659145"),
+			common.HexToAddress("0x2A4443ec27BF5F849B2Da15eB697d3Ef5302f186"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -226,7 +226,7 @@ var ProxiedPublicResolver = &contract{
 		runtimeCfg := contract.runtimeCfg
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0x2A4443ec27BF5F849B2Da15eB697d3Ef5302f186"),
+			common.HexToAddress("0xA08fCF0425736Ae7c10c0D3FCfB45C65f5f78212"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -447,14 +447,14 @@ var OracleMgrContract = &contract{
 
 		return nil
 	},
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		err := registerAddressToDomain(contract, opts, "oraclemgr")
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
+	//postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+	//	err := registerAddressToDomain(contract, opts, "oraclemgr")
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	return nil
+	//},
 }
 
 func registerAddressToDomain(contract *contract, opts *validGenesisOptions, domain string) error {
