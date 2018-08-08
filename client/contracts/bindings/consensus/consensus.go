@@ -159,7 +159,7 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus
 }
 
 func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) error {
-	log.Warn(fmt.Sprintf("Joining the network %v with a deposit %v. Account %q",
+	log.Info(fmt.Sprintf("Joining the network %v with a deposit %v. Account %q",
 		consensus.chainID.String(), deposit.String(), walletAccount.Account().Address.String()))
 	_, err := consensus.mtoken.Transfer(walletAccount, consensus.managerAddr, deposit, []byte("not_zero"), RegistrationHandler)
 	if err != nil {
@@ -170,7 +170,7 @@ func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *
 }
 
 func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) error {
-	log.Warn(fmt.Sprintf("Leaving the network %v. Account %q",
+	log.Info(fmt.Sprintf("Leaving the network %v. Account %q",
 		consensus.chainID.String(), walletAccount.Account().Address.String()))
 	_, err := consensus.manager.DeregisterValidator(transactOpts(walletAccount, consensus.chainID))
 	if err != nil {
@@ -181,7 +181,7 @@ func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) error {
 }
 
 func (consensus *consensus) RedeemDeposits(walletAccount accounts.WalletAccount) error {
-	log.Warn(fmt.Sprintf("Redeem deposit from the network %v. Account %q",
+	log.Info(fmt.Sprintf("Redeem deposit from the network %v. Account %q",
 		consensus.chainID.String(), walletAccount.Account().Address.String()))
 	_, err := consensus.manager.ReleaseDeposits(transactOpts(walletAccount, consensus.chainID))
 	if err != nil {

@@ -32,10 +32,12 @@ func (s *sgx) Free() {
 
 // GetPrice returns a raw transaction containing the latest average price
 func (s *sgx) GetPrice() []byte {
-	var txSize uintptr
-	txBuffer := make([]byte, 2048)
-	txBufferUnsafe := C.CBytes(txBuffer)
-	//C.assemblePriceTx((*C.uint8_t)(txBufferUnsafe), (*C.size_t)(unsafe.Pointer(&y)))
-	//return C.GoBytes(unsafe.Pointer(txBufferC), *txSize)
+	/*
+		var txSize uintptr
+		txBuffer := make([]byte, 2048)
+		txBufferUnsafe := C.CBytes(txBuffer)
+		//C.assemblePriceTx((*C.uint8_t)(txBufferUnsafe), (*C.size_t)(unsafe.Pointer(&y)))
+		//return C.GoBytes(unsafe.Pointer(txBufferC), *txSize)
+	*/
 	return []byte{}
 }

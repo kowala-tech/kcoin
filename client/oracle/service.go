@@ -2,11 +2,16 @@
 package oracle
 
 import (
+	"context"
 	"sync"
+	"time"
 
-	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/core"
+	"github.com/kowala-tech/kcoin/client/core/rawdb"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
 	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p"
@@ -30,6 +35,7 @@ type Service struct {
 	reporting     bool
 	doneCh        chan struct{}
 	priceProvider SecurePriceProvider
+	txPoolAPI     *kcoinapi.PublicTransactionPoolAPI
 }
 
 // New returns a price reporting service
@@ -43,6 +49,7 @@ func New(fullNode *knode.Kowala) (*Service, error) {
 		fullNode:      fullNode,
 		oracleMgr:     oracleMgr,
 		priceProvider: new(sgx),
+		txPoolAPI:     kcoinapi.NewPublicTransactionPoolAPI(fullNode.APIBackend(), nil),
 	}, nil
 }
 
@@ -66,7 +73,6 @@ func (s *Service) APIs() []rpc.API {
 // Start implements node.Service, starting up the monitoring and reporting daemon.
 func (s *Service) Start(server *p2p.Server) error {
 	s.doneCh = make(chan struct{})
-	s.priceProvider.Init()
 	log.Info("Oracle deamon started")
 
 	return nil
@@ -75,8 +81,6 @@ func (s *Service) Start(server *p2p.Server) error {
 // Stop implements node.Service, terminating the price.
 func (s *Service) Stop() error {
 	close(s.doneCh)
-	s.StopReporting()
-	s.priceProvider.Free()
 	log.Info("Oracle deamon stopped")
 
 	return nil
@@ -94,6 +98,18 @@ func (s *Service) reportPriceLoop() {
 			return
 		case <-chainHeadCh:
 			rawTx := s.priceProvider.GetPrice()
+			hash, err := s.txPoolAPI.SendRawTransaction(context.TODO(), rawTx)
+			if err != nil {
+				log.Error("failed to send the transaction")
+				continue
+			}
+			// @TODO (rgeraldes) - modify to timeout
+			_, err = waitMined(context.TODO(), s, hash)
+			if err != nil {
+				log.Error("failed to identity transaction")
+				continue
+			}
+			// @TODO (rgeraldes) - receipt status
 		}
 	}
 }
@@ -102,31 +118,29 @@ func (s *Service) StartReporting() error {
 	s.reportingMu.Lock()
 	defer s.reportingMu.Unlock()
 
-	coinbase, err := s.fullNode.Coinbase()
+	walletAccount, err := s.fullNode.GetWalletAccount()
 	if err != nil {
 		return err
 	}
 
+	s.priceProvider.Init()
+
 	// register oracle
-	isOracle, err := s.oracleMgr.IsOracle(coinbase)
+	isOracle, err := s.oracleMgr.IsOracle(walletAccount.Account().Address)
 	if err != nil {
 		return err
 	}
 
 	if !isOracle {
-		tx, err := s.oracleMgr.RegisterOracle(bind.NewKeyedTransactor(nil))
+		tx, err := s.oracleMgr.RegisterOracle(walletAccount)
 		if err != nil {
 			return err
 		}
-
-		/*
-			receipt, err := bind.WaitMined(context.TODO(), s.fullNode.APIBackend(), tx)
-			if err != nil {
-				return err
-			}
-		*/
-
-		// @TODO - receipt status
+		_, err = waitMined(context.TODO(), s, tx.Hash())
+		if err != nil {
+			return err
+		}
+		// @TODO (rgeraldes) - receipt status
 	}
 
 	go s.reportPriceLoop()
@@ -139,32 +153,29 @@ func (s *Service) StopReporting() error {
 	s.reportingMu.Lock()
 	defer s.reportingMu.Unlock()
 
-	coinbase, err := s.fullNode.Coinbase()
+	walletAccount, err := s.fullNode.GetWalletAccount()
 	if err != nil {
 		return err
 	}
 
-	isOracle, err := s.oracleMgr.IsOracle(coinbase)
+	isOracle, err := s.oracleMgr.IsOracle(walletAccount.Account().Address)
 	if err != nil {
 		return nil
 	}
 
 	if isOracle {
-		tx, err := s.oracleMgr.DeregisterOracle(bind.NewKeyedTransactor(nil))
+		tx, err := s.oracleMgr.DeregisterOracle(walletAccount)
 		if err != nil {
 			return err
 		}
-
-		/*
-			receipt, err := bind.WaitMined(context.TODO(), knode.NewContractBackend(fullNode.APIBackend()), tx)
-			if err != nil {
-				return err
-			}
-		*/
-
-		// @TODO - receipt status
+		_, err = waitMined(context.TODO(), s, tx.Hash())
+		if err != nil {
+			return err
+		}
+		// @TODO (rgeraldes) - receipt status
 
 		s.doneCh <- struct{}{}
+		s.priceProvider.Free()
 		s.reporting = false
 	}
 
@@ -176,4 +187,49 @@ func (s *Service) IsReporting() bool {
 	defer s.reportingMu.RUnlock()
 
 	return s.reporting
+}
+
+func (s *Service) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	tx, blockHash, _, index := rawdb.ReadTransaction(s.fullNode.APIBackend().ChainDb(), txHash)
+	if tx == nil {
+		return nil, nil
+	}
+	receipts, err := s.fullNode.APIBackend().GetReceipts(ctx, blockHash)
+	if err != nil {
+		return nil, err
+	}
+	if len(receipts) <= int(index) {
+		return nil, nil
+	}
+	return receipts[index], nil
+}
+
+type Backend interface {
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
+}
+
+// waitMined waits for tx to be mined on the blockchain.
+// It stops waiting when the context is canceled.
+func waitMined(ctx context.Context, b Backend, txHash common.Hash) (*types.Receipt, error) {
+	queryTicker := time.NewTicker(time.Second)
+	defer queryTicker.Stop()
+
+	logger := log.New("hash", txHash)
+	for {
+		receipt, err := b.TransactionReceipt(ctx, txHash)
+		if receipt != nil {
+			return receipt, nil
+		}
+		if err != nil {
+			logger.Trace("Receipt retrieval failed", "err", err)
+		} else {
+			logger.Trace("Transaction not yet mined")
+		}
+		// Wait for the next round.
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-queryTicker.C:
+		}
+	}
 }

@@ -298,9 +298,9 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	s.coinbase = coinbase
 	s.lock.Unlock()
 
-	walletAccount, err := s.getWalletAccount()
+	walletAccount, err := s.GetWalletAccount()
 	if err != nil {
-		log.Error("error SetCoinbase on validator getWalletAccount", "err", err)
+		log.Error("error SetCoinbase on validator GetWalletAccount", "err", err)
 	}
 
 	if err := s.validator.SetCoinbase(walletAccount); err != nil {
@@ -308,7 +308,7 @@ func (s *Kowala) SetCoinbase(coinbase common.Address) {
 	}
 }
 
-func (s *Kowala) getWalletAccount() (accounts.WalletAccount, error) {
+func (s *Kowala) GetWalletAccount() (accounts.WalletAccount, error) {
 	account := accounts.Account{Address: s.coinbase}
 	wallet, err := s.accountManager.Find(account)
 	if err != nil {
@@ -348,7 +348,7 @@ func (s *Kowala) StartValidating() error {
 	// @TODO (rgeraldes) - review (does it make sense to have a list of transactions before the election or not)
 	atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
-	walletAccount, err := s.getWalletAccount()
+	walletAccount, err := s.GetWalletAccount()
 	if err != nil {
 		return fmt.Errorf("error starting validating: %v", err)
 	}

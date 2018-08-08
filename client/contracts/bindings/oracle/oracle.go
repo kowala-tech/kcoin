@@ -1,12 +1,16 @@
 package oracle
 
 import (
+	"errors"
+	"fmt"
 	"math/big"
 
+	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -18,15 +22,20 @@ var mapOracleMgrToAddr = map[uint64]common.Address{
 }
 
 type Manager interface {
-	RegisterOracle(opts *bind.TransactOpts) (*types.Transaction, error)
-	DeregisterOracle(opts *bind.TransactOpts) (*types.Transaction, error)
+	RegisterOracle(walletAccount accounts.WalletAccount) (*types.Transaction, error)
+	DeregisterOracle(walletAccount accounts.WalletAccount) (*types.Transaction, error)
 	Price() (*big.Int, error)
 	GetOracleCount() (*big.Int, error)
 	IsOracle(identity common.Address) (bool, error)
 }
 
+type manager struct {
+	*OracleMgr
+	chainID *big.Int
+}
+
 // Binding returns a binding to the current oracle mgr
-func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgrSession, error) {
+func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*manager, error) {
 	addr, ok := mapOracleMgrToAddr[chainID.Uint64()]
 	if !ok {
 		return nil, bindings.ErrNoAddress
@@ -37,8 +46,45 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgr
 		return nil, err
 	}
 
-	return &OracleMgrSession{
-		Contract: mgr,
-		CallOpts: bind.CallOpts{},
+	return &manager{
+		OracleMgr: mgr,
+		chainID:   chainID,
 	}, nil
+}
+
+func (mgr *manager) RegisterOracle(walletAccount accounts.WalletAccount) (*types.Transaction, error) {
+	log.Info(fmt.Sprintf("Joining the oracle pool %v. Account %q", mgr.chainID.String(), walletAccount.Account().Address.String()))
+	return mgr.OracleMgr.RegisterOracle(transactOpts(walletAccount, mgr.chainID))
+}
+
+func (mgr *manager) DeregisterOracle(walletAccount accounts.WalletAccount) (*types.Transaction, error) {
+	log.Info(fmt.Sprintf("Leaving the network %v. Account %q", mgr.chainID.String(), walletAccount.Account().Address.String()))
+	return mgr.OracleMgr.DeregisterOracle(transactOpts(walletAccount, mgr.chainID))
+}
+
+func (mgr *manager) Price() (*big.Int, error) {
+	return mgr.OracleMgr.Price(&bind.CallOpts{})
+}
+
+func (mgr *manager) GetOracleCount() (*big.Int, error) {
+	return mgr.OracleMgr.GetOracleCount(&bind.CallOpts{})
+}
+
+func (mgr *manager) IsOracle(identity common.Address) (bool, error) {
+	return mgr.OracleMgr.IsOracle(&bind.CallOpts{}, identity)
+}
+
+func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.TransactOpts {
+	signerAddress := walletAccount.Account().Address
+	opts := &bind.TransactOpts{
+		From: signerAddress,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			if address != signerAddress {
+				return nil, errors.New("not authorized to sign this account")
+			}
+			return walletAccount.SignTx(walletAccount.Account(), tx, chainID)
+		},
+	}
+
+	return opts
 }
