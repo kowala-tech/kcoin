@@ -31,7 +31,7 @@ func NewVotingTable(voteType types.VoteType, voters types.Voters, majority Quoru
 	return &votingTable{
 		voteType: voteType,
 		voters:   voters,
-		votes:    types.NewVotes(),
+		votes:    types.NewVotesSet(),
 		quorum:   TwoThirdsPlusOneVoteQuorum,
 		majority: majority,
 	}, nil
@@ -59,7 +59,7 @@ func (table *votingTable) Add(voteAddressed types.AddressVote) error {
 }
 
 func (table *votingTable) isDuplicate(vote *types.Vote) bool {
-	return table.votes.Has(vote.Hash())
+	return table.votes.Contains(vote.Hash())
 }
 
 func (table *votingTable) isVoter(address common.Address) bool {

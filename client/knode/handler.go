@@ -661,6 +661,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		p.MarkFragment(request.Data.Proof)
 		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data); err != nil {
+			log.Error("error while adding a new block fragment", "err", err, "round", request.Round, "block", request.BlockNumber, "fragment", request.Data)
 			// ignore
 			break
 		}

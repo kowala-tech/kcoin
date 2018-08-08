@@ -224,7 +224,7 @@ type VotesSet struct {
 	l sync.RWMutex
 }
 
-func NewVotes() *VotesSet {
+func NewVotesSet() *VotesSet {
 	return &VotesSet{m: make(map[common.Hash]*Vote)}
 }
 
@@ -234,7 +234,7 @@ func (v *VotesSet) Add(vote *Vote) {
 	v.l.Unlock()
 }
 
-func (v *VotesSet) Has(h common.Hash) bool {
+func (v *VotesSet) Contains(h common.Hash) bool {
 	v.l.RLock()
 	_, res := v.m[h]
 	v.l.RUnlock()
