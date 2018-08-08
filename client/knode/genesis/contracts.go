@@ -8,14 +8,14 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
-	kns2 "github.com/kowala-tech/kcoin/client/kns"
 	"github.com/kowala-tech/kcoin/client/crypto"
+	kns2 "github.com/kowala-tech/kcoin/client/kns"
 )
 
 var ProxyFactoryAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
@@ -181,7 +181,6 @@ var ProxiedFIFSRegistrar = &contract{
 			return err
 		}
 
-		//TODO (jgimeno) for now is the validator coming from the testnet.
 		initKnsParams, err := abi.Pack(
 			"initialize",
 			common.HexToAddress(ProxyKNSRegistryAddr),
@@ -275,7 +274,6 @@ var ProxiedPublicResolver = &contract{
 			return err
 		}
 
-		//TODO (jgimeno) for now is the validator coming from the testnet.
 		initKnsParams, err := abi.Pack(
 			"initialize",
 			common.HexToAddress(ProxyKNSRegistryAddr),
@@ -372,7 +370,7 @@ func createProxyFromContract(contractAddr common.Address, accountCreator common.
 		accountCreator,
 		contractAddr,
 	)
-	if err != nil{
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -523,6 +521,92 @@ var OracleMgrContract = &contract{
 
 		return nil
 	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := registerAddressToDomain(contract, opts, "oraclemgr")
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+func registerAddressToDomain(contract *contract, opts *validGenesisOptions, domain string) error {
+	validatorAddr := opts.prefundedAccounts[0].accountAddress
+
+	runtimeCfg := contract.runtimeCfg
+	runtimeCfg.Origin = *validatorAddr
+
+	registrarABI, err := abi.JSON(strings.NewReader(kns.FIFSRegistrarABI))
+	if err != nil {
+		return err
+	}
+
+	registerParams, err := registrarABI.Pack(
+		"register",
+		crypto.Keccak256Hash([]byte(domain)),
+		*validatorAddr,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = runtime.Call(common.HexToAddress(ProxyRegistrarAddr), registerParams, runtimeCfg)
+	if err != nil {
+		return fmt.Errorf(
+			"%s:%s",
+			fmt.Sprintf("Failed to register domain %s in FIFSRegistrar.", domain),
+			err,
+		)
+	}
+
+	registryABI, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
+	if err != nil {
+		return err
+	}
+
+	setResolverParams, err := registryABI.Pack(
+		"setResolver",
+		kns2.NameHash(domain + ".kowala"),
+		common.HexToAddress(ProxyResolverAddr),
+	)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = runtime.Call(common.HexToAddress(ProxyKNSRegistryAddr), setResolverParams, runtimeCfg)
+	if err != nil {
+		return fmt.Errorf(
+			"%s:%s",
+			fmt.Sprintf("Failed to set resolver for domain %s in Registry.", domain),
+			err,
+		)
+	}
+
+	resolverABI, err := abi.JSON(strings.NewReader(kns.PublicResolverABI))
+	if err != nil {
+		return err
+	}
+
+	setAddrParams, err := resolverABI.Pack(
+		"setAddr",
+		kns2.NameHash(domain + ".kowala"),
+		contract.address,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = runtime.Call(common.HexToAddress(ProxyResolverAddr), setAddrParams, runtimeCfg)
+	if err != nil {
+		return fmt.Errorf(
+			"%s:%s",
+			fmt.Sprintf("Failed to set domain %s in resolver.", domain),
+			err,
+		)
+	}
+
+	return nil
 }
 
 var ValidatorMgrContract = &contract{
