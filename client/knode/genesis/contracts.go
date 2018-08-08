@@ -447,14 +447,14 @@ var OracleMgrContract = &contract{
 
 		return nil
 	},
-	//postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-	//	err := registerAddressToDomain(contract, opts, "oraclemgr")
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	return nil
-	//},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := registerAddressToDomain(contract, opts, "oraclemgr")
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
 }
 
 func registerAddressToDomain(contract *contract, opts *validGenesisOptions, domain string) error {
