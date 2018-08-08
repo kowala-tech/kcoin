@@ -91,12 +91,8 @@ var ProxiedKNSRegistry = &contract{
 		contract.address = knsProxiedAddress
 		contract.code = contract.runtimeCfg.State.GetCode(knsProxiedAddress)
 
-		return nil
-	},
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		// Init Registry
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
-
-		runtimeCfg := contract.runtimeCfg
 		runtimeCfg.Origin = *validatorAddr
 
 		abi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
@@ -118,7 +114,20 @@ var ProxiedKNSRegistry = &contract{
 			return fmt.Errorf("%s:%s", "Failed to initialize KNSRegistry.", err)
 		}
 
+		return nil
+	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		validatorAddr := opts.prefundedAccounts[0].accountAddress
+
 		// call setSubnodeOwner
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *validatorAddr
+
+		abi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
+		if err != nil {
+			return err
+		}
+
 		subnodeOwnerParams, err := abi.Pack(
 			"setSubnodeOwner",
 			[32]byte{},
