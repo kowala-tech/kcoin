@@ -38,7 +38,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@Kowala Wallet Tools">
 <meta name="twitter:creator" content="@Kowala Wallet Tools">
-<link href="https://fonts.googleapis.com/css?family=Poppins" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
 </head>
 <body>
 
@@ -48,7 +48,7 @@
   <section class="container">
     @@if (site === 'mew' ) {
       <a class="brand" href="/" aria-label="Go to homepage">
-        <img src="images/logo-myetherwallet.svg" width="100" alt="Kowala Wallet Tools" />
+        <img src="https://cdn.kowala.tech/images/kowala/kowala-white.svg" width="100" alt="Kowala Wallet Tools" />
         <p class="small visible-xs">3.21.12</p>
       </a>
     }
