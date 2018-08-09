@@ -131,7 +131,7 @@ func (e *GenesisMismatchError) Error() string {
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.AllTendermintProtocolChanges, common.Hash{}, errGenesisNoConfig
+		return params.AllKonsensusProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no stored genesis block.
@@ -143,13 +143,16 @@ func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConf
 		} else {
 			log.Info("Writing custom genesis block")
 		}
-		block, err := genesis.Commit(db)
 
 		// @TODO (rgeraldes) - since we removed the difficulty calculation inside
 		// commit, there's the possibility that the method returns a nil block
 		// in case of an error, and that will trigger a segmentation violation
 		// while trying to get the block.Hash(), block is nil at this point.
-		log.Warn("Error information", "err", err)
+		block, err := genesis.Commit(db)
+		if err != nil {
+			log.Warn("Error information", "err", err)
+		}
+
 		return genesis.Config, block.Hash(), err
 	}
 
@@ -199,7 +202,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	case ghash == params.TestnetGenesisHash:
 		return params.TestnetChainConfig
 	default:
-		return params.AllTendermintProtocolChanges
+		return params.AllKonsensusProtocolChanges
 	}
 }
 
@@ -253,7 +256,7 @@ func (g *Genesis) Commit(db kcoindb.Database) (*types.Block, error) {
 
 	config := g.Config
 	if config == nil {
-		config = params.AllTendermintProtocolChanges
+		config = params.AllKonsensusProtocolChanges
 	}
 	rawdb.WriteChainConfig(db, block.Hash(), config)
 	return block, nil
@@ -298,7 +301,7 @@ func DefaultTestnetGenesisBlock() *Genesis {
 // DevGenesisBlock returns the 'kcoin --dev' genesis block.
 func DevGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:   params.AllTendermintProtocolChanges,
+		Config:   params.AllKonsensusProtocolChanges,
 		GasLimit: 4712388,
 		Alloc:    decodePrealloc(devAllocData),
 	}

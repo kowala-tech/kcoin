@@ -48,19 +48,30 @@ func (u *updater) Update() error {
 		return nil
 	}
 
-	err := u.download()
-	if err != nil {
+	if err := u.download(); err != nil {
 		return err
 	}
 
-	err = u.unzip()
+	if err := u.unzip(); err != nil {
+		return err
+	}
 
-	return err
+	if err := u.backupCurrentBinary(); err != nil {
+		return err
+	}
+
+	if err := u.replaceNewBinary(); err != nil {
+		return err
+	}
+
+	fmt.Println("Client is up to date please start with your normal options")
+
+	return nil
 }
 
 func (u *updater) download() error {
 	assetUrl := u.repository + "/" + u.latestAsset.Path()
-	fmt.Println("downloading latest version asset " + assetUrl)
+	fmt.Println("downloading latest version")
 
 	out, err := os.Create(u.latestAsset.Path())
 	if err != nil {
@@ -74,8 +85,7 @@ func (u *updater) download() error {
 	}
 	defer response.Body.Close()
 
-	_, err = io.Copy(out, response.Body)
-	if err != nil {
+	if _, err = io.Copy(out, response.Body); err != nil {
 		return err
 	}
 
@@ -89,14 +99,14 @@ func (u *updater) unzip() error {
 	}
 	defer r.Close()
 
+	fmt.Println("unziping file")
+
 	for _, f := range r.File {
 		rc, err := f.Open()
 		if err != nil {
 			return err
 		}
 		defer rc.Close()
-
-		fmt.Println("unziping file " + f.Name)
 
 		path := filepath.Join("", f.Name)
 		if f.FileInfo().IsDir() {
@@ -114,6 +124,47 @@ func (u *updater) unzip() error {
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func (u *updater) backupCurrentBinary() error {
+	file := os.Args[0]
+
+	dir, filename := filepath.Split(file)
+
+	absdir, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+
+	backupFile := absdir + "/backup_" + filename
+
+	fmt.Println("backing up binary")
+
+	if err = os.Rename(file, backupFile); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *updater) replaceNewBinary() error {
+	file := os.Args[0]
+
+	dir, oldFilename := filepath.Split(file)
+
+	absdir, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+
+	filename := "kcoin-" + u.latestAsset.Os() + "-" + u.latestAsset.Arch()
+	binary := absdir + "/" + oldFilename
+
+	if err = os.Rename(filename, binary); err != nil {
+		return err
 	}
 
 	return nil
