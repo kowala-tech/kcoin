@@ -40,7 +40,7 @@ contract('Oracle Manager', ([_, admin, owner, newOwner, notOwner]) => {
     await this.kns.setResolver(namehash('validator.kowala'), this.resolver.address, { from: owner });
     this.consensus = await ConsensusMock.new(true);
     await this.resolver.setAddr(namehash('validator.kowala'), this.consensus.address, { from: owner });
-    this.oracle = await OracleMgr.new(1, 1, 1, this.consensus.address, this.knsProxyAddress, { from: owner });
+    this.oracle = await OracleMgr.new(1, 1, 1, this.resolver.address, { from: owner });
   });
 
   it('should set Consensus address using KNS', async () => {
@@ -49,10 +49,9 @@ contract('Oracle Manager', ([_, admin, owner, newOwner, notOwner]) => {
     const resolver = await PublicResolver.at(knsResolverAddr);
 
     // when
-    await this.oracle.registerOracle({ from: owner });
-    const numberOfOracles = await this.oracle.getOracleCount();
-
+    const consensusAddr = await resolver.addr(namehash('validator.kowala'));
+    
     // then
-    await numberOfOracles.should.be.bignumber.equal(1);
+    await consensusAddr.should.be.equal(this.consensus.address);
   });
 });

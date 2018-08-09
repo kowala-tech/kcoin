@@ -2,7 +2,6 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "../../token/KRC223.sol";
-import "../../kns/KNSRegistry.sol";
 import "../../kns/PublicResolver.sol";
 import {NameHash} from "../../utils/NameHash.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
@@ -16,9 +15,9 @@ contract ValidatorMgr is Pausable {
     uint public maxNumValidators;
     uint public freezePeriod;
     bytes32 public validatorsChecksum;
+    bytes32 nodeNamehash;
     address public miningTokenAddr;
     uint public superNodeAmount;
-    KNSRegistry public kns;
     PublicResolver public knsResolver;
 
     struct Deposit {
@@ -74,14 +73,14 @@ contract ValidatorMgr is Pausable {
      * @param _maxNumValidators Maximum numbers of Validators.
      * @param _freezePeriod Freeze period for Validator's deposits.
      * @param _superNodeAmount Amount required to be considered a super node.
-     * @param _knsAddr Address of KNS.
+     * @param _resolverAddr Address of KNS Resolver.
      */
     function ValidatorMgr(
         uint _baseDeposit,
         uint _maxNumValidators,
         uint _freezePeriod,
         uint _superNodeAmount,
-        address _knsAddr) 
+        address _resolverAddr) 
     public {
         require(_maxNumValidators > 0);
 
@@ -89,9 +88,9 @@ contract ValidatorMgr is Pausable {
         maxNumValidators = _maxNumValidators;
         freezePeriod = _freezePeriod * 1 days;
         superNodeAmount = _superNodeAmount;
-        kns = KNSRegistry(_knsAddr);
-        knsResolver = PublicResolver(kns.resolver(NameHash.namehash("miningtoken.kowala")));
-        miningTokenAddr = knsResolver.addr(NameHash.namehash("miningtoken.kowala"));
+        knsResolver = PublicResolver(_resolverAddr);
+        nodeNamehash = NameHash.namehash("miningtoken.kowala");
+        miningTokenAddr = knsResolver.addr(nodeNamehash);
     }
 
     /**

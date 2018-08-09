@@ -29,7 +29,7 @@ contract('Validator Manager', ([_, owner, newOwner, notOwner]) => {
     await this.kns.setResolver(namehash('miningtoken.kowala'), this.resolver.address, { from: owner });
     this.miningToken = await MiningTokenMock.new();
     await this.resolver.setAddr(namehash('miningtoken.kowala'), this.miningToken.address, { from: owner });
-    this.validator = await ValidatorMgr.new(1, 2, 3, 1, this.kns.address, { from: owner });
+    this.validator = await ValidatorMgr.new(1, 2, 3, 1, this.resolver.address, { from: owner });
   });
 
   it('should set MiningToken Address from KNS during creation', async () => {

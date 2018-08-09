@@ -44,7 +44,7 @@ contract('KNS Functionality', (accounts) => {
 
   it('should add validator address to validator.kowala domain', async () => {
     // given
-    const validator = await ValidatorMgr.new(1, 2, 3, '0x1234', 1);
+    const validator = await ValidatorMgr.new(1, 2, 3, 1, this.resolver.address);
     await this.registrar.register(web3.sha3('validator'), accounts[0], { from: accounts[0] });
     await this.kns.setResolver(namehash('validator.kowala'), this.resolver.address);
 

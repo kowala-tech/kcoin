@@ -2,7 +2,6 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./Consensus.sol";
-import "../kns/KNSRegistry.sol";
 import "../kns/PublicResolver.sol";
 import {NameHash} from "../utils/NameHash.sol";
 
@@ -16,8 +15,8 @@ contract OracleMgr is Pausable {
     uint public updatePeriod;
     Consensus consensus;
     uint public price;
-    KNSRegistry public kns;
     PublicResolver public knsResolver;
+    bytes32 nodeNamehash;
     bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
     struct OraclePrice {
@@ -64,13 +63,13 @@ contract OracleMgr is Pausable {
      * @param _maxNumOracles Maximum numbers of Oracles.
      * @param _syncFrequency Synchronize frequency for Oracles.
      * @param _updatePeriod Update period.
+     * @param _resolverAddr Address of KNS Resolver.
      */
     function OracleMgr(
         uint _maxNumOracles,
         uint _syncFrequency,
         uint _updatePeriod,
-        address _consensusAddr,
-        address _knsAddr) 
+        address _resolverAddr) 
     public {
         require(_maxNumOracles > 0);
 
@@ -82,9 +81,9 @@ contract OracleMgr is Pausable {
         maxNumOracles = _maxNumOracles;
         syncFrequency = _syncFrequency;
         updatePeriod = _updatePeriod;
-        kns = KNSRegistry(_knsAddr);
-        knsResolver = PublicResolver(kns.resolver(NameHash.namehash("validator.kowala")));
-        consensus = Consensus(knsResolver.addr(NameHash.namehash("validator.kowala")));
+        knsResolver = PublicResolver(_resolverAddr);
+        nodeNamehash = NameHash.namehash("validatormgr.kowala");
+        consensus = Consensus(knsResolver.addr(nodeNamehash));
     }
 
     /**
