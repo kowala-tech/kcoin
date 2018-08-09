@@ -7,6 +7,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
@@ -16,9 +17,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	kns2 "github.com/kowala-tech/kcoin/client/kns"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 )
-
 
 type contract struct {
 	name       string
@@ -507,7 +506,7 @@ func registerAddressToDomain(contract *contract, opts *validGenesisOptions, doma
 
 	setResolverParams, err := registryABI.Pack(
 		"setResolver",
-		kns2.NameHash(domain + ".kowala"),
+		kns2.NameHash(domain+".kowala"),
 		common.HexToAddress(bindings.ProxyResolverAddr),
 	)
 	if err != nil {
@@ -530,7 +529,7 @@ func registerAddressToDomain(contract *contract, opts *validGenesisOptions, doma
 
 	setAddrParams, err := resolverABI.Pack(
 		"setAddr",
-		kns2.NameHash(domain + ".kowala"),
+		kns2.NameHash(domain+".kowala"),
 		contract.address,
 	)
 	if err != nil {
