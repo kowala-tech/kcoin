@@ -59,6 +59,7 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(MiningTokenContract)
 	gen.AddContract(ValidatorMgrContract)
 	gen.AddContract(OracleMgrContract)
+	gen.AddContract(MultiSigNameRegister)
 
 	return gen.Generate(opts)
 }
@@ -107,9 +108,12 @@ func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 func (gen *generator) deployContracts(opts *validGenesisOptions) error {
 	for _, contract := range gen.contracts {
 		contract.runtimeCfg = gen.getDefaultRuntimeConfig()
-		if err := contract.deploy(contract, opts); err != nil {
-			return err
+		if contract.deploy != nil {
+			if err := contract.deploy(contract, opts); err != nil {
+				return err
+			}
 		}
+
 		if contract.postDeploy != nil {
 			if err := contract.postDeploy(contract, opts); err != nil {
 				return err
