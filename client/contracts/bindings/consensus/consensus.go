@@ -17,8 +17,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
-	"github.com/kowala-tech/kcoin/client/params"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
+		"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
 	kns2 "github.com/kowala-tech/kcoin/client/kns"
 )
 
@@ -32,10 +31,6 @@ const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 var (
 	DefaultData = []byte("not_zero")
 )
-
-var mapMultiSigWalletToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"),
-}
 
 // ValidatorsChecksum lets a validator know if there are changes in the validator set
 type ValidatorsChecksum [32]byte
@@ -270,9 +265,9 @@ func (consensus *consensus) MintInit() error {
 	var err error
 	consensus.initMint.Do(func() {
 		if consensus.multiSigWallet == nil {
-			addr, ok := mapMultiSigWalletToAddr[consensus.chainID.Uint64()]
-			if !ok {
-				err = bindings.ErrNoAddress
+			addr, errKNS := getAddressFromKNS("multisig.kowala", consensus.contractBackend)
+			if errKNS != nil {
+				err = errKNS
 				return
 			}
 
