@@ -18,6 +18,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
+	kns2 "github.com/kowala-tech/kcoin/client/kns"
 )
 
 //go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
@@ -30,6 +32,12 @@ const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 var (
 	DefaultData = []byte("not_zero")
 )
+
+var ProxyFactoryAddr = "0x1582aEd4A8156325e28ef9eF075Da1E1D44AA56E"
+var ProxyKNSRegistryAddr = "0xDfA58b86D285cF07E15ceEc0BaAb89e1D26305d7"
+var ProxyRegistrarAddr = "0x927C9AF9CF36a9d43d3160576e750612bc9e63e9"
+var ProxyResolverAddr = "0x577baB773e23327B0Ab7081E2a1ffcd186514d75"
+var MultiSigWalletAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
 
 var mapValidatorMgrToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x80eDa603028fe504B57D14d947c8087c1798D800"),
@@ -134,9 +142,14 @@ type consensus struct {
 
 // Binding returns a binding to the current consensus engine
 func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
-	addr, ok := mapValidatorMgrToAddr[chainID.Uint64()]
-	if !ok {
-		return nil, bindings.ErrNoAddress
+	resolver, err := kns.NewPublicResolverCaller(
+		common.HexToAddress(ProxyResolverAddr),
+		contractBackend,
+	)
+
+	addr, err := resolver.Addr(nil, kns2.NameHash("validatormgr.kowala"))
+	if err != nil {
+		return nil, err
 	}
 
 	manager, err := NewValidatorMgr(addr, contractBackend)
