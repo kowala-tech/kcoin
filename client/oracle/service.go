@@ -4,7 +4,8 @@ package oracle
 import (
 	"context"
 	"sync"
-	"time"
+
+	"github.com/kowala-tech/kcoin/client/accounts"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
@@ -32,10 +33,11 @@ type Service struct {
 	fullNode  *knode.Kowala
 	oracleMgr oracle.Manager
 
-	reportingMu sync.RWMutex
-	reporting   bool
-	doneCh      chan struct{}
-	txPoolAPI   *kcoinapi.PublicTransactionPoolAPI
+	reportingMu   sync.RWMutex
+	reporting     bool
+	walletAccount accounts.WalletAccount
+	doneCh        chan struct{}
+	txPoolAPI     *kcoinapi.PublicTransactionPoolAPI
 }
 
 // New returns a price reporting service
@@ -95,23 +97,33 @@ func (s *Service) reportPriceLoop() {
 		select {
 		case <-s.doneCh:
 			return
-		case <-chainHeadCh:
-			rawTx, err := scraper.GetPrice()
+		case head := <-chainHeadCh:
+			submitted, err := s.oracleMgr.HasPriceFrom(s.walletAccount.Account().Address)
 			if err != nil {
-				// @TODO (rgeraldes)
-			}
-			hash, err := s.txPoolAPI.SendRawTransaction(context.TODO(), rawTx)
-			if err != nil {
-				log.Error("failed to send the transaction")
+				log.Error("")
 				continue
 			}
-			// @TODO (rgeraldes) - modify to timeout
-			_, err = waitMined(context.TODO(), s, hash)
-			if err != nil {
-				log.Error("failed to identity transaction")
-				continue
+			if IsUpdatePeriod(head.Block.Number()) && !submitted {
+				rawTx, err := scraper.GetPrice()
+				if err != nil {
+					log.Error("failed to secure a price")
+					continue
+				}
+				hash, err := s.txPoolAPI.SendRawTransaction(context.TODO(), rawTx)
+				if err != nil {
+					log.Error("failed to send the transaction")
+					continue
+				}
+				receipt, err := waitMined(context.TODO(), s, hash)
+				if err != nil {
+					log.Error("failed to identify transaction")
+					continue
+				}
+				if receipt.Status == types.ReceiptStatusFailed {
+					log.Error("receipt status: failed")
+					continue
+				}
 			}
-			// @TODO (rgeraldes) - receipt status
 		}
 	}
 }
@@ -124,25 +136,28 @@ func (s *Service) StartReporting() error {
 	if err != nil {
 		return err
 	}
+	s.walletAccount = walletAccount
 
 	scraper.Init()
 
-	// register oracle
 	isOracle, err := s.oracleMgr.IsOracle(walletAccount.Account().Address)
 	if err != nil {
 		return err
 	}
 
+	// register oracle
 	if !isOracle {
 		tx, err := s.oracleMgr.RegisterOracle(walletAccount)
 		if err != nil {
 			return err
 		}
-		_, err = waitMined(context.TODO(), s, tx.Hash())
+		receipt, err := waitMined(context.TODO(), s, tx.Hash())
 		if err != nil {
 			return err
 		}
-		// @TODO (rgeraldes) - receipt status
+		if receipt.Status == types.ReceiptStatusFailed {
+			return errors.New("receipt status: failed")
+		}
 	}
 
 	go s.reportPriceLoop()
@@ -155,26 +170,24 @@ func (s *Service) StopReporting() error {
 	s.reportingMu.Lock()
 	defer s.reportingMu.Unlock()
 
-	walletAccount, err := s.fullNode.GetWalletAccount()
+	isOracle, err := s.oracleMgr.IsOracle(s.walletAccount.Account().Address)
 	if err != nil {
 		return err
 	}
 
-	isOracle, err := s.oracleMgr.IsOracle(walletAccount.Account().Address)
-	if err != nil {
-		return nil
-	}
-
+	// deregister oracle
 	if isOracle {
-		tx, err := s.oracleMgr.DeregisterOracle(walletAccount)
+		tx, err := s.oracleMgr.DeregisterOracle(s.walletAccount)
 		if err != nil {
 			return err
 		}
-		_, err = waitMined(context.TODO(), s, tx.Hash())
+		receipt, err := waitMined(context.TODO(), s, tx.Hash())
 		if err != nil {
 			return err
 		}
-		// @TODO (rgeraldes) - receipt status
+		if receipt.Status == types.ReceiptStatusFailed {
+			return errors.New("receipt status: failed")
+		}
 
 		s.doneCh <- struct{}{}
 		scraper.Free()
@@ -204,34 +217,4 @@ func (s *Service) TransactionReceipt(ctx context.Context, txHash common.Hash) (*
 		return nil, nil
 	}
 	return receipts[index], nil
-}
-
-type Backend interface {
-	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
-}
-
-// waitMined waits for tx to be mined on the blockchain.
-// It stops waiting when the context is canceled.
-func waitMined(ctx context.Context, b Backend, txHash common.Hash) (*types.Receipt, error) {
-	queryTicker := time.NewTicker(time.Second)
-	defer queryTicker.Stop()
-
-	logger := log.New("hash", txHash)
-	for {
-		receipt, err := b.TransactionReceipt(ctx, txHash)
-		if receipt != nil {
-			return receipt, nil
-		}
-		if err != nil {
-			logger.Trace("Receipt retrieval failed", "err", err)
-		} else {
-			logger.Trace("Transaction not yet mined")
-		}
-		// Wait for the next round.
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-queryTicker.C:
-		}
-	}
 }

@@ -132,6 +132,7 @@ var (
 		"./kcoinclient",
 		"./accounts",
 		"./core/types",
+		"./oracle",
 		"./params",
 		"./contracts/bindings/token",
 		"./contracts/bindings/ownership",

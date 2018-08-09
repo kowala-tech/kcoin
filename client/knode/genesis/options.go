@@ -81,16 +81,11 @@ type GovernanceOpts struct {
 }
 
 type PriceOpts struct {
-	InitialPrice  float64
-	SyncFrequency uint64
-	UpdatePeriod  uint64
+	InitialPrice float64
 }
 
 type DataFeedSystemOpts struct {
 	MaxNumOracles uint64
-	FreezePeriod  uint64 // in days
-	BaseDeposit   uint64 // in kUSD
-	Price         PriceOpts
 }
 
 type PrefundedAccount struct {
@@ -119,16 +114,11 @@ type validValidatorMgrOpts struct {
 }
 
 type validPriceOpts struct {
-	initialPrice  *big.Int
-	syncFrequency *big.Int
-	updatePeriod  *big.Int
+	initialPrice *big.Int
 }
 
 type validOracleMgrOpts struct {
 	maxNumOracles    *big.Int
-	freezePeriod     *big.Int
-	baseDeposit      *big.Int
-	price            validPriceOpts
 	validatorMgrAddr common.Address
 	owner            common.Address
 }
@@ -220,13 +210,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// data feed system
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
-	oracleBaseDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.DataFeedSystem.BaseDeposit), big.NewInt(params.Kcoin))
-	oracleFreezePeriod := new(big.Int).SetUint64(options.DataFeedSystem.FreezePeriod)
-
-	initialPrice := new(big.Int)
-	new(big.Float).Mul(new(big.Float).SetFloat64(options.DataFeedSystem.Price.InitialPrice), big.NewFloat(params.Kcoin)).Int(initialPrice)
-	syncFrequency := new(big.Int).SetUint64(options.DataFeedSystem.Price.SyncFrequency)
-	updatePeriod := new(big.Int).SetUint64(options.DataFeedSystem.Price.UpdatePeriod)
 
 	// mining tokens
 	decimals := new(big.Int).Exp(common.Big1, new(big.Int).SetUint64(options.Consensus.MiningToken.Decimals), nil)
@@ -267,13 +250,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		},
 		oracleMgr: &validOracleMgrOpts{
 			maxNumOracles: maxNumOracles,
-			freezePeriod:  oracleFreezePeriod,
-			baseDeposit:   oracleBaseDeposit,
-			price: validPriceOpts{
-				initialPrice:  initialPrice,
-				syncFrequency: syncFrequency,
-				updatePeriod:  updatePeriod,
-			},
 		},
 		miningToken: &validMiningTokenOpts{
 			name:     options.Consensus.MiningToken.Name,

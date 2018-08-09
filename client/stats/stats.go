@@ -550,11 +550,6 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 		return nil, err
 	}
 
-	currencyPrice, err := s.oracleMgr.Price()
-	if err != nil {
-		return nil, err
-	}
-
 	return &blockStats{
 		Number:         header.Number,
 		Hash:           header.Hash(),
@@ -570,7 +565,6 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 		ValidatorCount: validatorCount,
 		MaxValidators:  maxValidators,
 		OracleCount:    oracleCount,
-		CurrencyPrice:  currencyPrice,
 	}, nil
 }
 

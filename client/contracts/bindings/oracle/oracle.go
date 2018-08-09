@@ -24,9 +24,9 @@ var mapOracleMgrToAddr = map[uint64]common.Address{
 type Manager interface {
 	RegisterOracle(walletAccount accounts.WalletAccount) (*types.Transaction, error)
 	DeregisterOracle(walletAccount accounts.WalletAccount) (*types.Transaction, error)
-	Price() (*big.Int, error)
 	GetOracleCount() (*big.Int, error)
 	IsOracle(identity common.Address) (bool, error)
+	HasPriceFrom(oracle common.Address) (bool, error)
 }
 
 type manager struct {
@@ -62,16 +62,16 @@ func (mgr *manager) DeregisterOracle(walletAccount accounts.WalletAccount) (*typ
 	return mgr.OracleMgr.DeregisterOracle(transactOpts(walletAccount, mgr.chainID))
 }
 
-func (mgr *manager) Price() (*big.Int, error) {
-	return mgr.OracleMgr.Price(&bind.CallOpts{})
-}
-
 func (mgr *manager) GetOracleCount() (*big.Int, error) {
 	return mgr.OracleMgr.GetOracleCount(&bind.CallOpts{})
 }
 
 func (mgr *manager) IsOracle(identity common.Address) (bool, error) {
 	return mgr.OracleMgr.IsOracle(&bind.CallOpts{}, identity)
+}
+
+func (mgr *manager) HasPriceFrom(oracle common.Address) (bool, error) {
+	return mgr.OracleMgr.HasSubmittedPrice(&bind.CallOpts{}, oracle)
 }
 
 func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.TransactOpts {
