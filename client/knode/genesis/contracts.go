@@ -16,6 +16,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	kns2 "github.com/kowala-tech/kcoin/client/kns"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 )
 
 
@@ -86,7 +87,7 @@ var ProxiedKNSRegistry = &contract{
 
 		initKnsParams, err := abi.Pack(
 			"initialize",
-			common.HexToAddress(consensus.MultiSigWalletAddr),
+			common.HexToAddress(bindings.MultiSigWalletAddr),
 		)
 		if err != nil {
 			return err
@@ -102,7 +103,7 @@ var ProxiedKNSRegistry = &contract{
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
 		// call setSubnodeOwner
 		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = common.HexToAddress(consensus.MultiSigWalletAddr)
+		runtimeCfg.Origin = common.HexToAddress(bindings.MultiSigWalletAddr)
 
 		abi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
 		if err != nil {
@@ -113,7 +114,7 @@ var ProxiedKNSRegistry = &contract{
 			"setSubnodeOwner",
 			[32]byte{},
 			crypto.Keccak256Hash([]byte("kowala")),
-			common.HexToAddress(consensus.ProxyRegistrarAddr),
+			common.HexToAddress(bindings.ProxyRegistrarAddr),
 		)
 		if err != nil {
 			return err
@@ -177,7 +178,7 @@ var ProxiedFIFSRegistrar = &contract{
 
 		initKnsParams, err := abi.Pack(
 			"initialize",
-			common.HexToAddress(consensus.ProxyKNSRegistryAddr),
+			common.HexToAddress(bindings.ProxyKNSRegistryAddr),
 			kns2.NameHash("kowala"),
 		)
 		if err != nil {
@@ -243,7 +244,7 @@ var ProxiedPublicResolver = &contract{
 
 		initKnsParams, err := abi.Pack(
 			"initialize",
-			common.HexToAddress(consensus.ProxyKNSRegistryAddr),
+			common.HexToAddress(bindings.ProxyKNSRegistryAddr),
 		)
 		if err != nil {
 			return err
@@ -294,7 +295,7 @@ func createProxyFromContract(contractAddr common.Address, accountCreator common.
 		return nil, nil, err
 	}
 
-	ret, _, err := runtime.Call(common.HexToAddress(consensus.ProxyFactoryAddr), createProxyArgs, runtimeCfg)
+	ret, _, err := runtime.Call(common.HexToAddress(bindings.ProxyFactoryAddr), createProxyArgs, runtimeCfg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s:%s", "Failed to create proxy for KNS", err)
 	}
@@ -483,7 +484,7 @@ func registerAddressToDomain(contract *contract, opts *validGenesisOptions, doma
 		return err
 	}
 
-	_, _, err = runtime.Call(common.HexToAddress(consensus.ProxyRegistrarAddr), registerParams, runtimeCfg)
+	_, _, err = runtime.Call(common.HexToAddress(bindings.ProxyRegistrarAddr), registerParams, runtimeCfg)
 	if err != nil {
 		return fmt.Errorf(
 			"%s:%s",
@@ -500,13 +501,13 @@ func registerAddressToDomain(contract *contract, opts *validGenesisOptions, doma
 	setResolverParams, err := registryABI.Pack(
 		"setResolver",
 		kns2.NameHash(domain + ".kowala"),
-		common.HexToAddress(consensus.ProxyResolverAddr),
+		common.HexToAddress(bindings.ProxyResolverAddr),
 	)
 	if err != nil {
 		return err
 	}
 
-	_, _, err = runtime.Call(common.HexToAddress(consensus.ProxyKNSRegistryAddr), setResolverParams, runtimeCfg)
+	_, _, err = runtime.Call(common.HexToAddress(bindings.ProxyKNSRegistryAddr), setResolverParams, runtimeCfg)
 	if err != nil {
 		return fmt.Errorf(
 			"%s:%s",
@@ -529,7 +530,7 @@ func registerAddressToDomain(contract *contract, opts *validGenesisOptions, doma
 		return err
 	}
 
-	_, _, err = runtime.Call(common.HexToAddress(consensus.ProxyResolverAddr), setAddrParams, runtimeCfg)
+	_, _, err = runtime.Call(common.HexToAddress(bindings.ProxyResolverAddr), setAddrParams, runtimeCfg)
 	if err != nil {
 		return fmt.Errorf(
 			"%s:%s",

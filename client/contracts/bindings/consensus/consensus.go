@@ -33,20 +33,6 @@ var (
 	DefaultData = []byte("not_zero")
 )
 
-var ProxyFactoryAddr = "0x1582aEd4A8156325e28ef9eF075Da1E1D44AA56E"
-var ProxyKNSRegistryAddr = "0xDfA58b86D285cF07E15ceEc0BaAb89e1D26305d7"
-var ProxyRegistrarAddr = "0x927C9AF9CF36a9d43d3160576e750612bc9e63e9"
-var ProxyResolverAddr = "0x577baB773e23327B0Ab7081E2a1ffcd186514d75"
-var MultiSigWalletAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
-
-var mapMiningTokenToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"),
-}
-
-var mapOracleToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
-}
-
 var mapMultiSigWalletToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"),
 }
@@ -81,7 +67,12 @@ type mUSD struct {
 }
 
 func NewMUSD(contractBackend bind.ContractBackend, chainID *big.Int) (*mUSD, error) {
-	mtoken, err := NewMiningToken(mapMiningTokenToAddr[chainID.Uint64()], contractBackend)
+	addr, err := getAddressFromKNS("miningtoken.kowala", contractBackend)
+	if err != nil {
+		return nil, err
+	}
+
+	mtoken, err := NewMiningToken(addr, contractBackend)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +155,7 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus
 
 func getAddressFromKNS(domain string, caller bind.ContractCaller) (common.Address, error) {
 	resolver, err := kns.NewPublicResolverCaller(
-		common.HexToAddress(ProxyResolverAddr),
+		common.HexToAddress(bindings.ProxyResolverAddr),
 		caller,
 	)
 	if err != nil {
@@ -295,9 +286,9 @@ func (consensus *consensus) MintInit() error {
 		}
 
 		if consensus.oracle == nil {
-			addr, ok := mapOracleToAddr[consensus.chainID.Uint64()]
-			if !ok {
-				err = bindings.ErrNoAddress
+			addr, errKns := getAddressFromKNS("oraclemgr.kowala", consensus.contractBackend)
+			if err != nil {
+				err = errKns
 				return
 			}
 
