@@ -22,6 +22,7 @@ var ProxyFactoryAddr = "0x1582aEd4A8156325e28ef9eF075Da1E1D44AA56E"
 var ProxyKNSRegistryAddr = "0xDfA58b86D285cF07E15ceEc0BaAb89e1D26305d7"
 var ProxyRegistrarAddr = "0x927C9AF9CF36a9d43d3160576e750612bc9e63e9"
 var ProxyResolverAddr = "0x577baB773e23327B0Ab7081E2a1ffcd186514d75"
+var MultiSigWalletAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
 
 type contract struct {
 	name       string
@@ -90,7 +91,7 @@ var ProxiedKNSRegistry = &contract{
 
 		initKnsParams, err := abi.Pack(
 			"initialize",
-			*validatorAddr,
+			common.HexToAddress(MultiSigWalletAddr),
 		)
 		if err != nil {
 			return err
@@ -104,11 +105,9 @@ var ProxiedKNSRegistry = &contract{
 		return nil
 	},
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		validatorAddr := opts.prefundedAccounts[0].accountAddress
-
 		// call setSubnodeOwner
 		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = *validatorAddr
+		runtimeCfg.Origin = common.HexToAddress(MultiSigWalletAddr)
 
 		abi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
 		if err != nil {
@@ -344,6 +343,9 @@ var MultiSigContract = &contract{
 
 		return nil
 	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		return registerAddressToDomain(contract, opts, "multisig")
+	},
 }
 
 var MiningTokenContract = &contract{
@@ -380,7 +382,16 @@ var MiningTokenContract = &contract{
 
 		return nil
 	},
-	postDeploy: mintTokens,
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := mintTokens(contract, opts)
+		if err != nil {
+			return err
+		}
+
+		registerAddressToDomain(contract, opts, "miningtoken")
+
+		return nil
+	},
 }
 
 func mintTokens(contract *contract, opts *validGenesisOptions) error {
@@ -570,7 +581,14 @@ var ValidatorMgrContract = &contract{
 
 		return nil
 	},
-	postDeploy: registerValidators,
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := registerValidators(contract, opts)
+		if err != nil {
+			return err
+		}
+
+		return registerAddressToDomain(contract, opts, "validatormgr")
+	},
 }
 
 func registerValidators(contract *contract, opts *validGenesisOptions) error {
