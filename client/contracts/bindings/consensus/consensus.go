@@ -39,10 +39,6 @@ var ProxyRegistrarAddr = "0x927C9AF9CF36a9d43d3160576e750612bc9e63e9"
 var ProxyResolverAddr = "0x577baB773e23327B0Ab7081E2a1ffcd186514d75"
 var MultiSigWalletAddr = "0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"
 
-var mapValidatorMgrToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x80eDa603028fe504B57D14d947c8087c1798D800"),
-}
-
 var mapMiningTokenToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"),
 }
@@ -142,12 +138,7 @@ type consensus struct {
 
 // Binding returns a binding to the current consensus engine
 func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
-	resolver, err := kns.NewPublicResolverCaller(
-		common.HexToAddress(ProxyResolverAddr),
-		contractBackend,
-	)
-
-	addr, err := resolver.Addr(nil, kns2.NameHash("validatormgr.kowala"))
+	addr, err := getAddressFromKNS("validatormgr.kowala", contractBackend)
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +160,18 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus
 		chainID:         chainID,
 		contractBackend: contractBackend,
 	}, nil
+}
+
+func getAddressFromKNS(domain string, caller bind.ContractCaller) (common.Address, error) {
+	resolver, err := kns.NewPublicResolverCaller(
+		common.HexToAddress(ProxyResolverAddr),
+		caller,
+	)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return resolver.Addr(nil, kns2.NameHash(domain))
 }
 
 func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) error {
