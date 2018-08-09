@@ -14,6 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
 	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/oracle/scraper"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/rpc"
 	"github.com/pkg/errors"
@@ -31,11 +32,10 @@ type Service struct {
 	fullNode  *knode.Kowala
 	oracleMgr oracle.Manager
 
-	reportingMu   sync.RWMutex
-	reporting     bool
-	doneCh        chan struct{}
-	priceProvider SecurePriceProvider
-	txPoolAPI     *kcoinapi.PublicTransactionPoolAPI
+	reportingMu sync.RWMutex
+	reporting   bool
+	doneCh      chan struct{}
+	txPoolAPI   *kcoinapi.PublicTransactionPoolAPI
 }
 
 // New returns a price reporting service
@@ -46,10 +46,9 @@ func New(fullNode *knode.Kowala) (*Service, error) {
 	}
 
 	return &Service{
-		fullNode:      fullNode,
-		oracleMgr:     oracleMgr,
-		priceProvider: new(sgx),
-		txPoolAPI:     kcoinapi.NewPublicTransactionPoolAPI(fullNode.APIBackend(), nil),
+		fullNode:  fullNode,
+		oracleMgr: oracleMgr,
+		txPoolAPI: kcoinapi.NewPublicTransactionPoolAPI(fullNode.APIBackend(), nil),
 	}, nil
 }
 
@@ -97,7 +96,10 @@ func (s *Service) reportPriceLoop() {
 		case <-s.doneCh:
 			return
 		case <-chainHeadCh:
-			rawTx := s.priceProvider.GetPrice()
+			rawTx, err := scraper.GetPrice()
+			if err != nil {
+				// @TODO (rgeraldes)
+			}
 			hash, err := s.txPoolAPI.SendRawTransaction(context.TODO(), rawTx)
 			if err != nil {
 				log.Error("failed to send the transaction")
@@ -123,7 +125,7 @@ func (s *Service) StartReporting() error {
 		return err
 	}
 
-	s.priceProvider.Init()
+	scraper.Init()
 
 	// register oracle
 	isOracle, err := s.oracleMgr.IsOracle(walletAccount.Account().Address)
@@ -175,7 +177,7 @@ func (s *Service) StopReporting() error {
 		// @TODO (rgeraldes) - receipt status
 
 		s.doneCh <- struct{}{}
-		s.priceProvider.Free()
+		scraper.Free()
 		s.reporting = false
 	}
 

@@ -14,7 +14,6 @@
 
 #include "common.h"
 #include "kowala.h"
-#include "rpc_provider.h"
 #include "log.h"
 
 #include <chrono>
@@ -27,8 +26,6 @@ using namespace std;
 sgx_enclave_id_t global_eid = 0;
 
 string key_file = "enclave.key";
-
-RPCProvider rpc_provider("http://rpcnode.zygote.kowala.tech:30503/");
 
 typedef struct _sgx_errlist_t
 {
@@ -105,33 +102,6 @@ void print_error_message(sgx_status_t ret)
         printf("Error code is 0x%X. Please refer to the \"Intel SGX SDK Developer Reference\" for more details.\n", ret);
 }
 
-int init_account()
-{
-    int ret;
-
-    vector<uint8_t> data;
-
-    ifstream keyFile(key_file, std::ios::binary);
-    if (keyFile.good())
-    {
-        data.clear();
-        data.assign(istreambuf_iterator<char>(keyFile), istreambuf_iterator<char>());
-        keyFile.close();
-    }
-    else
-    {
-        return -1;
-    }
-
-    ret = ecall_sgx_select_account(global_eid, &ret, &data[0], data.size());
-    if (ret != SGX_SUCCESS)
-    {
-        return -1;
-    }
-
-    return 0;
-}
-
 int init_enclave()
 {
     char token_path[MAX_PATH] = {'\0'};
@@ -200,87 +170,6 @@ int init_enclave()
     return 0;
 }
 
-void exit()
-{
-    int ret;
-    /*
-    sgx_status_t status = ecall_deregister_oracle(global_eid, &ret);
-    
-    if (ret != SGX_SUCCESS)
-    {
-        return -1;
-    }*/
-
-    sgx_destroy_enclave(global_eid);
-}
-
-void cmdHelp()
-{
-    cout << "--keygen <fname>:    Generate a new sgx key file\n"
-            "--keyfile <fname>:   Load the required sgx key file\n"
-            "--address <fname>:   Show the key file address\n "
-            "--help:              Show help\n";
-}
-
-void parseFlags(int argc, char **argv)
-{
-    const char *const short_opts = "f:g";
-    const option long_opts[] = {
-        {"keygen", required_argument, nullptr, 'g'},
-        {"keyfile", required_argument, nullptr, 'f'},
-        {"help", no_argument, nullptr, 'h'},
-        {nullptr, no_argument, nullptr, 0}};
-
-    while (true)
-    {
-        const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
-
-        if (-1 == opt)
-            break;
-
-        switch (opt)
-        {
-        case 'f':
-            key_file = string(optarg);
-            break;
-        case 'g':
-        {
-            key_file = string(optarg);
-            unsigned char addr[20];
-
-            int ret;
-            vector<uint8_t> sealed_key(4096, 0);
-            size_t sealed_key_len = 0;
-            ret = ecall_sgx_new_account(global_eid, &ret, &sealed_key[0], &sealed_key_len, addr);
-            if (ret != SGX_SUCCESS)
-            {
-                exit(1);
-            }
-
-            ofstream output(key_file, ios::binary);
-            copy(sealed_key.begin(), sealed_key.end(), ostreambuf_iterator<char>(output));
-            output.close();
-
-            std::stringstream buffer;
-            for (int i = 0; i < 20; i++)
-            {
-                buffer << std::hex << std::setfill('0');
-                buffer << std::setw(2) << static_cast<unsigned>(addr[i]);
-            }
-
-            cout << "Address: " << buffer.str() << endl;
-
-            exit(1);
-        }
-        case 'h': // -h or --help
-        case '?': // Unrecognized option
-        default:
-            cmdHelp();
-            exit(1);
-        }
-    }
-}
-
 int initSGX()
 {
     if (init_enclave() < 0)
@@ -311,78 +200,3 @@ int assemblePriceTx(uint8_t *raw_tx, size_t *raw_tx_len)
 
     return 0;
 }
-
-int SGX_CDECL main(int argc, char *argv[])
-{
-    (void)(argc);
-    (void)(argv);
-    int ret;
-
-    signal(SIGINT, exit);
-    signal(SIGTERM, exit);
-
-    /*
-    
-    parseFlags(argc, argv);
-
-    if (init_account() < 0)
-    {
-        logger->error("Failed to initialize the account");
-        return -1;
-    }
-
-    sgx_status_t status;
-    if (rpc_provider.isOracle(kowala::common::to_address("0x")) == FALSE)
-    {
-        logger->info("Registering oracle...");
-        status = ecall_register_oracle(global_eid, &ret);
-        if (ret != SGX_SUCCESS)
-        {
-            logger->error("Failed to register oracle");
-            return -1;
-        }
-    }
-
-    arith_uint256 syncFrequency(rpc_provider.getStorageAt(kowala::accounts::ORACLE_MANAGER_ADDR, "0"));
-    arith_uint256 updatePeriod(rpc_provider.getStorageAt(kowala::accounts::ORACLE_MANAGER_ADDR, "1"));
-    for (;;)
-    {
-        arith_uint256 blockNumber(rpc_provider.blockNumber());
-
-        //logger->trace("block info");
-
-        // different round if division produces a different number
-        // inside limits if modulus > division + syncFreq - update Period
-
-        
-
-        std::this_thread::sleep_for(chrono::seconds(120));
-    }
-
-    */
-
-    return 0;
-}
-
-/*
-int ocall_send_raw_tx(uint8_t *raw_tx, size_t len)
-{
-    std::vector<uint8_t> tx(raw_tx, raw_tx + len);
-    rpc_provider.sendRawTransaction(toHexPrefixed(tx));
-}
-
-int ocall_get_receipt(const char *str)
-{
-    return 0;
-}
-
-int ocall_gasprice_suggestion()
-{
-    return 0;
-}
-
-int ocall_gas_estimate()
-{
-    return 0;
-}
-*/
