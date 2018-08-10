@@ -1,7 +1,9 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "../../token/ERC223.sol";
+import "../../token/KRC223.sol";
+import "../../kns/PublicResolver.sol";
+import {NameHash} from "../../utils/NameHash.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
 //import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
 
@@ -13,8 +15,10 @@ contract ValidatorMgr is Pausable {
     uint public maxNumValidators;
     uint public freezePeriod;
     bytes32 public validatorsChecksum;
+    bytes32 nodeNamehash;
     address public miningTokenAddr;
     uint public superNodeAmount;
+    PublicResolver public knsResolver;
 
     struct Deposit {
         uint amount;
@@ -68,17 +72,25 @@ contract ValidatorMgr is Pausable {
      * @param _baseDeposit base deposit for Validator
      * @param _maxNumValidators Maximum numbers of Validators.
      * @param _freezePeriod Freeze period for Validator's deposits.
-     * @param _miningTokenAddr Address of mining token.
      * @param _superNodeAmount Amount required to be considered a super node.
+     * @param _resolverAddr Address of KNS Resolver.
      */
-    function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _miningTokenAddr, uint _superNodeAmount) public {
+    function ValidatorMgr(
+        uint _baseDeposit,
+        uint _maxNumValidators,
+        uint _freezePeriod,
+        uint _superNodeAmount,
+        address _resolverAddr) 
+    public {
         require(_maxNumValidators > 0);
 
         baseDeposit = _baseDeposit;
         maxNumValidators = _maxNumValidators;
         freezePeriod = _freezePeriod * 1 days;
-        miningTokenAddr = _miningTokenAddr;
         superNodeAmount = _superNodeAmount;
+        knsResolver = PublicResolver(_resolverAddr);
+        nodeNamehash = NameHash.namehash("miningtoken.kowala");
+        miningTokenAddr = knsResolver.addr(nodeNamehash);
     }
 
     /**
@@ -295,7 +307,7 @@ contract ValidatorMgr is Pausable {
         _removeDeposits(msg.sender, i);
 
         if (refund > 0) {
-            ERC223 mtoken = ERC223(miningTokenAddr);
+            KRC223 mtoken = KRC223(miningTokenAddr);
             mtoken.transfer(msg.sender, refund);
         }
     }
@@ -312,5 +324,4 @@ contract ValidatorMgr is Pausable {
         tkn = TKN(_from, _value/*, _data, bytes4(u)*/);
         _registerValidator();
     }
-    
 }
