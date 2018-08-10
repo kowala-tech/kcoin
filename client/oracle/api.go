@@ -19,9 +19,11 @@ func (api *PrivateOracleAPI) Start() error {
 }
 
 // Stop the oracle service
-func (api *PrivateOracleAPI) Stop() bool {
-	api.oracleServ.StopReporting()
-	return true
+func (api *PrivateOracleAPI) Stop() error {
+	if api.oracleServ.IsReporting() {
+		return api.oracleServ.StopReporting()
+	}
+	return nil
 }
 
 // IsReporting returns whether the oracle is currently reporting prices or not

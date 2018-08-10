@@ -170,29 +170,21 @@ func (s *Service) StopReporting() error {
 	s.reportingMu.Lock()
 	defer s.reportingMu.Unlock()
 
-	isOracle, err := s.oracleMgr.IsOracle(s.walletAccount.Account().Address)
+	tx, err := s.oracleMgr.DeregisterOracle(s.walletAccount)
 	if err != nil {
 		return err
 	}
-
-	// deregister oracle
-	if isOracle {
-		tx, err := s.oracleMgr.DeregisterOracle(s.walletAccount)
-		if err != nil {
-			return err
-		}
-		receipt, err := waitMined(context.TODO(), s, tx.Hash())
-		if err != nil {
-			return err
-		}
-		if receipt.Status == types.ReceiptStatusFailed {
-			return errors.New("receipt status: failed")
-		}
-
-		s.doneCh <- struct{}{}
-		scraper.Free()
-		s.reporting = false
+	receipt, err := waitMined(context.TODO(), s, tx.Hash())
+	if err != nil {
+		return err
 	}
+	if receipt.Status == types.ReceiptStatusFailed {
+		return errors.New("receipt status: failed")
+	}
+
+	s.doneCh <- struct{}{}
+	scraper.Free()
+	s.reporting = false
 
 	return nil
 }
