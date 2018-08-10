@@ -9,6 +9,8 @@ const (
 	MiningTokenDomain
 )
 
+const KowalaTLD = "kowala"
+
 type KNSDomain struct {
 	node string
 	tld  string
@@ -27,20 +29,20 @@ func (k KNSDomain) Node() string {
 }
 
 var KNSDomains = map[int]KNSDomain{
-	MultiSigDomain: KNSDomain{
+	MultiSigDomain: {
 		node: "multisig",
-		tld:  "kowala",
+		tld:  KowalaTLD,
 	},
-	OracleMgrDomain: KNSDomain{
+	OracleMgrDomain: {
 		node: "oraclemgr",
-		tld:  "kowala",
+		tld:  KowalaTLD,
 	},
-	ValidatorMgrDomain: KNSDomain{
+	ValidatorMgrDomain: {
 		node: "validatormgr",
-		tld:  "kowala",
+		tld:  KowalaTLD,
 	},
-	MiningTokenDomain: KNSDomain{
+	MiningTokenDomain: {
 		node: "miningtoken",
-		tld:  "kowala",
+		tld:  KowalaTLD,
 	},
 }
