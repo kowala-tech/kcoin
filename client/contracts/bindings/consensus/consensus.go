@@ -20,9 +20,9 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
-//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
+//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts zos-lib/=../../truffle/node_modules/zos-lib/ openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
 //go:generate ../../../build/bin/abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
-//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ ../../truffle/contracts/consensus/token/MiningToken.sol
+//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts zos-lib/=../../truffle/node_modules/zos-lib/ openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ ../../truffle/contracts/consensus/token/MiningToken.sol
 //go:generate ../../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
 
 const RegistrationHandler = "registerValidator(address,uint256,bytes)"
@@ -52,6 +52,7 @@ type ValidatorsChecksum [32]byte
 
 // Consensus is a gateway to the validators contracts on the network
 type Consensus interface {
+	Domain() string
 	Join(walletAccount accounts.WalletAccount, amount *big.Int) error
 	Leave(walletAccount accounts.WalletAccount) error
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
@@ -132,8 +133,8 @@ type consensus struct {
 	oracle         *oracle.OracleMgr
 }
 
-// Binding returns a binding to the current consensus engine
-func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
+// Bind returns a binding to the current consensus engine
+func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
 	addr, ok := mapValidatorMgrToAddr[chainID.Uint64()]
 	if !ok {
 		return nil, bindings.ErrNoAddress
@@ -319,6 +320,11 @@ func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address)
 	}
 
 	return tx.Hash(), err
+}
+
+// @TODO(rgeraldes) - temporary method
+func (consensus *consensus) Domain() string {
+	return ""
 }
 
 func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.TransactOpts {

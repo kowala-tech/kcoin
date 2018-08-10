@@ -2,6 +2,7 @@ pragma solidity 0.4.24;
 
 import "../kns/KNS.sol";
 import "zos-lib/contracts/migrations/Initializable.sol";
+import "./Simple.sol";
 
 /**
  * The KNS registry contract.
@@ -34,6 +35,10 @@ contract KNSRegistryV1 is KNS, Initializable {
 
     function helloProxy() public pure returns(string){
         return "HelloProxy";
+    }
+
+    function returnContract() public returns(Simple){
+        return Simple(1);
     }
 
     /**
