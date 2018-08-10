@@ -1,11 +1,16 @@
+i{
+  color: #fff !important;
+}
+
 div.page-logo {
     margin-top: 25px;
     overflow: visible;
 }
+
 img.logo-default {
-    max-height: 200px;
-    height: 30px;
+  width: 50%;
 }
+
 .dashboard-stat2 .display .icon {
     display: inline-block;
     float: left;
@@ -13,10 +18,10 @@ img.logo-default {
     margin-right: 1em;
 }
 .dashboard-stat2 .display .icon>i {
-	color: #cbd4e0;
+	color: #fff;
 	font-size: 4em;
 }
-.create{background-color:#36c6d3}
+.create{background-color:#fff}
 .current-page-home .page-head .page-title {
     display: none;
 }
@@ -24,18 +29,17 @@ img.logo-default {
 	color: #fff;
 }
 .page-head .page-title h1 small {
-    color: #fe0053;
     font-size: 1em;
     font-weight: 400;
 }
 .truncate-txhash, .truncate-addrhash{
-	white-space:nowrap; 
+	white-space:nowrap;
 	overflow:hidden;
 	text-overflow: ellipsis;
 	max-width:220px;
 }
 .truncate-addrhash {
-	max-width:200px;   
+	max-width:200px;
 }
 .scrollable {
 	max-height: 400px;
@@ -71,7 +75,7 @@ img.logo-default {
 }
 #table_txs td, #table_internal_txs td {
 	font-size: 12px;
-	white-space:nowrap; 
+	white-space:nowrap;
 	overflow:hidden;
 	text-overflow: ellipsis;
 }
@@ -113,8 +117,6 @@ img.logo-default {
 }
 .dashboard-stat-light {
 	background: 0 0;
-	color: #fe0053!important;
-	text-shadow: 2px 2px 2px #1f033d!important;
 }
 .dashboard-stat-light-text {
 	font-weight: 300;
@@ -128,13 +130,11 @@ img.logo-default {
 	white-space: nowrap!important;
 	background-color: transparent;
 	color: #fff!important;
-	text-shadow: 2px 2px 2px #1f033d!important
 }
 .blocks-portlet a {
 	white-space: nowrap!important;
 	font-size: 87%;    background-color: transparent;
 	color: #fff!important;
-	text-shadow: 2px 2px 2px #1f033d!important
 }
 .menu-light {
 	background-color: rgba(0,0,0,.15)!important;
@@ -143,7 +143,7 @@ img.logo-default {
 }
 .home-tx{
 	font-size: 12px;
-	white-space:nowrap; 
+	white-space:nowrap;
 	overflow:hidden;
 	text-overflow: ellipsis;
 }
@@ -171,7 +171,7 @@ pre {
     word-wrap: break-word;
 }
 pre.code-js, .verified{
-    max-height: 200px; 
+    max-height: 200px;
 }
 .code {
     font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
