@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "../../token/KRC223.sol";
-import "../../kns/PublicResolver.sol";
+import "../../kns/DomainResolver.sol";
 import {NameHash} from "../../utils/NameHash.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
 //import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
@@ -17,7 +17,7 @@ contract ValidatorMgr is Pausable {
     bytes32 public validatorsChecksum;
     bytes32 nodeNamehash;
     uint public superNodeAmount;
-    PublicResolver public knsResolver;
+    DomainResolver public knsResolver;
 
     struct Deposit {
         uint amount;
@@ -87,7 +87,7 @@ contract ValidatorMgr is Pausable {
         maxNumValidators = _maxNumValidators;
         freezePeriod = _freezePeriod * 1 days;
         superNodeAmount = _superNodeAmount;
-        knsResolver = PublicResolver(_resolverAddr);
+        knsResolver = DomainResolver(_resolverAddr);
         nodeNamehash = NameHash.namehash("miningtoken.kowala");
     }
 

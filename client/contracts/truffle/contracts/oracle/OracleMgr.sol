@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./Consensus.sol";
-import "../kns/PublicResolver.sol";
+import "../kns/DomainResolver.sol";
 import {NameHash} from "../utils/NameHash.sol";
 
 /**
@@ -14,7 +14,7 @@ contract OracleMgr is Pausable {
     uint public syncFrequency;
     uint public updatePeriod;
     uint public price;
-    PublicResolver public knsResolver;
+    DomainResolver public knsResolver;
     bytes32 nodeNamehash;
     bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
@@ -80,7 +80,7 @@ contract OracleMgr is Pausable {
         maxNumOracles = _maxNumOracles;
         syncFrequency = _syncFrequency;
         updatePeriod = _updatePeriod;
-        knsResolver = PublicResolver(_resolverAddr);
+        knsResolver = DomainResolver(_resolverAddr);
         nodeNamehash = NameHash.namehash("validatormgr.kowala");
     }
 
