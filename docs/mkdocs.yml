@@ -1,10 +1,9 @@
-site_name: kCoin documentation
+site_name: kCoin Documentation
 dev_addr: 0.0.0.0:8000
 theme:
   name: material
-  custom_dir: theme_custom
-  favicon: 'assets/images/favicon.ico'
-  logo: 'assets/images/logo.png'
+  favicon: 'https://cdn.kowala.tech/images/meta/favicon.ico'
+  logo: 'https://cdn.kowala.tech/images/kowala/kowala-white.svg'
 extra:
   social:
     - type: 'github'
@@ -35,7 +34,7 @@ pages:
     - 'Join the Test Network' : 'getting-started/testnet.md'
     - 'Validator Registry': 'getting-started/consensus.md'
   - Glossary: 'glossary/index.md'
-  - Consensus: 
+  - Consensus:
     - 'Overview': 'consensus/index.md'
     - 'Kowala Protocol': 'consensus/kowala.md'
     - 'Proof-of-Stake Pitfalls': 'consensus/pitfalls.md'
@@ -44,7 +43,7 @@ pages:
   - Oracle:
     - 'Overview': 'oracle/index.md'
   - Advanced:
-    - Core Types: 
+    - Core Types:
       - 'Block':  'advanced/types/block.md'
       - 'Transaction': 'advanced/types/tx.md'
       - 'Account': 'advanced/types/account.md'

@@ -13,7 +13,7 @@
         "title": "Kcoin Block Explorer",
         "contact": "mailto:info@kowala.tech",
         "about": "This is the Kcoin Blockchain Explorer.",
-        "logo": "/img/kowala.svg",
+        "logo": "https://cdn.kowala.tech/images/kowala/kowala.svg",
         "customCss": "default.css",
         "copyright": "2018 &copy; Kowala Tech.",
         "useEthFiat": false,

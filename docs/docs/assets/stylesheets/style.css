@@ -13,25 +13,40 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Override header and footer with kowala violet*/
-.md-header,
-.md-footer-nav,
-.md-footer-meta {
-  background-color: #0c1e3e;
-}
-
-.md-logo {
-  width: 90;
-  height: 24;
-}
-
-/* Highlight current page in nav menu */
-.md-nav__link--active {
-  color: #536dfe;
-  font-weight: bold;
+img {
+  width: 100px;
 }
 
 /* Increase size of social media links in page footer */
 .md-footer-social {
   font-size: 20px;
+}
+
+.md-header {
+  background-color: #008ef5;
+}
+
+.md-header a {
+  color: white !important;
+}
+
+.md-header a:hover {
+  color: white !important;
+}
+
+
+a {
+  color: #004476 !important;
+}
+
+a:hover {
+  color: #008ef5 !important;
+}
+
+.md-footer-nav, .md-footer-meta {
+  background: white;
+}
+
+.md-footer-meta div {
+  color: black !important;
 }
