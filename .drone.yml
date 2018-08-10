@@ -12,8 +12,8 @@ pipeline:
   go_generate:
     image: kowalatech/go:1.0.11
     commands:
-    - make go_generate
-    - make assert_no_changes
+      - make go_generate
+      - make assert_no_changes
     when:
       event: [push]
 
@@ -431,6 +431,14 @@ pipeline:
     when:
       event: [push, tag]
       branch: [dev]
+
+  upload_repository_index:
+    image: kowalatech/go:1.0.11
+    commands:
+      - make go_repository_index_update
+    when:
+      event: [push, tag]
+      branch: [master,dev]
 
   upload_dev_docs_to_s3:
     group: asset_deployment
