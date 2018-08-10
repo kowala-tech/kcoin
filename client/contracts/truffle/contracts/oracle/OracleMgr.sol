@@ -13,7 +13,6 @@ contract OracleMgr is Pausable {
     uint public maxNumOracles;
     uint public syncFrequency;
     uint public updatePeriod;
-    Consensus consensus;
     uint public price;
     PublicResolver public knsResolver;
     bytes32 nodeNamehash;
@@ -49,7 +48,7 @@ contract OracleMgr is Pausable {
     }
 
     modifier onlySuperNode {
-        require(consensus.isSuperNode(msg.sender));
+        require(Consensus(knsResolver.addr(nodeNamehash)).isSuperNode(msg.sender));
         _;
     }
 
@@ -83,7 +82,6 @@ contract OracleMgr is Pausable {
         updatePeriod = _updatePeriod;
         knsResolver = PublicResolver(_resolverAddr);
         nodeNamehash = NameHash.namehash("validatormgr.kowala");
-        consensus = Consensus(knsResolver.addr(nodeNamehash));
     }
 
     /**

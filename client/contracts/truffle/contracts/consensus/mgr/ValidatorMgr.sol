@@ -16,7 +16,6 @@ contract ValidatorMgr is Pausable {
     uint public freezePeriod;
     bytes32 public validatorsChecksum;
     bytes32 nodeNamehash;
-    address public miningTokenAddr;
     uint public superNodeAmount;
     PublicResolver public knsResolver;
 
@@ -90,7 +89,6 @@ contract ValidatorMgr is Pausable {
         superNodeAmount = _superNodeAmount;
         knsResolver = PublicResolver(_resolverAddr);
         nodeNamehash = NameHash.namehash("miningtoken.kowala");
-        miningTokenAddr = knsResolver.addr(nodeNamehash);
     }
 
     /**
@@ -307,7 +305,7 @@ contract ValidatorMgr is Pausable {
         _removeDeposits(msg.sender, i);
 
         if (refund > 0) {
-            KRC223 mtoken = KRC223(miningTokenAddr);
+            KRC223 mtoken = KRC223(knsResolver.addr(nodeNamehash));
             mtoken.transfer(msg.sender, refund);
         }
     }
