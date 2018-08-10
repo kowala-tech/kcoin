@@ -40,6 +40,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/rpc"
 	"github.com/pkg/errors"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 )
 
 // Binding constructor creates a new contract binding
