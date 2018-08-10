@@ -17,7 +17,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
-	kns2 "github.com/kowala-tech/kcoin/client/kns"
+	kns2 "github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 )

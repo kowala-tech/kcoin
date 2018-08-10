@@ -16,7 +16,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 	"github.com/kowala-tech/kcoin/client/crypto"
-	kns2 "github.com/kowala-tech/kcoin/client/kns"
+	kns2 "github.com/kowala-tech/kcoin/client/common/kns"
 )
 
 type contract struct {
