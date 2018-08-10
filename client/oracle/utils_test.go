@@ -4,30 +4,31 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsUpdatePeriod(t *testing.T) {
-	testCases := struct{
-		input *big.Int
-		output bool
-	}
-	{
+	testCases := []struct {
+		Input  *big.Int
+		Output bool
+	}{
 		{
-			input: new(big.Int).SetUint64(869),
-			output: false,
+			Input:  new(big.Int).SetUint64(884),
+			Output: false,
 		},
 		{
-			input: new(big.Int).SetUint64(870),
-			output: true,
+			Input:  new(big.Int).SetUint64(885),
+			Output: true,
 		},
 		{
-			input: new(big.Int).SetUint64(871),
-			output: true,
+			Input:  new(big.Int).SetUint64(886),
+			Output: true,
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(fmt.Sprintf("blockNumber: %v", testCase.input), func (t *testing.T){
-			require.Equal(t, testCase.output, IsUpdatePeriod(testCase.input))
+		t.Run(fmt.Sprintf("blockNumber: %v", testCase.Input), func(t *testing.T) {
+			require.Equal(t, testCase.Output, IsUpdatePeriod(testCase.Input))
 		})
 	}
 }
