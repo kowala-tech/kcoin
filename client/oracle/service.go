@@ -36,8 +36,9 @@ type Service struct {
 	reportingMu   sync.RWMutex
 	reporting     bool
 	walletAccount accounts.WalletAccount
-	doneCh        chan struct{}
 	txPoolAPI     *kcoinapi.PublicTransactionPoolAPI
+
+	doneCh chan struct{}
 }
 
 // New returns a price reporting service
