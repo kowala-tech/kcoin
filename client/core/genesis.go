@@ -143,13 +143,16 @@ func SetupGenesisBlock(db kcoindb.Database, genesis *Genesis) (*params.ChainConf
 		} else {
 			log.Info("Writing custom genesis block")
 		}
-		block, err := genesis.Commit(db)
 
 		// @TODO (rgeraldes) - since we removed the difficulty calculation inside
 		// commit, there's the possibility that the method returns a nil block
 		// in case of an error, and that will trigger a segmentation violation
 		// while trying to get the block.Hash(), block is nil at this point.
-		log.Warn("Error information", "err", err)
+		block, err := genesis.Commit(db)
+		if err != nil {
+			log.Warn("Error information", "err", err)
+		}
+
 		return genesis.Config, block.Hash(), err
 	}
 
