@@ -39,17 +39,16 @@ static mbedtls_mpi global_default_secret;
 secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
 
 /*
-    ---- ADDRESS -------------------------------
-    SEC: cd244b3015703ddf545595da06ada5516628c5feadbf49dc66049c4b370cc5d8
-    PUB: bb48ae3726c5737344a54b3463fec499cb108a7d11ba137ba3c7d043bd6d7e14994f60462a3f91550749bb2ae5411f22b7f9bee79956a463c308ad508f3557df
-    ADR: 89b44e4d3c81ede05d0f5de8d1a68f754d73d997
+    Address:        0xD6e579085c82329C89fca7a9F012bE59028ED53F
+    Public key:     04eadf899c53eaa974cda5a813d770a2e7791e686d6f4297f04e527e25d219b25c9e1be2f3fef7b4b35f8c82ce5a7f7ee3669b749e8d04d6913175dbabd6d5a58c
+    Private key:    fca939d59ed3b0b69db1faffd2413ae9f6314ae2dc74a9dd2496ab7bdad066f7
 */
-#define DEV_KEY "cd244b3015703ddf545595da06ada5516628c5feadbf49dc66049c4b370cc5d8"
+#define DEV_KEY "fca939d59ed3b0b69db1faffd2413ae9f6314ae2dc74a9dd2496ab7bdad066f7"
 
 int ecdsa_sign(const uint8_t *data, uint8_t *rr, uint8_t *ss, uint8_t *vv)
 {
     //C.secp256k1_context_set_illegal_callback(context, C.callbackFunc(C.secp256k1GoPanicIllegal), nil)
-	//C.secp256k1_context_set_error_callback(context, C.callbackFunc(C.secp256k1GoPanicError), nil)
+    //C.secp256k1_context_set_error_callback(context, C.callbackFunc(C.secp256k1GoPanicError), nil)
 
     int ret;
     mbedtls_mpi secret;
@@ -57,7 +56,8 @@ int ecdsa_sign(const uint8_t *data, uint8_t *rr, uint8_t *ss, uint8_t *vv)
     unsigned char secret_buffer[32];
 
     ret = mbedtls_mpi_read_string(&secret, 16, DEV_KEY);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         return -1;
         //ret -1;
         //goto exit;
@@ -70,12 +70,13 @@ int ecdsa_sign(const uint8_t *data, uint8_t *rr, uint8_t *ss, uint8_t *vv)
         //goto exit;
     }
 
-    secp256k1_ecdsa_recoverable_signature rsig; 
+    secp256k1_ecdsa_recoverable_signature rsig;
     secp256k1_nonce_function nonce_fn = secp256k1_nonce_function_rfc6979;
-    if (secp256k1_ecdsa_sign_recoverable(ctx, &rsig, data, secret_buffer, nonce_fn, NULL) == 0) {
+    if (secp256k1_ecdsa_sign_recoverable(ctx, &rsig, data, secret_buffer, nonce_fn, NULL) == 0)
+    {
         return -1;
     }
-    
+
     int recid;
     bytes sig(65, 0);
     secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx, sig.data(), &recid, &rsig);
@@ -86,8 +87,6 @@ int ecdsa_sign(const uint8_t *data, uint8_t *rr, uint8_t *ss, uint8_t *vv)
 
     return 0;
 }
-
-
 
 int ecall_sgx_select_account(const uint8_t *secret, size_t secret_len)
 {
@@ -108,7 +107,7 @@ int ecall_sgx_select_account(const uint8_t *secret, size_t secret_len)
     return mbedtls_mpi_read_binary(&global_default_secret, y, sizeof y);
 }
 
-int ecdsa_pk_to_addr(const mbedtls_mpi *seckey, unsigned char *addr) 
+int ecdsa_pk_to_addr(const mbedtls_mpi *seckey, unsigned char *addr)
 {
     unsigned char pubkey[65];
     unsigned char address[32];
@@ -116,34 +115,39 @@ int ecdsa_pk_to_addr(const mbedtls_mpi *seckey, unsigned char *addr)
     size_t buflen = 0;
     int ret;
 
-
     mbedtls_ecdsa_init(&ctx);
     mbedtls_ecp_group_load(&ctx.grp, ECPARAMS);
 
     mbedtls_mpi_copy(&ctx.d, seckey);
 
     ret = mbedtls_ecp_mul(&ctx.grp, &ctx.Q, &ctx.d, &ctx.grp.G, NULL, NULL);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         return -1;
     }
 
     ret = mbedtls_ecp_point_write_binary(&ctx.grp, &ctx.Q, MBEDTLS_ECP_PF_UNCOMPRESSED, &buflen, pubkey, 65);
-    if (ret == MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL) {
-    return -1;
-    } else if (ret == MBEDTLS_ERR_ECP_BAD_INPUT_DATA) {
-    return -1;
+    if (ret == MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL)
+    {
+        return -1;
     }
-    if (buflen != 65) {
+    else if (ret == MBEDTLS_ERR_ECP_BAD_INPUT_DATA)
+    {
+        return -1;
+    }
+    if (buflen != 65)
+    {
         //LL_CRITICAL("ecp serialization is incorrect olen=%ld", buflen);
     }
 
     ret = keccak(pubkey + 1, 64, address, 32);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         return -1;
     }
 
     memcpy(addr, address + 12, 20);
-    return 0;  
+    return 0;
 }
 
 int ecall_sgx_new_account(unsigned char *sealed_key, size_t *sealed_key_len, unsigned char *addr)
@@ -158,8 +162,9 @@ int ecall_sgx_new_account(unsigned char *sealed_key, size_t *sealed_key_len, uns
     mbedtls_ecp_group_init(&grp);
     mbedtls_ecp_group_load(&grp, MBEDTLS_ECP_DP_SECP256K1);
     ret = mbedtls_mpi_read_string(&secret, 16, DEV_KEY);
-    if (ret != 0) {
-        ret -1;
+    if (ret != 0)
+    {
+        ret - 1;
         goto exit;
     }
     //mbedtls_mpi_fill_random(&secret, grp.nbits / 8, mbedtls_sgx_drbg_random, NULL);
@@ -186,7 +191,8 @@ int ecall_sgx_new_account(unsigned char *sealed_key, size_t *sealed_key_len, uns
         free(sealed_buffer);
     }
 
-    if (ecdsa_pk_to_addr(&secret, addr) < 0) {
+    if (ecdsa_pk_to_addr(&secret, addr) < 0)
+    {
         ret = -1;
         goto exit;
     }
