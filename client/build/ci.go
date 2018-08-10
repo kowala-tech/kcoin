@@ -126,7 +126,7 @@ var (
 	// stablePackages is a list of packages known to be stable to do full test and linters
 	stablePackages = []string{
 		"./consensus",
-		"./consensus/tendermint",
+		"./consensus/konsensus",
 		"./knode/validator",
 		"./knode/genesis",
 		"./kcoinclient",

@@ -15,7 +15,7 @@ const (
 	TestNetwork  = "test"
 	OtherNetwork = "other"
 
-	TendermintConsensus = "tendermint"
+	KonsensusConsensus = "konsensus"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 	}
 
 	availableConsensusEngines = map[string]bool{
-		TendermintConsensus: true,
+		KonsensusConsensus: true,
 	}
 
 	ErrEmptyMaxNumValidators             = errors.New("max number of validators is mandatory")
@@ -195,7 +195,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		return nil, err
 	}
 
-	consensusEngine := TendermintConsensus
+	consensusEngine := KonsensusConsensus
 	if options.Consensus.Engine != "" {
 		consensusEngine, err = mapConsensusEngine(options.Consensus.Engine)
 		if err != nil {

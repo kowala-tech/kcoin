@@ -14,8 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
-	"github.com/kowala-tech/kcoin/client/consensus/tendermint"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings"
+	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
@@ -227,8 +226,8 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kcoindb.Da
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Kowala service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database) engine.Engine {
-	// @TODO (rgeraldes) - complete with tendermint config if necessary, set rewarded to true
-	engine := tendermint.New(&params.TendermintConfig{})
+	// @TODO (rgeraldes) - complete with konsensus config if necessary, set rewarded to true
+	engine := konsensus.New(&params.KonsensusConfig{})
 	return engine
 }
 
@@ -248,7 +247,7 @@ func (s *Kowala) APIs() []rpc.API {
 			Service:   NewPublicKowalaAPI(s),
 			Public:    true,
 		}, {
-			Namespace: "eth",
+			Namespace: "/Bindjheth",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,

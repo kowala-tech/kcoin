@@ -1,10 +1,10 @@
 package validator
 
 import (
+	"errors"
 	"math/big"
 	"time"
 
-	"errors"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"

@@ -21,8 +21,8 @@ var Networks = map[string]map[string]Options{
 				NumConfirmations: 2,
 			},
 			Consensus: &ConsensusOpts{
-				Engine:           TendermintConsensus,
-				MaxNumValidators: 500,
+				Engine:           KonsensusConsensus,
+				MaxNumValidators: 100,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
 				SuperNodeAmount:  6000000,
@@ -91,8 +91,8 @@ var Networks = map[string]map[string]Options{
 				NumConfirmations: 2,
 			},
 			Consensus: &ConsensusOpts{
-				Engine:           TendermintConsensus,
-				MaxNumValidators: 500,
+				Engine:           KonsensusConsensus,
+				MaxNumValidators: 100,
 				FreezePeriod:     1,
 				BaseDeposit:      1000000,
 				SuperNodeAmount:  6000000,

@@ -24,6 +24,78 @@ var (
 	initialBalance = new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin))
 )
 
+func getDefaultOpts() genesis.Options {
+	baseDeposit := uint64(20)
+	superNodeAmount := uint64(6000000)
+	tokenHolder := genesis.TokenHolder{
+		Address:   getAddress(user).Hex(),
+		NumTokens: superNodeAmount,
+	}
+
+	opts := genesis.Options{
+		Network: "test",
+		Consensus: &genesis.ConsensusOpts{
+			Engine:           "konsensus",
+			MaxNumValidators: 10,
+			FreezePeriod:     30,
+			BaseDeposit:      baseDeposit,
+			SuperNodeAmount:  superNodeAmount,
+			Validators: []genesis.Validator{
+				{
+					Address: tokenHolder.Address,
+					Deposit: tokenHolder.NumTokens,
+				},
+				{
+					Address: getAddress(superNode).Hex(),
+					Deposit: superNodeAmount,
+				},
+			},
+			MiningToken: &genesis.MiningTokenOpts{
+				Name:     "mUSD",
+				Symbol:   "mUSD",
+				Cap:      20000000,
+				Decimals: 18,
+				Holders:  []genesis.TokenHolder{tokenHolder, {Address: getAddress(superNode).Hex(), NumTokens: superNodeAmount}},
+			},
+		},
+		Governance: &genesis.GovernanceOpts{
+			Origin:           getAddress(author).Hex(),
+			Governors:        []string{getAddress(governor).Hex()},
+			NumConfirmations: 1,
+		},
+		DataFeedSystem: &genesis.DataFeedSystemOpts{
+			MaxNumOracles: 10,
+			FreezePeriod:  32,
+			BaseDeposit:   1,
+			Price: genesis.PriceOpts{
+				InitialPrice:  1,
+				SyncFrequency: 600,
+				UpdatePeriod:  30,
+			},
+		},
+		PrefundedAccounts: []genesis.PrefundedAccount{
+			{
+				Address: tokenHolder.Address,
+				Balance: 10,
+			},
+			{
+				Address: getAddress(superNode).Hex(),
+				Balance: 10,
+			},
+			{
+				Address: getAddress(governor).Hex(),
+				Balance: 10,
+			},
+			{
+				Address: getAddress(userWithoutMUSD).Hex(),
+				Balance: 10,
+			},
+		},
+	}
+
+	return opts
+}
+
 type OracleMgrSuite struct {
 	suite.Suite
 	backend   *backends.SimulatedBackend
