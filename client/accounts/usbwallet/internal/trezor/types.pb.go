@@ -85,7 +85,7 @@ func (x *FailureType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (FailureType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{0}
+	return fileDescriptor_types_ccfddd123d774afb, []int{0}
 }
 
 // *
@@ -136,7 +136,7 @@ func (x *OutputScriptType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (OutputScriptType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{1}
+	return fileDescriptor_types_ccfddd123d774afb, []int{1}
 }
 
 // *
@@ -184,7 +184,7 @@ func (x *InputScriptType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (InputScriptType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{2}
+	return fileDescriptor_types_ccfddd123d774afb, []int{2}
 }
 
 // *
@@ -232,7 +232,7 @@ func (x *RequestType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (RequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{3}
+	return fileDescriptor_types_ccfddd123d774afb, []int{3}
 }
 
 // *
@@ -298,7 +298,7 @@ func (x *ButtonRequestType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (ButtonRequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{4}
+	return fileDescriptor_types_ccfddd123d774afb, []int{4}
 }
 
 // *
@@ -340,7 +340,7 @@ func (x *PinMatrixRequestType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (PinMatrixRequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{5}
+	return fileDescriptor_types_ccfddd123d774afb, []int{5}
 }
 
 // *
@@ -386,7 +386,7 @@ func (x *RecoveryDeviceType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (RecoveryDeviceType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{6}
+	return fileDescriptor_types_ccfddd123d774afb, []int{6}
 }
 
 // *
@@ -428,7 +428,7 @@ func (x *WordRequestType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (WordRequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{7}
+	return fileDescriptor_types_ccfddd123d774afb, []int{7}
 }
 
 // *
@@ -454,7 +454,7 @@ func (m *HDNodeType) Reset()         { *m = HDNodeType{} }
 func (m *HDNodeType) String() string { return proto.CompactTextString(m) }
 func (*HDNodeType) ProtoMessage()    {}
 func (*HDNodeType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{0}
+	return fileDescriptor_types_ccfddd123d774afb, []int{0}
 }
 func (m *HDNodeType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HDNodeType.Unmarshal(m, b)
@@ -528,7 +528,7 @@ func (m *HDNodePathType) Reset()         { *m = HDNodePathType{} }
 func (m *HDNodePathType) String() string { return proto.CompactTextString(m) }
 func (*HDNodePathType) ProtoMessage()    {}
 func (*HDNodePathType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{1}
+	return fileDescriptor_types_ccfddd123d774afb, []int{1}
 }
 func (m *HDNodePathType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HDNodePathType.Unmarshal(m, b)
@@ -585,7 +585,7 @@ func (m *CoinType) Reset()         { *m = CoinType{} }
 func (m *CoinType) String() string { return proto.CompactTextString(m) }
 func (*CoinType) ProtoMessage()    {}
 func (*CoinType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{2}
+	return fileDescriptor_types_ccfddd123d774afb, []int{2}
 }
 func (m *CoinType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CoinType.Unmarshal(m, b)
@@ -696,7 +696,7 @@ func (m *MultisigRedeemScriptType) Reset()         { *m = MultisigRedeemScriptTy
 func (m *MultisigRedeemScriptType) String() string { return proto.CompactTextString(m) }
 func (*MultisigRedeemScriptType) ProtoMessage()    {}
 func (*MultisigRedeemScriptType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{3}
+	return fileDescriptor_types_ccfddd123d774afb, []int{3}
 }
 func (m *MultisigRedeemScriptType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MultisigRedeemScriptType.Unmarshal(m, b)
@@ -759,7 +759,7 @@ func (m *TxInputType) Reset()         { *m = TxInputType{} }
 func (m *TxInputType) String() string { return proto.CompactTextString(m) }
 func (*TxInputType) ProtoMessage()    {}
 func (*TxInputType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{4}
+	return fileDescriptor_types_ccfddd123d774afb, []int{4}
 }
 func (m *TxInputType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxInputType.Unmarshal(m, b)
@@ -858,7 +858,7 @@ func (m *TxOutputType) Reset()         { *m = TxOutputType{} }
 func (m *TxOutputType) String() string { return proto.CompactTextString(m) }
 func (*TxOutputType) ProtoMessage()    {}
 func (*TxOutputType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{5}
+	return fileDescriptor_types_ccfddd123d774afb, []int{5}
 }
 func (m *TxOutputType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxOutputType.Unmarshal(m, b)
@@ -935,7 +935,7 @@ func (m *TxOutputBinType) Reset()         { *m = TxOutputBinType{} }
 func (m *TxOutputBinType) String() string { return proto.CompactTextString(m) }
 func (*TxOutputBinType) ProtoMessage()    {}
 func (*TxOutputBinType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{6}
+	return fileDescriptor_types_ccfddd123d774afb, []int{6}
 }
 func (m *TxOutputBinType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxOutputBinType.Unmarshal(m, b)
@@ -991,7 +991,7 @@ func (m *TransactionType) Reset()         { *m = TransactionType{} }
 func (m *TransactionType) String() string { return proto.CompactTextString(m) }
 func (*TransactionType) ProtoMessage()    {}
 func (*TransactionType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{7}
+	return fileDescriptor_types_ccfddd123d774afb, []int{7}
 }
 func (m *TransactionType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TransactionType.Unmarshal(m, b)
@@ -1091,7 +1091,7 @@ func (m *TxRequestDetailsType) Reset()         { *m = TxRequestDetailsType{} }
 func (m *TxRequestDetailsType) String() string { return proto.CompactTextString(m) }
 func (*TxRequestDetailsType) ProtoMessage()    {}
 func (*TxRequestDetailsType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{8}
+	return fileDescriptor_types_ccfddd123d774afb, []int{8}
 }
 func (m *TxRequestDetailsType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxRequestDetailsType.Unmarshal(m, b)
@@ -1155,7 +1155,7 @@ func (m *TxRequestSerializedType) Reset()         { *m = TxRequestSerializedType
 func (m *TxRequestSerializedType) String() string { return proto.CompactTextString(m) }
 func (*TxRequestSerializedType) ProtoMessage()    {}
 func (*TxRequestSerializedType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{9}
+	return fileDescriptor_types_ccfddd123d774afb, []int{9}
 }
 func (m *TxRequestSerializedType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxRequestSerializedType.Unmarshal(m, b)
@@ -1215,7 +1215,7 @@ func (m *IdentityType) Reset()         { *m = IdentityType{} }
 func (m *IdentityType) String() string { return proto.CompactTextString(m) }
 func (*IdentityType) ProtoMessage()    {}
 func (*IdentityType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{10}
+	return fileDescriptor_types_ccfddd123d774afb, []int{10}
 }
 func (m *IdentityType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_IdentityType.Unmarshal(m, b)
@@ -1361,9 +1361,9 @@ func init() {
 	proto.RegisterExtension(E_WireBootloader)
 }
 
-func init() { proto.RegisterFile("types.proto", fileDescriptor_types_bb03e09a1977888d) }
+func init() { proto.RegisterFile("types.proto", fileDescriptor_types_ccfddd123d774afb) }
 
-var fileDescriptor_types_bb03e09a1977888d = []byte{
+var fileDescriptor_types_ccfddd123d774afb = []byte{
 	// 1899 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x57, 0xdb, 0x72, 0x1a, 0xc9,
 	0x19, 0xf6, 0x00, 0x92, 0xe0, 0x07, 0xc4, 0xa8, 0x7d, 0xd0, 0x78, 0x6d, 0xaf, 0x31, 0x76, 0x62,
