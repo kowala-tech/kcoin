@@ -1,6 +1,3 @@
-// +build !linux
-// +build !386
-
 package scraper
 
 import (
