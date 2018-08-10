@@ -10,9 +10,9 @@ var Networks = map[string]map[string]Options{
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
-					"0xa1e8587ed7f915d5bbbf283b21af4813232069f7",
-					"0xbfAdCF85554F139F978DE5442aacFBe085c754f7",
-					"0xF358eb1020375800746ccd5c6638DA36C5a6bec9",
+					"0x6D5E05684c737D42F313d5B82A88090136e831F8",
+					"0x049ec8777b4806eff0Bb6039551690D8f650B25a",
+					"0x902f069aF381a650B7F18Ff28ffdAd0f11eb425b",
 				},
 				NumConfirmations: 2,
 			},
