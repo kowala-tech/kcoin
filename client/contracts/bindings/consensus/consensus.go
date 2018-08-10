@@ -19,6 +19,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	kns2 "github.com/kowala-tech/kcoin/client/kns"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 //go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
@@ -62,7 +63,10 @@ type mUSD struct {
 }
 
 func NewMUSD(contractBackend bind.ContractBackend, chainID *big.Int) (*mUSD, error) {
-	addr, err := getAddressFromKNS("miningtoken.kowala", contractBackend)
+	addr, err := getAddressFromKNS(
+		params.KNSDomains[params.MiningTokenDomain].FullDomain(),
+		contractBackend,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +128,10 @@ type consensus struct {
 
 // Binding returns a binding to the current consensus engine
 func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
-	addr, err := getAddressFromKNS("validatormgr.kowala", contractBackend)
+	addr, err := getAddressFromKNS(
+		params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
+		contractBackend,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +272,10 @@ func (consensus *consensus) MintInit() error {
 	var err error
 	consensus.initMint.Do(func() {
 		if consensus.multiSigWallet == nil {
-			addr, errKNS := getAddressFromKNS("multisig.kowala", consensus.contractBackend)
+			addr, errKNS := getAddressFromKNS(
+				params.KNSDomains[params.MultiSigDomain].FullDomain(),
+				consensus.contractBackend,
+			)
 			if errKNS != nil {
 				err = errKNS
 				return
@@ -281,7 +291,10 @@ func (consensus *consensus) MintInit() error {
 		}
 
 		if consensus.oracle == nil {
-			addr, errKns := getAddressFromKNS("oraclemgr.kowala", consensus.contractBackend)
+			addr, errKns := getAddressFromKNS(
+				params.KNSDomains[params.OracleMgrDomain].FullDomain(),
+				consensus.contractBackend,
+			)
 			if err != nil {
 				err = errKns
 				return
