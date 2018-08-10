@@ -578,7 +578,8 @@ func (val *validator) vote(vote *types.Vote) {
 
 	err = val.votingSystem.Add(addressVote)
 	if err != nil {
-		log.Warn("Failed to add own vote to voting table", "err", err)
+		log.Error("Failed to add own vote to voting table",
+			"err", err, "blockHash", addressVote.Vote().BlockHash(), "hash", addressVote.Vote().Hash())
 	}
 }
 
@@ -586,12 +587,18 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 	if !val.Validating() {
 		return ErrCantAddBlockFragmentNotValidating
 	}
-	val.blockFragments.Add(fragment)
+
+	if err := val.blockFragments.Add(fragment); err != nil {
+		err = errors.New("Failed to add a new block fragment: " + err.Error())
+		return err
+	}
 
 	if val.blockFragments.HasAll() {
 		block, err := val.blockFragments.Assemble()
 		if err != nil {
-			log.Crit("Failed to assemble the block", "err", err)
+			err = errors.New("Failed to assemble the block: " + err.Error())
+			log.Error("error while adding a new block fragment", "err", err, "round", round, "block", blockNumber, "fragment", fragment)
+			return err
 		}
 
 		// Start the parallel header verifier
@@ -607,6 +614,13 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		err = <-results
 		if err == nil {
 			err = val.chain.Validator().ValidateBody(block)
+			if err != nil {
+				err = errors.New("Failed to validate thr block body: " + err.Error())
+				log.Error("error while validating a block body",
+					"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block", block)
+
+				return err
+			}
 		}
 
 		parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
@@ -614,6 +628,9 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		// Process block using the parent state as reference point.
 		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
 		if err != nil {
+			log.Error("Failed to process the block", "err", err,
+				"round", round, "block", blockNumber, "fragment", fragment, "block", block)
+
 			log.Crit("Failed to process the block", "err", err)
 		}
 
@@ -625,6 +642,10 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
 		if err != nil {
 			val.handleMutex.Unlock()
+
+			log.Error("Failed to validate the state", "err", err,
+				"round", round, "block", blockNumber, "fragment", fragment, "block", block)
+
 			log.Crit("Failed to validate the state", "err", err)
 		}
 

@@ -2,6 +2,10 @@ package types
 
 import (
 	"bytes"
+	"sync"
+
+	"github.com/pkg/errors"
+
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
@@ -39,6 +43,17 @@ type DataSet struct {
 	count      uint             // number of current data chunks
 	data       []*Chunk         // stores data chunks
 	membership *common.BitArray // indicates whether a data unit is present or not
+	l          sync.RWMutex
+}
+
+// Metadata represents the content specifications
+type Metadata struct {
+	NChunks uint        `json:"nchunks" gencodec:"required"`
+	Root    common.Hash `json:"proof"   gencodec:"required"` // root hash of the trie
+}
+
+type MetadataMarshalling struct {
+	NChunks hexutil.Uint64
 }
 
 func NewDataSetFromMeta(meta *Metadata) *DataSet {
@@ -89,16 +104,6 @@ func NewDataSetFromData(data []byte, size int) *DataSet {
 	}
 }
 
-// Metadata represents the content specifications
-type Metadata struct {
-	NChunks uint        `json:"nchunks" gencodec:"required"`
-	Root    common.Hash `json:"proof"   gencodec:"required"` // root hash of the trie
-}
-
-type MetadataMarshalling struct {
-	NChunks hexutil.Uint64
-}
-
 func (ds *DataSet) Metadata() *Metadata {
 	return ds.meta
 }
@@ -108,29 +113,49 @@ func (ds *DataSet) Size() uint {
 }
 
 func (ds *DataSet) Count() uint {
+	ds.l.RLock()
+	defer ds.l.RUnlock()
 	return ds.count
 }
 
 func (ds *DataSet) Get(i int) *Chunk {
 	// @TODO (rgeraldes) - add logic to verify if the fragment
 	// exists
+
+	ds.l.RLock()
+	defer ds.l.RUnlock()
 	return ds.data[i]
 }
 
-func (ds *DataSet) Add(chunk *Chunk) {
+func (ds *DataSet) Add(chunk *Chunk) error {
+	if chunk == nil {
+		return errors.New("got a nil fragment")
+	}
+
+	ds.l.Lock()
+
 	// @TODO (rgeraldes) - validate index
 	// @TODO (rgeraldes) - check hash proof
 	ds.data[chunk.Index] = chunk
 	// @TODO (rgeraldes) - review int vs uint64
 	ds.membership.Set(int(chunk.Index))
 	ds.count++
+
+	ds.l.Unlock()
+
+	return nil
 }
 
 func (ds *DataSet) HasAll() bool {
+	ds.l.RLock()
+	defer ds.l.RUnlock()
 	return ds.count == ds.meta.NChunks
 }
 
 func (ds *DataSet) Data() []byte {
+	ds.l.RLock()
+	defer ds.l.RUnlock()
+
 	var buffer bytes.Buffer
 	for _, chunk := range ds.data {
 		buffer.Write(chunk.Data)
@@ -139,6 +164,9 @@ func (ds *DataSet) Data() []byte {
 }
 
 func (ds *DataSet) Assemble() (*Block, error) {
+	ds.l.RLock()
+	defer ds.l.RUnlock()
+
 	var block Block
 	if err := rlp.DecodeBytes(ds.Data(), &block); err != nil {
 		return nil, err
