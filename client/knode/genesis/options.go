@@ -113,10 +113,6 @@ type validValidatorMgrOpts struct {
 	owner            common.Address
 }
 
-type validPriceOpts struct {
-	initialPrice *big.Int
-}
-
 type validOracleMgrOpts struct {
 	maxNumOracles    *big.Int
 	validatorMgrAddr common.Address
