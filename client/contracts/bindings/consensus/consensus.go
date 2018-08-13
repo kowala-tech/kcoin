@@ -68,7 +68,9 @@ type Consensus interface {
 }
 
 type Minter interface {
-	Mint(opts *accounts.TransactOpts, to common.Address) (common.Hash, error)
+	MultiSigWalletContract() *ownership.MultiSigWallet
+	Mint(opts *accounts.TransactOpts, to common.Address, value *big.Int) (common.Hash, error)
+	Confirm(opts *accounts.TransactOpts, transactionID *big.Int) (common.Hash, error)
 }
 
 type mUSD struct {
@@ -101,15 +103,18 @@ func (tkn *mUSD) Mint(opts *accounts.TransactOpts, to common.Address, value *big
 }
 
 func toBind(opts *accounts.TransactOpts) *bind.TransactOpts {
-	return &bind.TransactOpts{
+	bindOpts := &bind.TransactOpts{
 		From:     opts.From,
 		Nonce:    opts.Nonce,
-		Signer:   bind.SignerFn(opts.Signer),
 		Value:    opts.Value,
 		GasPrice: opts.GasPrice,
-		GasLimit: opts.GasLimit.Uint64(),
 		Context:  opts.Context,
+		Signer:   bind.SignerFn(opts.Signer),
 	}
+	if opts.GasLimit != nil {
+		bindOpts.GasLimit = opts.GasLimit.Uint64()
+	}
+	return bindOpts
 }
 
 func (tkn *mUSD) BalanceOf(target common.Address) (*big.Int, error) {
@@ -127,6 +132,7 @@ type consensus struct {
 	chainID         *big.Int
 	contractBackend bind.ContractBackend
 
+	mtokenAddr     common.Address
 	initMint       sync.Once
 	multiSigWallet *ownership.MultiSigWallet
 	oracle         *oracle.OracleMgr
@@ -263,7 +269,14 @@ func (consensus *consensus) MintInit() error {
 	var err error
 	consensus.initMint.Do(func() {
 		if consensus.multiSigWallet == nil {
-			addr, ok := mapMultiSigWalletToAddr[consensus.chainID.Uint64()]
+			addr, ok := mapMiningTokenToAddr[consensus.chainID.Uint64()]
+			if !ok {
+				err = bindings.ErrNoAddress
+				return
+			}
+			consensus.mtokenAddr = addr
+
+			addr, ok = mapMultiSigWalletToAddr[consensus.chainID.Uint64()]
 			if !ok {
 				err = bindings.ErrNoAddress
 				return
@@ -298,7 +311,11 @@ func (consensus *consensus) MintInit() error {
 	return err
 }
 
-func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address) (common.Hash, error) {
+func (consensus *consensus) MultiSigWalletContract() *ownership.MultiSigWallet {
+	return consensus.multiSigWallet
+}
+
+func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address, value *big.Int) (common.Hash, error) {
 	if err := consensus.MintInit(); err != nil {
 		return common.Hash{}, err
 	}
@@ -308,12 +325,25 @@ func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address)
 		return common.Hash{}, err
 	}
 
-	mintParams, err := tokenABI.Pack("mint", to, opts.Value)
+	mintParams, err := tokenABI.Pack("mint", to, value)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	tx, err := consensus.multiSigWallet.SubmitTransaction(toBind(opts), to, common.Big0, mintParams)
+	tx, err := consensus.multiSigWallet.SubmitTransaction(toBind(opts), consensus.mtokenAddr, common.Big0, mintParams)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return tx.Hash(), err
+}
+
+func (consensus *consensus) Confirm(opts *accounts.TransactOpts, transactionID *big.Int) (common.Hash, error) {
+	if err := consensus.MintInit(); err != nil {
+		return common.Hash{}, err
+	}
+
+	tx, err := consensus.multiSigWallet.ConfirmTransaction(toBind(opts), transactionID)
 	if err != nil {
 		return common.Hash{}, err
 	}

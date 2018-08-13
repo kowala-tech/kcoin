@@ -206,13 +206,9 @@ func (api *PublicTokenAPI) Transfer(args TransferArgs) (common.Hash, error) {
 	return api.consensus.Token().Transfer(walletAccount, *args.To, (*big.Int)(args.Value), args.Data, args.CustomFallback)
 }
 
-func (api *PublicTokenAPI) Mint(args TransferArgs, pass string) (common.Hash, error) {
-	if args.Value == nil {
+func (api *PublicTokenAPI) Mint(args TransferArgs, pass string, to common.Address, value *big.Int) (common.Hash, error) {
+	if value == nil {
 		return common.Hash{}, errors.New("a number of tokens should be specified")
-	}
-
-	if args.To == nil {
-		return common.Hash{}, errors.New("a destination address should be specified")
 	}
 
 	walletAccount, err := api.getWallet(args.From)
@@ -231,7 +227,7 @@ func (api *PublicTokenAPI) Mint(args TransferArgs, pass string) (common.Hash, er
 		return common.Hash{}, err
 	}
 
-	return api.consensus.Mint(toTransact(transactOpts, args), *args.To)
+	return api.consensus.Mint(toTransact(transactOpts, args), to, value)
 }
 
 func toTransact(txOpts *accounts.TransactOpts, args TransferArgs) *accounts.TransactOpts {
