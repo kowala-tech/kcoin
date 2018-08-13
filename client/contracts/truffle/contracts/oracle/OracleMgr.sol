@@ -3,12 +3,13 @@ pragma solidity 0.4.24;
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./Consensus.sol";
 import "../kns/DomainResolver.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
 import {NameHash} from "../utils/NameHash.sol";
 
 /**
 * @title Oracle Manager contract
 */
-contract OracleMgr is Pausable {
+contract OracleMgr is Pausable, Initializable {
      
     uint public maxNumOracles;
     uint public syncFrequency;
@@ -69,6 +70,34 @@ contract OracleMgr is Pausable {
         uint _syncFrequency,
         uint _updatePeriod,
         address _resolverAddr) 
+    public {
+        require(_maxNumOracles > 0);
+
+        // sync enabled
+        if (_syncFrequency > 0) {
+            require(_updatePeriod > 0 && _updatePeriod <= _syncFrequency);
+        }
+        
+        maxNumOracles = _maxNumOracles;
+        syncFrequency = _syncFrequency;
+        updatePeriod = _updatePeriod;
+        knsResolver = DomainResolver(_resolverAddr);
+        nodeNamehash = NameHash.namehash("validatormgr.kowala");
+    }
+
+    /**
+     * initialize function for Proxy Pattern.
+     * @param _maxNumOracles Maximum numbers of Oracles.
+     * @param _syncFrequency Synchronize frequency for Oracles.
+     * @param _updatePeriod Update period.
+     * @param _resolverAddr Address of KNS Resolver.
+     */
+    function initialize (
+        uint _maxNumOracles,
+        uint _syncFrequency,
+        uint _updatePeriod,
+        address _resolverAddr)
+    isInitializer 
     public {
         require(_maxNumOracles > 0);
 

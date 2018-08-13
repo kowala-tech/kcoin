@@ -2,8 +2,9 @@ pragma solidity 0.4.24;
 
 import "./Token.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
 
-contract MintableToken is Token, Ownable {
+contract MintableToken is Token, Ownable, Initializable {
     event Mint(address indexed to, uint256 amount);
     event MintFinished();
 

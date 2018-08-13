@@ -8,6 +8,7 @@ const namehash = require('../node_modules/eth-ens-namehash');
 const NameHash = artifacts.require('./utils/NameHash.sol');
 const OracleMgr = artifacts.require('./oracle/OracleMgr.sol');
 const ValidatorMgr = artifacts.require('./consensus/mgr/ValidatorMgr.sol');
+const ValidatorMgr1 = artifacts.require('./consensus/mgr/ValidatorMgr1.sol');
 
 module.exports = (deployer) => {
   const domain = 'kowala';
@@ -21,6 +22,7 @@ module.exports = (deployer) => {
   deployer.deploy(NameHash);
   deployer.link(NameHash, OracleMgr);
   deployer.link(NameHash, ValidatorMgr);
+  deployer.link(NameHash, ValidatorMgr1);
 
   deployer.deploy(KNS)
     .then(() => deployer.deploy(FIFSRegistrar, KNS.address, rootNode.namehash))

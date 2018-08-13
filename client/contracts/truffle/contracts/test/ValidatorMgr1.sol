@@ -1,17 +1,17 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "../../token/KRC223.sol";
-import "../../kns/DomainResolver.sol";
+import "..//token/KRC223.sol";
+import "../kns/DomainResolver.sol";
 import "zos-lib/contracts/migrations/Initializable.sol";
-import {NameHash} from "../../utils/NameHash.sol";
+import {NameHash} from "../utils/NameHash.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
 //import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
 
 /**
  * @title Validator Manager for PoS consensus
  */
-contract ValidatorMgr is Pausable, Initializable {
+contract ValidatorMgr1 is Pausable, Initializable {
     uint public baseDeposit;       
     uint public maxNumValidators;
     uint public freezePeriod;
@@ -347,5 +347,9 @@ contract ValidatorMgr is Pausable, Initializable {
         // SSTORE problem - expensive
         tkn = TKN(_from, _value/*, _data, bytes4(u)*/);
         _registerValidator();
+    }
+
+    function helloProxy() public pure returns(string){
+        return "HelloProxy";
     }
 }
