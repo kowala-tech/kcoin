@@ -128,7 +128,7 @@ type consensus struct {
 }
 
 // Binding returns a binding to the current consensus engine
-func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
+func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
 	addr, err := getAddressFromKNS(
 		params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
 		contractBackend,
