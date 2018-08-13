@@ -14,6 +14,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 	"github.com/kowala-tech/kcoin/client/crypto"
@@ -35,6 +37,72 @@ func (contract *contract) AsGenesisAccount() core.GenesisAccount {
 		Storage: contract.storage,
 		Balance: new(big.Int),
 	}
+}
+
+var SystemVarsContract = &contract{
+	name: "SystemVars",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.sysvars
+
+		systemVarsABI, err := abi.JSON(strings.NewReader(sysvars.SystemVarsABI))
+		if err != nil {
+			return err
+		}
+
+		systemVarsParams, err := systemVarsABI.Pack(
+			"",
+			args.initialPrice,
+			args.initialSupply,
+		)
+		if err != nil {
+			return err
+		}
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = args.owner
+		contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(sysvars.SystemVarsBin), systemVarsParams...), runtimeCfg)
+		if err != nil {
+			return err
+		}
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		opts.stability.systemVarsAddr = contractAddr
+
+		return nil
+	},
+}
+
+var StabilityContract = &contract{
+	name: "Stability",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.stability
+
+		stabilityABI, err := abi.JSON(strings.NewReader(stability.StabilityABI))
+		if err != nil {
+			return err
+		}
+
+		stabilityParams, err := stabilityABI.Pack(
+			"",
+			args.minDeposit,
+			args.systemVarsAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = args.owner
+		contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(stability.StabilityBin), stabilityParams...), runtimeCfg)
+		if err != nil {
+			return err
+		}
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
 }
 
 var KNSRegistry = &contract{
@@ -335,6 +403,8 @@ var MultiSigContract = &contract{
 		opts.miningToken.owner = contractAddr
 		opts.validatorMgr.owner = contractAddr
 		opts.oracleMgr.owner = contractAddr
+		opts.sysvars.owner = contractAddr
+		opts.stability.owner = contractAddr
 
 		return nil
 	},
@@ -437,10 +507,7 @@ var OracleMgrContract = &contract{
 
 		managerParams, err := managerABI.Pack(
 			"",
-			args.price.initialPrice,
-			args.baseDeposit,
 			args.maxNumOracles,
-			args.freezePeriod,
 			args.price.syncFrequency,
 			args.price.updatePeriod,
 			args.validatorMgrAddr,

@@ -60,6 +60,8 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(ValidatorMgrContract)
 	gen.AddContract(OracleMgrContract)
 	gen.AddContract(MultiSigNameRegister)
+	gen.AddContract(SystemVarsContract)
+	gen.AddContract(StabilityContract)
 
 	return gen.Generate(opts)
 }
@@ -75,6 +77,7 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 	}
 
 	genesis := &core.Genesis{
+		Number:    validOptions.blockNumber,
 		Timestamp: uint64(genesisTimestamp),
 		GasLimit:  4700000,
 		Alloc:     gen.alloc,
@@ -100,7 +103,7 @@ func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 	}
 
 	gen.prefundAccounts(opts.prefundedAccounts)
-	gen.addBatchOfPrefundedAccountsIntoGenesis()
+	// @TODO (rgeraldes) - is this necessary?
 
 	return nil
 }
@@ -178,13 +181,6 @@ func getNetwork(network string) *big.Int {
 	}
 
 	return chainId
-}
-
-func (gen *generator) addBatchOfPrefundedAccountsIntoGenesis() {
-	// Add a batch of precompile balances to avoid them getting deleted
-	for i := int64(0); i < 256; i++ {
-		gen.alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
-	}
 }
 
 func (gen *generator) prefundAccounts(validPrefundedAccounts []*validPrefundedAccount) {

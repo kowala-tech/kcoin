@@ -38,6 +38,7 @@ type ValidatorsChecksum [32]byte
 
 // Consensus is a gateway to the validators contracts on the network
 type Consensus interface {
+	Domain() string
 	Join(walletAccount accounts.WalletAccount, amount *big.Int) error
 	Leave(walletAccount accounts.WalletAccount) error
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
@@ -334,6 +335,11 @@ func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address)
 	}
 
 	return tx.Hash(), err
+}
+
+// @TODO(rgeraldes) - temporary method
+func (consensus *consensus) Domain() string {
+	return ""
 }
 
 func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.TransactOpts {
