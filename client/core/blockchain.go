@@ -1403,12 +1403,13 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 // separated header/block phases (non-archive clients).
 func (bc *BlockChain) writeHeader(header *types.Header) error {
 	bc.wg.Add(1)
-	defer bc.wg.Done()
-
 	bc.mu.Lock()
-	defer bc.mu.Unlock()
 
 	_, err := bc.hc.WriteHeader(header)
+
+	bc.mu.Unlock()
+	bc.wg.Done()
+
 	return err
 }
 
