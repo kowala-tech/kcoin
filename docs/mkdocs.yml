@@ -47,6 +47,7 @@ pages:
       - 'Block':  'advanced/types/block.md'
       - 'Transaction': 'advanced/types/tx.md'
       - 'Account': 'advanced/types/account.md'
+    - Automatic client updates: 'advanced/automatic-client-updates.md'
   - Contributing:
     - 'Projects': 'contributing/projects.md'
   - About:
