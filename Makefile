@@ -123,9 +123,19 @@ wallet_backend_dep: dep
 
 # Cross Compilation Targets (xgo)
 
+.PHONY: go_repository_index_update
+go_repository_index_update:
+	@cd client; go run cmd/repository/main.go
+
 .PHONY: repository_index
 repository_index:
+	@echo "generating index files"
 	@aws s3 ls releases.kowala.io | cut -b32- - > index.txt
+
+.PHONY: repository_index_update
+repository_index_update: repository_index
+	@echo "uploading index files"
+	@aws s3 cp index.txt s3://releases.kowala.io --acl public-read
 
 .PHONY: kcoin_cross
 kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename
