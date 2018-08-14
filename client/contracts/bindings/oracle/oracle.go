@@ -17,12 +17,20 @@ var mapOracleMgrToAddr = map[uint64]common.Address{
 }
 
 type Manager interface {
-	Price() (*big.Int, error)
 	GetOracleCount() (*big.Int, error)
 }
 
-// Binding returns a binding to the current oracle mgr
-func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgrSession, error) {
+type manager struct {
+	*OracleMgrSession
+}
+
+// @TODO(rgeraldes) - temporary method
+func (mgr *manager) Domain() string {
+	return ""
+}
+
+// Bind returns a binding to the current oracle mgr
+func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
 	addr, ok := mapOracleMgrToAddr[chainID.Uint64()]
 	if !ok {
 		return nil, bindings.ErrNoAddress
@@ -33,8 +41,10 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgr
 		return nil, err
 	}
 
-	return &OracleMgrSession{
-		Contract: mgr,
-		CallOpts: bind.CallOpts{},
+	return &manager{
+		&OracleMgrSession{
+			Contract: mgr,
+			CallOpts: bind.CallOpts{},
+		},
 	}, nil
 }

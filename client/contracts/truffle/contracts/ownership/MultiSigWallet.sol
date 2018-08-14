@@ -1,6 +1,8 @@
 pragma solidity 0.4.24;
 
-contract MultiSigWallet {
+import "zos-lib/contracts/migrations/Initializable.sol";
+
+contract MultiSigWallet is Initializable {
 
     event Confirmation(address indexed sender, uint indexed transactionId);
     event Revocation(address indexed sender, uint indexed transactionId);
@@ -85,6 +87,25 @@ contract MultiSigWallet {
     /// @param _owners List of initial owners.
     /// @param _required Number of required confirmations.
     function MultiSigWallet(address[] _owners, uint _required)
+        public
+        validRequirement(_owners.length, _required)
+    {
+        for (uint i = 0; i<_owners.length; i++) {
+            require(!isOwner[_owners[i]] && _owners[i] != 0);
+            isOwner[_owners[i]] = true;
+        }
+        owners = _owners;
+        required = _required;
+    }
+
+    /**
+     * initialize function for Proxy Pattern. 
+     * @dev Contract constructor sets initial owners and required number of confirmations.
+     * @param _owners List of initial owners.
+     * @param _required Number of required confirmations.
+    */
+    function initialize (address[] _owners, uint _required)
+        isInitializer
         public
         validRequirement(_owners.length, _required)
     {

@@ -1,20 +1,24 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "../../token/ERC223.sol";
+import "../../token/KRC223.sol";
+import "../../kns/DomainResolver.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
+import {NameHash} from "../../utils/NameHash.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
 //import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
 
 /**
  * @title Validator Manager for PoS consensus
  */
-contract ValidatorMgr is Pausable {
+contract ValidatorMgr is Pausable, Initializable {
     uint public baseDeposit;       
     uint public maxNumValidators;
     uint public freezePeriod;
     bytes32 public validatorsChecksum;
-    address public miningTokenAddr;
+    bytes32 nodeNamehash;
     uint public superNodeAmount;
+    DomainResolver public knsResolver;
 
     struct Deposit {
         uint amount;
@@ -68,17 +72,50 @@ contract ValidatorMgr is Pausable {
      * @param _baseDeposit base deposit for Validator
      * @param _maxNumValidators Maximum numbers of Validators.
      * @param _freezePeriod Freeze period for Validator's deposits.
-     * @param _miningTokenAddr Address of mining token.
      * @param _superNodeAmount Amount required to be considered a super node.
+     * @param _resolverAddr Address of KNS Resolver.
      */
-    function ValidatorMgr(uint _baseDeposit, uint _maxNumValidators, uint _freezePeriod, address _miningTokenAddr, uint _superNodeAmount) public {
-        require(_maxNumValidators >= 1);
+    function ValidatorMgr(
+        uint _baseDeposit,
+        uint _maxNumValidators,
+        uint _freezePeriod,
+        uint _superNodeAmount,
+        address _resolverAddr) 
+    public {
+        require(_maxNumValidators > 0);
 
         baseDeposit = _baseDeposit;
         maxNumValidators = _maxNumValidators;
         freezePeriod = _freezePeriod * 1 days;
-        miningTokenAddr = _miningTokenAddr;
         superNodeAmount = _superNodeAmount;
+        knsResolver = DomainResolver(_resolverAddr);
+        nodeNamehash = NameHash.namehash("miningtoken.kowala");
+    }
+
+    /**
+     * initialize function for Proxy Pattern..
+     * @param _baseDeposit base deposit for Validator
+     * @param _maxNumValidators Maximum numbers of Validators.
+     * @param _freezePeriod Freeze period for Validator's deposits.
+     * @param _superNodeAmount Amount required to be considered a super node.
+     * @param _resolverAddr Address of KNS Resolver.
+     */
+    function initialize(
+        uint _baseDeposit,
+        uint _maxNumValidators,
+        uint _freezePeriod,
+        uint _superNodeAmount,
+        address _resolverAddr)
+    isInitializer
+    public {
+        require(_maxNumValidators > 0);
+
+        baseDeposit = _baseDeposit;
+        maxNumValidators = _maxNumValidators;
+        freezePeriod = _freezePeriod * 1 days;
+        superNodeAmount = _superNodeAmount;
+        knsResolver = DomainResolver(_resolverAddr);
+        nodeNamehash = NameHash.namehash("miningtoken.kowala");
     }
 
     /**
@@ -295,7 +332,7 @@ contract ValidatorMgr is Pausable {
         _removeDeposits(msg.sender, i);
 
         if (refund > 0) {
-            ERC223 mtoken = ERC223(miningTokenAddr);
+            KRC223 mtoken = KRC223(knsResolver.addr(nodeNamehash));
             mtoken.transfer(msg.sender, refund);
         }
     }
@@ -304,13 +341,11 @@ contract ValidatorMgr is Pausable {
      * @dev Register Validator
      * @param _from from address
      * @param _value value to send
-     * @param _data data to sent
      */
-    function registerValidator(address _from, uint _value, bytes _data) public {
+    function registerValidator(address _from, uint _value) public {
         //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
         // SSTORE problem - expensive
         tkn = TKN(_from, _value/*, _data, bytes4(u)*/);
         _registerValidator();
     }
-    
 }

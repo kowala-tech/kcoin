@@ -52,6 +52,7 @@ type ValidatorsChecksum [32]byte
 
 // Consensus is a gateway to the validators contracts on the network
 type Consensus interface {
+	Domain() string
 	Join(walletAccount accounts.WalletAccount, amount *big.Int) error
 	Leave(walletAccount accounts.WalletAccount) error
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
@@ -132,8 +133,8 @@ type consensus struct {
 	oracle         *oracle.OracleMgr
 }
 
-// Binding returns a binding to the current consensus engine
-func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
+// Bind returns a binding to the current consensus engine
+func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
 	addr, ok := mapValidatorMgrToAddr[chainID.Uint64()]
 	if !ok {
 		return nil, bindings.ErrNoAddress
@@ -319,6 +320,11 @@ func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address)
 	}
 
 	return tx.Hash(), err
+}
+
+// @TODO(rgeraldes) - temporary method
+func (consensus *consensus) Domain() string {
+	return ""
 }
 
 func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.TransactOpts {
