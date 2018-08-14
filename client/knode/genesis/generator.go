@@ -58,6 +58,7 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(ProxiedPublicResolver)
 	gen.AddContract(MiningTokenContract)
 	gen.AddContract(StringsLibrary)
+	gen.AddContract(NameHashLibrary)
 	//gen.AddContract(ValidatorMgrContract)
 	//gen.AddContract(OracleMgrContract)
 	//gen.AddContract(MultiSigNameRegister)

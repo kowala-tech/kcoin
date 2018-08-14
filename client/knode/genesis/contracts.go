@@ -516,6 +516,24 @@ var StringsLibrary = &contract{
 	},
 }
 
+var NameHashLibrary = &contract{
+	name: "NameHashLibrary",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(utils.NameHashBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
+}
+
 var OracleMgrContract = &contract{
 	name: "Oracle Manager",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
