@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	Bucket    = "releases.kowala.io"
+	Bucket    = "releases.kowala.tech"
 	Region    = "us-east-1"
 	IndexName = "index.txt"
 )

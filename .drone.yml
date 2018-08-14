@@ -411,7 +411,7 @@ pipeline:
     region: us-east-1
     acl: public-read
     encryption: AES256
-    bucket: releases.kowala.io
+    bucket: releases.kowala.tech
     source: gource-audio.mp4
     target: /kowala-kcoin-development-history.mp4
     when:
@@ -424,7 +424,7 @@ pipeline:
     region: us-east-1
     acl: public-read
     encryption: AES256
-    bucket: releases.kowala.io
+    bucket: releases.kowala.tech
     source: client/build/bin/kcoin-*.zip
     strip_prefix: client/build/bin/
     target: /
