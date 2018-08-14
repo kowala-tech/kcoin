@@ -9,7 +9,7 @@ repository to keep your client up to date automatically, but you don't have to:
 you're free to upgrade your client manually, or even host your own repository
 and use that for automatic updates. 
 
-We just this system to deploy mining clients on our own testnets, and also to
+We just use this system to deploy mining clients on our own testnets, and also to
 update our own personal mining machines, so we're pretty sure it works well.
 Since all kcoin networks are decentralized and owned by their users, we can't
 (and wouldn't) mandate the use of automatic updates &mdash; like everything
