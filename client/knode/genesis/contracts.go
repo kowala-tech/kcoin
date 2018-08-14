@@ -16,6 +16,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/utils"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 	"github.com/kowala-tech/kcoin/client/crypto"
@@ -495,6 +496,24 @@ func mintTokens(contract *contract, opts *validGenesisOptions) error {
 	}
 
 	return nil
+}
+
+var StringsLibrary = &contract{
+	name: "StringsLibrary",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(utils.StringsBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
 }
 
 var OracleMgrContract = &contract{
