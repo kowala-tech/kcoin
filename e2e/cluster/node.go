@@ -1,12 +1,14 @@
 package cluster
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/kcoinclient"
 	"github.com/kowala-tech/kcoin/client/log"
 )
 
@@ -217,6 +219,29 @@ func kcoinIsReadyFn(nodeID NodeID) func(NodeRunner) error {
 			return fmt.Errorf("node returns a wrong result. expect %s, got %s", randomStr, res.StdOut)
 		}
 
+		return nil
+	}
+}
+
+func rpcIsReadyFn(nodeID NodeID, rpcPort int32) func(NodeRunner) error {
+	parentFn := kcoinIsReadyFn(nodeID)
+	return func(runner NodeRunner) error {
+		err := parentFn(runner)
+		if err != nil {
+			return err
+		}
+		rpcAddr := fmt.Sprintf("http://%v:%v", runner.HostIP(), rpcPort)
+		client, err := kcoinclient.Dial(rpcAddr)
+		if err != nil {
+			return err
+		}
+		block, err := client.BlockNumber(context.Background())
+		if err != nil {
+			return err
+		}
+		if block.Int64() == 0 {
+			return errors.New("rpc service didn't see any block yet")
+		}
 		return nil
 	}
 }

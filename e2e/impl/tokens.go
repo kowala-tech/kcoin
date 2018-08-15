@@ -5,15 +5,37 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
-	"github.com/kowala-tech/kcoin/client/common/hexutil"
-	"github.com/kowala-tech/kcoin/client/knode"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/e2e/cluster"
 )
 
-func (ctx *ValidationContext) sendTokensAndWait(from, to accounts.Account, tokens int64) error {
+func (ctx *Context) IsMTokensBalanceExact(account string, expectedMTokens int64) error {
+	acc, ok := ctx.accounts[account]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", account)
+	}
+
+	return ctx.checkTokenBalance(acc, expectedMTokens)
+}
+
+func (ctx *Context) ITransferMTokens(mTokens int64, from, to string) error {
+	fromAccount, ok := ctx.accounts[from]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", from)
+	}
+
+	toAccount, ok := ctx.accounts[to]
+	if !ok {
+		return fmt.Errorf("can't get account for %q", to)
+	}
+
+	return ctx.sendTokensAndWait(fromAccount, toAccount, mTokens)
+}
+
+func (ctx *Context) sendTokensAndWait(from, to accounts.Account, tokens int64) error {
 	res := &cluster.ExecResponse{}
-	if err := ctx.execCommand(getTokenBalance(to.Address), res); err != nil {
+	if err := ctx.execCommand(ctx.rpcNodeID, getTokenBalance(to.Address), res); err != nil {
 		return err
 	}
 	currentBalanceBig, ok := new(big.Int).SetString(res.StdOut, 10)
@@ -31,55 +53,45 @@ func (ctx *ValidationContext) sendTokensAndWait(from, to accounts.Account, token
 		})
 }
 
-func (ctx *ValidationContext) sendTokens(from, to accounts.Account, tokens int64) error {
-	weis := toWei(tokens)
-	hexWeis := hexutil.Big(*weis)
-	args := knode.TransferArgs{
-			From:  from.Address,
-			To:    &to.Address,
-			Value: &hexWeis,
-	}
-
+func (ctx *Context) checkTokenBalance(account accounts.Account, expectedMTokens int64) error {
+	weis := toWei(expectedMTokens)
 	res := &cluster.ExecResponse{}
-	return ctx.execCommand(transferTokens(args), res)
-}
-
-func (ctx *ValidationContext) mintTokensAndWait(governance []accounts.Account, to accounts.Account, tokens int64) error {
-	var (
-		err error
-		currentBalanceBig *big.Int
-	)
-
-	if currentBalanceBig, err = ctx.getTokenBalance(to.Address); err != nil {
+	if err := ctx.execCommand(ctx.rpcNodeID, getTokenBalance(account.Address), res); err != nil {
 		return err
 	}
-	currentBalance := new(big.Int).Div(currentBalanceBig, big.NewInt(params.Kcoin)).Int64()
 
-	return ctx.waiter.Do(
-		func() error {
-			var err error
-			for _, from := range governance {
-				err = ctx.mintTokens(from, to, tokens, AccountPass)
-				if err != nil {
-					break
-				}
-			}
-			return err
-		},
-		func() error {
-			return ctx.checkTokenBalance(to, currentBalance+tokens)
-		})
-}
-
-func (ctx *ValidationContext) mintTokens(from, to accounts.Account, tokens int64, pass string) error {
-	weis := toWei(tokens)
-	hexWeis := hexutil.Big(*weis)
-	args := knode.TransferArgs{
-		From:  from.Address,
-		To:    &to.Address,
-		Value: &hexWeis,
+	tokenBalance, ok := new(big.Int).SetString(res.StdOut, 10)
+	if !ok {
+		return fmt.Errorf("incorrect mToken balance %q for %s", res.StdOut, account.Address.String())
 	}
 
-	res := &cluster.ExecResponse{}
-	return ctx.execCommand(mintTokens(args, pass), res)
+	if tokenBalance.Cmp(weis) != 0 {
+		return fmt.Errorf("account %s have %v mTokens, expected %v", account.Address.String(), tokenBalance, expectedMTokens)
+	}
+
+	return nil
+}
+
+func (ctx *Context) sendTokens(from, to accounts.Account, tokens int64) error {
+	weis := toWei(tokens)
+
+	musd, err := consensus.NewMUSD(ctx.client, ctx.chainID)
+	if err != nil {
+		return err
+	}
+	wallet, err := ctx.findWalletFor(from)
+	if err != nil {
+		return err
+	}
+	walletAccount, err := accounts.NewWalletAccount(wallet, from)
+	if err != nil {
+		return err
+	}
+
+	_, err = musd.Transfer(walletAccount, to.Address, weis, nil, "")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

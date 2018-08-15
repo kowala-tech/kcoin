@@ -175,13 +175,25 @@ func (vctx *ValidationContext) IHaveTheFollowingAccounts(accountsDataTable *gher
 		}
 
 		if accountData.Tokens != 0 {
-			if err := vctx.sendTokensAndWait(ctx.mtokensSeederAccount, acct, accountData.Tokens); err != nil {
+			if err := ctx.sendTokensAndWait(ctx.mtokensSeederAccount, acct, accountData.Tokens); err != nil {
 				return accountError(accountData, err)
 			}
 		}
 	}
 
 	return nil
+}
+
+func (ctx *Context) findWalletFor(acct accounts.Account) (accounts.Wallet, error) {
+	allWallets := ctx.AccountsStorage.Wallets()
+	for _, w := range allWallets {
+		for _, a := range w.Accounts() {
+			if a.Address == acct.Address {
+				return w, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("wallet not found for account %v", acct.Address)
 }
 
 func accountError(accountData *AccountEntry, err error) error {
