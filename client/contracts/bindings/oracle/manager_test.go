@@ -28,7 +28,7 @@ var (
 type OracleMgrSuite struct {
 	suite.Suite
 	backend   *backends.SimulatedBackend
-	oracleMgr *oracle.OracleMgr
+	oracleMgr *testfiles.OracleMgr
 }
 
 func TestOracleMgrSuite(t *testing.T) {
@@ -53,11 +53,9 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 		return
 	}
 
-	mockSuperNode := true
 	maxNumOracles := 50
 	switch {
 	case strings.Contains(testName, "_NotSuperNode"):
-		mockSuperNode = false
 		fallthrough
 	case strings.Contains(testName, "_Full"):
 		maxNumOracles = 1
@@ -65,17 +63,14 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 
 	transactOpts := bind.NewKeyedTransactor(owner)
 
-	// deploy consensus
-	mockAddr, _, _, err := testfiles.DeployConsensusMock(transactOpts, suite.backend, mockSuperNode)
-	req.NoError(err)
-	req.NotZero(mockAddr)
-
-	suite.backend.Commit()
+	suite.deployStringsLibrary(transactOpts)
+	suite.deployNameHashLibrary(transactOpts)
+	resolverMockAddress := suite.deployResolverMock(transactOpts)
 
 	// deploy oracle mgr contract
 	syncFreq := big.NewInt(900)
 	updatePeriod := big.NewInt(50)
-	_, _, oracleMgrContract, err := oracle.DeployOracleMgr(transactOpts, suite.backend, big.NewInt(int64(maxNumOracles)), syncFreq, updatePeriod, mockAddr)
+	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.backend, big.NewInt(int64(maxNumOracles)), syncFreq, updatePeriod, resolverMockAddress)
 	req.NoError(err)
 	req.NotNil(oracleMgrContract)
 	suite.oracleMgr = oracleMgrContract
