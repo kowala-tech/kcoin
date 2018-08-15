@@ -5,11 +5,14 @@ import (
 	"strings"
 	"testing"
 
+	"crypto/ecdsa"
+
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind/backends"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle/testfiles"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/utils"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/params"
@@ -17,8 +20,8 @@ import (
 )
 
 var (
-	owner, _       = crypto.GenerateKey()
-	user, _        = crypto.GenerateKey()
+	owner, _       = ecdsa.GenerateKey(crypto.S256(), strings.NewReader("ownerAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")) // Needed deterministic in order to link NameHash lib in contract.
+	user, _        = ecdsa.GenerateKey(crypto.S256(), strings.NewReader("userAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
 	initialBalance = new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin))
 )
 
@@ -86,19 +89,15 @@ func (suite *OracleMgrSuite) TestDeploy() {
 
 	transactOpts := bind.NewKeyedTransactor(owner)
 
-	// deploy consensus
-	mockSupernode := false
-	mockAddr, _, _, err := testfiles.DeployConsensusMock(transactOpts, suite.backend, mockSupernode)
-	req.NoError(err)
-	req.NotZero(mockAddr)
+	suite.deployStringsLibrary(transactOpts)
+	suite.deployNameHashLibrary(transactOpts)
+	resolverMock := suite.deployResolverMock(transactOpts)
 
-	suite.backend.Commit()
-
-	// deploy oracle mgr contract
+	//deploy oracle mgr contract
 	maxNumOracles := big.NewInt(50)
 	syncFreq := big.NewInt(900)
 	updatePeriod := big.NewInt(50)
-	_, _, oracleMgrContract, err := oracle.DeployOracleMgr(transactOpts, suite.backend, maxNumOracles, syncFreq, updatePeriod, mockAddr)
+	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.backend, maxNumOracles, syncFreq, updatePeriod, resolverMock)
 	req.NoError(err)
 	req.NotNil(oracleMgrContract)
 
@@ -118,6 +117,39 @@ func (suite *OracleMgrSuite) TestDeploy() {
 	req.NoError(err)
 	req.NotNil(storedUpdatePeriod)
 	req.Equal(updatePeriod, storedUpdatePeriod)
+}
+
+func (suite *OracleMgrSuite) deployResolverMock(transactOpts *bind.TransactOpts) common.Address {
+	req := suite.Require()
+
+	mockAddr, _, _, err := testfiles.DeployDomainResolverMock(transactOpts, suite.backend)
+	req.NoError(err)
+	req.NotZero(mockAddr)
+	suite.backend.Commit()
+
+	return mockAddr
+}
+
+func (suite *OracleMgrSuite) deployNameHashLibrary(transactOpts *bind.TransactOpts) common.Address {
+	req := suite.Require()
+
+	nameHashLib, _, _, err := utils.DeployNameHash(transactOpts, suite.backend)
+	req.NoError(err)
+	req.NotZero(nameHashLib)
+	suite.backend.Commit()
+
+	return nameHashLib
+}
+
+func (suite *OracleMgrSuite) deployStringsLibrary(transactOpts *bind.TransactOpts) common.Address {
+	req := suite.Require()
+
+	stringsLibAddr, _, _, err := utils.DeployStrings(transactOpts, suite.backend)
+	req.NoError(err)
+	req.NotZero(stringsLibAddr)
+	suite.backend.Commit()
+
+	return stringsLibAddr
 }
 
 func (suite *OracleMgrSuite) TestDeploy_MaxNumOraclesEqualZero() {
