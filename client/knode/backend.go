@@ -120,6 +120,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 		bindingFuncs:   []BindingConstructor{oracle.Bind, consensus.Bind, sysvars.Bind, stability.Bind},
+		contracts:      make(map[reflect.Type]bindings.Binding),
 	}
 
 	log.Info("Initialising Kowala protocol", "versions", protocol.Constants.Versions, "network", config.NetworkId)

@@ -92,7 +92,16 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	// deploy validator mgr
 	baseDeposit := new(big.Int).SetUint64(100)
 	superNodeAmount := new(big.Int).SetUint64(200)
-	_, _, validatorMgr, err := consensus.DeployValidatorMgr(transactOpts, suite.backend, baseDeposit, big.NewInt(int64(maxNumValidators)), big.NewInt(int64(freezePeriod)), mockAddr, superNodeAmount)
+
+	_, _, validatorMgr, err := consensus.DeployValidatorMgr(
+		transactOpts,
+		suite.backend,
+		baseDeposit,
+		big.NewInt(int64(maxNumValidators)),
+		big.NewInt(int64(freezePeriod)),
+		superNodeAmount,
+		mockAddr)
+
 	req.NoError(err)
 	req.NotNil(validatorMgr)
 	suite.validatorMgr = validatorMgr
@@ -120,7 +129,16 @@ func (suite *ValidatorMgrSuite) TestDeploy() {
 	maxNumValidators := new(big.Int).SetUint64(100)
 	freezePeriod := new(big.Int).SetUint64(1000)
 	superNodeAmount := new(big.Int).SetUint64(500000)
-	_, _, validatorMgr, err := consensus.DeployValidatorMgr(transactOpts, suite.backend, baseDeposit, maxNumValidators, freezePeriod, mockAddr, superNodeAmount)
+
+	_, _, validatorMgr, err := consensus.DeployValidatorMgr(
+		transactOpts,
+		suite.backend,
+		baseDeposit,
+		maxNumValidators,
+		freezePeriod,
+		superNodeAmount,
+		mockAddr)
+
 	req.NoError(err)
 	req.NotNil(validatorMgr)
 
@@ -141,7 +159,7 @@ func (suite *ValidatorMgrSuite) TestDeploy() {
 	req.NotNil(storedMaxNumValidators)
 	req.Equal(maxNumValidators, storedMaxNumValidators)
 
-	storedMiningTokenAddr, err := validatorMgr.MiningTokenAddr(&bind.CallOpts{})
+	storedMiningTokenAddr, err := validatorMgr.KnsResolver(&bind.CallOpts{})
 	req.NoError(err)
 	req.NotNil(storedMiningTokenAddr)
 	req.Equal(mockAddr, storedMiningTokenAddr)
@@ -169,7 +187,16 @@ func (suite *ValidatorMgrSuite) TestDeploy_MaxNumValidatorsZero() {
 	maxNumValidators := common.Big0 // set max num validators to zero
 	freezePeriod := new(big.Int).SetUint64(1000)
 	superNodeAmount := new(big.Int).SetUint64(500000)
-	_, _, _, err = consensus.DeployValidatorMgr(transactOpts, suite.backend, baseDeposit, maxNumValidators, freezePeriod, mockAddr, superNodeAmount)
+
+	_, _, _, err = consensus.DeployValidatorMgr(
+		transactOpts,
+		suite.backend,
+		baseDeposit,
+		maxNumValidators,
+		freezePeriod,
+		superNodeAmount,
+		mockAddr)
+
 	req.Error(err, "max number of validators cannot be zero")
 }
 
@@ -326,7 +353,9 @@ func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 	req.NoError(err)
 	req.NotNil(managerParams)
 
-	validatorMgrCode, validatorMgrAddr, _, err := runtime.Create(append(common.FromHex(consensus.ValidatorMgrBin), managerParams...), runtimeCfg)
+	validatorMgrCode, validatorMgrAddr, _, err := runtime.Create(
+		append(common.FromHex(consensus.ValidatorMgrBin), managerParams...), runtimeCfg)
+
 	req.NoError(err)
 	req.NotZero(validatorMgrAddr)
 	req.NotZero(validatorMgrCode)
