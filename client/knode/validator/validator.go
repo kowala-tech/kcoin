@@ -160,7 +160,14 @@ func (val *validator) run() {
 
 	log.Info("Starting the consensus state machine")
 	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
-		state = state()
+		var err error
+		state, err = state()
+
+		if err != nil {
+			log.Error("exiting validation process got error: ", "err", err.Error())
+			break
+		}
+
 		if val.maxTransitions > 0 && numTransitions == val.maxTransitions {
 			break
 		}

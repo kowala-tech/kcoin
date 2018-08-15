@@ -11,6 +11,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
+
+	"github.com/pkg/errors"
 )
 
 // work is the proposer current environment and holds all of the current state information
@@ -22,13 +24,16 @@ type work struct {
 	receipts []*types.Receipt
 }
 
-type stateFn func() stateFn
+type stateFn func() (stateFn, error)
 
-func (val *validator) notLoggedInState() stateFn {
+func (val *validator) abortedState() (stateFn, error) {
+	return nil, errors.New("validator state machine aborted")
+}
+
+func (val *validator) notLoggedInState() (stateFn, error) {
 	isGenesis, err := val.consensus.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
-		log.Warn("Failed to verify the voter information", "err", err)
-		return nil
+		return nil, errors.Wrap(err, "failed to verify the voter information: %s")
 	}
 
 	// @NOTE (rgeraldes) - sync was already done at this point and by default the investors will be
@@ -40,8 +45,7 @@ func (val *validator) notLoggedInState() stateFn {
 		defer chainHeadSub.Unsubscribe()
 
 		if err := val.consensus.Join(val.walletAccount, val.deposit); err != nil {
-			log.Error("Error joining validators network", "err", err)
-			return nil
+			return nil, errors.Wrap(err, "error joining validators network")
 		}
 
 		log.Info("Waiting confirmation to participate in the consensus")
@@ -50,12 +54,12 @@ func (val *validator) notLoggedInState() stateFn {
 			select {
 			case _, ok := <-chainHeadCh:
 				if !ok {
-					return nil
+					return nil, errors.New("error receiving voter registration event")
 				}
 
 				confirmed, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 				if err != nil {
-					log.Crit("Failed to verify the voter registration", "err", err)
+					return nil, errors.Wrap(err, "failed to verify the voter registration")
 				}
 
 				if confirmed {
@@ -66,11 +70,11 @@ func (val *validator) notLoggedInState() stateFn {
 	} else {
 		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
-			log.Crit("Failed to verify the voter information", "err", err)
-			return nil
+			return nil, errors.Wrap(err, "failed to verify the voter information")
 		}
 		if !isVoter {
-			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.walletAccount.Account().Address)
+			errMsg := fmt.Sprintf("invalid genesis - genesis validator needs to be registered as a voter, address %s", val.walletAccount.Account().Address)
+			return nil, errors.Wrap(err, errMsg)
 		}
 
 		log.Info("Deposit is not necessary for a genesis validator (first block)")
@@ -82,14 +86,14 @@ func (val *validator) notLoggedInState() stateFn {
 	log.Info("Voter has been accepted in the election", "enode", val.walletAccount.Account().Address.String())
 	val.restoreLastCommit()
 
-	return val.newElectionState
+	return val.newElectionState, nil
 }
 
-func (val *validator) newElectionState() stateFn {
+func (val *validator) newElectionState() (stateFn, error) {
 	log.Info("Starting a new election")
 	// update state machine based on current state
 	if err := val.init(); err != nil {
-		return nil
+		return nil, err
 	}
 
 	<-time.NewTimer(val.start.Sub(time.Now())).C
@@ -106,10 +110,10 @@ func (val *validator) newElectionState() stateFn {
 		}
 	}
 
-	return val.newRoundState
+	return val.newRoundState, nil
 }
 
-func (val *validator) newRoundState() stateFn {
+func (val *validator) newRoundState() (stateFn, error) {
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
 	val.voters.NextProposer()
@@ -121,10 +125,10 @@ func (val *validator) newRoundState() stateFn {
 		val.blockFragments = nil
 	}
 
-	return val.newProposalState
+	return val.newProposalState, nil
 }
 
-func (val *validator) newProposalState() stateFn {
+func (val *validator) newProposalState() (stateFn, error) {
 	proposer := val.voters.NextProposer()
 	if proposer.Address() == val.walletAccount.Account().Address {
 		log.Info("Proposing a new block")
@@ -133,7 +137,7 @@ func (val *validator) newProposalState() stateFn {
 		log.Info("Waiting for the proposal", "addr", proposer.Address())
 		val.waitForProposal()
 	}
-	return val.preVoteState
+	return val.preVoteState, nil
 }
 
 func (val *validator) waitForProposal() {
@@ -147,14 +151,14 @@ func (val *validator) waitForProposal() {
 	}
 }
 
-func (val *validator) preVoteState() stateFn {
+func (val *validator) preVoteState() (stateFn, error) {
 	log.Info("Pre vote sub-election")
 	val.preVote()
 
-	return val.preVoteWaitState
+	return val.preVoteWaitState, nil
 }
 
-func (val *validator) preVoteWaitState() stateFn {
+func (val *validator) preVoteWaitState() (stateFn, error) {
 	log.Info("Waiting for a majority in the pre-vote sub-election")
 	timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
 
@@ -165,17 +169,17 @@ func (val *validator) preVoteWaitState() stateFn {
 		log.Info("Timeout expired", "duration", timeout)
 	}
 
-	return val.preCommitState
+	return val.preCommitState, nil
 }
 
-func (val *validator) preCommitState() stateFn {
+func (val *validator) preCommitState() (stateFn, error) {
 	log.Info("Pre commit sub-election")
 	val.preCommit()
 
-	return val.preCommitWaitState
+	return val.preCommitWaitState, nil
 }
 
-func (val *validator) preCommitWaitState() stateFn {
+func (val *validator) preCommitWaitState() (stateFn, error) {
 	log.Info("Waiting for a majority in the pre-commit sub-election")
 	timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
 	defer val.majority.Unsubscribe()
@@ -184,16 +188,16 @@ func (val *validator) preCommitWaitState() stateFn {
 	case <-val.majority.Chan():
 		log.Info("There's a majority in the pre-commit sub-election!")
 		if val.block == nil {
-			return val.newRoundState
+			return val.newRoundState, nil
 		}
-		return val.commitState
+		return val.commitState, nil
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
-		return val.newRoundState
+		return val.newRoundState, nil
 	}
 }
 
-func (val *validator) commitState() stateFn {
+func (val *validator) commitState() (stateFn, error) {
 	log.Info("Commit state")
 
 	block := val.block
@@ -201,8 +205,7 @@ func (val *validator) commitState() stateFn {
 
 	_, err := work.state.Commit(true)
 	if err != nil {
-		log.Error("Failed writing block to chain", "err", err)
-		return nil
+		return nil, errors.Wrap(err, "failed writing block to chain")
 	}
 
 	// update block hash since it is now available and not when
@@ -218,8 +221,7 @@ func (val *validator) commitState() stateFn {
 
 	_, err = val.chain.WriteBlockWithState(block, val.work.receipts, val.work.state)
 	if err != nil {
-		log.Error("Failed writing block to chain", "err", err)
-		return nil
+		return nil, errors.Wrap(err, "failed writing block to chain")
 	}
 
 	// Broadcast the block and announce chain insertion event
@@ -237,20 +239,20 @@ func (val *validator) commitState() stateFn {
 
 	voter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 	if err != nil {
-		log.Crit("Failed to verify if the validator is a voter", "err", err)
+		return nil, errors.Wrap(err, "failed to verify if the validator is a voter")
 	}
 	if !voter {
 		log.Info(fmt.Sprintf("Logging out. Account %q is not a validator", val.walletAccount.Account().Address.String()))
-		return val.loggedOutState
+		return val.loggedOutState, nil
 	}
 
-	return val.newElectionState
+	return val.newElectionState, nil
 }
 
-func (val *validator) loggedOutState() stateFn {
+func (val *validator) loggedOutState() (stateFn, error) {
 	log.Info("Logged out")
 
 	atomic.StoreInt32(&val.validating, 0)
 
-	return nil
+	return nil, nil
 }
