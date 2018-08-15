@@ -2,8 +2,9 @@ Feature: Using the wallet backend
    As a wallet user
    I want to perform wallet operations
 
-   Background:
-     Given the wallet backend node is running
+  Background:
+    Given the network is running
+    And the wallet backend node is running
 
   Scenario: I can get the block height
     Given I check the current block height in the wallet backend API

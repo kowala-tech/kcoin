@@ -36,7 +36,7 @@ func (ctx *WalletBackendContext) runRedis() (redisAddr string, err error) {
 	if err != nil {
 		return "", err
 	}
-	if err := ctx.globalCtx.nodeRunner.Run(redisSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(redisSpec); err != nil {
 		return "", err
 	}
 	redisIP, err := ctx.globalCtx.nodeRunner.IP(redisSpec.ID)
@@ -51,7 +51,7 @@ func (ctx *WalletBackendContext) runNsqlookupd() (nsqlookupdAddr string, err err
 	if err != nil {
 		return "", err
 	}
-	if err := ctx.globalCtx.nodeRunner.Run(nsqlookupdSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(nsqlookupdSpec); err != nil {
 		return "", err
 	}
 
@@ -67,7 +67,7 @@ func (ctx *WalletBackendContext) runNsqd(nsqlookupdAddr string) (nsqdAddr string
 	if err != nil {
 		return "", nil
 	}
-	if err := ctx.globalCtx.nodeRunner.Run(nsqdSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(nsqdSpec); err != nil {
 		return "", err
 	}
 	nsqdIP, err := ctx.globalCtx.nodeRunner.IP(nsqdSpec.ID)
@@ -82,7 +82,7 @@ func (ctx *WalletBackendContext) runTransactionsPersistance(nsqdAddr, redisAddr 
 	if err != nil {
 		return err
 	}
-	if err := ctx.globalCtx.nodeRunner.Run(transactionsPersistanceSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(transactionsPersistanceSpec); err != nil {
 		return err
 	}
 
@@ -94,7 +94,7 @@ func (ctx *WalletBackendContext) runNotificationsApi(redisAddr string) (notifica
 	if err != nil {
 		return "", err
 	}
-	if err := ctx.globalCtx.nodeRunner.Run(notificationsApiSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(notificationsApiSpec); err != nil {
 		return "", err
 	}
 	notificationsApiIP, err := ctx.globalCtx.nodeRunner.IP(notificationsApiSpec.ID)
@@ -109,7 +109,7 @@ func (ctx *WalletBackendContext) runTransactionsPublisher(nsqdAddr, redisAddr, r
 	if err != nil {
 		return err
 	}
-	if err := ctx.globalCtx.nodeRunner.Run(txPublisherSpec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(txPublisherSpec); err != nil {
 		return err
 	}
 
@@ -121,7 +121,7 @@ func (ctx *WalletBackendContext) runWalletBackend(rpcAddr, notificationsApiAddr 
 	if err != nil {
 		return err
 	}
-	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(spec); err != nil {
 		return err
 	}
 
