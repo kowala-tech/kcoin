@@ -124,7 +124,6 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 
 	rawdb.WriteHeader(hc.chainDb, header)
 
-	//todo: @jeka try to use cumulative votes amount
 	// If the total difficulty is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf

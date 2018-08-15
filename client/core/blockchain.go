@@ -909,15 +909,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 	rawdb.WriteReceipts(batch, block.Hash(), block.NumberU64(), receipts)
 
-	//todo: @jeka try to use cumulative votes amount
-	reorg := block.Number().Cmp(currentBlock.Number()) > 0
-	if !reorg && block.Number().Cmp(currentBlock.Number()) == 0 {
-		// Split same-difficulty blocks by number, then at random
-		reorg = block.NumberU64() < currentBlock.NumberU64() || (block.NumberU64() == currentBlock.NumberU64() && mrand.Float64() < 0.5)
-	}
-	if reorg {
+	if bc.isReorgState(block, currentBlock) {
 		// Reorganise the chain if the parent is not the head block
-		if block.ParentHash() != currentBlock.Hash() {
+		if IsHead(block, currentBlock) {
 			log.Warn(fmt.Sprintf("a blockchain reorganization needed: block parent hash %v, current block hash %v",
 				block.ParentHash().String(), currentBlock.Hash().String()))
 
@@ -925,9 +919,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 				return NonStatTy, err
 			}
 		}
-		// Write the positional metadata for transaction/receipt lookups and preimages
-		rawdb.WriteTxLookupEntries(batch, block)
-		rawdb.WritePreimages(batch, block.NumberU64(), state.Preimages())
+		writePositionalMetadata(batch, block, state)
 
 		status = CanonStatTy
 	} else {
@@ -938,12 +930,31 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		return NonStatTy, err
 	}
 
-	// Set new head.
+	// set new head
 	if status == CanonStatTy {
 		bc.insert(block)
 	}
 	bc.futureBlocks.Remove(block.Hash())
 	return status, nil
+}
+
+// writePositionalMetadata Write the positional metadata for transaction/receipt lookups and preimages
+func writePositionalMetadata(batch kcoindb.Batch, block *types.Block, state *state.StateDB) {
+	rawdb.WriteTxLookupEntries(batch, block)
+	rawdb.WritePreimages(batch, block.NumberU64(), state.Preimages())
+}
+
+func IsHead(block *types.Block, currentBlock *types.Block) bool {
+	return block.ParentHash() != currentBlock.Hash()
+}
+
+func (bc *BlockChain) isReorgState(block *types.Block, currentBlock *types.Block) bool {
+	reorg := block.Number().Cmp(currentBlock.Number()) > 0
+	if !reorg && block.Number().Cmp(currentBlock.Number()) == 0 {
+		// Split same-difficulty blocks by number, then at random
+		reorg = block.NumberU64() < currentBlock.NumberU64() || (block.NumberU64() == currentBlock.NumberU64() && mrand.Float64() < 0.5)
+	}
+	return reorg
 }
 
 // InsertChain attempts to insert the given batch of blocks in to the canonical
