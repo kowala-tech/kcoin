@@ -910,19 +910,12 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	rawdb.WriteReceipts(batch, block.Hash(), block.NumberU64(), receipts)
 
 	if bc.isReorgState(block, currentBlock) {
-		// Reorganise the chain if the parent is not the head block
-		if IsHead(block, currentBlock) {
-			log.Warn(fmt.Sprintf("a blockchain reorganization needed: block parent hash %v, current block hash %v",
-				block.ParentHash().String(), currentBlock.Hash().String()))
-
-			if err := bc.reorg(currentBlock, block); err != nil {
-				return NonStatTy, err
-			}
+		status, err = bc.doReorg(block, currentBlock, batch, state)
+		if err != nil {
+			return NonStatTy, err
 		}
-		writePositionalMetadata(batch, block, state)
-
-		status = CanonStatTy
 	} else {
+		// side chain case
 		status = SideStatTy
 	}
 
@@ -936,6 +929,20 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	}
 	bc.futureBlocks.Remove(block.Hash())
 	return status, nil
+}
+
+func (bc *BlockChain) doReorg(block *types.Block, currentBlock *types.Block, batch kcoindb.Batch, state *state.StateDB) (WriteStatus, error) {
+	// Reorganise the chain if the parent is not the head block
+	if IsHead(block, currentBlock) {
+		log.Warn(fmt.Sprintf("a blockchain reorganization needed: block parent hash %v, current block hash %v",
+			block.ParentHash().String(), currentBlock.Hash().String()))
+
+		if err := bc.reorg(currentBlock, block); err != nil {
+			return NonStatTy, err
+		}
+	}
+	writePositionalMetadata(batch, block, state)
+	return CanonStatTy, nil
 }
 
 // writePositionalMetadata Write the positional metadata for transaction/receipt lookups and preimages
