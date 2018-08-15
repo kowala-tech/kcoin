@@ -2,6 +2,9 @@ Feature: Using the faucet
   As a user
   I want to be able to use the faucet
 
+  Background:
+    Given the network is running
+
   Scenario: Open the faucet
     Given I have the following accounts:
       | account | password | funds |
