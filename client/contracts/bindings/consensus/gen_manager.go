@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/client"
+	kowala "github.com/kowala-tech/kcoin/client"
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
