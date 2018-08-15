@@ -26,10 +26,6 @@ type work struct {
 
 type stateFn func() (stateFn, error)
 
-func (val *validator) abortedState() (stateFn, error) {
-	return nil, errors.New("validator state machine aborted")
-}
-
 func (val *validator) notLoggedInState() (stateFn, error) {
 	isGenesis, err := val.consensus.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
