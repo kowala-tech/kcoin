@@ -7,11 +7,16 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/common"
+	kns2 "github.com/kowala-tech/kcoin/client/common/kns"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
+	"github.com/kowala-tech/kcoin/client/crypto"
 )
 
 type contract struct {
@@ -30,6 +35,273 @@ func (contract *contract) AsGenesisAccount() core.GenesisAccount {
 		Storage: contract.storage,
 		Balance: new(big.Int),
 	}
+}
+
+var KNSRegistry = &contract{
+	name: "KNSRegistry",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.KNSRegistryBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
+}
+
+var ProxiedKNSRegistry = &contract{
+	name: "ProxiedKNSRegistry",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0x75AD571eFAcC241B23099c724c4A71FE30659145"),
+			*args.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+
+		// Init Registry
+		validatorAddr := opts.prefundedAccounts[0].accountAddress
+
+		runtimeCfg.Origin = *validatorAddr
+		abi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			common.HexToAddress(bindings.MultiSigWalletAddr),
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize KNSRegistry.", err)
+		}
+
+		return nil
+	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		// call setSubnodeOwner
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = common.HexToAddress(bindings.MultiSigWalletAddr)
+
+		abi, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
+		if err != nil {
+			return err
+		}
+
+		subnodeOwnerParams, err := abi.Pack(
+			"setSubnodeOwner",
+			[32]byte{},
+			crypto.Keccak256Hash([]byte("kowala")),
+			common.HexToAddress(bindings.ProxyRegistrarAddr),
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, subnodeOwnerParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to set subnode owner in KNSRegistry.", err)
+		}
+
+		return nil
+	},
+}
+
+var FIFSRegistrar = &contract{
+	name: "FIFSRegistrar",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.FIFSRegistrarBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
+}
+
+var ProxiedFIFSRegistrar = &contract{
+	name: "ProxiedFIFSRegistrar",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0x2A4443ec27BF5F849B2Da15eB697d3Ef5302f186"),
+			*args.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+
+		validatorAddr := opts.prefundedAccounts[0].accountAddress
+		runtimeCfg.Origin = *validatorAddr
+
+		abi, err := abi.JSON(strings.NewReader(kns.FIFSRegistrarABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			common.HexToAddress(bindings.ProxyKNSRegistryAddr),
+			kns2.NameHash("kowala"),
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize KNSRegistry.", err)
+		}
+
+		return nil
+	},
+}
+
+var PublicResolver = &contract{
+	name: "PublicResolver",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.PublicResolverBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
+}
+
+var ProxiedPublicResolver = &contract{
+	name: "ProxiedPublicResolver",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0xA08fCF0425736Ae7c10c0D3FCfB45C65f5f78212"),
+			*args.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+
+		// Init
+		validatorAddr := opts.prefundedAccounts[0].accountAddress
+
+		runtimeCfg.Origin = *validatorAddr
+
+		abi, err := abi.JSON(strings.NewReader(kns.PublicResolverABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			common.HexToAddress(bindings.ProxyKNSRegistryAddr),
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize PublicResolver.", err)
+		}
+
+		return nil
+	},
+}
+
+var UpgradeabilityProxyFactoryContract = &contract{
+	name: "UpgradeabilityProxyFactoryContract",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.multiSig
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = *args.multiSigCreator
+		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(proxy.UpgradeabilityProxyFactoryBin), runtimeCfg)
+		if err != nil {
+			return err
+		}
+
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
+}
+
+func createProxyFromContract(contractAddr common.Address, accountCreator common.Address, runtimeCfg *runtime.Config) (proxyContractAddr *common.Address, code []byte, err error) {
+	runtimeCfg.Origin = accountCreator
+
+	proxyABI, err := abi.JSON(strings.NewReader(proxy.UpgradeabilityProxyFactoryABI))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	createProxyArgs, err := proxyABI.Pack(
+		"createProxy",
+		accountCreator,
+		contractAddr,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret, _, err := runtime.Call(common.HexToAddress(bindings.ProxyFactoryAddr), createProxyArgs, runtimeCfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s:%s", "Failed to create proxy for KNS", err)
+	}
+
+	knsProxiedAddress := common.BytesToAddress(ret)
+
+	return &knsProxiedAddress, runtimeCfg.State.GetCode(knsProxiedAddress), nil
 }
 
 var MultiSigContract = &contract{
@@ -68,6 +340,16 @@ var MultiSigContract = &contract{
 	},
 }
 
+// MultiSigNameRegister is a contract just to register the multisig wallet to
+// the kns, due to its nature of first to be deployed.
+var MultiSigNameRegister = &contract{
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		contract.address = common.HexToAddress(bindings.MultiSigWalletAddr)
+
+		return registerAddressToDomain(contract, opts, "multisig")
+	},
+}
+
 var MiningTokenContract = &contract{
 	name: "Mining Token",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
@@ -102,7 +384,16 @@ var MiningTokenContract = &contract{
 
 		return nil
 	},
-	postDeploy: mintTokens,
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := mintTokens(contract, opts)
+		if err != nil {
+			return err
+		}
+
+		registerAddressToDomain(contract, opts, "miningtoken")
+
+		return nil
+	},
 }
 
 func mintTokens(contract *contract, opts *validGenesisOptions) error {
@@ -169,6 +460,92 @@ var OracleMgrContract = &contract{
 
 		return nil
 	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := registerAddressToDomain(contract, opts, "oraclemgr")
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+func registerAddressToDomain(contract *contract, opts *validGenesisOptions, domain string) error {
+	validatorAddr := opts.prefundedAccounts[0].accountAddress
+
+	runtimeCfg := contract.runtimeCfg
+	runtimeCfg.Origin = *validatorAddr
+
+	registrarABI, err := abi.JSON(strings.NewReader(kns.FIFSRegistrarABI))
+	if err != nil {
+		return err
+	}
+
+	registerParams, err := registrarABI.Pack(
+		"register",
+		crypto.Keccak256Hash([]byte(domain)),
+		*validatorAddr,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = runtime.Call(common.HexToAddress(bindings.ProxyRegistrarAddr), registerParams, runtimeCfg)
+	if err != nil {
+		return fmt.Errorf(
+			"%s:%s",
+			fmt.Sprintf("Failed to register domain %s in FIFSRegistrar.", domain),
+			err,
+		)
+	}
+
+	registryABI, err := abi.JSON(strings.NewReader(kns.KNSRegistryABI))
+	if err != nil {
+		return err
+	}
+
+	setResolverParams, err := registryABI.Pack(
+		"setResolver",
+		kns2.NameHash(domain+".kowala"),
+		common.HexToAddress(bindings.ProxyResolverAddr),
+	)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = runtime.Call(common.HexToAddress(bindings.ProxyKNSRegistryAddr), setResolverParams, runtimeCfg)
+	if err != nil {
+		return fmt.Errorf(
+			"%s:%s",
+			fmt.Sprintf("Failed to set resolver for domain %s in Registry.", domain),
+			err,
+		)
+	}
+
+	resolverABI, err := abi.JSON(strings.NewReader(kns.PublicResolverABI))
+	if err != nil {
+		return err
+	}
+
+	setAddrParams, err := resolverABI.Pack(
+		"setAddr",
+		kns2.NameHash(domain+".kowala"),
+		contract.address,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = runtime.Call(common.HexToAddress(bindings.ProxyResolverAddr), setAddrParams, runtimeCfg)
+	if err != nil {
+		return fmt.Errorf(
+			"%s:%s",
+			fmt.Sprintf("Failed to set domain %s in resolver.", domain),
+			err,
+		)
+	}
+
+	return nil
 }
 
 var ValidatorMgrContract = &contract{
@@ -206,7 +583,14 @@ var ValidatorMgrContract = &contract{
 
 		return nil
 	},
-	postDeploy: registerValidators,
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := registerValidators(contract, opts)
+		if err != nil {
+			return err
+		}
+
+		return registerAddressToDomain(contract, opts, "validatormgr")
+	},
 }
 
 func registerValidators(contract *contract, opts *validGenesisOptions) error {
