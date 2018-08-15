@@ -132,7 +132,7 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int32) error 
 	}()
 
 	if node.IsReadyFn != nil {
-		return common.WaitFor("Node starts", 1*time.Second, 20*time.Second, func() error {
+		return common.WaitFor("Node starts", 1*time.Second, 40*time.Second, func() error {
 			return node.IsReadyFn(runner)
 		})
 	}
