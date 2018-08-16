@@ -342,7 +342,7 @@ func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 	req.NotZero(tokenAddr)
 
 	// deploy validator mgr
-	validatorMgrABI, err := abi.JSON(strings.NewReader(consensus.ValidatorMgrABI))
+	validatorMgrABI, err := abi.JSON(strings.NewReader(testfiles.ValidatorMgrABI))
 	req.NoError(err)
 	req.NotZero(validatorMgrABI)
 
@@ -355,14 +355,14 @@ func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 		baseDeposit,
 		maxNumValidators,
 		freezePeriod,
-		tokenAddr,
 		superNodeAmount,
+		tokenAddr,
 	)
 	req.NoError(err)
 	req.NotNil(managerParams)
 
 	validatorMgrCode, validatorMgrAddr, _, err := runtime.Create(
-		append(common.FromHex(consensus.ValidatorMgrBin), managerParams...), runtimeCfg)
+		append(common.FromHex(testfiles.ValidatorMgrBin), managerParams...), runtimeCfg)
 
 	req.NoError(err)
 	req.NotZero(validatorMgrAddr)
