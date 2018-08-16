@@ -215,14 +215,14 @@ func (suite *ValidatorMgrSuite) TestIsValidator() {
 	registerOpts1 := bind.NewKeyedTransactor(owner)
 	from1 := crypto.PubkeyToAddress(owner.PublicKey)
 	value1 := new(big.Int).SetUint64(200)
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1)
 	req.NoError(err)
 
 	// register validator 2
 	registerOpts2 := bind.NewKeyedTransactor(user)
 	from2 := crypto.PubkeyToAddress(user.PublicKey)
 	value2 := new(big.Int).SetUint64(200)
-	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2, []byte{})
+	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2)
 	req.NoError(err)
 
 	// deregister validator 2
@@ -419,7 +419,7 @@ func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 	registerOpts := bind.NewKeyedTransactor(user)
 	from := crypto.PubkeyToAddress(user.PublicKey)
 	value := baseDeposit
-	_, err = suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err = suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.NoError(err)
 
 	// create a random user
@@ -466,14 +466,14 @@ func (suite *ValidatorMgrSuite) TestIsSuperNode() {
 	registerOpts1 := bind.NewKeyedTransactor(owner)
 	from1 := crypto.PubkeyToAddress(owner.PublicKey)
 	value1 := suite.superNodeAmount
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1)
 	req.NoError(err)
 
 	// register another validator (not super node)
 	registerOpts2 := bind.NewKeyedTransactor(user)
 	from2 := crypto.PubkeyToAddress(user.PublicKey)
 	value2 := new(big.Int).Sub(suite.superNodeAmount, common.Big1)
-	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2, []byte{})
+	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2)
 	req.NoError(err)
 
 	// create random user
@@ -529,7 +529,7 @@ func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
 	registerOpts := bind.NewKeyedTransactor(owner)
 	from := crypto.PubkeyToAddress(owner.PublicKey)
 	value := suite.baseDeposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -553,7 +553,7 @@ func (suite *ValidatorMgrSuite) TestRegisterValidator_WhenPaused() {
 	registerOpts := bind.NewKeyedTransactor(owner)
 	from := crypto.PubkeyToAddress(owner.PublicKey)
 	value := suite.baseDeposit
-	_, err = suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err = suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.Error(err, "cannot register the validator if the service is paused")
 }
 
@@ -564,11 +564,11 @@ func (suite *ValidatorMgrSuite) TestRegisterValidator_Duplicate() {
 	registerOpts := bind.NewKeyedTransactor(owner)
 	from := crypto.PubkeyToAddress(owner.PublicKey)
 	value := suite.baseDeposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.NoError(err)
 
 	// register validator again
-	_, err = suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err = suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.Error(err, "cannot register the same validator twice")
 }
 
@@ -579,7 +579,7 @@ func (suite *ValidatorMgrSuite) TestRegisterValidator_WithoutMinDeposit() {
 	registerOpts := bind.NewKeyedTransactor(owner)
 	from := crypto.PubkeyToAddress(owner.PublicKey)
 	value := new(big.Int).Sub(suite.baseDeposit, common.Big1) // set value to less than base deposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.Error(err, "requires the minimum deposit")
 }
 
@@ -590,7 +590,7 @@ func (suite *ValidatorMgrSuite) TestRegister_NotPaused_NewCandidate_WithMinDepos
 	registerOpts := bind.NewKeyedTransactor(owner)
 	from := crypto.PubkeyToAddress(owner.PublicKey)
 	value := suite.baseDeposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -625,14 +625,14 @@ func (suite *ValidatorMgrSuite) TestRegister_NotPaused_NewCandidate_WithMinDepos
 	registerOpts1 := bind.NewKeyedTransactor(owner)
 	from1 := crypto.PubkeyToAddress(owner.PublicKey)
 	value1 := suite.baseDeposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1)
 	req.NoError(err)
 
 	// register validator 2
 	registerOpts2 := bind.NewKeyedTransactor(user)
 	from2 := crypto.PubkeyToAddress(user.PublicKey)
 	value2 := new(big.Int).Add(value1, common.Big1)
-	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2, []byte{})
+	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2)
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -662,14 +662,14 @@ func (suite *ValidatorMgrSuite) TestRegister_NotPaused_NewCandidate_WithMinDepos
 	registerOpts1 := bind.NewKeyedTransactor(owner)
 	from1 := crypto.PubkeyToAddress(owner.PublicKey)
 	value1 := suite.baseDeposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1)
 	req.NoError(err)
 
 	// register validator 2
 	registerOpts2 := bind.NewKeyedTransactor(user)
 	from2 := crypto.PubkeyToAddress(user.PublicKey)
 	value2 := value1
-	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2, []byte{})
+	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2)
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -699,7 +699,7 @@ func (suite *ValidatorMgrSuite) TestRegister_NotPaused_NewCandidate_WithMinDepos
 	registerOpts1 := bind.NewKeyedTransactor(owner)
 	from1 := crypto.PubkeyToAddress(owner.PublicKey)
 	value1 := suite.baseDeposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts1, from1, value1)
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -710,7 +710,7 @@ func (suite *ValidatorMgrSuite) TestRegister_NotPaused_NewCandidate_WithMinDepos
 	registerOpts2 := bind.NewKeyedTransactor(user)
 	from2 := crypto.PubkeyToAddress(user.PublicKey)
 	value2 := minDeposit
-	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2, []byte{})
+	_, err = suite.validatorMgr.RegisterValidator(registerOpts2, from2, value2)
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -757,7 +757,7 @@ func (suite *ValidatorMgrSuite) TestDeregister_NotPaused_Validator() {
 	registerOpts := bind.NewKeyedTransactor(owner)
 	from := crypto.PubkeyToAddress(owner.PublicKey)
 	value := suite.baseDeposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -808,7 +808,7 @@ func (suite *ValidatorMgrSuite) TestReleaseDeposits_NotPaused_LockedDeposits() {
 	registerOpts := bind.NewKeyedTransactor(owner)
 	from := crypto.PubkeyToAddress(owner.PublicKey)
 	value := suite.baseDeposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -838,7 +838,7 @@ func (suite *ValidatorMgrSuite) TestReleaseDeposits_UnlockedDeposit() {
 	registerOpts := bind.NewKeyedTransactor(owner)
 	from := crypto.PubkeyToAddress(owner.PublicKey)
 	value := suite.baseDeposit
-	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value, []byte{})
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value)
 	req.NoError(err)
 
 	suite.Backend.Commit()
