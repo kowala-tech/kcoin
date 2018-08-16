@@ -25,8 +25,7 @@ var (
 )
 
 type OracleMgrSuite struct {
-	suite.Suite
-	backend          *backends.SimulatedBackend
+	utils.ContractTestSuite
 	oracleMgr        *testfiles.OracleMgr
 	resolverMockAddr common.Address
 }
@@ -47,7 +46,7 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 		},
 	})
 	req.NotNil(backend)
-	suite.backend = backend
+	suite.Backend = backend
 
 	if strings.Contains(testName, "TestDeploy") {
 		return
@@ -65,20 +64,20 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 
 	transactOpts := bind.NewKeyedTransactor(owner)
 
-	suite.deployStringsLibrary(transactOpts)
+	suite.DeployStringsLibrary(transactOpts)
 	suite.deployNameHashLibrary(transactOpts)
-	consensusAddr := suite.deployConsensusMock(transactOpts, isSuperNode)
+	consensusAddr := suite.DeployConsensusMock(transactOpts, isSuperNode)
 	resolverMockAddress := suite.deployResolverMock(transactOpts, consensusAddr)
 
 	// deploy oracle mgr contract
 	syncFreq := big.NewInt(900)
 	updatePeriod := big.NewInt(50)
-	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.backend, big.NewInt(int64(maxNumOracles)), syncFreq, updatePeriod, resolverMockAddress)
+	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, big.NewInt(int64(maxNumOracles)), syncFreq, updatePeriod, resolverMockAddress)
 	req.NoError(err)
 	req.NotNil(oracleMgrContract)
 	suite.oracleMgr = oracleMgrContract
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 }
 
 func (suite *OracleMgrSuite) TestDeploy() {
@@ -86,20 +85,20 @@ func (suite *OracleMgrSuite) TestDeploy() {
 
 	transactOpts := bind.NewKeyedTransactor(owner)
 
-	suite.deployStringsLibrary(transactOpts)
+	suite.DeployStringsLibrary(transactOpts)
 	suite.deployNameHashLibrary(transactOpts)
-	consensusAddr := suite.deployConsensusMock(transactOpts, false)
+	consensusAddr := suite.DeployConsensusMock(transactOpts, false)
 	suite.deployResolverMock(transactOpts, consensusAddr)
 
 	//deploy oracle mgr contract
 	maxNumOracles := big.NewInt(50)
 	syncFreq := big.NewInt(900)
 	updatePeriod := big.NewInt(50)
-	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.backend, maxNumOracles, syncFreq, updatePeriod, suite.resolverMockAddr)
+	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, syncFreq, updatePeriod, suite.resolverMockAddr)
 	req.NoError(err)
 	req.NotNil(oracleMgrContract)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	storedMaxNumOracles, err := oracleMgrContract.MaxNumOracles(&bind.CallOpts{})
 	req.NoError(err)
@@ -117,24 +116,13 @@ func (suite *OracleMgrSuite) TestDeploy() {
 	req.Equal(updatePeriod, storedUpdatePeriod)
 }
 
-func (suite *OracleMgrSuite) deployConsensusMock(opts *bind.TransactOpts, isSuperNode bool) common.Address {
-	req := suite.Require()
-
-	mockAddr, _, _, err := testfiles.DeployConsensusMock(opts, suite.backend, isSuperNode)
-	req.NoError(err)
-	req.NotZero(mockAddr)
-	suite.backend.Commit()
-
-	return mockAddr
-}
-
 func (suite *OracleMgrSuite) deployResolverMock(transactOpts *bind.TransactOpts, domain common.Address) common.Address {
 	req := suite.Require()
 
-	mockAddr, _, _, err := testfiles.DeployDomainResolverMock(transactOpts, suite.backend, domain)
+	mockAddr, _, _, err := testfiles.DeployDomainResolverMock(transactOpts, suite.Backend, domain)
 	req.NoError(err)
 	req.NotZero(mockAddr)
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	suite.resolverMockAddr = mockAddr
 
@@ -144,23 +132,12 @@ func (suite *OracleMgrSuite) deployResolverMock(transactOpts *bind.TransactOpts,
 func (suite *OracleMgrSuite) deployNameHashLibrary(transactOpts *bind.TransactOpts) common.Address {
 	req := suite.Require()
 
-	nameHashLib, _, _, err := utils.DeployNameHash(transactOpts, suite.backend)
+	nameHashLib, _, _, err := utils.DeployNameHash(transactOpts, suite.Backend)
 	req.NoError(err)
 	req.NotZero(nameHashLib)
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	return nameHashLib
-}
-
-func (suite *OracleMgrSuite) deployStringsLibrary(transactOpts *bind.TransactOpts) common.Address {
-	req := suite.Require()
-
-	stringsLibAddr, _, _, err := utils.DeployStrings(transactOpts, suite.backend)
-	req.NoError(err)
-	req.NotZero(stringsLibAddr)
-	suite.backend.Commit()
-
-	return stringsLibAddr
 }
 
 func (suite *OracleMgrSuite) TestDeploy_MaxNumOraclesEqualZero() {
@@ -172,7 +149,7 @@ func (suite *OracleMgrSuite) TestDeploy_MaxNumOraclesEqualZero() {
 	maxNumOracles := common.Big0
 	syncFreq := big.NewInt(900)
 	updatePeriod := big.NewInt(50)
-	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.backend, maxNumOracles, syncFreq, updatePeriod, suite.resolverMockAddr)
+	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, syncFreq, updatePeriod, suite.resolverMockAddr)
 	req.Error(err, "max number of oracles must be greater than 0")
 }
 
@@ -185,7 +162,7 @@ func (suite *OracleMgrSuite) TestDeploy_SyncFreqGreaterZero_UpdatePeriodZero() {
 	maxNumOracles := big.NewInt(50)
 	syncFreq := big.NewInt(900)
 	updatePeriod := big.NewInt(0)
-	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.backend, maxNumOracles, syncFreq, updatePeriod, suite.resolverMockAddr)
+	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, syncFreq, updatePeriod, suite.resolverMockAddr)
 	req.Error(err, "update period must be greater than 0 when sync is enabled")
 }
 
@@ -198,7 +175,7 @@ func (suite *OracleMgrSuite) TestDeploy_SyncFreqGreaterZero_UpdatePeriodGreaterS
 	maxNumOracles := big.NewInt(50)
 	syncFreq := big.NewInt(900)
 	updatePeriod := big.NewInt(1000)
-	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.backend, maxNumOracles, syncFreq, updatePeriod, suite.resolverMockAddr)
+	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, syncFreq, updatePeriod, suite.resolverMockAddr)
 	req.Error(err, "update period must be less or equal than sync freq")
 }
 
@@ -210,7 +187,7 @@ func (suite *OracleMgrSuite) TestRegisterOracle_WhenPaused() {
 	// pause service
 	suite.oracleMgr.Pause(transactOpts)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// register oracle must fail
 	registerOpts := bind.NewKeyedTransactor(user)
@@ -226,7 +203,7 @@ func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_Duplicate() {
 	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
 	req.NoError(err)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// register the same oracle again
 	_, err = suite.oracleMgr.RegisterOracle(registerOpts)
@@ -273,13 +250,13 @@ func (suite *OracleMgrSuite) TestDeregisterOracle_WhenPaused() {
 	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
 	req.NoError(err)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// pause service
 	pauseOpts := bind.NewKeyedTransactor(owner)
 	suite.oracleMgr.Pause(pauseOpts)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// deregister oracle
 	deregisterOpts := bind.NewKeyedTransactor(user)
@@ -304,14 +281,14 @@ func (suite *OracleMgrSuite) TestDeregisterOracle_NotPaused_Oracle() {
 	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
 	req.NoError(err)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// deregister oracle
 	deregisterOpts := bind.NewKeyedTransactor(user)
 	_, err = suite.oracleMgr.DeregisterOracle(deregisterOpts)
 	req.NoError(err)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// oracle count must be zero
 	count, err := suite.oracleMgr.GetOracleCount(&bind.CallOpts{})
@@ -327,13 +304,13 @@ func (suite *OracleMgrSuite) TestSubmitPrice_WhenPaused() {
 	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
 	req.NoError(err)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// pause service
 	pauseOpts := bind.NewKeyedTransactor(owner)
 	suite.oracleMgr.Pause(pauseOpts)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	priceOpts := bind.NewKeyedTransactor(user)
 	_, err = suite.oracleMgr.SubmitPrice(priceOpts, common.Big2)
@@ -356,7 +333,7 @@ func (suite *OracleMgrSuite) TestSubmitPrice_NotPaused_Oracle() {
 	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
 	req.NoError(err)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// submit price
 	priceOpts := bind.NewKeyedTransactor(user)
@@ -372,14 +349,14 @@ func (suite *OracleMgrSuite) TestSubmitPrice_NotPaused_Oracle_SubmitPriceTwiceSa
 	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
 	req.NoError(err)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// submit price
 	priceOpts := bind.NewKeyedTransactor(user)
 	_, err = suite.oracleMgr.SubmitPrice(priceOpts, common.Big2)
 	req.NoError(err)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// submit price
 	_, err = suite.oracleMgr.SubmitPrice(priceOpts, common.Big2)
