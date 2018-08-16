@@ -13,18 +13,18 @@ import (
 )
 
 // DomainResolverMockABI is the input ABI used to generate the binding from.
-const DomainResolverMockABI = "[{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
+const DomainResolverMockABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"node\",\"type\":\"bytes32\"}],\"name\":\"addr\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_domainAddr\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
 
 // DomainResolverMockBin is the compiled bytecode used for deploying new contracts.
-const DomainResolverMockBin = `6080604052348015600f57600080fd5b50603580601d6000396000f3006080604052600080fd00a165627a7a72305820a7012f1005ee45bbeaed29d2b6fe4aa9bf765a4585dd3483584497d087e913eb0029`
+const DomainResolverMockBin = `608060405234801561001057600080fd5b5060405160208061018c83398101806040528101908080519060200190929190505050806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050610109806100836000396000f300608060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633b3b57de146044575b600080fd5b348015604f57600080fd5b506070600480360381019080803560001916906020019092919050505060b2565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b60008060009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1690509190505600a165627a7a72305820180025535e58a53979e4027e30acfb05334efd451528a73ad60bb9d6850205520029`
 
 // DeployDomainResolverMock deploys a new Kowala contract, binding an instance of DomainResolverMock to it.
-func DeployDomainResolverMock(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *DomainResolverMock, error) {
+func DeployDomainResolverMock(auth *bind.TransactOpts, backend bind.ContractBackend, _domainAddr common.Address) (common.Address, *types.Transaction, *DomainResolverMock, error) {
 	parsed, err := abi.JSON(strings.NewReader(DomainResolverMockABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(DomainResolverMockBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(DomainResolverMockBin), backend, _domainAddr)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -171,4 +171,30 @@ func (_DomainResolverMock *DomainResolverMockTransactorRaw) Transfer(opts *bind.
 // Transact invokes the (paid) contract method with params as input values.
 func (_DomainResolverMock *DomainResolverMockTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _DomainResolverMock.Contract.contract.Transact(opts, method, params...)
+}
+
+// Addr is a free data retrieval call binding the contract method 0x3b3b57de.
+//
+// Solidity: function addr(node bytes32) constant returns(address)
+func (_DomainResolverMock *DomainResolverMockCaller) Addr(opts *bind.CallOpts, node [32]byte) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _DomainResolverMock.contract.Call(opts, out, "addr", node)
+	return *ret0, err
+}
+
+// Addr is a free data retrieval call binding the contract method 0x3b3b57de.
+//
+// Solidity: function addr(node bytes32) constant returns(address)
+func (_DomainResolverMock *DomainResolverMockSession) Addr(node [32]byte) (common.Address, error) {
+	return _DomainResolverMock.Contract.Addr(&_DomainResolverMock.CallOpts, node)
+}
+
+// Addr is a free data retrieval call binding the contract method 0x3b3b57de.
+//
+// Solidity: function addr(node bytes32) constant returns(address)
+func (_DomainResolverMock *DomainResolverMockCallerSession) Addr(node [32]byte) (common.Address, error) {
+	return _DomainResolverMock.Contract.Addr(&_DomainResolverMock.CallOpts, node)
 }
