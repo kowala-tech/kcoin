@@ -2,6 +2,9 @@ Feature: Sending and receiving transactions
   As a user
   I want to be able to send and receive transactions
 
+  Background:
+    Given the network is running
+
   Scenario: Send 1 kcoin successfully
     Given I have the following accounts:
       | account | password | funds |

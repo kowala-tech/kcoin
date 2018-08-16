@@ -81,10 +81,16 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 		Cmd:         cmd,
 		Env:         []string{},
 		Files:       files,
-		IsReadyFn:   kcoinIsReadyFn(builder.id),
+		IsReadyFn:   builder.isReadyFn(),
 		PortMapping: portMapping,
 	}
 	return spec
+}
+func (builder *KcoinNodeBuilder) isReadyFn() func(NodeRunner) error {
+	if builder.rpcPort != nil {
+		return rpcIsReadyFn(builder.id, *builder.rpcPort)
+	}
+	return kcoinIsReadyFn(builder.id)
 }
 
 func (builder *KcoinNodeBuilder) WithNetworkId(networkID string) *KcoinNodeBuilder {

@@ -2,6 +2,9 @@ Feature: Joining network
   As a node maintainer
   I want to be able to connect to a network
 
+  Background:
+    Given the network is running
+
   Scenario: Connect a node to the network
     When I start a new node
     Then my node should sync with the network

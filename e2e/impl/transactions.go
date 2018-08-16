@@ -14,15 +14,6 @@ import (
 	"github.com/kowala-tech/kcoin/e2e/cluster"
 )
 
-func (ctx *Context) CurrentBlock() (uint64, error) {
-	block, err := ctx.client.BlockNumber(context.Background())
-	if err != nil {
-		return 0, err
-	}
-
-	return block.Uint64(), nil
-}
-
 func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
 	return ctx.waiter.Do(
 		func() error {
@@ -182,22 +173,7 @@ func (ctx *Context) transactionBlock(tx *types.Transaction) (*types.Block, error
 }
 
 func (ctx *Context) buildTx(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
-	nonce, err := ctx.client.NonceAt(context.Background(), from.Address, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	gp, err := ctx.client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	gas, err := ctx.client.EstimateGas(context.Background(), kowala.CallMsg{
-		From:     from.Address,
-		To:       &to.Address,
-		Value:    toWei(kcoin),
-		GasPrice: gp,
-	})
+	nonce, gp, gas, err := ctx.getTxParams(from, to, kcoin)
 	if err != nil {
 		return nil, err
 	}
@@ -205,6 +181,29 @@ func (ctx *Context) buildTx(from, to accounts.Account, kcoin int64) (*types.Tran
 	tx := types.NewTransaction(nonce, to.Address, toWei(kcoin), gas, gp, nil)
 
 	return ctx.AccountsStorage.SignTx(from, tx, ctx.chainID)
+}
+
+func (ctx *Context) getTxParams(from, to accounts.Account, kcoin int64) (uint64, *big.Int, uint64, error) {
+	nonce, err := ctx.client.NonceAt(context.Background(), from.Address, nil)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+
+	gasPrice, err := ctx.client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return 0, nil, 0, err
+	}
+
+	gas, err := ctx.client.EstimateGas(context.Background(), kowala.CallMsg{
+		From:     from.Address,
+		To:       &to.Address,
+		Value:    toWei(kcoin),
+		GasPrice: gasPrice,
+	})
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	return nonce, gasPrice, gas, nil
 }
 
 func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
