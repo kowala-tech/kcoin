@@ -10,7 +10,8 @@ import (
 
 type ContractTestSuite struct {
 	suite.Suite
-	Backend *backends.SimulatedBackend
+	Backend          *backends.SimulatedBackend
+	ResolverMockAddr common.Address
 }
 
 //DeployConsensusMock deploys a mock of the consensus contract.
@@ -47,4 +48,17 @@ func (suite *ContractTestSuite) DeployNameHashLibrary(transactOpts *bind.Transac
 	suite.Backend.Commit()
 
 	return nameHashLib
+}
+
+func (suite *ContractTestSuite) DeployResolverMock(transactOpts *bind.TransactOpts, domain common.Address) common.Address {
+	req := suite.Require()
+
+	mockAddr, _, _, err := testfiles.DeployDomainResolverMock(transactOpts, suite.Backend, domain)
+	req.NoError(err)
+	req.NotZero(mockAddr)
+	suite.Backend.Commit()
+
+	suite.ResolverMockAddr = mockAddr
+
+	return mockAddr
 }
