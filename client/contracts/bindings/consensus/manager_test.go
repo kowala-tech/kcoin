@@ -1,18 +1,19 @@
 package consensus_test
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"strings"
 	"testing"
+
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind/backends"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus/testfiles"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/utils"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/stretchr/testify/suite"
-	"crypto/ecdsa"
 )
 
 var (
@@ -23,9 +24,8 @@ var (
 )
 
 type ValidatorMgrSuite struct {
-	suite.Suite
-	backend         *backends.SimulatedBackend
-	validatorMgr    *consensus.ValidatorMgr
+	utils.ContractTestSuite
+	validatorMgr    *testfiles.ValidatorMgr
 	tokenMock       *testfiles.TokenMock
 	superNodeAmount *big.Int
 	baseDeposit     *big.Int
@@ -53,7 +53,7 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 		},
 	})
 	req.NotNil(backend)
-	suite.backend = backend
+	suite.Backend = backend
 
 	// we deploy the contracts during the test
 	if strings.Contains(testName, "TestDeploy") {
@@ -73,21 +73,21 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	transactOpts := bind.NewKeyedTransactor(owner)
 
 	// deploy token mock
-	mockAddr, _, tokenMock, err := testfiles.DeployTokenMock(transactOpts, suite.backend)
+	mockAddr, _, tokenMock, err := testfiles.DeployTokenMock(transactOpts, suite.Backend)
 	req.NoError(err)
 	req.NotNil(tokenMock)
 	req.NotZero(mockAddr)
 	suite.tokenMock = tokenMock
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	// deploy validator mgr
 	baseDeposit := new(big.Int).SetUint64(100)
 	superNodeAmount := new(big.Int).SetUint64(200)
 
-	_, _, validatorMgr, err := consensus.DeployValidatorMgr(
+	_, _, validatorMgr, err := testfiles.DeployValidatorMgr(
 		transactOpts,
-		suite.backend,
+		suite.Backend,
 		baseDeposit,
 		big.NewInt(int64(maxNumValidators)),
 		big.NewInt(int64(freezePeriod)),
@@ -100,7 +100,7 @@ func (suite *ValidatorMgrSuite) BeforeTest(suiteName, testName string) {
 	suite.superNodeAmount = superNodeAmount
 	suite.baseDeposit = baseDeposit
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 }
 
@@ -109,31 +109,36 @@ func (suite *ValidatorMgrSuite) TestDeploy() {
 
 	transactOpts := bind.NewKeyedTransactor(owner)
 
+	suite.DeployStringsLibrary(transactOpts)
+	suite.DeployNameHashLibrary(transactOpts)
+	consensusAddr := suite.DeployConsensusMock(transactOpts, false)
+	resolverAddr := suite.DeployResolverMock(transactOpts, consensusAddr)
+
 	// deploy token mock
-	mockAddr, _, tokenMock, err := testfiles.DeployTokenMock(transactOpts, suite.backend)
+	mockAddr, _, tokenMock, err := testfiles.DeployTokenMock(transactOpts, suite.Backend)
 	req.NoError(err)
 	req.NotNil(tokenMock)
 	req.NotZero(mockAddr)
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	baseDeposit := new(big.Int).SetUint64(100)
 	maxNumValidators := new(big.Int).SetUint64(100)
 	freezePeriod := new(big.Int).SetUint64(1000)
 	superNodeAmount := new(big.Int).SetUint64(500000)
 
-	_, _, validatorMgr, err := consensus.DeployValidatorMgr(
+	_, _, validatorMgr, err := testfiles.DeployValidatorMgr(
 		transactOpts,
-		suite.backend,
+		suite.Backend,
 		baseDeposit,
 		maxNumValidators,
 		freezePeriod,
 		superNodeAmount,
-		mockAddr)
+		resolverAddr)
 
 	req.NoError(err)
 	req.NotNil(validatorMgr)
 
-	suite.backend.Commit()
+	suite.Backend.Commit()
 
 	storedBaseDeposit, err := validatorMgr.BaseDeposit(&bind.CallOpts{})
 	req.NoError(err)
@@ -150,10 +155,10 @@ func (suite *ValidatorMgrSuite) TestDeploy() {
 	req.NotNil(storedMaxNumValidators)
 	req.Equal(maxNumValidators, storedMaxNumValidators)
 
-	storedMiningTokenAddr, err := validatorMgr.KnsResolver(&bind.CallOpts{})
+	expectedResolverAddr, err := validatorMgr.KnsResolver(&bind.CallOpts{})
 	req.NoError(err)
-	req.NotNil(storedMiningTokenAddr)
-	req.Equal(mockAddr, storedMiningTokenAddr)
+	req.NotNil(expectedResolverAddr)
+	req.Equal(resolverAddr, expectedResolverAddr)
 
 	storedSuperNodeAmount, err := validatorMgr.SuperNodeAmount(&bind.CallOpts{})
 	req.NoError(err)
