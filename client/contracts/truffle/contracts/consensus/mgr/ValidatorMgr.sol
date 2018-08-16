@@ -314,9 +314,8 @@ contract ValidatorMgr is Pausable {
      * @dev Register Validator
      * @param _from from address
      * @param _value value to send
-     * @param _data data to sent
      */
-    function registerValidator(address _from, uint _value, bytes _data) public {
+    function registerValidator(address _from, uint _value) public {
         //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
         // SSTORE problem - expensive
         tkn = TKN(_from, _value/*, _data, bytes4(u)*/);

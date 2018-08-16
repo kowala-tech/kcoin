@@ -10,13 +10,16 @@ require('chai')
   .use(require('chai-bignumber')(web3.BigNumber))
   .should();
 
+const {
+  EVMError,
+} = require('../helpers/testUtils.js');
+
 const ValidatorMgr = artifacts.require('ValidatorMgr.sol');
 const PublicResolver = artifacts.require('PublicResolver.sol');
 const KNS = artifacts.require('KNSRegistry.sol');
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
 const MiningTokenMock = artifacts.require('TokenMock.sol');
 const namehash = require('eth-ens-namehash');
-const { EVMError } = require('../helpers/testUtils.js');
 
 contract('Validator Manager', ([_, owner, newOwner, notOwner]) => {
   beforeEach(async () => {
@@ -29,7 +32,22 @@ contract('Validator Manager', ([_, owner, newOwner, notOwner]) => {
     await this.kns.setResolver(namehash('miningtoken.kowala'), this.resolver.address, { from: owner });
     this.miningToken = await MiningTokenMock.new();
     await this.resolver.setAddr(namehash('miningtoken.kowala'), this.miningToken.address, { from: owner });
-    this.validator = await ValidatorMgr.new(1, 2, 3, 1, this.resolver.address, { from: owner });
+    this.validator = await ValidatorMgr.new(100, 100, 0, 200, this.resolver.address, { from: owner });
+  });
+
+  it('should release deposit', async () => {
+    // given
+    const initialBalance = await this.miningToken.balanceOf(newOwner, { from: newOwner });
+    await this.validator.registerValidator(newOwner, 100, { from: newOwner });
+    await this.validator.deregisterValidator({ from: newOwner });
+
+    // when
+    await this.validator.releaseDeposits({ from: newOwner });
+
+    // then
+    const balanceAfterRelease = await this.miningToken.balanceOf(newOwner, { from: newOwner });
+    await initialBalance.should.be.bignumber.equal(0);
+    await balanceAfterRelease.should.be.bignumber.equal(100);
   });
 
   it('should set MiningToken Address from KNS during creation', async () => {
@@ -39,7 +57,7 @@ contract('Validator Manager', ([_, owner, newOwner, notOwner]) => {
 
     // when
     const miningTokenAddr = await resolver.addr(namehash('miningtoken.kowala'));
-    
+
     // then
     await miningTokenAddr.should.be.equal(this.miningToken.address);
   });
