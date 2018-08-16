@@ -53,9 +53,11 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 		return
 	}
 
+	isSuperNode := true
 	maxNumOracles := 50
 	switch {
 	case strings.Contains(testName, "_NotSuperNode"):
+		isSuperNode = false
 		fallthrough
 	case strings.Contains(testName, "_Full"):
 		maxNumOracles = 1
@@ -65,7 +67,8 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 
 	suite.deployStringsLibrary(transactOpts)
 	suite.deployNameHashLibrary(transactOpts)
-	resolverMockAddress := suite.deployResolverMock(transactOpts)
+	consensusAddr := suite.deployConsensusMock(transactOpts, isSuperNode)
+	resolverMockAddress := suite.deployResolverMock(transactOpts, consensusAddr)
 
 	// deploy oracle mgr contract
 	syncFreq := big.NewInt(900)
@@ -85,7 +88,8 @@ func (suite *OracleMgrSuite) TestDeploy() {
 
 	suite.deployStringsLibrary(transactOpts)
 	suite.deployNameHashLibrary(transactOpts)
-	suite.deployResolverMock(transactOpts)
+	consensusAddr := suite.deployConsensusMock(transactOpts, false)
+	suite.deployResolverMock(transactOpts, consensusAddr)
 
 	//deploy oracle mgr contract
 	maxNumOracles := big.NewInt(50)
@@ -113,10 +117,21 @@ func (suite *OracleMgrSuite) TestDeploy() {
 	req.Equal(updatePeriod, storedUpdatePeriod)
 }
 
-func (suite *OracleMgrSuite) deployResolverMock(transactOpts *bind.TransactOpts) common.Address {
+func (suite *OracleMgrSuite) deployConsensusMock(opts *bind.TransactOpts, isSuperNode bool) common.Address {
 	req := suite.Require()
 
-	mockAddr, _, _, err := testfiles.DeployDomainResolverMock(transactOpts, suite.backend)
+	mockAddr, _, _, err := testfiles.DeployConsensusMock(opts, suite.backend, isSuperNode)
+	req.NoError(err)
+	req.NotZero(mockAddr)
+	suite.backend.Commit()
+
+	return mockAddr
+}
+
+func (suite *OracleMgrSuite) deployResolverMock(transactOpts *bind.TransactOpts, domain common.Address) common.Address {
+	req := suite.Require()
+
+	mockAddr, _, _, err := testfiles.DeployDomainResolverMock(transactOpts, suite.backend, domain)
 	req.NoError(err)
 	req.NotZero(mockAddr)
 	suite.backend.Commit()
