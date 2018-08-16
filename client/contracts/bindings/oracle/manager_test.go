@@ -65,7 +65,7 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 	transactOpts := bind.NewKeyedTransactor(owner)
 
 	suite.DeployStringsLibrary(transactOpts)
-	suite.deployNameHashLibrary(transactOpts)
+	suite.DeployNameHashLibrary(transactOpts)
 	consensusAddr := suite.DeployConsensusMock(transactOpts, isSuperNode)
 	resolverMockAddress := suite.deployResolverMock(transactOpts, consensusAddr)
 
@@ -86,7 +86,7 @@ func (suite *OracleMgrSuite) TestDeploy() {
 	transactOpts := bind.NewKeyedTransactor(owner)
 
 	suite.DeployStringsLibrary(transactOpts)
-	suite.deployNameHashLibrary(transactOpts)
+	suite.DeployNameHashLibrary(transactOpts)
 	consensusAddr := suite.DeployConsensusMock(transactOpts, false)
 	suite.deployResolverMock(transactOpts, consensusAddr)
 
@@ -127,17 +127,6 @@ func (suite *OracleMgrSuite) deployResolverMock(transactOpts *bind.TransactOpts,
 	suite.resolverMockAddr = mockAddr
 
 	return mockAddr
-}
-
-func (suite *OracleMgrSuite) deployNameHashLibrary(transactOpts *bind.TransactOpts) common.Address {
-	req := suite.Require()
-
-	nameHashLib, _, _, err := utils.DeployNameHash(transactOpts, suite.Backend)
-	req.NoError(err)
-	req.NotZero(nameHashLib)
-	suite.Backend.Commit()
-
-	return nameHashLib
 }
 
 func (suite *OracleMgrSuite) TestDeploy_MaxNumOraclesEqualZero() {

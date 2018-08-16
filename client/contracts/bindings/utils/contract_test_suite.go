@@ -13,6 +13,7 @@ type ContractTestSuite struct {
 	Backend *backends.SimulatedBackend
 }
 
+//DeployConsensusMock deploys a mock of the consensus contract.
 func (suite *ContractTestSuite) DeployConsensusMock(opts *bind.TransactOpts, isSuperNode bool) common.Address {
 	req := suite.Require()
 
@@ -24,6 +25,7 @@ func (suite *ContractTestSuite) DeployConsensusMock(opts *bind.TransactOpts, isS
 	return mockAddr
 }
 
+//DeployStringsLibrary deploys the Strings.sol library.
 func (suite *ContractTestSuite) DeployStringsLibrary(transactOpts *bind.TransactOpts) common.Address {
 	req := suite.Require()
 
@@ -33,4 +35,16 @@ func (suite *ContractTestSuite) DeployStringsLibrary(transactOpts *bind.Transact
 	suite.Backend.Commit()
 
 	return stringsLibAddr
+}
+
+//DeployNameHashLibrary deploys NameHash.sol library.
+func (suite *ContractTestSuite) DeployNameHashLibrary(transactOpts *bind.TransactOpts) common.Address {
+	req := suite.Require()
+
+	nameHashLib, _, _, err := DeployNameHash(transactOpts, suite.Backend)
+	req.NoError(err)
+	req.NotZero(nameHashLib)
+	suite.Backend.Commit()
+
+	return nameHashLib
 }
