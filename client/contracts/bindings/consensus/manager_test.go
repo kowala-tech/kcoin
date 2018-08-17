@@ -14,6 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus/testfiles"
+	testfiles2 "github.com/kowala-tech/kcoin/client/contracts/bindings/oracle/testfiles"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/utils"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
@@ -331,6 +332,22 @@ func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 		Origin: crypto.PubkeyToAddress(owner.PublicKey),
 	}
 
+	// deploy strings library
+	stringsLibCode, stringsAddr, _, err := runtime.Create(common.FromHex(utils.StringsBin), runtimeCfg)
+	req.NoError(err)
+	req.NotZero(stringsLibCode)
+	req.NotZero(stringsAddr)
+
+	// deploy namehash library
+	nameHashABI, err := abi.JSON(strings.NewReader(testfiles2.NameHashABI))
+	req.NoError(err)
+	req.NotNil(nameHashABI)
+
+	nameHashLibCode, nameHashLibAddr, _, err := runtime.Create(common.FromHex(utils.NameHashBin), runtimeCfg)
+	req.NoError(err)
+	req.NotZero(nameHashLibCode)
+	req.NotZero(nameHashLibAddr)
+
 	// deploy token mock
 	tokenMockABI, err := abi.JSON(strings.NewReader(testfiles.TokenMockABI))
 	req.NoError(err)
@@ -340,6 +357,22 @@ func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 	req.NoError(err)
 	req.NotZero(tokenCode)
 	req.NotZero(tokenAddr)
+
+	// Deploy resolver mock
+	resolverMockABI, err := abi.JSON(strings.NewReader(testfiles2.DomainResolverMockABI))
+	req.NoError(err)
+	req.NotNil(resolverMockABI)
+
+	resolverParams, err := resolverMockABI.Pack(
+		"",
+		tokenAddr,
+	)
+	req.NoError(err)
+
+	resolverCode, resolverAddr, _, err := runtime.Create(append(common.FromHex(testfiles2.DomainResolverMockBin), resolverParams...), runtimeCfg)
+	req.NoError(err)
+	req.NotZero(resolverCode)
+	req.NotZero(resolverAddr)
 
 	// deploy validator mgr
 	validatorMgrABI, err := abi.JSON(strings.NewReader(testfiles.ValidatorMgrABI))
@@ -356,7 +389,7 @@ func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 		maxNumValidators,
 		freezePeriod,
 		superNodeAmount,
-		tokenAddr,
+		resolverAddr,
 	)
 	req.NoError(err)
 	req.NotNil(managerParams)
@@ -380,8 +413,6 @@ func (suite *ValidatorMgrSuite) TestIsGenesisValidator() {
 		"registerValidator",
 		genesisValidatorAddr,
 		baseDeposit,
-		[]byte("not_zero"), // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/285
-
 	)
 	req.NoError(err)
 	req.NotZero(registrationParams)
