@@ -300,8 +300,6 @@ var ProxiedPublicResolver = &contract{
 		contract.address = *proxyContractAddr
 		contract.code = code
 
-		fmt.Printf("%s\n", proxyContractAddr.String())
-
 		// Init
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
 
