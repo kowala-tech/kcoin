@@ -134,7 +134,7 @@ type consensus struct {
 }
 
 // Binding returns a binding to the current consensus engine
-func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
+func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
 	addr, err := getAddressFromKNS(
 		params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
 		contractBackend,
@@ -274,7 +274,6 @@ func (consensus *consensus) Token() token.Token {
 }
 
 //Minter interface implementation
-
 func (consensus *consensus) MintInit() error {
 	var err error
 	consensus.initMint.Do(func() {
