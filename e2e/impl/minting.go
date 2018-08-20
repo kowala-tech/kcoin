@@ -27,7 +27,7 @@ func (ctx *Context) MintMTokens(m, n int, mTokens int64, to string) error {
 }
 
 func (ctx *Context) mintTokensAndWait(governance []accounts.Account, to accounts.Account, tokens int64) error {
-	c, err := consensus.Bind(ctx.client, ctx.chainID)
+	c, err := consensus.Binding(ctx.client, ctx.chainID)
 	if err != nil {
 		return err
 	}
