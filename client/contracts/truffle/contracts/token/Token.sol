@@ -93,8 +93,8 @@ contract Token is KRC223  {
             if (balanceOf(msg.sender) < _value) revert();
             balances[msg.sender] = balances[msg.sender].sub(_value);
             balances[_to] = balances[_to].add(_value);
-            // _to.transfer(0);
-            assert(_to.call.value(0)(bytes4(keccak256(_custom_fallback)), msg.sender, _value, _data));
+            _to.transfer(0);
+            // assert(_to.call.value(0)(bytes4(keccak256(_custom_fallback)), msg.sender, _value, _data));
             Transfer(msg.sender, _to, _value, _data);
             return true;
         }

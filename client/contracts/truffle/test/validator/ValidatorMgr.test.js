@@ -19,6 +19,7 @@ const PublicResolver = artifacts.require('PublicResolver.sol');
 const KNS = artifacts.require('KNSRegistry.sol');
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
 const MiningTokenMock = artifacts.require('TokenMock.sol');
+const Token = artifacts.require('MintableToken.sol');
 const namehash = require('eth-ens-namehash');
 
 contract('Validator Manager', ([_, owner, newOwner, notOwner]) => {
@@ -45,7 +46,7 @@ contract('Validator Manager', ([_, owner, newOwner, notOwner]) => {
     await this.validator.releaseDeposits({ from: newOwner });
 
     // then
-    const balanceAfterRelease = await this.miningToken.balanceOf(newOwner, { from: newOwner });
+    const balanceAfterRelease = await this.miningToken.balanceOf(newOwner);
     await initialBalance.should.be.bignumber.equal(0);
     await balanceAfterRelease.should.be.bignumber.equal(100);
   });
@@ -60,5 +61,18 @@ contract('Validator Manager', ([_, owner, newOwner, notOwner]) => {
 
     // then
     await miningTokenAddr.should.be.equal(this.miningToken.address);
+  });
+
+  it('Should transfer tokens to new owner', async () => {
+    // given
+    const tkn = await Token.new({ from: owner });
+    await tkn.mint(owner, 10, { from: owner });
+
+    // when
+    await tkn.transfer(newOwner, 5, { from: owner });
+
+    // then
+    const balance = await tkn.balanceOf(newOwner);
+    await balance.should.be.bignumber.equal(5);
   });
 });
