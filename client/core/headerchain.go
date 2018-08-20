@@ -124,36 +124,44 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 
 	rawdb.WriteHeader(hc.chainDb, header)
 
-	// Delete any canonical number assignments above the new head
-	batch := hc.chainDb.NewBatch()
-	for i := number + 1; ; i++ {
-		hash := rawdb.ReadCanonicalHash(hc.chainDb, i)
-		if hash == (common.Hash{}) {
-			break
+	// If the total difficulty is higher than our known, add it to the canonical chain
+	// Second clause in the if statement reduces the vulnerability to selfish mining.
+	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
+	if header.Number.Cmp(hc.CurrentHeader().Number) > 0 || (header.Number.Cmp(hc.CurrentHeader().Number) == 0 && mrand.Float64() < 0.5) {
+		// Delete any canonical number assignments above the new head
+		batch := hc.chainDb.NewBatch()
+		for i := number + 1; ; i++ {
+			hash := rawdb.ReadCanonicalHash(hc.chainDb, i)
+			if hash == (common.Hash{}) {
+				break
+			}
+			rawdb.DeleteCanonicalHash(batch, i)
 		}
-		rawdb.DeleteCanonicalHash(batch, i)
-	}
-	batch.Write()
-	// Overwrite any stale canonical number assignments
-	var (
-		headHash   = header.ParentHash
-		headNumber = header.Number.Uint64() - 1
-		headHeader = hc.GetHeader(headHash, headNumber)
-	)
-	for rawdb.ReadCanonicalHash(hc.chainDb, headNumber) != headHash {
-		rawdb.WriteCanonicalHash(hc.chainDb, headHash, headNumber)
+		batch.Write()
+		// Overwrite any stale canonical number assignments
+		var (
+			headHash   = header.ParentHash
+			headNumber = header.Number.Uint64() - 1
+			headHeader = hc.GetHeader(headHash, headNumber)
+		)
+		for rawdb.ReadCanonicalHash(hc.chainDb, headNumber) != headHash {
+			rawdb.WriteCanonicalHash(hc.chainDb, headHash, headNumber)
 
-		headHash = headHeader.ParentHash
-		headNumber = headHeader.Number.Uint64() - 1
-		headHeader = hc.GetHeader(headHash, headNumber)
-	}
-	// Extend the canonical chain with the new header
-	rawdb.WriteCanonicalHash(hc.chainDb, hash, number)
-	rawdb.WriteHeadHeaderHash(hc.chainDb, hash)
-	hc.currentHeaderHash = hash
-	hc.currentHeader.Store(types.CopyHeader(header))
+			headHash = headHeader.ParentHash
+			headNumber = headHeader.Number.Uint64() - 1
+			headHeader = hc.GetHeader(headHash, headNumber)
+		}
+		// Extend the canonical chain with the new header
+		rawdb.WriteCanonicalHash(hc.chainDb, hash, number)
+		rawdb.WriteHeadHeaderHash(hc.chainDb, hash)
 
-	status = CanonStatTy
+		hc.currentHeaderHash = hash
+		hc.currentHeader.Store(types.CopyHeader(header))
+
+		status = CanonStatTy
+	} else {
+		status = SideStatTy
+	}
 
 	hc.headerCache.Add(hash, header)
 	hc.numberCache.Add(hash, number)
@@ -183,14 +191,18 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 
 	// Generate the list of seal verification requests, and start the parallel verifier
 	seals := make([]bool, len(chain))
-	for i := 0; i < len(seals)/checkFreq; i++ {
-		index := i*checkFreq + hc.rand.Intn(checkFreq)
-		if index >= len(seals) {
-			index = len(seals) - 1
+	if checkFreq != 0 {
+		// In case of checkFreq == 0 all seals are left false.
+		for i := 0; i < len(seals)/checkFreq; i++ {
+			index := i*checkFreq + hc.rand.Intn(checkFreq)
+			if index >= len(seals) {
+				index = len(seals) - 1
+			}
+			seals[index] = true
 		}
-		seals[index] = true
+		// Last should always be verified to avoid junk.
+		seals[len(seals)-1] = true
 	}
-	seals[len(seals)-1] = true // Last should always be verified to avoid junk
 
 	abort, results := hc.engine.VerifyHeaders(hc, chain, seals)
 	defer close(abort)
@@ -310,7 +322,6 @@ func (hc *HeaderChain) GetAncestor(hash common.Hash, number, ancestor uint64, ma
 	}
 	return hash, number
 }
-
 
 // GetHeader retrieves a block header from the database by hash and number,
 // caching it if found.
