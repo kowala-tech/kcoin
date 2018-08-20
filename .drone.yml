@@ -338,6 +338,14 @@ pipeline:
       branch: [master]
       event: [push, tag]
 
+  assemble_e2e_logs:
+    group: build_artifacts
+    image: kowalatech/go:1.0.11
+    commands:
+      - cd e2e/logs; zip -r e2e-build-${DRONE_BUILD_NUMBER}.zip *
+    when:
+      status: failure
+      event: [pull_request]
 
   build_artifacts:
     group: build_artifacts
@@ -472,7 +480,7 @@ pipeline:
     group: asset_deployment
     image: plugins/s3
     region: us-east-1
-    acl: private
+    acl: public-read
     encryption: AES256
     bucket: "kcoin-e2e"
     source: e2e/logs/*
@@ -493,7 +501,7 @@ pipeline:
 
         _${DRONE_COMMIT_MESSAGE}_
 
-        {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}>
+        {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}> | <https://s3.amazonaws.com/kcoin-e2e/logs/${DRONE_BUILD_NUMBER}/e2e-build-${DRONE_BUILD_NUMBER}.zip|e2e logs>
     when:
       status: failure
       event: [push, tag, pull_request]
