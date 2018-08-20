@@ -58,6 +58,7 @@ type Minter interface {
 	MultiSigWalletContract() *ownership.MultiSigWallet
 	Mint(opts *accounts.TransactOpts, to common.Address, value *big.Int) (common.Hash, error)
 	Confirm(opts *accounts.TransactOpts, transactionID *big.Int) (common.Hash, error)
+	MintInit() error
 }
 
 type mUSD struct {
