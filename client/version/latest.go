@@ -2,9 +2,10 @@ package version
 
 import (
 	"bufio"
+	"net/http"
+
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/pkg/errors"
-	"net/http"
 )
 
 const indexFile = "index.txt"
@@ -34,10 +35,11 @@ func (f *finder) All() ([]Asset, error) {
 	var assets []Asset
 	scanner := bufio.NewScanner(response.Body)
 	for scanner.Scan() {
-		version, err := filenameParser(scanner.Text())
+		text := scanner.Text()
+		version, err := filenameParser(text)
 		if err != nil {
 			// ignore error and continue to next filename
-			log.Debug("could not parse filename", err)
+			log.Debug("could not parse filename", "err", err, "test", text)
 			continue
 		}
 		assets = append(assets, version)

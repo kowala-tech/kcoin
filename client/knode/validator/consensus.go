@@ -8,6 +8,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 // VotingState encapsulates the consensus state for a specific block election
@@ -42,18 +43,21 @@ type VotingState struct {
 type VotingTables = [2]core.VotingTable
 
 func NewVotingTables(eventMux *event.TypeMux, voters types.Voters) (VotingTables, error) {
-	majorityFunc := func() {
-		go eventMux.Post(core.NewMajorityEvent{})
+	majorityFunc := func(winnerBlock common.Hash) {
+		go eventMux.Post(core.NewMajorityEvent{Winner: winnerBlock})
 	}
 
 	var err error
 	tables := VotingTables{}
-	tables[0], err = core.NewVotingTable(types.PreVote, voters, majorityFunc)
+
+	// prevote
+	tables[types.PreVote], err = core.NewVotingTable(types.PreVote, voters, majorityFunc)
 	if err != nil {
 		return tables, err
 	}
 
-	tables[1], err = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
+	// precommit
+	tables[types.PreCommit], err = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
 	if err != nil {
 		return tables, err
 	}
@@ -113,6 +117,15 @@ func (vs *VotingSystem) Add(vote types.AddressVote) error {
 	go vs.eventMux.Post(core.NewVoteEvent{Vote: vote.Vote()})
 
 	return nil
+}
+
+func (vs *VotingSystem) Leader(round uint64, voteType types.VoteType) (common.Hash, error) {
+	votingTable, err := vs.getVoteSet(round, voteType)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return votingTable.Leader(), nil
 }
 
 func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) (core.VotingTable, error) {

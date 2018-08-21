@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/davecgh/go-spew/spew"
 )
 
 // work is the proposer current environment and holds all of the current state information
@@ -181,8 +182,8 @@ func (val *validator) preCommitWaitState() stateFn {
 	defer val.majority.Unsubscribe()
 
 	select {
-	case <-val.majority.Chan():
-		log.Info("There's a majority in the pre-commit sub-election!")
+	case event := <-val.majority.Chan():
+		log.Info("There's a majority in the pre-commit sub-election!", "event", spew.Sdump(event))
 		if val.block == nil {
 			return val.newRoundState
 		}

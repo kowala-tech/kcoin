@@ -10,6 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
+	"bytes"
 )
 
 //go:generate gencodec -type votedata -field-override votedataMarshalling -out gen_vote_json.go
@@ -220,23 +221,45 @@ func (vote *Vote) String() string {
 type Votes []*Vote
 
 type VotesSet struct {
-	m map[common.Hash]*Vote
-	l sync.RWMutex
+	m        map[common.Hash]*Vote // non-nil votes
+	nilVotes map[common.Hash]*Vote // nil votes
+	counter  map[common.Hash]int   // map[block.Hash]count
+	leader   common.Hash           // block.Hash
+	l        sync.RWMutex
 }
 
 func NewVotesSet() *VotesSet {
-	return &VotesSet{m: make(map[common.Hash]*Vote)}
+	return &VotesSet{
+		m:        make(map[common.Hash]*Vote),
+		nilVotes: make(map[common.Hash]*Vote),
+		counter:  make(map[common.Hash]int),
+	}
 }
 
 func (v *VotesSet) Add(vote *Vote) {
 	v.l.Lock()
+	defer v.l.Unlock()
+
+	if bytes.Equal(vote.data.BlockHash.Bytes(), common.Hash{}.Bytes()) {
+		v.nilVotes[vote.Hash()] = vote
+		return
+	}
+
 	v.m[vote.Hash()] = vote
-	v.l.Unlock()
+	v.counter[vote.data.BlockHash]++
+	if v.counter[vote.data.BlockHash] > v.counter[v.leader] {
+		v.leader = vote.data.BlockHash
+	}
 }
 
 func (v *VotesSet) Contains(h common.Hash) bool {
 	v.l.RLock()
 	_, res := v.m[h]
+
+	if !res {
+		_, res = v.nilVotes[h]
+	}
+
 	v.l.RUnlock()
 	return res
 }
@@ -244,6 +267,13 @@ func (v *VotesSet) Contains(h common.Hash) bool {
 func (v *VotesSet) Len() int {
 	v.l.RLock()
 	res := len(v.m)
+	v.l.RUnlock()
+	return res
+}
+
+func (v *VotesSet) Leader() common.Hash {
+	v.l.RLock()
+	res := v.leader
 	v.l.RUnlock()
 	return res
 }

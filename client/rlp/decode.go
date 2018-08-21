@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 var (
@@ -868,6 +869,11 @@ func (s *Stream) Kind() (kind Kind, size uint64, err error) {
 				// At toplevel, check that the value is smaller
 				// than the remaining input length.
 				if s.limited && s.size > s.remaining {
+					log.Error("rlp Kind error ErrValueTooLarge: `s.limited && s.size > s.remaining`",
+						"limited", s.limited,
+						"size", s.size,
+						"remaining", s.remaining)
+
 					s.kinderr = ErrValueTooLarge
 				}
 			} else {
@@ -1010,6 +1016,10 @@ func (s *Stream) willRead(n uint64) error {
 	}
 	if s.limited {
 		if n > s.remaining {
+			log.Error("rlp willRead error ErrValueTooLarge: `n > s.remaining`",
+				"n", n,
+				"s.remaining", s.remaining)
+
 			return ErrValueTooLarge
 		}
 		s.remaining -= n

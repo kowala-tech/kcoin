@@ -8,6 +8,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/davecgh/go-spew/spew"
+	"fmt"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -50,6 +52,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, usedGas, cfg)
 		if err != nil {
+			fmt.Println("failed StateProcessor.Process", "data", spew.Sdump(header, tx, usedGas, allLogs))
 			return nil, nil, 0, err
 		}
 		receipts = append(receipts, receipt)
