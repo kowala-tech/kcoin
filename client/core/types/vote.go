@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math/big"
@@ -10,7 +11,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
-	"bytes"
 )
 
 //go:generate gencodec -type votedata -field-override votedataMarshalling -out gen_vote_json.go

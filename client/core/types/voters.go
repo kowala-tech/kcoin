@@ -2,9 +2,8 @@ package types
 
 import (
 	"errors"
-	"math/big"
-
 	"io"
+	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/rlp"

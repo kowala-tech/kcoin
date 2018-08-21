@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
-	"github.com/kowala-tech/kcoin/client/common"
 )
 
 // VotingState encapsulates the consensus state for a specific block election
