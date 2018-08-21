@@ -7,7 +7,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
-	"github.com/davecgh/go-spew/spew"
 )
 
 var ErrDuplicateVote = errors.New("duplicate vote")
@@ -73,13 +72,7 @@ func (table *votingTable) isVoter(address common.Address) bool {
 }
 
 func (table *votingTable) hasQuorum() bool {
-	res := table.quorum(table.votes.Len(), table.voters.Len())
-
-	if res {
-		log.Debug("Quorum votes:", spew.Sdump(table.votes))
-	}
-
-	return res
+	return table.quorum(table.votes.Len(), table.voters.Len())
 }
 
 type QuorumReachedFunc func(winner common.Hash)
