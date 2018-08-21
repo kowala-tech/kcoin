@@ -76,9 +76,9 @@ var Networks = map[string]map[string]Options{
 			Governance: &GovernanceOpts{
 				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
 				Governors: []string{
-					"0xa1e8587ed7f915d5bbbf283b21af4813232069f7",
-					"0xbfAdCF85554F139F978DE5442aacFBe085c754f7",
-					"0xF358eb1020375800746ccd5c6638DA36C5a6bec9",
+					"0xf861e10641952a42f9c527a43ab77c3030ee2c8f",
+					"0x7dd43075b89c129bcd2cca1e2d680a6f3f30b5d9",
+					"0xa1d4755112491db5ddf0e10b9253b5a0f6783759",
 				},
 				NumConfirmations: 2,
 			},
@@ -90,7 +90,7 @@ var Networks = map[string]map[string]Options{
 				SuperNodeAmount:  6000000,
 				Validators: []Validator{
 					{
-						Address: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+						Address: "0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0",
 						Deposit: 6000000,
 					},
 				},
@@ -101,7 +101,7 @@ var Networks = map[string]map[string]Options{
 					Decimals: 18,
 					Holders: []TokenHolder{
 						{
-							Address:   "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+							Address:   "0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0",
 							NumTokens: 10000000,
 						},
 					},
@@ -119,19 +119,27 @@ var Networks = map[string]map[string]Options{
 			},
 			PrefundedAccounts: []PrefundedAccount{
 				{
-					Address: "0xa1e8587ed7f915d5bbbf283b21af4813232069f7",
+					Address: "0xf861e10641952a42f9c527a43ab77c3030ee2c8f",
 					Balance: 50,
 				},
 				{
-					Address: "0xbfAdCF85554F139F978DE5442aacFBe085c754f7",
+					Address: "0x7dd43075b89c129bcd2cca1e2d680a6f3f30b5d9",
 					Balance: 50,
 				},
 				{
-					Address: "0xF358eb1020375800746ccd5c6638DA36C5a6bec9",
+					Address: "0xa1d4755112491db5ddf0e10b9253b5a0f6783759",
 					Balance: 50,
 				},
 				{
-					Address: "0xd6e579085c82329c89fca7a9f012be59028ed53f",
+					Address: "0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0",
+					Balance: 1000000,
+				},
+				{
+					Address: "0x45880e0ab20b1ca0391e8fe871fa035e58edada9",
+					Balance: 1000000,
+				},
+				{
+					Address: "0xdac38f0e18ef8bd32aaae695f82e37e14a75a74b",
 					Balance: 1000000,
 				},
 			},
