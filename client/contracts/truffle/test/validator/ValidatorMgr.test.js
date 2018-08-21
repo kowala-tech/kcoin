@@ -22,7 +22,7 @@ const MiningTokenMock = artifacts.require('TokenMock.sol');
 const DomainResolverMock = artifacts.require('DomainResolverMock.sol');
 const namehash = require('eth-ens-namehash');
 
-contract('Validator Manager', ([_, owner, newOwner, newOwner2, newOwner3, notOwner]) => {
+contract('Validator Manager', ([_, owner, newOwner, newOwner2, newOwner3, newOwner4, notOwner]) => {
   describe('KNS functionality', async () => {
     beforeEach(async () => {
       this.kns = await KNS.new({ from: owner });
@@ -92,6 +92,19 @@ contract('Validator Manager', ([_, owner, newOwner, newOwner2, newOwner3, notOwn
 
         // when
         const exptectedFailedRegistration = this.validator.registerValidator(newOwner, 100, { from: newOwner });
+
+        // then
+        await exptectedFailedRegistration.should.eventually.be.rejectedWith(EVMError('revert'));
+      });
+
+      it('should not register validators above the limit', async () => {
+        // given
+        await this.validator.registerValidator(newOwner, 130, { from: newOwner });
+        await this.validator.registerValidator(newOwner2, 120, { from: newOwner2 });
+        await this.validator.registerValidator(newOwner3, 110, { from: newOwner3 });
+
+        // when
+        const exptectedFailedRegistration = this.validator.registerValidator(newOwner4, 100, { from: newOwner4 });
 
         // then
         await exptectedFailedRegistration.should.eventually.be.rejectedWith(EVMError('revert'));
@@ -200,8 +213,8 @@ contract('Validator Manager', ([_, owner, newOwner, newOwner2, newOwner3, notOwn
       it('should get minimal required deposit when there are no positions left', async () => {
         // given
         await this.validator.registerValidator(newOwner, 130, { from: newOwner });
-        await this.validator.registerValidator(newOwner2, 120, { from: newOwner });
-        await this.validator.registerValidator(newOwner3, 110, { from: newOwner });
+        await this.validator.registerValidator(newOwner2, 120, { from: newOwner2 });
+        await this.validator.registerValidator(newOwner3, 110, { from: newOwner3 });
 
         // when
         const minDeposit = await this.validator.getMinimumDeposit();
