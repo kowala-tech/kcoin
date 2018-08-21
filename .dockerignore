@@ -1,6 +1,5 @@
 **/node_modules
 **/.git
-**/node_modules
 .git
 !.git/HEAD
 !.git/refs/heads
@@ -15,3 +14,8 @@ wallet-backend/vendor
 
 *.mp4
 *.ppm
+
+wallet-tools/dist/
+wallet-tools/chrome-extension/
+wallet-tools/json_relay_node/
+wallet-tools/json_relay_php/
