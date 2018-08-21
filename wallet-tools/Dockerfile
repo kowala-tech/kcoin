@@ -9,7 +9,7 @@ RUN openssl genrsa -des3 -passout pass:x -out server.pass.key 2048 && \
     openssl x509 -req -sha256 -days 365 -in server.csr -signkey server.key -out server.crt
 
 WORKDIR /wallet-tools
-ADD . /wallet-tools
+ADD ./wallet-tools /wallet-tools
 
 ARG APP_URL
 ARG CDN_URL
