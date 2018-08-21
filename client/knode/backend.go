@@ -230,7 +230,7 @@ func (s *Kowala) APIs() []rpc.API {
 		}, {
 			Namespace: "mtoken",
 			Version:   "1.0",
-			Service:   NewPublicTokenAPI(s.accountManager, s.consensus),
+			Service:   NewPublicTokenAPI(s.accountManager, s.consensus, s.chainConfig.ChainID),
 			Public:    false,
 		}, {
 			Namespace: "eth",
