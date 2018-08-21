@@ -149,6 +149,18 @@ func (r *Receipt) Size() common.StorageSize {
 	return size
 }
 
+func (r *Receipt) String() string {
+	return fmt.Sprintf(`
+TxHash:			 	%s
+ContractAddress: 	%s
+GasUsed:		 	%d
+CumulativeGasUsed:	%d
+Status: 			%d
+Size: 				%s
+Logs: %v
+`, r.TxHash.String(), r.ContractAddress.String(), r.CumulativeGasUsed, r.GasUsed, r.Status, r.Size().String(), r.Logs)
+}
+
 // ReceiptForStorage is a wrapper around a Receipt that flattens and parses the
 // entire content of a receipt, as opposed to only the consensus fields originally.
 type ReceiptForStorage Receipt

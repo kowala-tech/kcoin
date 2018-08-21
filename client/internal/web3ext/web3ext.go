@@ -463,8 +463,14 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'mint',
 			call: 'mtoken_mint',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputAddressFormatter, web3._extend.utils.fromDecimal]
+		}),
+		new web3._extend.Method({
+			name: 'confirm',
+			call: 'mtoken_confirm',
 			params: 2,
-			inputFormatter: [web3._extend.formatters.inputTransactionFormatter, null]
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.utils.fromDecimal]
 		})
 	],
 	properties: []
