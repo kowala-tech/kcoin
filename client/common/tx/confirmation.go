@@ -15,13 +15,13 @@ type Backend interface {
 
 // WaitMined waits for tx to be mined on the blockchain.
 // It stops waiting when the context is canceled.
-func WaitMined(ctx context.Context, b Backend, tx *types.Transaction) (*types.Receipt, error) {
+func WaitMined(ctx context.Context, b Backend, txHash common.Hash) (*types.Receipt, error) {
 	queryTicker := time.NewTicker(time.Second)
 	defer queryTicker.Stop()
 
-	logger := log.New("hash", tx.Hash())
+	logger := log.New("hash", txHash)
 	for {
-		receipt, err := b.TransactionReceipt(ctx, tx.Hash())
+		receipt, err := b.TransactionReceipt(ctx, txHash)
 		if receipt != nil {
 			return receipt, nil
 		}

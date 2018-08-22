@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/kowala-tech/kcoin/client/common/tx"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
@@ -48,7 +49,7 @@ func (val *validator) notLoggedInState() stateFn {
 
 		log.Info("Waiting confirmation to participate in the consensus")
 
-		receipt, err := val.backend.TransactionReceipt(context.TODO(), txHash)
+		receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
 		if err != nil {
 			log.Crit("Failed to verify the voter registration", "err", err)
 		}
