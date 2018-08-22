@@ -72,10 +72,11 @@ type Kowala struct {
 
 	validator validator.Validator // consensus validator
 
+	consensus *consensus.Consensus
+
 	bindingFuncs []BindingConstructor // binding constructors (in dependency order)
 	contracts    map[reflect.Type]bindings.Binding
 
-	consensus consensus.Consensus // consensus binding
 	gasPrice  *big.Int
 	coinbase  common.Address
 	deposit   *big.Int
@@ -152,6 +153,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 
 	var systemVars *sysvars.Vars
 	if err := kcoin.Contract(&systemVars); err != nil {
+		return nil, err
+	}
+
+	if err := kcoin.Contract(&kcoin.consensus); err != nil {
 		return nil, err
 	}
 
@@ -414,7 +419,7 @@ func (s *Kowala) IsListening() bool                  { return true } // Always l
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkID }
 func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
-func (s *Kowala) Consensus() consensus.Consensus     { return s.consensus }
+func (s *Kowala) Consensus() *consensus.Consensus    { return s.consensus }
 func (s *Kowala) APIBackend() *KowalaAPIBackend      { return s.apiBackend }
 func (s *Kowala) ChainConfig() *params.ChainConfig   { return s.chainConfig }
 

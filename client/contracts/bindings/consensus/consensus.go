@@ -28,13 +28,7 @@ import (
 
 const RegistrationHandler = "registerValidator(address,uint256,bytes)"
 
-var (
-	DefaultData = []byte("not_zero")
-)
-
-// ValidatorsChecksum lets a validator know if there are changes in the validator set
-type ValidatorsChecksum [32]byte
-
+var DefaultData = []byte("not_zero")
 
 type mUSD struct {
 	*MiningToken
@@ -187,7 +181,7 @@ func (css *Consensus) RedeemDeposits(walletAccount accounts.WalletAccount) error
 	return nil
 }
 
-func (css *Consensus) ValidatorsChecksum() (ValidatorsChecksum, error) {
+func (css *Consensus) ValidatorsChecksum() (types.VotersChecksum, error) {
 	return css.manager.ValidatorsChecksum(&bind.CallOpts{})
 }
 

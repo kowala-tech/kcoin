@@ -179,10 +179,10 @@ type TransferArgs struct {
 // PublicTokenAPI exposes a collection of methods related to tokens
 type PublicTokenAPI struct {
 	accountMgr *accounts.Manager
-	consensus  consensus.Consensus
+	consensus  *consensus.Consensus
 }
 
-func NewPublicTokenAPI(accountMgr *accounts.Manager, c consensus.Consensus) *PublicTokenAPI {
+func NewPublicTokenAPI(accountMgr *accounts.Manager, c *consensus.Consensus) *PublicTokenAPI {
 	return &PublicTokenAPI{
 		accountMgr: accountMgr,
 		consensus:  c,
