@@ -26,7 +26,7 @@ func WaitMined(ctx context.Context, b Backend, txHash common.Hash) (*types.Recei
 			return receipt, nil
 		}
 		if err != nil {
-			logger.Trace("Receipt retrieval failed", "err", err)
+			return nil, err
 		} else {
 			logger.Trace("Transaction not yet mined")
 		}
