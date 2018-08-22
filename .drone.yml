@@ -353,10 +353,10 @@ pipeline:
     environment:
       - DOCKER_HOST=tcp://docker:2375
     commands:
-      - make kcoin_cross
+      - make kcoin_cross_rename
     when:
-      event: [push, tag]
-      branch: [dev]
+        #event: [push, tag]
+        #branch: [dev]
 
   compile_gource_video:
     group: build_artifacts
@@ -506,7 +506,7 @@ pipeline:
       status: failure
       event: [push, tag, pull_request]
 
-services:
+services1:
   docker:
     image: docker:dind
     command: [ '-l', 'fatal' ]
