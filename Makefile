@@ -144,8 +144,8 @@ kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename
 .PHONY: kcoin_cross_build
 kcoin_cross_build:
 	cd client; build/env.sh go run build/ci.go xgo -- --go=latest --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
-	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-dawin-amd64
-	mv client/build/bin/kcoin-windows-4-amd64 client/build/bin/kcoin-windows-amd64
+	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-darwin-amd64
+	mv client/build/bin/kcoin-windows-4.0-amd64.exe client/build/bin/kcoin-windows-amd64.exe
 
 .PHONY: kcoin_cross_compress
 kcoin_cross_compress:
@@ -154,16 +154,16 @@ kcoin_cross_compress:
 .PHONY: kcoin_cross_rename
 kcoin_cross_rename:
 ifdef DRONE_TAG
+	mkdir -p client/build/bin/tags/$(DRONE_TAG)
 	cd client/build/bin && for f in kcoin-*; do \
-		mkdir -p "client/build/bin/tags/$(DRONE_TAG)";\
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
 		version=$$(echo $$f | awk '{ gsub("kcoin", "tags/$(DRONE_TAG)/kcoin"); print }');\
 		cp $$f $$release;\
 		mv $$f $$version;\
 	done;
 else
+	mkdir -p client/build/bin/commits/$(DRONE_COMMIT_SHA)
 	cd client/build/bin && for f in kcoin-*; do \
-		mkdir -p "client/build/bin/commits/$(DRONE_COMMIT_SHA)";\
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-unstable"); print }');\
 		version=$$(echo $$f | awk '{ gsub("kcoin", "commits/$(DRONE_COMMIT_SHA)/kcoin"); print }');\
 		cp $$f $$release;\
