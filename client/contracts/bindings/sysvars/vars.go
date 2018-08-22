@@ -16,15 +16,12 @@ var mapSystemVarsToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
 }
 
-type Vars interface {
-}
-
-type vars struct {
+type Vars struct {
 	*SystemVarsSession
 }
 
 // @TODO(rgeraldes) - temporary method
-func (v *vars) Domain() string {
+func (v *Vars) Domain() string {
 	return ""
 }
 
@@ -40,7 +37,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		return nil, err
 	}
 
-	return &vars{
+	return &Vars{
 		&SystemVarsSession{
 			Contract: contract,
 			CallOpts: bind.CallOpts{},

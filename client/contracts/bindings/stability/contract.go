@@ -16,15 +16,12 @@ var mapStabilityContractToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
 }
 
-type StabilityContract interface {
-}
-
-type stability struct {
+type StabilityContract struct {
 	*StabilitySession
 }
 
 // @TODO(rgeraldes) - temporary method
-func (sc *stability) Domain() string {
+func (sc *StabilityContract) Domain() string {
 	return ""
 }
 
@@ -40,7 +37,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		return nil, err
 	}
 
-	return &stability{
+	return &StabilityContract{
 		&StabilitySession{
 			Contract: contract,
 			CallOpts: bind.CallOpts{},

@@ -72,7 +72,7 @@ type Kowala struct {
 
 	validator validator.Validator // consensus validator
 
-	bindingFuncs []BindingConstructor // binding constructors
+	bindingFuncs []BindingConstructor // binding constructors (in dependency order)
 	contracts    map[reflect.Type]bindings.Binding
 
 	consensus consensus.Consensus // consensus binding
@@ -119,8 +119,13 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		deposit:        config.Deposit,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
-		bindingFuncs:   []BindingConstructor{oracle.Bind, consensus.Bind, sysvars.Bind, stability.Bind},
-		contracts:      make(map[reflect.Type]bindings.Binding),
+		bindingFuncs: []BindingConstructor{
+			oracle.Bind,
+			consensus.Bind,
+			sysvars.Bind,
+			stability.Bind,
+		},
+		contracts: make(map[reflect.Type]bindings.Binding),
 	}
 
 	log.Info("Initialising Kowala protocol", "versions", protocol.Constants.Versions, "network", config.NetworkId)
@@ -132,19 +137,20 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		if err != nil {
 			return nil, err
 		}
+		// build and save the binding
 		kind := reflect.TypeOf(contract)
 		if _, exists := kcoin.contracts[kind]; exists {
-			return nil, errors.New("duplicate cotnract")
+			return nil, errors.New("duplicate contract")
 		}
 		kcoin.contracts[kind] = contract
 	}
 
-	var oracleMgr oracle.Manager
+	var oracleMgr *oracle.Manager
 	if err := kcoin.Contract(&oracleMgr); err != nil {
 		return nil, err
 	}
 
-	var systemVars sysvars.SystemVars
+	var systemVars *sysvars.Vars
 	if err := kcoin.Contract(&systemVars); err != nil {
 		return nil, err
 	}

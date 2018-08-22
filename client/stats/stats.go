@@ -67,9 +67,9 @@ type Service struct {
 	pass string // Password to authorize access to the monitoring page
 	host string // Remote address of the monitoring service
 
-	oracleMgr oracle.Manager
-	validatorMgr consensus.Consensus
-	sysvars sysvars.SystemVars
+	oracleMgr *oracle.Manager
+	validatorMgr *consensus.Consensus
+	sysvars *sysvars.Vars
 
 	pongCh chan struct{} // Pong notifications are fed into this channel
 	histCh chan []uint64 // History request block numbers are fed into this channel
@@ -86,17 +86,17 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 	// Assemble and return the stats service
 	engine := kowalaServ.Engine()
 
-	var oracleMgr oracle.Manager
+	var oracleMgr *oracle.Manager
 	if err := kowalaServ.Contract(oracleMgr); err != nil {
 		return nil, fmt.Errorf("Failed to load the oracle contract %v", err)
 	}
 
-	var validatorMgr consensus.Consensus
+	var validatorMgr *consensus.Consensus
 	if err := kowalaServ.Contract(validatorMgr); err != nil {
 		return nil, fmt.Errorf("Failed to load the consensus contract %v", err)
 	}
 
-	var sysvars sysvars.SystemVars
+	var sysvars *sysvars.Vars
 	if err := kowalaServ.Contract(sysvars); err != nil {
 		return nil, fmt.Errorf("Failed to load the system vars contract %v", err)
 	}

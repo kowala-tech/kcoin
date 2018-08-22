@@ -16,16 +16,12 @@ var mapOracleMgrToAddr = map[uint64]common.Address{
 	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
 }
 
-type Manager interface {
-	GetOracleCount() (*big.Int, error)
-}
-
-type manager struct {
+type Manager struct {
 	*OracleMgrSession
 }
 
 // @TODO(rgeraldes) - temporary method
-func (mgr *manager) Domain() string {
+func (mgr *Manager) Domain() string {
 	return ""
 }
 
@@ -41,7 +37,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		return nil, err
 	}
 
-	return &manager{
+	return &Manager{
 		&OracleMgrSession{
 			Contract: mgr,
 			CallOpts: bind.CallOpts{},

@@ -35,30 +35,6 @@ var (
 // ValidatorsChecksum lets a validator know if there are changes in the validator set
 type ValidatorsChecksum [32]byte
 
-// Consensus is a gateway to the validators contracts on the network
-type Consensus interface {
-	Domain() string
-	Join(walletAccount accounts.WalletAccount, amount *big.Int) error
-	Leave(walletAccount accounts.WalletAccount) error
-	RedeemDeposits(walletAccount accounts.WalletAccount) error
-	ValidatorsChecksum() (ValidatorsChecksum, error)
-	Validators() (types.Voters, error)
-	GetValidatorCount() (*big.Int, error)
-	MaxValidators() (*big.Int, error)
-	Deposits(address common.Address) ([]*types.Deposit, error)
-	IsGenesisValidator(address common.Address) (bool, error)
-	IsValidator(address common.Address) (bool, error)
-	MinimumDeposit() (*big.Int, error)
-	Token() token.Token
-	Minter
-}
-
-type Minter interface {
-	MultiSigWalletContract() *ownership.MultiSigWallet
-	Mint(opts *accounts.TransactOpts, to common.Address, value *big.Int) (common.Hash, error)
-	Confirm(opts *accounts.TransactOpts, transactionID *big.Int) (common.Hash, error)
-	MintInit() error
-}
 
 type mUSD struct {
 	*MiningToken
@@ -121,7 +97,8 @@ func (tkn *mUSD) Name() (string, error) {
 	return tkn.MiningToken.Name(&bind.CallOpts{})
 }
 
-type consensus struct {
+// Consensus is a gateway to the validators contracts on the network
+type Consensus struct {
 	manager         *ValidatorMgr
 	managerAddr     common.Address
 	mtoken          token.Token
@@ -134,7 +111,7 @@ type consensus struct {
 	oracle         *oracle.OracleMgr
 }
 
-// Binding returns a binding to the current consensus engine
+// Binding returns a binding to the current Consensus engine
 func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
 	//addr, err := getAddressFromKNS(
 	//	params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
@@ -156,7 +133,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		return nil, err
 	}
 
-	return &consensus{
+	return &Consensus{
 		manager:         manager,
 		managerAddr:     addr,
 		mtoken:          mUSD,
@@ -177,10 +154,10 @@ func getAddressFromKNS(domain string, caller bind.ContractCaller) (common.Addres
 	return resolver.Addr(nil, kns2.NameHash(domain))
 }
 
-func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) error {
+func (css *Consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) error {
 	log.Warn(fmt.Sprintf("Joining the network %v with a deposit %v. Account %q",
-		consensus.chainID.String(), deposit.String(), walletAccount.Account().Address.String()))
-	_, err := consensus.mtoken.Transfer(walletAccount, consensus.managerAddr, deposit, []byte("not_zero"), RegistrationHandler)
+		css.chainID.String(), deposit.String(), walletAccount.Account().Address.String()))
+	_, err := css.mtoken.Transfer(walletAccount, css.managerAddr, deposit, []byte("not_zero"), RegistrationHandler)
 	if err != nil {
 		return fmt.Errorf("failed to transact the deposit: %s", err)
 	}
@@ -188,10 +165,10 @@ func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *
 	return nil
 }
 
-func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) error {
+func (css *Consensus) Leave(walletAccount accounts.WalletAccount) error {
 	log.Warn(fmt.Sprintf("Leaving the network %v. Account %q",
-		consensus.chainID.String(), walletAccount.Account().Address.String()))
-	_, err := consensus.manager.DeregisterValidator(transactOpts(walletAccount, consensus.chainID))
+		css.chainID.String(), walletAccount.Account().Address.String()))
+	_, err := css.manager.DeregisterValidator(transactOpts(walletAccount, css.chainID))
 	if err != nil {
 		return err
 	}
@@ -199,10 +176,10 @@ func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) error {
 	return nil
 }
 
-func (consensus *consensus) RedeemDeposits(walletAccount accounts.WalletAccount) error {
+func (css *Consensus) RedeemDeposits(walletAccount accounts.WalletAccount) error {
 	log.Warn(fmt.Sprintf("Redeem deposit from the network %v. Account %q",
-		consensus.chainID.String(), walletAccount.Account().Address.String()))
-	_, err := consensus.manager.ReleaseDeposits(transactOpts(walletAccount, consensus.chainID))
+		css.chainID.String(), walletAccount.Account().Address.String()))
+	_, err := css.manager.ReleaseDeposits(transactOpts(walletAccount, css.chainID))
 	if err != nil {
 		return err
 	}
@@ -210,19 +187,19 @@ func (consensus *consensus) RedeemDeposits(walletAccount accounts.WalletAccount)
 	return nil
 }
 
-func (consensus *consensus) ValidatorsChecksum() (ValidatorsChecksum, error) {
-	return consensus.manager.ValidatorsChecksum(&bind.CallOpts{})
+func (css *Consensus) ValidatorsChecksum() (ValidatorsChecksum, error) {
+	return css.manager.ValidatorsChecksum(&bind.CallOpts{})
 }
 
-func (consensus *consensus) Validators() (types.Voters, error) {
-	count, err := consensus.manager.GetValidatorCount(&bind.CallOpts{})
+func (css *Consensus) Validators() (types.Voters, error) {
+	count, err := css.manager.GetValidatorCount(&bind.CallOpts{})
 	if err != nil {
 		return nil, err
 	}
 
 	voters := make([]*types.Voter, count.Uint64())
 	for i := int64(0); i < count.Int64(); i++ {
-		validator, err := consensus.manager.GetValidatorAtIndex(&bind.CallOpts{}, big.NewInt(i))
+		validator, err := css.manager.GetValidatorAtIndex(&bind.CallOpts{}, big.NewInt(i))
 		if err != nil {
 			return nil, err
 		}
@@ -234,15 +211,15 @@ func (consensus *consensus) Validators() (types.Voters, error) {
 	return types.NewVoters(voters)
 }
 
-func (consensus *consensus) Deposits(addr common.Address) ([]*types.Deposit, error) {
-	count, err := consensus.manager.GetDepositCount(&bind.CallOpts{From: addr})
+func (css *Consensus) Deposits(addr common.Address) ([]*types.Deposit, error) {
+	count, err := css.manager.GetDepositCount(&bind.CallOpts{From: addr})
 	if err != nil {
 		return nil, err
 	}
 
 	deposits := make([]*types.Deposit, count.Uint64())
 	for i := int64(0); i < count.Int64(); i++ {
-		deposit, err := consensus.manager.GetDepositAtIndex(&bind.CallOpts{From: addr}, big.NewInt(i))
+		deposit, err := css.manager.GetDepositAtIndex(&bind.CallOpts{From: addr}, big.NewInt(i))
 		if err != nil {
 			return nil, err
 		}
@@ -252,39 +229,39 @@ func (consensus *consensus) Deposits(addr common.Address) ([]*types.Deposit, err
 	return deposits, nil
 }
 
-func (consensus *consensus) IsGenesisValidator(address common.Address) (bool, error) {
-	return consensus.manager.IsGenesisValidator(&bind.CallOpts{}, address)
+func (css *Consensus) IsGenesisValidator(address common.Address) (bool, error) {
+	return css.manager.IsGenesisValidator(&bind.CallOpts{}, address)
 }
 
-func (consensus *consensus) IsValidator(address common.Address) (bool, error) {
-	return consensus.manager.IsValidator(&bind.CallOpts{}, address)
+func (css *Consensus) IsValidator(address common.Address) (bool, error) {
+	return css.manager.IsValidator(&bind.CallOpts{}, address)
 }
 
-func (consensus *consensus) MinimumDeposit() (*big.Int, error) {
-	return consensus.manager.GetMinimumDeposit(&bind.CallOpts{})
+func (css *Consensus) MinimumDeposit() (*big.Int, error) {
+	return css.manager.GetMinimumDeposit(&bind.CallOpts{})
 }
 
-func (consensus *consensus) GetValidatorCount() (*big.Int, error) {
-	return consensus.manager.GetValidatorCount(&bind.CallOpts{})
+func (css *Consensus) GetValidatorCount() (*big.Int, error) {
+	return css.manager.GetValidatorCount(&bind.CallOpts{})
 }
 
-func (consensus *consensus) MaxValidators() (*big.Int, error) {
-	return consensus.manager.MaxNumValidators(&bind.CallOpts{})
+func (css *Consensus) MaxValidators() (*big.Int, error) {
+	return css.manager.MaxNumValidators(&bind.CallOpts{})
 }
 
-func (consensus *consensus) Token() token.Token {
-	return consensus.mtoken
+func (css *Consensus) Token() token.Token {
+	return css.mtoken
 }
 
 //Minter interface implementation
 
-func (consensus *consensus) MintInit() error {
+func (css *Consensus) MintInit() error {
 	var err error
-	consensus.initMint.Do(func() {
-		if consensus.multiSigWallet == nil {
+	css.initMint.Do(func() {
+		if css.multiSigWallet == nil {
 			//addr, errKNS := getAddressFromKNS(
 			//	params.KNSDomains[params.MultiSigDomain].FullDomain(),
-			//	consensus.contractBackend,
+			//	css.contractBackend,
 			//)
 			//if errKNS != nil {
 			//	err = errKNS
@@ -294,18 +271,18 @@ func (consensus *consensus) MintInit() error {
 			addr := common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62")
 
 			var multisig *ownership.MultiSigWallet
-			multisig, err = ownership.NewMultiSigWallet(addr, consensus.contractBackend)
+			multisig, err = ownership.NewMultiSigWallet(addr, css.contractBackend)
 			if err != nil {
 				return
 			}
 
-			consensus.multiSigWallet = multisig
+			css.multiSigWallet = multisig
 		}
 
-		if consensus.oracle == nil {
+		if css.oracle == nil {
 			//addr, errKns := getAddressFromKNS(
 			//	params.KNSDomains[params.OracleMgrDomain].FullDomain(),
-			//	consensus.contractBackend,
+			//	css.contractBackend,
 			//)
 			//if err != nil {
 			//	err = errKns
@@ -315,24 +292,24 @@ func (consensus *consensus) MintInit() error {
 			addr := common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5")
 
 			var oracleMgr *oracle.OracleMgr
-			oracleMgr, err = oracle.NewOracleMgr(addr, consensus.contractBackend)
+			oracleMgr, err = oracle.NewOracleMgr(addr, css.contractBackend)
 			if err != nil {
 				return
 			}
 
-			consensus.oracle = oracleMgr
+			css.oracle = oracleMgr
 		}
 	})
 
 	return err
 }
 
-func (consensus *consensus) MultiSigWalletContract() *ownership.MultiSigWallet {
-	return consensus.multiSigWallet
+func (css *Consensus) MultiSigWalletContract() *ownership.MultiSigWallet {
+	return css.multiSigWallet
 }
 
-func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address, value *big.Int) (common.Hash, error) {
-	if err := consensus.MintInit(); err != nil {
+func (css *Consensus) Mint(opts *accounts.TransactOpts, to common.Address, value *big.Int) (common.Hash, error) {
+	if err := css.MintInit(); err != nil {
 		return common.Hash{}, err
 	}
 
@@ -346,7 +323,7 @@ func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address,
 		return common.Hash{}, err
 	}
 
-	tx, err := consensus.multiSigWallet.SubmitTransaction(toBind(opts), consensus.mtokenAddr, common.Big0, mintParams)
+	tx, err := css.multiSigWallet.SubmitTransaction(toBind(opts), css.mtokenAddr, common.Big0, mintParams)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -354,12 +331,12 @@ func (consensus *consensus) Mint(opts *accounts.TransactOpts, to common.Address,
 	return tx.Hash(), err
 }
 
-func (consensus *consensus) Confirm(opts *accounts.TransactOpts, transactionID *big.Int) (common.Hash, error) {
-	if err := consensus.MintInit(); err != nil {
+func (css *Consensus) Confirm(opts *accounts.TransactOpts, transactionID *big.Int) (common.Hash, error) {
+	if err := css.MintInit(); err != nil {
 		return common.Hash{}, err
 	}
 
-	tx, err := consensus.multiSigWallet.ConfirmTransaction(toBind(opts), transactionID)
+	tx, err := css.multiSigWallet.ConfirmTransaction(toBind(opts), transactionID)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -368,7 +345,7 @@ func (consensus *consensus) Confirm(opts *accounts.TransactOpts, transactionID *
 }
 
 // @TODO(rgeraldes) - temporary method
-func (consensus *consensus) Domain() string {
+func (css *Consensus) Domain() string {
 	return ""
 }
 
