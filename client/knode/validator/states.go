@@ -31,6 +31,10 @@ func (val *validator) notLoggedInState() stateFn {
 		return nil
 	}
 
+	log.Info(
+		fmt.Sprintf("The genesis validator assert is %v and the address is %s", isGenesis, val.walletAccount.Account().Address.Hex()),
+	)
+
 	// @NOTE (rgeraldes) - sync was already done at this point and by default the investors will be
 	// part of the initial set of validators - no need to make a deposit if the block number is 0
 	// since these validators will be marked as voters from the start

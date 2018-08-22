@@ -1,0 +1,8 @@
+ignored = [
+  "github.com/kowala-tech/kcoin/client",
+  "github.com/kowala-tech/kcoin/client/*",
+]
+
+[[constraint]]
+  name = "docker.io/go-docker"
+  version = "1.0.0"
