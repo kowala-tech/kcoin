@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"sync/atomic"
@@ -39,29 +40,20 @@ func (val *validator) notLoggedInState() stateFn {
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
 
-		if err := val.consensus.Join(val.walletAccount, val.deposit); err != nil {
+		txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
+		if err != nil {
 			log.Error("Error joining validators network", "err", err)
 			return nil
 		}
 
 		log.Info("Waiting confirmation to participate in the consensus")
-	L:
-		for {
-			select {
-			case _, ok := <-chainHeadCh:
-				if !ok {
-					return nil
-				}
 
-				confirmed, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
-				if err != nil {
-					log.Crit("Failed to verify the voter registration", "err", err)
-				}
-
-				if confirmed {
-					break L
-				}
-			}
+		receipt, err := val.backend.TransactionReceipt(context.TODO(), txHash)
+		if err != nil {
+			log.Crit("Failed to verify the voter registration", "err", err)
+		}
+		if receipt.Status == types.ReceiptStatusFailed {
+			log.Crit("Failed to register the validator - receipt status failed")
 		}
 	} else {
 		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)

@@ -2,6 +2,7 @@
 package knode
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -380,6 +381,21 @@ func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.
 func (s *Kowala) Consensus() consensus.Consensus     { return s.consensus }
 func (s *Kowala) APIBackend() *KowalaAPIBackend      { return s.apiBackend }
 func (s *Kowala) ChainConfig() *params.ChainConfig   { return s.chainConfig }
+
+func (s *Kowala) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	tx, blockHash, _, index := rawdb.ReadTransaction(s.chainDb, txHash)
+	if tx == nil {
+		return nil, nil
+	}
+	receipts, err := s.apiBackend.GetReceipts(ctx, blockHash)
+	if err != nil {
+		return nil, err
+	}
+	if len(receipts) <= int(index) {
+		return nil, nil
+	}
+	return receipts[index], nil
+}
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
