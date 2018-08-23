@@ -1,7 +1,9 @@
 package validator
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -9,6 +11,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/tx"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/core"
@@ -36,6 +39,7 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() kcoindb.Database
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 }
 
 type Validator interface {
@@ -404,9 +408,16 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 }
 
 func (val *validator) leave() {
-	err := val.consensus.Leave(val.walletAccount)
+	txHash, err := val.consensus.Leave(val.walletAccount)
 	if err != nil {
 		log.Error("failed to leave the election", "err", err)
+	}
+	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+	if err != nil {
+		log.Error("Failed to verify the voter deregistration", "err", err)
+	}
+	if receipt.Status == types.ReceiptStatusFailed {
+		log.Error("Failed to deregister validator - receipt status failed")
 	}
 }
 
@@ -708,5 +719,18 @@ func (val *validator) RedeemDeposits() error {
 	if !val.Validating() {
 		return ErrIsNotRunning
 	}
-	return val.consensus.RedeemDeposits(val.walletAccount)
+
+	txHash, err := val.consensus.RedeemDeposits(val.walletAccount)
+	if err != nil {
+		return err
+	}
+	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+	if err != nil {
+		return err
+	}
+	if receipt.Status == types.ReceiptStatusFailed {
+		return fmt.Errorf("Failed to redeem deposits - receipt status failed")
+	}
+
+	return nil
 }
