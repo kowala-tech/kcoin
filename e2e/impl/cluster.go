@@ -197,7 +197,7 @@ func (ctx *Context) runBootnode() error {
 func (ctx *Context) runGenesisValidator() error {
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.bootnode).
-		WithLogLevel(6).
+		WithLogLevel(4).
 		WithID("genesis-validator-"+ctx.nodeSuffix).
 		WithSyncMode("full").
 		WithNetworkId(ctx.chainID.String()).
