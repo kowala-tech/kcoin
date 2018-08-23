@@ -5,6 +5,7 @@ const KNS = artifacts.require('./kns/KNSRegistry.sol');
 const FIFSRegistrar = artifacts.require('./kns/FIFSRegistrar.sol');
 const PublicResolver = artifacts.require('./kns/PublicResolver.sol');
 const namehash = require('../node_modules/eth-ens-namehash');
+
 const NameHash = artifacts.require('./utils/NameHash.sol');
 const OracleMgr = artifacts.require('./oracle/OracleMgr.sol');
 const ValidatorMgr = artifacts.require('./consensus/mgr/ValidatorMgr.sol');

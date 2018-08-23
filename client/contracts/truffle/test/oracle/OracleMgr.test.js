@@ -9,7 +9,8 @@ require('chai')
   .use(require('chai-as-promised'))
   .use(require('chai-bignumber')(web3.BigNumber))
   .should();
-
+const namehash = require('eth-ens-namehash');
+const { EVMError } = require('../helpers/testUtils.js');
 const { Contracts } = require('zos-lib');
 
 const OracleMgr = artifacts.require('OracleMgr.sol');
@@ -20,10 +21,8 @@ const KNS = artifacts.require('KNSRegistry.sol');
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
 const UpgradeabilityProxy = Contracts.getFromNodeModules('zos-lib', 'UpgradeabilityProxyFactory');
 const AdminUpgradeabilityProxy = Contracts.getFromNodeModules('zos-lib', 'AdminUpgradeabilityProxy');
-const namehash = require('eth-ens-namehash');
-const { EVMError } = require('../helpers/testUtils.js');
 
-contract('Oracle Manager', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwner4, notOwner]) => {
+contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwner4, notOwner]) => {
   describe('KNS functionality', async () => {
     beforeEach(async () => {
       this.proxyFactory = await UpgradeabilityProxy.new();
