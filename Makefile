@@ -154,16 +154,16 @@ kcoin_cross_compress:
 .PHONY: kcoin_cross_rename
 kcoin_cross_rename:
 ifdef DRONE_TAG
+	mkdir -p client/build/bin/tags/$(DRONE_TAG)
 	cd client/build/bin && for f in kcoin-*; do \
-		mkdir -p "client/build/bin/tags/$(DRONE_TAG)";\
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
 		version=$$(echo $$f | awk '{ gsub("kcoin", "tags/$(DRONE_TAG)/kcoin"); print }');\
 		cp $$f $$release;\
 		mv $$f $$version;\
 	done;
 else
+	mkdir -p client/build/bin/commits/$(DRONE_COMMIT_SHA)
 	cd client/build/bin && for f in kcoin-*; do \
-		mkdir -p "client/build/bin/commits/$(DRONE_COMMIT_SHA)";\
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-unstable"); print }');\
 		version=$$(echo $$f | awk '{ gsub("kcoin", "commits/$(DRONE_COMMIT_SHA)/kcoin"); print }');\
 		cp $$f $$release;\
