@@ -179,6 +179,20 @@ contract('ValidatorMgr', ([_, owner, newOwner, newOwner2, newOwner3, newOwner4, 
         // then
         await balanceAfterSecondRelease.should.be.bignumber.equal(balanceFirstAfterRelease);
       });
+
+      it('Mining token properties', async () => {
+        // when
+        const name = await this.miningToken.name();
+        const symbol = await this.miningToken.symbol();
+        const decimals = await this.miningToken.decimals();
+        const totalSupply = await this.miningToken.totalSupply();
+
+        // then
+        await name.should.be.equal('mock');
+        await symbol.should.be.equal('mock');
+        await decimals.should.be.bignumber.equal(18);
+        await totalSupply.should.be.bignumber.equal(0);
+      });
     });
     describe('setters and getters', async () => {
       it('should get validator`s deposit', async () => {

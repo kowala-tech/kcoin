@@ -177,6 +177,20 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
         // then
         await expectedPriceFailure.should.eventually.be.rejectedWith(EVMError('revert'));
       });
+
+      it('should get price count', async () => {
+        // given
+        await this.oracle.registerOracle({ from: newOwner });
+        await this.oracle.registerOracle({ from: newOwner2 });
+
+        // when
+        await this.oracle.submitPrice(10, { from: newOwner });
+        await this.oracle.submitPrice(15, { from: newOwner2 });
+
+        // then
+        const priceCount = await this.oracle.getPriceCount();
+        await priceCount.should.be.bignumber.equal(2);
+      });
     });
   });
 });
