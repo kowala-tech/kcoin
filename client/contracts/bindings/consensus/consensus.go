@@ -52,9 +52,9 @@ type ValidatorsChecksum [32]byte
 
 // Consensus is a gateway to the validators contracts on the network
 type Consensus interface {
-	Join(walletAccount accounts.WalletAccount, amount *big.Int) error
-	Leave(walletAccount accounts.WalletAccount) error
-	RedeemDeposits(walletAccount accounts.WalletAccount) error
+	Join(walletAccount accounts.WalletAccount, amount *big.Int) (common.Hash, error)
+	Leave(walletAccount accounts.WalletAccount) (common.Hash, error)
+	RedeemDeposits(walletAccount accounts.WalletAccount) (common.Hash, error)
 	ValidatorsChecksum() (ValidatorsChecksum, error)
 	Validators() (types.Voters, error)
 	GetValidatorCount() (*big.Int, error)
@@ -164,37 +164,37 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus
 	}, nil
 }
 
-func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) error {
+func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) (common.Hash, error) {
 	log.Warn(fmt.Sprintf("Joining the network %v with a deposit %v. Account %q",
 		consensus.chainID.String(), deposit.String(), walletAccount.Account().Address.String()))
-	_, err := consensus.mtoken.Transfer(walletAccount, consensus.managerAddr, deposit, []byte("not_zero"), RegistrationHandler)
+	hash, err := consensus.mtoken.Transfer(walletAccount, consensus.managerAddr, deposit, []byte("not_zero"), RegistrationHandler)
 	if err != nil {
-		return fmt.Errorf("failed to transact the deposit: %s", err)
+		return common.Hash{}, fmt.Errorf("failed to transact the deposit: %s", err)
 	}
 
-	return nil
+	return hash, nil
 }
 
-func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) error {
+func (consensus *consensus) Leave(walletAccount accounts.WalletAccount) (common.Hash, error) {
 	log.Warn(fmt.Sprintf("Leaving the network %v. Account %q",
 		consensus.chainID.String(), walletAccount.Account().Address.String()))
-	_, err := consensus.manager.DeregisterValidator(transactOpts(walletAccount, consensus.chainID))
+	tx, err := consensus.manager.DeregisterValidator(transactOpts(walletAccount, consensus.chainID))
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 
-	return nil
+	return tx.Hash(), nil
 }
 
-func (consensus *consensus) RedeemDeposits(walletAccount accounts.WalletAccount) error {
+func (consensus *consensus) RedeemDeposits(walletAccount accounts.WalletAccount) (common.Hash, error) {
 	log.Warn(fmt.Sprintf("Redeem deposit from the network %v. Account %q",
 		consensus.chainID.String(), walletAccount.Account().Address.String()))
-	_, err := consensus.manager.ReleaseDeposits(transactOpts(walletAccount, consensus.chainID))
+	tx, err := consensus.manager.ReleaseDeposits(transactOpts(walletAccount, consensus.chainID))
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 
-	return nil
+	return tx.Hash(), nil
 }
 
 func (consensus *consensus) ValidatorsChecksum() (ValidatorsChecksum, error) {
