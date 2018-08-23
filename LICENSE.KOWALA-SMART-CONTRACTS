@@ -1,12 +1,20 @@
-Copyright (c) 2018
+Copyright (c) 2017-2018, Kowala SEZC
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are not permitted. Details can be find below:
 
-* Users can view and copy the source code
-* Users cannot modify the source code
-* Users cannot use the source or a modified version of it in blockchain other than kUSD Mainnet
+* Users man view and copy the source code
+* Users may not publish the source code
+* Users may not modify the source code
+* Users may compile the unmodified source code and link the resulting
+  objects into an executable, provided no other objects are linked into
+  the executable, other than those objects idenfified in the makefiles or
+  build instructions that are part of the unmodified source code.
+* Users may not use an executable compiled from the unmodified source code to
+  connect to any executables other than those that are identified by Kowala
+  SEZC as nodes of the kUSD Main Net or of the kUSD Test Net.
+
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
