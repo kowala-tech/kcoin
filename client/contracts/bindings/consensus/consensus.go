@@ -26,7 +26,7 @@ import (
 //go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ ../../truffle/contracts/consensus/token/MiningToken.sol
 //go:generate ../../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
 
-const RegistrationHandler = "registerValidator(address,uint256,bytes)"
+const RegistrationHandler = "registerValidator(address,uint256)"
 
 var DefaultData = []byte("not_zero")
 
