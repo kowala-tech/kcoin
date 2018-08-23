@@ -272,7 +272,7 @@ func (s *Kowala) APIs() []rpc.API {
 		}, {
 			Namespace: "mtoken",
 			Version:   "1.0",
-			Service:   NewPublicTokenAPI(s.accountManager, s.consensus),
+			Service:   NewPublicTokenAPI(s.accountManager, s.consensus, s.chainConfig.ChainID),
 			Public:    false,
 		}, {
 			Namespace: "eth",
@@ -430,6 +430,21 @@ func (s *Kowala) Contract(contract interface{}) error {
 		return nil
 	}
 	return errors.New("contract unknown")
+}
+
+func (s *Kowala) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	tx, blockHash, _, index := rawdb.ReadTransaction(s.chainDb, txHash)
+	if tx == nil {
+		return nil, nil
+	}
+	receipts, err := s.apiBackend.GetReceipts(ctx, blockHash)
+	if err != nil {
+		return nil, err
+	}
+	if len(receipts) <= int(index) {
+		return nil, nil
+	}
+	return receipts[index], nil
 }
 
 // Protocols implements node.Service, returning all the currently configured
