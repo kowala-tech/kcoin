@@ -1,0 +1,1 @@
+[{"constant":true,"inputs":[{"name":"_node","type":"string"}],"name":"namehash","outputs":[{"name":"_namehash","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"}]

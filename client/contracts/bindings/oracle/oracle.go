@@ -9,7 +9,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
-//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/oracle/OracleMgr.sol
+//go:generate solc --allow-paths ., --abi --bin --overwrite --libraries NameHash:0x66DA4aC1767B04B0d99bC94CCaD6EEF8dA63Ae96 -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/oracle/OracleMgr.sol
 //go:generate ../../../build/bin/abigen -abi build/OracleMgr.abi -bin build/OracleMgr.bin -pkg oracle -type OracleMgr -out ./gen_manager.go
 
 var mapOracleMgrToAddr = map[uint64]common.Address{
@@ -17,12 +17,20 @@ var mapOracleMgrToAddr = map[uint64]common.Address{
 }
 
 type Manager interface {
-	Price() (*big.Int, error)
 	GetOracleCount() (*big.Int, error)
 }
 
-// Binding returns a binding to the current oracle mgr
-func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgrSession, error) {
+type manager struct {
+	*OracleMgrSession
+}
+
+// @TODO(rgeraldes) - temporary method
+func (mgr *manager) Domain() string {
+	return ""
+}
+
+// Bind returns a binding to the current oracle mgr
+func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
 	addr, ok := mapOracleMgrToAddr[chainID.Uint64()]
 	if !ok {
 		return nil, bindings.ErrNoAddress
@@ -33,8 +41,10 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgr
 		return nil, err
 	}
 
-	return &OracleMgrSession{
-		Contract: mgr,
-		CallOpts: bind.CallOpts{},
+	return &manager{
+		&OracleMgrSession{
+			Contract: mgr,
+			CallOpts: bind.CallOpts{},
+		},
 	}, nil
 }

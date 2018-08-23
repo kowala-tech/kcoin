@@ -286,7 +286,11 @@ func (ctx *Context) buildGenesis() error {
 	baseDeposit := uint64(1)
 
 	newGenesis, err := genesis.Generate(genesis.Options{
-		Network: "test",
+		Network:     "test",
+		BlockNumber: 0,
+		SystemVars: &genesis.SystemVarsOpts{
+			InitialPrice: 1,
+		},
 		Consensus: &genesis.ConsensusOpts{
 			Engine:           "konsensus",
 			MaxNumValidators: 10,
@@ -309,12 +313,12 @@ func (ctx *Context) buildGenesis() error {
 			Governors:        ctx.getGovernors(),
 			NumConfirmations: ctx.genesisOptions.requiredGovernanceConfirmations,
 		},
+		StabilityContract: &genesis.StabilityContractOpts{
+			MinDeposit: 50,
+		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{
 			MaxNumOracles: 10,
-			FreezePeriod:  0,
-			BaseDeposit:   0,
 			Price: genesis.PriceOpts{
-				InitialPrice:  1,
 				SyncFrequency: 600,
 				UpdatePeriod:  30,
 			},

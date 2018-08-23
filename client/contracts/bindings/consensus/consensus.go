@@ -11,7 +11,9 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
+	kns2 "github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
@@ -20,7 +22,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
-//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
+//go:generate solc --allow-paths ., --abi --bin --overwrite --libraries NameHash:0x66DA4aC1767B04B0d99bC94CCaD6EEF8dA63Ae96 -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
 //go:generate ../../../build/bin/abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
 //go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ ../../truffle/contracts/consensus/token/MiningToken.sol
 //go:generate ../../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
@@ -31,27 +33,12 @@ var (
 	DefaultData = []byte("not_zero")
 )
 
-var mapValidatorMgrToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x80eDa603028fe504B57D14d947c8087c1798D800"),
-}
-
-var mapMiningTokenToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"),
-}
-
-var mapOracleToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
-}
-
-var mapMultiSigWalletToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62"),
-}
-
 // ValidatorsChecksum lets a validator know if there are changes in the validator set
 type ValidatorsChecksum [32]byte
 
 // Consensus is a gateway to the validators contracts on the network
 type Consensus interface {
+	Domain() string
 	Join(walletAccount accounts.WalletAccount, amount *big.Int) error
 	Leave(walletAccount accounts.WalletAccount) error
 	RedeemDeposits(walletAccount accounts.WalletAccount) error
@@ -79,7 +66,15 @@ type mUSD struct {
 }
 
 func NewMUSD(contractBackend bind.ContractBackend, chainID *big.Int) (*mUSD, error) {
-	mtoken, err := NewMiningToken(mapMiningTokenToAddr[chainID.Uint64()], contractBackend)
+	addr, err := getAddressFromKNS(
+		params.KNSDomains[params.MiningTokenDomain].FullDomain(),
+		contractBackend,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	mtoken, err := NewMiningToken(addr, contractBackend)
 	if err != nil {
 		return nil, err
 	}
@@ -139,10 +134,13 @@ type consensus struct {
 }
 
 // Binding returns a binding to the current consensus engine
-func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus, error) {
-	addr, ok := mapValidatorMgrToAddr[chainID.Uint64()]
-	if !ok {
-		return nil, bindings.ErrNoAddress
+func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
+	addr, err := getAddressFromKNS(
+		params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
+		contractBackend,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	manager, err := NewValidatorMgr(addr, contractBackend)
@@ -162,6 +160,18 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*consensus
 		chainID:         chainID,
 		contractBackend: contractBackend,
 	}, nil
+}
+
+func getAddressFromKNS(domain string, caller bind.ContractCaller) (common.Address, error) {
+	resolver, err := kns.NewPublicResolverCaller(
+		common.HexToAddress(bindings.ProxyResolverAddr),
+		caller,
+	)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return resolver.Addr(nil, kns2.NameHash(domain))
 }
 
 func (consensus *consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) error {
@@ -269,16 +279,12 @@ func (consensus *consensus) MintInit() error {
 	var err error
 	consensus.initMint.Do(func() {
 		if consensus.multiSigWallet == nil {
-			addr, ok := mapMiningTokenToAddr[consensus.chainID.Uint64()]
-			if !ok {
-				err = bindings.ErrNoAddress
-				return
-			}
-			consensus.mtokenAddr = addr
-
-			addr, ok = mapMultiSigWalletToAddr[consensus.chainID.Uint64()]
-			if !ok {
-				err = bindings.ErrNoAddress
+			addr, errKNS := getAddressFromKNS(
+				params.KNSDomains[params.MultiSigDomain].FullDomain(),
+				consensus.contractBackend,
+			)
+			if errKNS != nil {
+				err = errKNS
 				return
 			}
 
@@ -292,9 +298,12 @@ func (consensus *consensus) MintInit() error {
 		}
 
 		if consensus.oracle == nil {
-			addr, ok := mapOracleToAddr[consensus.chainID.Uint64()]
-			if !ok {
-				err = bindings.ErrNoAddress
+			addr, errKns := getAddressFromKNS(
+				params.KNSDomains[params.OracleMgrDomain].FullDomain(),
+				consensus.contractBackend,
+			)
+			if err != nil {
+				err = errKns
 				return
 			}
 
@@ -349,6 +358,11 @@ func (consensus *consensus) Confirm(opts *accounts.TransactOpts, transactionID *
 	}
 
 	return tx.Hash(), err
+}
+
+// @TODO(rgeraldes) - temporary method
+func (consensus *consensus) Domain() string {
+	return ""
 }
 
 func transactOpts(walletAccount accounts.WalletAccount, chainID *big.Int) *bind.TransactOpts {

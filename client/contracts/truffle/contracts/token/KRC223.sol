@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-contract ERC223 {
+contract KRC223 {
     uint public totalSupply;
   
     function balanceOf(address who) public view returns (uint);
@@ -14,5 +14,5 @@ contract ERC223 {
     function transfer(address to, uint value, bytes data) public returns (bool ok);
     function transfer(address to, uint value, bytes data, string custom_fallback) public returns (bool ok);
   
-    event Transfer(address indexed from, address indexed to, uint value, bytes indexed data);
+    event Transfer(address indexed from, address indexed to, uint value, bytes data);
 }

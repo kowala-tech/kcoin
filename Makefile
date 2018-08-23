@@ -100,6 +100,8 @@ bindings_node_modules:
 
 .PHONY: go_generate
 go_generate: notifications_dep wallet_backend_dep bindings_node_modules abigen  moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
+	# force namehash first because the other contracts depend on this libraries.
+	go generate ./client/contracts/bindings/utils/namehash.go
 	go generate ./...
 
 .PHONY: docker_go_generate
