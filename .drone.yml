@@ -218,7 +218,7 @@ pipeline:
       - EXPLORER_URL=https://explorer.zygote.kowala.tech
       - FAUCET_URL=https://faucet.zygote.kowala.tech
       - CDN_URL=https://cdn.kowala.io
-      - WS_SECRET=abc123
+      - WS_SECRET=DuHLdsKV6cagynn9
     repo: kowalatech/netstats
     dockerfile: netstats/Dockerfile
     pull: true
@@ -251,7 +251,7 @@ pipeline:
       - EXPLORER_URL=https://explorer.kusd.kowala.tech
       - FAUCET_URL=https://faucet.kusd.kowala.tech
       - CDN_URL=https://cdn.kowala.tech
-      - WS_SECRET=abc123
+      - WS_SECRET=DuHLdsKV6cagynn9
     when:
       branch: [master]
       event: [push, tag]
