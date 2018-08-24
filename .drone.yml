@@ -214,6 +214,11 @@ pipeline:
       - DRONE_TAG
       - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
+      - URL=https://stats.zygote.kowala.tech
+      - EXPLORER_URL=https://explorer.zygote.kowala.tech
+      - FAUCET_URL=https://faucet.zygote.kowala.tech
+      - CDN_URL=https://cdn.kowala.io
+      - WS_SECRET=abc123
     repo: kowalatech/netstats
     dockerfile: netstats/Dockerfile
     pull: true
@@ -234,9 +239,17 @@ pipeline:
     privileged: true
     auto_tag: true
     build_args:
-      - URL=https://stats.kowala.tech
-      - EXPLORER_URL=https://explorer.zygote.kowala.tech
-      - FAUCET_URL=https://faucet.zygote.kowala.tech
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+      - URL=https://stats.kusd.kowala.tech
+      - EXPLORER_URL=https://explorer.kusd.kowala.tech
+      - FAUCET_URL=https://faucet.kusd.kowala.tech
       - CDN_URL=https://cdn.kowala.tech
       - WS_SECRET=abc123
     when:
@@ -506,7 +519,7 @@ pipeline:
       status: failure
       event: [push, tag, pull_request]
 
-services:
+services1:
   docker:
     image: docker:dind
     command: [ '-l', 'fatal' ]
