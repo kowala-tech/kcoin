@@ -415,8 +415,6 @@ var MultiSigContract = &contract{
 // the kns, due to its nature of first to be deployed.
 var MultiSigNameRegister = &contract{
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		contract.address = common.HexToAddress(bindings.MultiSigWalletAddr)
-
 		return registerAddressToDomain(contract, opts, "multisig")
 	},
 }
