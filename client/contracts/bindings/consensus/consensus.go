@@ -108,15 +108,13 @@ type Consensus struct {
 
 // Binding returns a binding to the current Consensus engine
 func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
-	//addr, err := getAddressFromKNS(
-	//	params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
-	//	contractBackend,
-	//)
-	//if err != nil {
-	//	return nil, err
-	//}
-
-	addr := common.HexToAddress("0x80eDa603028fe504B57D14d947c8087c1798D800")
+	addr, err := getAddressFromKNS(
+		params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
+		contractBackend,
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	manager, err := NewValidatorMgr(addr, contractBackend)
 	if err != nil {
@@ -284,8 +282,6 @@ func (css *Consensus) MintInit() error {
 				err = errKns
 				return
 			}
-
-			//addr := common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5")
 
 			var oracleMgr *oracle.OracleMgr
 			oracleMgr, err = oracle.NewOracleMgr(addr, css.contractBackend)
