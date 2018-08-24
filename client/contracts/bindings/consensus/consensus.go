@@ -133,6 +133,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		mtoken:          mUSD,
 		chainID:         chainID,
 		contractBackend: contractBackend,
+		mtokenAddr:      common.HexToAddress("0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"),
 	}, nil
 }
 
