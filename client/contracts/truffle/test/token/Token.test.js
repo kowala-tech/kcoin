@@ -85,14 +85,6 @@ contract('Token', ([_, owner, newOwner, notOwner]) => {
     this.token = await Token.new({ from: owner });
   });
 
-  it('Should have correct properties', async () => {
-    // given
-    const name = await this.token.name();
-    console.log('name');
-    console.log(name);
-    console.log('----------');
-  });
-
   it('Should transfer tokens to new owner', async () => {
     // given
     await this.token.mint(owner, 10, { from: owner });
