@@ -152,7 +152,7 @@ func getAddressFromKNS(domain string, caller bind.ContractCaller) (common.Addres
 func (css *Consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) (common.Hash, error) {
 	log.Warn(fmt.Sprintf("Joining the network %v with a deposit %v. Account %q",
 		css.chainID.String(), deposit.String(), walletAccount.Account().Address.String()))
-	_, err := css.mtoken.Transfer(walletAccount, css.managerAddr, deposit, []byte("not_zero"), RegistrationHandler)
+	hash, err := css.mtoken.Transfer(walletAccount, css.managerAddr, deposit, []byte("not_zero"), RegistrationHandler)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to transact the deposit: %s", err)
 	}
@@ -163,7 +163,7 @@ func (css *Consensus) Join(walletAccount accounts.WalletAccount, deposit *big.In
 func (css *Consensus) Leave(walletAccount accounts.WalletAccount) (common.Hash, error) {
 	log.Warn(fmt.Sprintf("Leaving the network %v. Account %q",
 		css.chainID.String(), walletAccount.Account().Address.String()))
-	_, err := css.manager.DeregisterValidator(transactOpts(walletAccount, css.chainID))
+	tx, err := css.manager.DeregisterValidator(transactOpts(walletAccount, css.chainID))
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -174,7 +174,7 @@ func (css *Consensus) Leave(walletAccount accounts.WalletAccount) (common.Hash, 
 func (css *Consensus) RedeemDeposits(walletAccount accounts.WalletAccount) (common.Hash, error) {
 	log.Warn(fmt.Sprintf("Redeem deposit from the network %v. Account %q",
 		css.chainID.String(), walletAccount.Account().Address.String()))
-	_, err := css.manager.ReleaseDeposits(transactOpts(walletAccount, css.chainID))
+	tx, err := css.manager.ReleaseDeposits(transactOpts(walletAccount, css.chainID))
 	if err != nil {
 		return common.Hash{}, err
 	}

@@ -9,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"context"
+
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
@@ -77,9 +79,9 @@ type Kowala struct {
 	bindingFuncs []BindingConstructor // binding constructors (in dependency order)
 	contracts    map[reflect.Type]bindings.Binding
 
-	gasPrice  *big.Int
-	coinbase  common.Address
-	deposit   *big.Int
+	gasPrice *big.Int
+	coinbase common.Address
+	deposit  *big.Int
 
 	networkID     uint64
 	netRPCService *kcoinapi.PublicNetAPI

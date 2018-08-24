@@ -13,6 +13,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/tx"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
@@ -62,19 +63,6 @@ type Service interface {
 	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
 }
 
-
-
-type Consensus interface {
-	Join(walletAccount accounts.WalletAccount, amount *big.Int) error
-	Leave(walletAccount accounts.WalletAccount) error
-	RedeemDeposits(walletAccount accounts.WalletAccount) error
-	ValidatorsChecksum() (types.VotersChecksum, error)
-	Validators() (types.Voters, error)
-	Deposits(address common.Address) ([]*types.Deposit, error)
-	IsGenesisValidator(address common.Address) (bool, error)
-	IsValidator(address common.Address) (bool, error)
-}
-
 // validator represents a consensus validator
 type validator struct {
 	VotingState        // consensus internal state
@@ -95,7 +83,7 @@ type validator struct {
 
 	walletAccount accounts.WalletAccount
 
-	consensus Consensus // consensus binding
+	consensus *consensus.Consensus // consensus binding
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
@@ -110,7 +98,7 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, consensus Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
 		config:    config,
 		backend:   backend,
