@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/kowala-tech/kcoin/client/params"
-
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/common"
 	kns2 "github.com/kowala-tech/kcoin/client/common/kns"
@@ -22,6 +20,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/vm/runtime"
 	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 type contract struct {
