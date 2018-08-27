@@ -109,6 +109,9 @@ var StabilityContract = &contract{
 
 		return nil
 	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.StabilityDomain].Node())
+	},
 }
 
 var KNSRegistry = &contract{

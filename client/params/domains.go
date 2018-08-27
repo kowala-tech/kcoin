@@ -8,6 +8,7 @@ const (
 	ValidatorMgrDomain
 	MiningTokenDomain
 	SystemVarsDomain
+	StabilityDomain
 )
 
 const KowalaTLD = "kowala"
@@ -48,6 +49,10 @@ var KNSDomains = map[int]KNSDomain{
 	},
 	SystemVarsDomain: {
 		node: "systemvars",
+		tld:  KowalaTLD,
+	},
+	StabilityDomain: {
+		node: "stability",
 		tld:  KowalaTLD,
 	},
 }
