@@ -39,7 +39,7 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 		"--testnet",
 		"--gasprice", "1",
 		"--networkid", builder.networkId,
-		"--bootnodes", builder.bootnode,
+		"--bootnodesv5", builder.bootnode,
 		"--syncmode", builder.syncMode,
 		"--verbosity", strconv.Itoa(int(builder.logLevel)),
 	}
