@@ -7,20 +7,18 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kowala-tech/kcoin/client/common/kns"
-
-	"github.com/kowala-tech/kcoin/client/params"
-
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 //go:generate solc --allow-paths ., --abi --bin --overwrite --libraries NameHash:0x66DA4aC1767B04B0d99bC94CCaD6EEF8dA63Ae96 -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
