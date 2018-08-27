@@ -74,6 +74,9 @@ var SystemVarsContract = &contract{
 
 		return nil
 	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.SystemVarsDomain].Node())
+	},
 }
 
 var StabilityContract = &contract{
@@ -461,9 +464,7 @@ var MiningTokenContract = &contract{
 			return err
 		}
 
-		registerAddressToDomain(contract, opts, params.KNSDomains[params.MiningTokenDomain].Node())
-
-		return nil
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.MiningTokenDomain].Node())
 	},
 }
 
@@ -565,12 +566,7 @@ var OracleMgrContract = &contract{
 		return nil
 	},
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		err := registerAddressToDomain(contract, opts, params.KNSDomains[params.OracleMgrDomain].Node())
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.OracleMgrDomain].Node())
 	},
 }
 

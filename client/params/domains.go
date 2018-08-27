@@ -7,6 +7,7 @@ const (
 	OracleMgrDomain
 	ValidatorMgrDomain
 	MiningTokenDomain
+	SystemVarsDomain
 )
 
 const KowalaTLD = "kowala"
@@ -43,6 +44,10 @@ var KNSDomains = map[int]KNSDomain{
 	},
 	MiningTokenDomain: {
 		node: "miningtoken",
+		tld:  KowalaTLD,
+	},
+	SystemVarsDomain: {
+		node: "systemvars",
 		tld:  KowalaTLD,
 	},
 }
