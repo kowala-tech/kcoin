@@ -3,90 +3,113 @@ extends ./layout.jade
 
 block content
   .grid-container(ng-controller='StatsCtrl')
-    .grid-x.grid-margin-x(ng-cloak)
+    #blockchain.grid-x.grid-margin-x(ng-cloak)
       .cell.large-12
-        h4 Blockchain Metrics
-      .cell.large-3
+        h3.title Blockchain
+      .cell.large-4
         h5 Last Block
-        h3 {{ lastBlock | blockTimeFilter }}
-
-      .cell.large-3
-        h5 Last Block #
-        h3 {{ bestBlock | number}}
-
-      .cell.large-3
-        h5 Avg. Block Time
-        h3 {{ avgBlockTime | avgTimeFilter }}
-
-      .cell.large-3
-        h5 Active Nodes
+        h3 {{ bestBlock | number }}
+      .cell.large-4
+        .grid-x
+          .cell.large-12
+            h5 Block Time
+          .cell.large-6
+            h3 {{ avgBlockTime | avgTimeFilter }}
+          .cell.large-6
+            sparkchart(data="{{blockTimes.join(',')}}", tooltipsuffix="s")
+      .cell.large-4.disabled
+        h5 Transaction Fee
+        h3 {{ bestStats.transactionFee | priceFilter }}
+      .cell.large-4
+        h5 Nodes
         h3 {{nodesActive}}/{{nodesTotal}}
-
-      .cell.large-3
-        h5 Gas Price
-        h3 {{ bestStats.gasPrice.toString() | priceFilter }}
-
-      .cell.large-3
-        h5 Gas Limit
-        h3 {{ bestStats.block.gasLimit || 0 | number }}
-
-      .cell.large-3
-        h5 Stability Fee
-        h3 {{ bestStats.block.stabilityFee | priceFilter }}
-
-      .cell.large-3
-        h5 Page Latency
-        h3 {{ latency }} {{"ms"}}
-
-
-    .grid-x.grid-margin-x(ng-cloak)
       .cell.large-4
-        .chart(class="{{ avgBlockTime | avgTimeClass }}")
-          h5 Block Time
-          sparkchart.spark-blocktimes(data="{{lastBlocksTime.join(',')}}", tooltipsuffix="s")
-
-      .cell.large-4
-        .chart
-          h5 Transactions
-          sparkchart.spark-transactions(data="{{transactionDensity.join(',')}}")
-
-      .cell.large-4
-        .chart
-          h5 Gas Spending
-          sparkchart.spark-gasspending(data="{{gasSpending.join(',')}}")
-
-
-    .grid-x.grid-margin-x(ng-cloak)
-      .cell.large-12
-        h4 Validator Metrics
-
-      .cell.large-3
         h5 Validators
         h3 {{ bestStats.block.validatorCount || 0 | number }}/{{ bestStats.block.maxValidators || 0 | number }}
-
-      .cell.large-3
-        h5 Min. Validator Deposit
-        h3 {{ bestStats.block.minDeposit | priceFilter }}
-
-      .cell.large-3
-        h5 Minted Reward
-        h3 {{ bestStats.block.mintedReward | priceFilter }}
-
-      .cell.large-3
+      .cell.large-4
         h5 Oracles
         h3 {{ bestStats.block.oracleCount || 0 | number }}
+      .cell.large-12
+        .grid-x
+          .cell.large-12
+            h5 Transactions
+          .cell.large-4
+            h3 {{ bestStats.block.transactions.count() || 0 | number }}
+          .cell.large-8
+            sparkchart(data="{{transactions.join(',')}}")
 
-    .grid-x.grid-margin-x(ng-cloak)
+    #validator.grid-x.grid-margin-x(ng-cloak)
       .cell.large-12
-        .chart.xdouble-chart(class="{{ blockPropagationAvg | propagationAvgTimeClass : true }}")
-          h5 Currency Market Price
-          sparkchart.spark-currency-price(data="{{currencyPrice.join(',')}}", tooltipprefix="$")
+        h3.title Mining
+      .cell.large-4
+        .grid-x
+          .cell.large-12
+            h5 Minted Reward
+          .cell.large-6
+            h3 {{ bestStats.block.mintedReward | priceFilter }}
+          .cell.large-6
+            sparkchart(data="{{mintedRewards.join(',')}}")
+      .cell.large-4.disabled
+        .grid-x
+          .cell.large-12
+            h5 Oracle Reward
+          .cell.large-6
+            h3 {{ bestStats.block.oracleReward | priceFilter }}
+          .cell.large-6
+            sparkchart(data="{{oracleRewards.join(',')}}")
+      .cell.large-4
+        .grid-x
+          .cell.large-12
+            h5 Compute Reward
+          .cell.large-6
+            h3 {{ (bestStats.block.gasUsed * bestStats.gasPrice) | number:0 | priceFilter }}
+          .cell.large-6
+            sparkchart(data="{{computeRewards.join(',')}}")
+      .cell.large-4
+        h5 Validator
+        h4 {{ bestStats.block.validator }}
 
-    .grid-x.grid-margin-x(ng-cloak)
+    #stability.grid-x.grid-margin-x(ng-cloak)
       .cell.large-12
-        h4 Nodes
+        h3.title Stability
+      .cell.large-12.disabled
+        .grid-x
+          .cell.large-12
+            h5 Market Price
+          .cell.large-4
+            h3 {{ bestStats.block.currencyPrice | usdPriceFilter }}
+          .cell.large-8
+            sparkchart(data="{{currencyPrices.join(',')}}", tooltipprefix="$")
+      .cell.large-4
+        .grid-x
+          .cell.large-12
+            h5 Stability Fee
+          .cell.large-6
+            h3 {{ bestStats.block.stabilityFee | priceFilter }}
+          .cell.large-6
+            sparkchart(data="{{stabilityFees.join(',')}}")
+      .cell.large-4.disabled
+        .grid-x
+          .cell.large-12
+            h5 Stability Reward
+          .cell.large-6
+            h3 {{ bestStats.block.stabilityReward | priceFilter }}
+          .cell.large-6
+            sparkchart(data="{{stabilityRewards.join(',')}}")
+      .cell.large-4.disabled
+        .grid-x
+          .cell.large-12
+            h5 Burn Amount
+          .cell.large-6
+            h3 {{ bestStats.block.burnAmount | priceFilter }}
+          .cell.large-6
+            sparkchart(data="{{burnAmounts.join(',')}}")
+
+    #connected-nodes.grid-x.grid-margin-x(ng-cloak)
       .cell.large-12
-        table
+        h3.title Connected Nodes
+      .cell.large-12
+        table.scroll
           thead
             tr
               th(ng-click="orderTable(['info.name'], false)") Node
@@ -94,11 +117,12 @@ block content
               th(ng-click="orderTable(['-stats.peers'], false)") Peers
               th(ng-click="orderTable(['-stats.block.number', 'stats.block.propagation'], false)") Last Block
               th(ng-click="orderTable(['-stats.block.received'], false)") Last Block Time
-              th(ng-click="orderTable(['stats.propagationAvg'], false)") Avg. Propagation Time
+              th(ng-click="orderTable(['stats.propagationAvg'], false)") Avg. Propagation
               th(ng-click="orderTable(['-stats.uptime'], false)") Up Time
           tbody
             tr(ng-repeat='node in nodes | orderBy:predicate track by node.id')
-              td {{node.info.name}} {{node.info.node | nodeVersion}}
+              td
+                {{node.info.name}} {{node.info.node | nodeVersion}}
               td {{ node.readable.latency }}
               td {{node.stats.peers}}
               td {{'#'}}{{ node.stats.block.number | number }}
