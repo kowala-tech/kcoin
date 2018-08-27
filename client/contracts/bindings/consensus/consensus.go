@@ -19,7 +19,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
-	"github.com/kowala-tech/kcoin/client/params"
 )
 
 //go:generate solc --allow-paths ., --abi --bin --overwrite --libraries NameHash:0x66DA4aC1767B04B0d99bC94CCaD6EEF8dA63Ae96 -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
@@ -108,13 +107,15 @@ type Consensus struct {
 
 // Binding returns a binding to the current Consensus engine
 func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
-	addr, err := getAddressFromKNS(
-		params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
-		contractBackend,
-	)
-	if err != nil {
-		return nil, err
-	}
+	//addr, err := getAddressFromKNS(
+	//	params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
+	//	contractBackend,
+	//)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	addr := common.HexToAddress("0x80eDa603028fe504B57D14d947c8087c1798D800")
 
 	manager, err := NewValidatorMgr(addr, contractBackend)
 	if err != nil {
@@ -274,14 +275,16 @@ func (css *Consensus) MintInit() error {
 		}
 
 		if css.oracle == nil {
-			addr, errKns := getAddressFromKNS(
-				params.KNSDomains[params.OracleMgrDomain].FullDomain(),
-				css.contractBackend,
-			)
-			if err != nil {
-				err = errKns
-				return
-			}
+			//addr, errKns := getAddressFromKNS(
+			//	params.KNSDomains[params.OracleMgrDomain].FullDomain(),
+			//	css.contractBackend,
+			//)
+			//if err != nil {
+			//	err = errKns
+			//	return
+			//}
+
+			addr := common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5")
 
 			var oracleMgr *oracle.OracleMgr
 			oracleMgr, err = oracle.NewOracleMgr(addr, css.contractBackend)
