@@ -8,15 +8,16 @@ import (
 )
 
 func NameHash(name string) common.Hash {
-	node := common.Hash{}
+	if len(name) == 0 {
+		return common.Hash{}
+	}
 
-	if len(name) > 0 {
-		labels := strings.Split(name, ".")
+	var node common.Hash
 
-		for i := len(labels) - 1; i >= 0; i-- {
-			labelSha := crypto.Keccak256Hash([]byte(labels[i]))
-			node = crypto.Keccak256Hash(node.Bytes(), labelSha.Bytes())
-		}
+	labels := strings.Split(name, ".")
+	for i := len(labels) - 1; i >= 0; i-- {
+		labelSha := crypto.Keccak256Hash([]byte(labels[i]))
+		node = crypto.Keccak256Hash(node.Bytes(), labelSha.Bytes())
 	}
 
 	return node
