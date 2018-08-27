@@ -238,7 +238,6 @@ pipeline:
       - EXPLORER_URL=https://explorer.zygote.kowala.tech
       - FAUCET_URL=https://faucet.zygote.kowala.tech
       - CDN_URL=https://cdn.kowala.tech
-      - WS_SECRET=abc123
     when:
       branch: [master]
       event: [push, tag]
