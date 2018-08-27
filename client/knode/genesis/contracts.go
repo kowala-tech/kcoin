@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/kowala-tech/kcoin/client/params"
+
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/common"
 	kns2 "github.com/kowala-tech/kcoin/client/common/kns"
@@ -415,7 +417,7 @@ var MultiSigContract = &contract{
 // the kns, due to its nature of first to be deployed.
 var MultiSigNameRegister = &contract{
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		return registerAddressToDomain(contract, opts, "multisig")
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.MultiSigDomain].Node())
 	},
 }
 
@@ -459,7 +461,7 @@ var MiningTokenContract = &contract{
 			return err
 		}
 
-		registerAddressToDomain(contract, opts, "miningtoken")
+		registerAddressToDomain(contract, opts, params.KNSDomains[params.MiningTokenDomain].Node())
 
 		return nil
 	},
@@ -563,7 +565,7 @@ var OracleMgrContract = &contract{
 		return nil
 	},
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		err := registerAddressToDomain(contract, opts, "oraclemgr")
+		err := registerAddressToDomain(contract, opts, params.KNSDomains[params.OracleMgrDomain].Node())
 		if err != nil {
 			return err
 		}
@@ -691,7 +693,7 @@ var ValidatorMgrContract = &contract{
 			return err
 		}
 
-		return registerAddressToDomain(contract, opts, "validatormgr")
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.ValidatorMgrDomain].Node())
 	},
 }
 
