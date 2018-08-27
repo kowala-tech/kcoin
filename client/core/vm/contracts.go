@@ -30,12 +30,13 @@ import (
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
-// requires a deterministic gas count based on the input size of the Run method of the
+// requires a deterministic compute units count based on the input size of the Run method of the
 // contract.
 type PrecompiledContract interface {
-	RequiredGas(input []byte) uint64  // RequiredPrice calculates the contract gas use
-	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
+	RequiredComputeUnits(input []byte) uint64 // RequiredComputUnits calculates the contract compute units use
+	Run(input []byte) ([]byte, error)         // Run runs the precompiled contract
 }
+
 // PrecompiledContractsAndromeda contains the default set of pre-compiled Kowala
 // contracts used in the Andromeda release.
 var PrecompiledContractsAndromeda = map[common.Address]PrecompiledContract{
@@ -51,7 +52,7 @@ var PrecompiledContractsAndromeda = map[common.Address]PrecompiledContract{
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, err error) {
-	gas := p.RequiredGas(input)
+	gas := p.RequiredComputeUnits(input)
 	if contract.UseGas(gas) {
 		return p.Run(input)
 	}
@@ -61,8 +62,8 @@ func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contr
 // ECRECOVER implemented as a native contract.
 type ecrecover struct{}
 
-func (c *ecrecover) RequiredGas(input []byte) uint64 {
-	return params.EcrecoverGas
+func (c *ecrecover) RequiredComputeUnits(input []byte) uint64 {
+	return params.EcrecoverComputeUnits
 }
 
 func (c *ecrecover) Run(input []byte) ([]byte, error) {
@@ -94,12 +95,12 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 // SHA256 implemented as a native contract.
 type sha256hash struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
+// RequiredComputeUnits returns the compute units required to execute the pre-compiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *sha256hash) RequiredGas(input []byte) uint64 {
-	return uint64(len(input)+31)/32*params.Sha256PerWordGas + params.Sha256BaseGas
+func (c *sha256hash) RequiredComputeUnits(input []byte) uint64 {
+	return uint64(len(input)+31)/32*params.Sha256PerWordComputeUnits + params.Sha256BaseComputeUnits
 }
 func (c *sha256hash) Run(input []byte) ([]byte, error) {
 	h := sha256.Sum256(input)
@@ -109,12 +110,12 @@ func (c *sha256hash) Run(input []byte) ([]byte, error) {
 // RIPMED160 implemented as a native contract.
 type ripemd160hash struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
+// RequiredComputeUnits returns the compute units required to execute the pre-compiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *ripemd160hash) RequiredGas(input []byte) uint64 {
-	return uint64(len(input)+31)/32*params.Ripemd160PerWordGas + params.Ripemd160BaseGas
+func (c *ripemd160hash) RequiredComputeUnits(input []byte) uint64 {
+	return uint64(len(input)+31)/32*params.Ripemd160PerWordComputeUnits + params.Ripemd160BaseComputeUnits
 }
 func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
 	ripemd := ripemd160.New()
@@ -125,12 +126,12 @@ func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
 // data copy implemented as a native contract.
 type dataCopy struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
+// RequiredComputeUnits returns the gas required to execute the pre-compiled contract.
 //
 // This method does not require any overflow checking as the input size gas costs
 // required for anything significant is so high it's impossible to pay for.
-func (c *dataCopy) RequiredGas(input []byte) uint64 {
-	return uint64(len(input)+31)/32*params.IdentityPerWordGas + params.IdentityBaseGas
+func (c *dataCopy) RequiredComputeUnits(input []byte) uint64 {
+	return uint64(len(input)+31)/32*params.IdentityPerWordComputeUnits + params.IdentityBaseComputeUnits
 }
 func (c *dataCopy) Run(in []byte) ([]byte, error) {
 	return in, nil
@@ -153,8 +154,8 @@ var (
 	big199680 = big.NewInt(199680)
 )
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *bigModExp) RequiredGas(input []byte) uint64 {
+// RequiredComputeUnits returns the compute units required to execute the pre-compiled contract.
+func (c *bigModExp) RequiredComputeUnits(input []byte) uint64 {
 	var (
 		baseLen = new(big.Int).SetBytes(getData(input, 0, 32))
 		expLen  = new(big.Int).SetBytes(getData(input, 32, 32))
@@ -188,7 +189,7 @@ func (c *bigModExp) RequiredGas(input []byte) uint64 {
 	}
 	adjExpLen.Add(adjExpLen, big.NewInt(int64(msb)))
 
-	// Calculate the gas cost of the operation
+	// Calculate the compute units cost of the operation
 	gas := new(big.Int).Set(math.BigMax(modLen, baseLen))
 	switch {
 	case gas.Cmp(big64) <= 0:
@@ -264,9 +265,9 @@ func newTwistPoint(blob []byte) (*bn256.G2, error) {
 // bn256Add implements a native elliptic curve point addition.
 type bn256Add struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *bn256Add) RequiredGas(input []byte) uint64 {
-	return params.Bn256AddGas
+// RequiredComputeUnits returns the gas required to execute the pre-compiled contract.
+func (c *bn256Add) RequiredComputeUnits(input []byte) uint64 {
+	return params.Bn256AddComputeUnits
 }
 
 func (c *bn256Add) Run(input []byte) ([]byte, error) {
@@ -286,9 +287,9 @@ func (c *bn256Add) Run(input []byte) ([]byte, error) {
 // bn256ScalarMul implements a native elliptic curve scalar multiplication.
 type bn256ScalarMul struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *bn256ScalarMul) RequiredGas(input []byte) uint64 {
-	return params.Bn256ScalarMulGas
+// RequiredComputeUnits returns the gas required to execute the pre-compiled contract.
+func (c *bn256ScalarMul) RequiredComputeUnits(input []byte) uint64 {
+	return params.Bn256ScalarMulComputeUnits
 }
 
 func (c *bn256ScalarMul) Run(input []byte) ([]byte, error) {
@@ -315,9 +316,9 @@ var (
 // bn256Pairing implements a pairing pre-compile for the bn256 curve
 type bn256Pairing struct{}
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *bn256Pairing) RequiredGas(input []byte) uint64 {
-	return params.Bn256PairingBaseGas + uint64(len(input)/192)*params.Bn256PairingPerPointGas
+// RequiredComputeUnits returns the gas required to execute the pre-compiled contract.
+func (c *bn256Pairing) RequiredComputeUnits(input []byte) uint64 {
+	return params.Bn256PairingBaseComputeUnits + uint64(len(input)/192)*params.Bn256PairingPerPointComputeUnits
 }
 
 func (c *bn256Pairing) Run(input []byte) ([]byte, error) {

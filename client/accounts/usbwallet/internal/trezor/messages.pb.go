@@ -3045,7 +3045,7 @@ func (m *TxAck) GetTx() *TransactionType {
 // @next PinMatrixRequest
 // @next EthereumTxRequest
 // @next Failure
-type EthereumSignTx struct {
+type KowalaSignTx struct {
 	AddressN             []uint32 `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
 	Nonce                []byte   `protobuf:"bytes,2,opt,name=nonce" json:"nonce,omitempty"`
 	GasPrice             []byte   `protobuf:"bytes,3,opt,name=gas_price,json=gasPrice" json:"gas_price,omitempty"`
@@ -3219,7 +3219,7 @@ func (m *EthereumTxRequest) GetSignatureS() []byte {
 // Request: Transaction payload data.
 // @prev EthereumTxRequest
 // @next EthereumTxRequest
-type EthereumTxAck struct {
+type KowalaTxAck struct {
 	DataChunk            []byte   `protobuf:"bytes,1,opt,name=data_chunk,json=dataChunk" json:"data_chunk,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`

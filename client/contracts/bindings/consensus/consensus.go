@@ -104,15 +104,14 @@ func (tkn *mUSD) Mint(opts *accounts.TransactOpts, to common.Address, value *big
 
 func toBind(opts *accounts.TransactOpts) *bind.TransactOpts {
 	bindOpts := &bind.TransactOpts{
-		From:     opts.From,
-		Nonce:    opts.Nonce,
-		Value:    opts.Value,
-		GasPrice: opts.GasPrice,
-		Context:  opts.Context,
-		Signer:   bind.SignerFn(opts.Signer),
+		From:    opts.From,
+		Nonce:   opts.Nonce,
+		Value:   opts.Value,
+		Context: opts.Context,
+		Signer:  bind.SignerFn(opts.Signer),
 	}
-	if opts.GasLimit != nil {
-		bindOpts.GasLimit = opts.GasLimit.Uint64()
+	if opts.ComputeLimit != nil {
+		bindOpts.ComputeLimit = opts.ComputeLimit.Uint64()
 	}
 	return bindOpts
 }

@@ -45,7 +45,7 @@ func memoryGasCost(mem *Memory, newMemSize uint64) (uint64, error) {
 
 	if newMemSize > uint64(mem.Len()) {
 		square := newMemSizeWords * newMemSizeWords
-		linCoef := newMemSizeWords * params.MemoryGas
+		linCoef := newMemSizeWords * params.MemoryComputeUnits
 		quadCoef := square / params.QuadCoeffDiv
 		newTotalFee := linCoef + quadCoef
 
@@ -79,7 +79,7 @@ func gasCallDataCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *St
 		return 0, errGasUintOverflow
 	}
 
-	if words, overflow = math.SafeMul(toWordSize(words), params.CopyGas); overflow {
+	if words, overflow = math.SafeMul(toWordSize(words), params.CopyComputeUnits); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -105,7 +105,7 @@ func gasReturnDataCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *
 		return 0, errGasUintOverflow
 	}
 
-	if words, overflow = math.SafeMul(toWordSize(words), params.CopyGas); overflow {
+	if words, overflow = math.SafeMul(toWordSize(words), params.CopyComputeUnits); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -126,14 +126,14 @@ func gasSStore(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, m
 	// 3. From a non-zero to a non-zero                         (CHANGE)
 	if val == (common.Hash{}) && y.Sign() != 0 {
 		// 0 => non 0
-		return params.SstoreSetGas, nil
+		return params.SstoreSetComputeUnits, nil
 	} else if val != (common.Hash{}) && y.Sign() == 0 {
 		// non 0 => 0
-		evm.StateDB.AddRefund(params.SstoreRefundGas)
-		return params.SstoreClearGas, nil
+		evm.StateDB.AddRefund(params.SstoreRefundComputeUnits)
+		return params.SstoreClearComputeUnits, nil
 	} else {
 		// non 0 => non 0 (or 0 => 0)
-		return params.SstoreResetGas, nil
+		return params.SstoreResetComputeUnits, nil
 	}
 }
 
@@ -149,15 +149,15 @@ func makeGasLog(n uint64) gasFunc {
 			return 0, err
 		}
 
-		if gas, overflow = math.SafeAdd(gas, params.LogGas); overflow {
+		if gas, overflow = math.SafeAdd(gas, params.LogComputeUnits); overflow {
 			return 0, errGasUintOverflow
 		}
-		if gas, overflow = math.SafeAdd(gas, n*params.LogTopicGas); overflow {
+		if gas, overflow = math.SafeAdd(gas, n*params.LogTopicComputeUnits); overflow {
 			return 0, errGasUintOverflow
 		}
 
 		var memorySizeGas uint64
-		if memorySizeGas, overflow = math.SafeMul(requestedSize, params.LogDataGas); overflow {
+		if memorySizeGas, overflow = math.SafeMul(requestedSize, params.LogDataComputeUnits); overflow {
 			return 0, errGasUintOverflow
 		}
 		if gas, overflow = math.SafeAdd(gas, memorySizeGas); overflow {
@@ -174,7 +174,7 @@ func gasSha3(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem
 		return 0, err
 	}
 
-	if gas, overflow = math.SafeAdd(gas, params.Sha3Gas); overflow {
+	if gas, overflow = math.SafeAdd(gas, params.Sha3ComputeUnits); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -182,7 +182,7 @@ func gasSha3(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem
 	if overflow {
 		return 0, errGasUintOverflow
 	}
-	if wordGas, overflow = math.SafeMul(toWordSize(wordGas), params.Sha3WordGas); overflow {
+	if wordGas, overflow = math.SafeMul(toWordSize(wordGas), params.Sha3WordComputeUnits); overflow {
 		return 0, errGasUintOverflow
 	}
 	if gas, overflow = math.SafeAdd(gas, wordGas); overflow {
@@ -206,7 +206,7 @@ func gasCodeCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack,
 	if overflow {
 		return 0, errGasUintOverflow
 	}
-	if wordGas, overflow = math.SafeMul(toWordSize(wordGas), params.CopyGas); overflow {
+	if wordGas, overflow = math.SafeMul(toWordSize(wordGas), params.CopyComputeUnits); overflow {
 		return 0, errGasUintOverflow
 	}
 	if gas, overflow = math.SafeAdd(gas, wordGas); overflow {
@@ -231,7 +231,7 @@ func gasExtCodeCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *Sta
 		return 0, errGasUintOverflow
 	}
 
-	if wordGas, overflow = math.SafeMul(toWordSize(wordGas), params.CopyGas); overflow {
+	if wordGas, overflow = math.SafeMul(toWordSize(wordGas), params.CopyComputeUnits); overflow {
 		return 0, errGasUintOverflow
 	}
 
@@ -283,7 +283,7 @@ func gasCreate(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, m
 	if err != nil {
 		return 0, err
 	}
-	if gas, overflow = math.SafeAdd(gas, params.CreateGas); overflow {
+	if gas, overflow = math.SafeAdd(gas, params.CreateComputeUnits); overflow {
 		return 0, errGasUintOverflow
 	}
 	return gas, nil
@@ -321,12 +321,12 @@ func gasCall(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem
 		address        = common.BigToAddress(stack.Back(1))
 	)
 
-	if transfersValue && evm.StateDB.Empty(address)  {
-		gas += params.CallNewAccountGas
+	if transfersValue && evm.StateDB.Empty(address) {
+		gas += params.CallNewAccountComputeUnits
 	}
 
 	if transfersValue {
-		gas += params.CallValueTransferGas
+		gas += params.CallValueTransferComputeUnits
 	}
 	memoryGas, err := memoryGasCost(mem, memorySize)
 	if err != nil {
@@ -350,7 +350,7 @@ func gasCall(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem
 func gasCallCode(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	gas := gt.Calls
 	if stack.Back(2).Sign() != 0 {
-		gas += params.CallValueTransferGas
+		gas += params.CallValueTransferComputeUnits
 	}
 	memoryGas, err := memoryGasCost(mem, memorySize)
 	if err != nil {
@@ -393,7 +393,7 @@ func gasSuicide(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, 
 	}
 
 	if !evm.StateDB.HasSuicided(contract.Address()) {
-		evm.StateDB.AddRefund(params.SuicideRefundGas)
+		evm.StateDB.AddRefund(params.SuicideRefundComputeUnits)
 	}
 	return gas, nil
 }

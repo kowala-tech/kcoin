@@ -47,15 +47,14 @@ type Context struct {
 	GetHash GetHashFunc
 
 	// Message information
-	Origin   common.Address // Provides information for ORIGIN
-	GasPrice *big.Int       // Provides information for GASPRICE
+	Origin           common.Address // Provides information for ORIGIN
+	ComputeUnitPrice *big.Int       // Provides information for COMPUTEUNITPRICE
 
 	// Block information
-	Coinbase    common.Address // Provides information for COINBASE
-	GasLimit    uint64         // Provides information for GASLIMIT
-	BlockNumber *big.Int       // Provides information for NUMBER
-	Time        *big.Int       // Provides information for TIME
-	Difficulty  *big.Int       // Provides information for DIFFICULTY
+	Coinbase     common.Address // Provides information for COINBASE
+	ComputeLimit uint64         // Provides information for COMPUTELIMIT
+	BlockNumber  *big.Int       // Provides information for NUMBER
+	Time         *big.Int       // Provides information for TIME
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -347,7 +346,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
 	if err == nil && !maxCodeSizeExceeded {
-		createDataGas := uint64(len(ret)) * params.CreateDataGas
+		createDataGas := uint64(len(ret)) * params.CreateDataComputeUnits
 		if contract.UseGas(createDataGas) {
 			evm.StateDB.SetCode(contractAddr, ret)
 		} else {

@@ -12,17 +12,17 @@ import (
 )
 
 var (
-	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
+	errInsufficientBalanceForComputeCapacity = errors.New("insufficient balance to pay for compute capacity")
 )
 
 /*
 The State Transitioning Model
 
 A state transition is a change made when a transaction is applied to the current world state
-The state transitioning model does all all the necessary work to work out a valid new state root.
+The state transitioning model does all the necessary work to work out a valid new state root.
 
 1) Nonce handling
-2) Pre pay gas
+2) Pre pay compute capacity
 3) Create a new state object if the recipient is \0*32
 4) Value transfer
 == If contract creation ==
@@ -35,8 +35,8 @@ The state transitioning model does all all the necessary work to work out a vali
 type StateTransition struct {
 	gp         *GasPool
 	msg        Message
-	gas        uint64
-	gasPrice   *big.Int
+	computeCapacity        uint64
+	computeUnitPrice   *big.Int
 	initialGas uint64
 	value      *big.Int
 	data       []byte
@@ -47,11 +47,9 @@ type StateTransition struct {
 // Message represents a message sent to a contract.
 type Message interface {
 	From() common.Address
-	//FromFrontier() (common.Address, error)
 	To() *common.Address
 
-	GasPrice() *big.Int
-	Gas() uint64
+	ComputateLimit() uint64
 	Value() *big.Int
 
 	Nonce() uint64
@@ -60,10 +58,10 @@ type Message interface {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error) {
+func IntrinsicGas(data []byte, contractCreation) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
-	if contractCreation && homestead {
+	if contractCreation {
 		gas = params.TxGasContractCreation
 	} else {
 		gas = params.TxGas
@@ -98,7 +96,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		gp:       gp,
 		evm:      evm,
 		msg:      msg,
-		gasPrice: msg.GasPrice(),
+		gasPrice: params.FixedPrice,
 		value:    msg.Value(),
 		data:     msg.Data(),
 		state:    evm.StateDB,

@@ -16,6 +16,11 @@ var (
 	ErrInvalidChainID = errors.New("invalid chain id for signer")
 )
 
+// deriveSigner makes a *best* guess about which signer to use.
+func deriveSigner(V *big.Int) Signer {
+	return NewAndromedaSigner(deriveChainID(V))
+}
+
 type Hasher interface {
 	HashWithData(data ...interface{}) common.Hash
 }
