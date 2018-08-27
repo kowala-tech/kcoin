@@ -2,14 +2,13 @@
 package knode
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
-
-	"context"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
