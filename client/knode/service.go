@@ -135,6 +135,24 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 
 	kcoin.apiBackend = &KowalaAPIBackend{kcoin, nil}
 
+	// consensus engine
+	kcoin.engine = CreateConsensusEngine(ctx, kcoin.config, kcoin.chainConfig, kcoin.chainDb)
+
+	if !config.SkipBcVersionCheck {
+		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
+		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
+			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run kcoin upgradedb.\n", bcVersion, core.BlockChainVersion)
+		}
+		rawdb.WriteDatabaseVersion(chainDb, core.BlockChainVersion)
+	}
+
+	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
+	cacheConfig := &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
+	kcoin.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, kcoin.chainConfig, kcoin.engine, vmConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, constructor := range kcoin.bindingFuncs {
 		contract, err := constructor(NewContractBackend(kcoin.apiBackend), kcoin.chainConfig.ChainID)
 		if err != nil {
@@ -162,23 +180,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		return nil, err
 	}
 
-	// consensus engine
-	kcoin.engine = CreateConsensusEngine(ctx, kcoin.config, kcoin.chainConfig, kcoin.chainDb)
-
-	if !config.SkipBcVersionCheck {
-		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
-		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run kcoin upgradedb.\n", bcVersion, core.BlockChainVersion)
-		}
-		rawdb.WriteDatabaseVersion(chainDb, core.BlockChainVersion)
-	}
-
-	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
-	cacheConfig := &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
-	kcoin.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, kcoin.chainConfig, kcoin.engine, vmConfig)
-	if err != nil {
-		return nil, err
-	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)

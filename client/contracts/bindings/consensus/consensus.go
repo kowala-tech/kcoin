@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kowala-tech/kcoin/client/params"
+
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
@@ -36,15 +38,14 @@ type mUSD struct {
 }
 
 func NewMUSD(contractBackend bind.ContractBackend, chainID *big.Int) (*mUSD, error) {
-	//addr, err := getAddressFromKNS(
-	//	params.KNSDomains[params.MiningTokenDomain].FullDomain(),
-	//	contractBackend,
-	//)
-	//if err != nil {
-	//	return nil, err
-	//}
+	addr, err := getAddressFromKNS(
+		params.KNSDomains[params.MiningTokenDomain].FullDomain(),
+		contractBackend,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-	addr := common.HexToAddress("0x6f04441A6eD440Cc139a4E33402b438C27E97F4B")
 	mtoken, err := NewMiningToken(addr, contractBackend)
 	if err != nil {
 		return nil, err
@@ -107,15 +108,21 @@ type Consensus struct {
 
 // Binding returns a binding to the current Consensus engine
 func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
-	//addr, err := getAddressFromKNS(
-	//	params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
-	//	contractBackend,
-	//)
-	//if err != nil {
-	//	return nil, err
-	//}
+	addr, err := getAddressFromKNS(
+		params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
+		contractBackend,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-	addr := common.HexToAddress("0x80eDa603028fe504B57D14d947c8087c1798D800")
+	mTokenAddr, err := getAddressFromKNS(
+		params.KNSDomains[params.MiningTokenDomain].FullDomain(),
+		contractBackend,
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	manager, err := NewValidatorMgr(addr, contractBackend)
 	if err != nil {
@@ -133,7 +140,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		mtoken:          mUSD,
 		chainID:         chainID,
 		contractBackend: contractBackend,
-		mtokenAddr:      common.HexToAddress("0x6f04441A6eD440Cc139a4E33402b438C27E97F4B"),
+		mtokenAddr:      mTokenAddr,
 	}, nil
 }
 
@@ -254,16 +261,14 @@ func (css *Consensus) MintInit() error {
 	var err error
 	css.initMint.Do(func() {
 		if css.multiSigWallet == nil {
-			//addr, errKNS := getAddressFromKNS(
-			//	params.KNSDomains[params.MultiSigDomain].FullDomain(),
-			//	css.contractBackend,
-			//)
-			//if errKNS != nil {
-			//	err = errKNS
-			//	return
-			//}
-
-			addr := common.HexToAddress("0xfE9bed356E7bC4f7a8fC48CC19C958f4e640AC62")
+			addr, errKNS := getAddressFromKNS(
+				params.KNSDomains[params.MultiSigDomain].FullDomain(),
+				css.contractBackend,
+			)
+			if errKNS != nil {
+				err = errKNS
+				return
+			}
 
 			var multisig *ownership.MultiSigWallet
 			multisig, err = ownership.NewMultiSigWallet(addr, css.contractBackend)
@@ -275,16 +280,14 @@ func (css *Consensus) MintInit() error {
 		}
 
 		if css.oracle == nil {
-			//addr, errKns := getAddressFromKNS(
-			//	params.KNSDomains[params.OracleMgrDomain].FullDomain(),
-			//	css.contractBackend,
-			//)
-			//if err != nil {
-			//	err = errKns
-			//	return
-			//}
-
-			addr := common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5")
+			addr, errKns := getAddressFromKNS(
+				params.KNSDomains[params.OracleMgrDomain].FullDomain(),
+				css.contractBackend,
+			)
+			if err != nil {
+				err = errKns
+				return
+			}
 
 			var oracleMgr *oracle.OracleMgr
 			oracleMgr, err = oracle.NewOracleMgr(addr, css.contractBackend)
