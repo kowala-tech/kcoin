@@ -6,7 +6,7 @@ import "../kns/DomainResolver.sol";
 import {NameHash} from "../utils/NameHash.sol";
 
 /**
-
+* @title Oracle Manager contract
 */
 contract OracleMgr is Pausable {
      
