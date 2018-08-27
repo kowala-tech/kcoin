@@ -105,7 +105,6 @@ func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 	}
 
 	gen.prefundAccounts(opts.prefundedAccounts)
-	// @TODO (rgeraldes) - is this necessary?
 
 	return nil
 }
