@@ -7,15 +7,15 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kowala-tech/kcoin/client/common/kns"
+
 	"github.com/kowala-tech/kcoin/client/params"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
-	kns2 "github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/token"
@@ -38,7 +38,7 @@ type mUSD struct {
 }
 
 func NewMUSD(contractBackend bind.ContractBackend, chainID *big.Int) (*mUSD, error) {
-	addr, err := getAddressFromKNS(
+	addr, err := kns.GetAddressFromDomain(
 		params.KNSDomains[params.MiningTokenDomain].FullDomain(),
 		contractBackend,
 	)
@@ -108,7 +108,7 @@ type Consensus struct {
 
 // Binding returns a binding to the current Consensus engine
 func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
-	addr, err := getAddressFromKNS(
+	addr, err := kns.GetAddressFromDomain(
 		params.KNSDomains[params.ValidatorMgrDomain].FullDomain(),
 		contractBackend,
 	)
@@ -116,7 +116,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		return nil, err
 	}
 
-	mTokenAddr, err := getAddressFromKNS(
+	mTokenAddr, err := kns.GetAddressFromDomain(
 		params.KNSDomains[params.MiningTokenDomain].FullDomain(),
 		contractBackend,
 	)
@@ -142,18 +142,6 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		contractBackend: contractBackend,
 		mtokenAddr:      mTokenAddr,
 	}, nil
-}
-
-func getAddressFromKNS(domain string, caller bind.ContractCaller) (common.Address, error) {
-	resolver, err := kns.NewPublicResolverCaller(
-		common.HexToAddress(bindings.ProxyResolverAddr),
-		caller,
-	)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	return resolver.Addr(nil, kns2.NameHash(domain))
 }
 
 func (css *Consensus) Join(walletAccount accounts.WalletAccount, deposit *big.Int) (common.Hash, error) {
@@ -273,7 +261,7 @@ func (css *Consensus) MintInit() error {
 		}
 
 		if css.oracle == nil {
-			addr, errKns := getAddressFromKNS(
+			addr, errKns := kns.GetAddressFromDomain(
 				params.KNSDomains[params.OracleMgrDomain].FullDomain(),
 				css.contractBackend,
 			)
