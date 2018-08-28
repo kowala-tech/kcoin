@@ -7,6 +7,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/vm"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -36,7 +37,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		Coinbase:    beneficiary,
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
-		GasLimit:    header.GasLimit,
+		GasLimit:    params.ComputeCapacity,
 		GasPrice:    new(big.Int).Set(msg.GasPrice()),
 	}
 }

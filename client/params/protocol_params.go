@@ -1,13 +1,8 @@
 package params
 
-var (
-	ComputeCapacity = GenesisComputeCapacity // The artificial target
-)
-
 const (
-	GasLimitBoundDivisor   uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
-	MinComputeCapacity     uint64 = 5000    // Minimum the compute capacity may ever be.
-	GenesisComputeCapacity uint64 = 4712388 // Compute capacity of the Genesis block.
+	ComputeCapacity    uint64 = 4712388 // Compute capacity
+	MinComputeCapacity uint64 = 5000    // Minimum the compute capacity may ever be.
 
 	// computational efforts
 	ExpByteCompEffort             uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.

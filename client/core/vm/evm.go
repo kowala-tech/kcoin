@@ -39,9 +39,9 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 // it shouldn't be modified.
 type Context struct {
 	// CanTransfer returns whether the account contains
-	// sufficient ether to transfer the value
+	// sufficient kcoin to transfer the value
 	CanTransfer CanTransferFunc
-	// Transfer transfers ether from one account to the other
+	// Transfer transfers kcoin from one account to the other
 	Transfer TransferFunc
 	// GetHash returns the hash corresponding to n
 	GetHash GetHashFunc
@@ -51,11 +51,10 @@ type Context struct {
 	GasPrice *big.Int       // Provides information for GASPRICE
 
 	// Block information
-	Coinbase    common.Address // Provides information for COINBASE
-	GasLimit    uint64         // Provides information for GASLIMIT
-	BlockNumber *big.Int       // Provides information for NUMBER
-	Time        *big.Int       // Provides information for TIME
-	Difficulty  *big.Int       // Provides information for DIFFICULTY
+	Coinbase        common.Address // Provides information for COINBASE
+	ComputeCapacity uint64         // Provides information for COMPUTECAPACITY
+	BlockNumber     *big.Int       // Provides information for NUMBER
+	Time            *big.Int       // Provides information for TIME
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
