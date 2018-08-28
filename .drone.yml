@@ -21,7 +21,6 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.11
     commands:
-      # test_genesis should run before test
       - make test_genesis
       - make test
       - make lint
