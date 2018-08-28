@@ -27,28 +27,32 @@ func (ctx *Context) MintMTokens(m, n int, mTokens int64, to string) error {
 }
 
 func (ctx *Context) mintTokensAndWait(governance []accounts.Account, to accounts.Account, tokens int64) error {
-	c, err := consensus.Binding(ctx.client, ctx.chainID)
+	c, err := consensus.Bind(ctx.client, ctx.chainID)
 	if err != nil {
 		return err
 	}
-	if err := c.MintInit(); err != nil {
+
+	// TODO: Code smell, @rgeraldes
+	var cCast = c.(*consensus.Consensus)
+
+	if err := cCast.MintInit(); err != nil {
 		return err
 	}
 
-	transactionID, err := ctx.submitTransactionToMint(c, governance[0], to, tokens)
+	transactionID, err := ctx.submitTransactionToMint(cCast, governance[0], to, tokens)
 	if err != nil {
 		return err
 	}
 
 	for _, acct := range governance[1:] {
-		if err := ctx.confirmMintTransaction(c, acct, transactionID); err != nil {
+		if err := ctx.confirmMintTransaction(cCast, acct, transactionID); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (ctx *Context) submitTransactionToMint(c consensus.Consensus, acct accounts.Account, to accounts.Account, tokens int64) (*big.Int, error) {
+func (ctx *Context) submitTransactionToMint(c *consensus.Consensus, acct accounts.Account, to accounts.Account, tokens int64) (*big.Int, error) {
 	weis := toWei(tokens)
 	var transaction common.Hash
 	var transactionID *big.Int
@@ -94,7 +98,7 @@ func (ctx *Context) submitTransactionToMint(c consensus.Consensus, acct accounts
 	return transactionID, err
 }
 
-func (ctx *Context) confirmMintTransaction(c consensus.Consensus, acct accounts.Account, transactionID *big.Int) error {
+func (ctx *Context) confirmMintTransaction(c *consensus.Consensus, acct accounts.Account, transactionID *big.Int) error {
 	var transaction common.Hash
 	return ctx.waiter.Do(
 		func() error {
