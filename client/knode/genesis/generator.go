@@ -105,6 +105,7 @@ func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 	}
 
 	gen.prefundAccounts(opts.prefundedAccounts)
+	gen.addBatchOfPrefundedAccountsIntoGenesis()
 
 	return nil
 }
@@ -182,6 +183,13 @@ func getNetwork(network string) *big.Int {
 	}
 
 	return chainId
+}
+
+func (gen *generator) addBatchOfPrefundedAccountsIntoGenesis() {
+	// Add a batch of precompile balances to avoid them getting deleted
+	for i := int64(0); i < 256; i++ {
+		gen.alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
+	}
 }
 
 func (gen *generator) prefundAccounts(validPrefundedAccounts []*validPrefundedAccount) {
