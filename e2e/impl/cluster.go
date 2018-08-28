@@ -286,13 +286,14 @@ func (ctx *Context) buildGenesis() error {
 	baseDeposit := uint64(1)
 
 	newGenesis, err := genesis.Generate(genesis.Options{
-		Network:     "test",
+		Network:     genesis.TestNetwork,
 		BlockNumber: 0,
+		ExtraData:   "Kowala's first block",
 		SystemVars: &genesis.SystemVarsOpts{
 			InitialPrice: 1,
 		},
 		Consensus: &genesis.ConsensusOpts{
-			Engine:           "konsensus",
+			Engine:           genesis.KonsensusConsensus,
 			MaxNumValidators: 10,
 			FreezePeriod:     5,
 			BaseDeposit:      baseDeposit,

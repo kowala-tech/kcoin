@@ -82,7 +82,7 @@ var Networks = map[string]map[string]Options{
 				InitialPrice: 1,
 			},
 			Governance: &GovernanceOpts{
-				Origin: "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+				Origin: "0xFF9DFBD395cD1C4a4F23C16aa8a5c44109Bc17DF",
 				Governors: []string{
 					"0xf861e10641952a42f9c527a43ab77c3030ee2c8f",
 					"0x7dd43075b89c129bcd2cca1e2d680a6f3f30b5d9",
