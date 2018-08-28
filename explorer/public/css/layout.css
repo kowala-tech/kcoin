@@ -1070,7 +1070,7 @@
 body,html {
     margin: 0;
     padding: 0;
-    background: #008ef5;
+    background: #29a5ff;
     color: #fff;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -1171,7 +1171,7 @@ body,html {
     }
 
     .page-head {
-        background: #008ef5;
+        background: #29a5ff;
     }
 
     .page-content {
