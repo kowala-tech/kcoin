@@ -4,27 +4,30 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
-	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
-//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/oracle/OracleMgr.sol
+//go:generate solc --allow-paths ., --abi --bin --overwrite --libraries NameHash:0x6Eb2a774C270BA6af7e6C9CaE18499dA8A591b5e -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/oracle/OracleMgr.sol
 //go:generate ../../../build/bin/abigen -abi build/OracleMgr.abi -bin build/OracleMgr.bin -pkg oracle -type OracleMgr -out ./gen_manager.go
 
-var mapOracleMgrToAddr = map[uint64]common.Address{
-	params.TestnetChainConfig.ChainID.Uint64(): common.HexToAddress("0x4C55B59340FF1398d6aaE362A140D6e93855D4A5"),
+type Manager struct {
+	*OracleMgrSession
 }
 
-type Manager interface {
-	Price() (*big.Int, error)
-	GetOracleCount() (*big.Int, error)
+// @TODO(rgeraldes) - temporary method
+func (mgr *Manager) Domain() string {
+	return ""
 }
 
-// Binding returns a binding to the current oracle mgr
-func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgrSession, error) {
-	addr, ok := mapOracleMgrToAddr[chainID.Uint64()]
-	if !ok {
+// Bind returns a binding to the current oracle mgr
+func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error) {
+	addr, err := kns.GetAddressFromDomain(
+		params.KNSDomains[params.OracleMgrDomain].FullDomain(),
+		contractBackend,
+	)
+	if err != nil {
 		return nil, bindings.ErrNoAddress
 	}
 
@@ -33,8 +36,10 @@ func Binding(contractBackend bind.ContractBackend, chainID *big.Int) (*OracleMgr
 		return nil, err
 	}
 
-	return &OracleMgrSession{
-		Contract: mgr,
-		CallOpts: bind.CallOpts{},
+	return &Manager{
+		&OracleMgrSession{
+			Contract: mgr,
+			CallOpts: bind.CallOpts{},
+		},
 	}, nil
 }
