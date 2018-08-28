@@ -127,7 +127,6 @@ var KNSRegistry = &contract{
 
 		contract.code = contractCode
 		contract.address = contractAddr
-		fmt.Printf("KNSRegistry addr %s\n", contractAddr.Hex())
 
 		return nil
 	},
@@ -151,7 +150,6 @@ var ProxiedKNSRegistry = &contract{
 
 		contract.address = *proxyContractAddr
 		contract.code = code
-		fmt.Printf("Proxied KNSRegistry addr %s\n", proxyContractAddr.Hex())
 
 		// Init Registry
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
@@ -220,7 +218,6 @@ var FIFSRegistrar = &contract{
 
 		contract.code = contractCode
 		contract.address = contractAddr
-		fmt.Printf("FIFSRegistrar addr %s\n", contractAddr.Hex())
 
 		return nil
 	},
@@ -245,7 +242,6 @@ var ProxiedFIFSRegistrar = &contract{
 
 		contract.address = *proxyContractAddr
 		contract.code = code
-		fmt.Printf("Proxied FIFS REgistrar %s\n", proxyContractAddr.Hex())
 
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
 		runtimeCfg.Origin = *validatorAddr
@@ -287,7 +283,6 @@ var PublicResolver = &contract{
 
 		contract.code = contractCode
 		contract.address = contractAddr
-		fmt.Printf("Public resolver %s\n", contractAddr.Hex())
 
 		return nil
 	},
@@ -311,7 +306,6 @@ var ProxiedPublicResolver = &contract{
 
 		contract.address = *proxyContractAddr
 		contract.code = code
-		fmt.Printf("Proxied Public resolver %s\n", proxyContractAddr.Hex())
 
 		// Init
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
@@ -354,7 +348,6 @@ var UpgradeabilityProxyFactoryContract = &contract{
 
 		contract.code = contractCode
 		contract.address = contractAddr
-		fmt.Printf("Proxy factory contract %s", contractAddr.Hex())
 
 		return nil
 	},
@@ -414,7 +407,6 @@ var MultiSigContract = &contract{
 		}
 		contract.code = contractCode
 		contract.address = contractAddr
-		fmt.Printf("MultiSigWallet addr %s\n", contractAddr.Hex())
 
 		opts.miningToken.owner = contractAddr
 		opts.validatorMgr.owner = contractAddr
@@ -520,7 +512,6 @@ var StringsLibrary = &contract{
 		}
 		contract.code = contractCode
 		contract.address = contractAddr
-		fmt.Printf("Strings library %s\n", contractAddr.Hex())
 
 		return nil
 	},
@@ -539,7 +530,6 @@ var NameHashLibrary = &contract{
 		}
 		contract.code = contractCode
 		contract.address = contractAddr
-		fmt.Printf("NameHash library %s\n", contractAddr.Hex())
 
 		return nil
 	},
