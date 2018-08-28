@@ -310,7 +310,7 @@ func (ctx *Context) buildGenesis() error {
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
-			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+			Origin:           "0xFF9DFBD395cD1C4a4F23C16aa8a5c44109Bc17DF",
 			Governors:        ctx.getGovernors(),
 			NumConfirmations: ctx.genesisOptions.requiredGovernanceConfirmations,
 		},
