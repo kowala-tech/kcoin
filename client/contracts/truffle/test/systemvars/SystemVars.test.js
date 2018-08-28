@@ -1,4 +1,4 @@
- /* global artifacts, contract, it, beforeEach, describe, before, web3 */
+/* global artifacts, contract, it, beforeEach, describe, before, web3 */
 /* eslint no-unused-expressions: 0 */
 /* eslint consistent-return: 0 */
 /* eslint-disable max-len */
@@ -11,7 +11,7 @@ require('chai')
   .should();
 
 const {
-  EVMError, ether
+  EVMError, ether,
 } = require('../helpers/testUtils.js');
 
 const SysVar = artifacts.require('SystemVars.sol');
