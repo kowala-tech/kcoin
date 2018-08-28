@@ -247,7 +247,7 @@ func (css *Consensus) MintInit() error {
 	var err error
 	css.initMint.Do(func() {
 		if css.multiSigWallet == nil {
-			addr := common.HexToAddress(bindings.MultiSigWalletAddr)
+			addr := bindings.MultiSigWalletAddr
 
 			var multisig *ownership.MultiSigWallet
 			multisig, err = ownership.NewMultiSigWallet(addr, css.contractBackend)

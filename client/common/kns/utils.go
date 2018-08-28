@@ -9,7 +9,7 @@ import (
 
 func GetAddressFromDomain(domain string, caller bind.ContractCaller) (common.Address, error) {
 	resolver, err := kns.NewPublicResolverCaller(
-		common.HexToAddress(bindings.ProxyResolverAddr),
+		bindings.ProxyResolverAddr,
 		caller,
 	)
 	if err != nil {
