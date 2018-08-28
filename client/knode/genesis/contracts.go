@@ -127,6 +127,7 @@ var KNSRegistry = &contract{
 
 		contract.code = contractCode
 		contract.address = contractAddr
+		fmt.Printf("KNSRegistry addr %s\n", contractAddr.Hex())
 
 		return nil
 	},
@@ -140,7 +141,7 @@ var ProxiedKNSRegistry = &contract{
 		runtimeCfg := contract.runtimeCfg
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0x75AD571eFAcC241B23099c724c4A71FE30659145"),
+			common.HexToAddress("0x2d7465b88a0A5A1bBff2671C8ED78F7506465ddc"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -150,6 +151,7 @@ var ProxiedKNSRegistry = &contract{
 
 		contract.address = *proxyContractAddr
 		contract.code = code
+		fmt.Printf("Proxied KNSRegistry addr %s\n", proxyContractAddr.Hex())
 
 		// Init Registry
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
@@ -218,6 +220,7 @@ var FIFSRegistrar = &contract{
 
 		contract.code = contractCode
 		contract.address = contractAddr
+		fmt.Printf("FIFSRegistrar addr %s\n", contractAddr.Hex())
 
 		return nil
 	},
@@ -232,7 +235,7 @@ var ProxiedFIFSRegistrar = &contract{
 		runtimeCfg.Origin = *args.multiSigCreator
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0x2A4443ec27BF5F849B2Da15eB697d3Ef5302f186"),
+			common.HexToAddress("0x3b058a1a62E59D185618f64BeBBAF3C52bf099E0"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -242,6 +245,7 @@ var ProxiedFIFSRegistrar = &contract{
 
 		contract.address = *proxyContractAddr
 		contract.code = code
+		fmt.Printf("Proxied FIFS REgistrar %s\n", proxyContractAddr.Hex())
 
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
 		runtimeCfg.Origin = *validatorAddr
@@ -283,6 +287,7 @@ var PublicResolver = &contract{
 
 		contract.code = contractCode
 		contract.address = contractAddr
+		fmt.Printf("Public resolver %s\n", contractAddr.Hex())
 
 		return nil
 	},
@@ -296,7 +301,7 @@ var ProxiedPublicResolver = &contract{
 		runtimeCfg := contract.runtimeCfg
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0xA08fCF0425736Ae7c10c0D3FCfB45C65f5f78212"),
+			common.HexToAddress("0xA275adEf1A19c815817910F2898e4134428e6ee4"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -306,6 +311,7 @@ var ProxiedPublicResolver = &contract{
 
 		contract.address = *proxyContractAddr
 		contract.code = code
+		fmt.Printf("Proxied Public resolver %s\n", proxyContractAddr.Hex())
 
 		// Init
 		validatorAddr := opts.prefundedAccounts[0].accountAddress
@@ -348,6 +354,7 @@ var UpgradeabilityProxyFactoryContract = &contract{
 
 		contract.code = contractCode
 		contract.address = contractAddr
+		fmt.Printf("Proxy factory contract %s", contractAddr.Hex())
 
 		return nil
 	},
@@ -407,6 +414,7 @@ var MultiSigContract = &contract{
 		}
 		contract.code = contractCode
 		contract.address = contractAddr
+		fmt.Printf("MultiSigWallet addr %s\n", contractAddr.Hex())
 
 		opts.miningToken.owner = contractAddr
 		opts.validatorMgr.owner = contractAddr
@@ -512,6 +520,7 @@ var StringsLibrary = &contract{
 		}
 		contract.code = contractCode
 		contract.address = contractAddr
+		fmt.Printf("Strings library %s\n", contractAddr.Hex())
 
 		return nil
 	},
@@ -530,6 +539,7 @@ var NameHashLibrary = &contract{
 		}
 		contract.code = contractCode
 		contract.address = contractAddr
+		fmt.Printf("NameHash library %s\n", contractAddr.Hex())
 
 		return nil
 	},
