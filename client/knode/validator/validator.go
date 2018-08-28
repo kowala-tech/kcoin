@@ -322,6 +322,7 @@ func (val *validator) AddVote(vote *types.Vote) error {
 	return nil
 }
 
+/*
 func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
 	gp := new(core.GasPool).AddGas(val.header.GasLimit)
 
@@ -406,6 +407,7 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 
 	return nil, receipt.Logs
 }
+*/
 
 func (val *validator) leave() {
 	txHash, err := val.consensus.Leave(val.walletAccount)
@@ -476,7 +478,7 @@ func (val *validator) createBlock() *types.Block {
 	}
 
 	txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
-	val.commitTransactions(val.eventMux, txs, val.chain, val.walletAccount.Account().Address)
+	//val.commitTransactions(val.eventMux, txs, val.chain, val.walletAccount.Account().Address)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block

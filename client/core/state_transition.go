@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
+	errInsufficientBalanceForComputationalEffort = errors.New("insufficient balance to pay for computational resources")
 )
 
 /*
@@ -22,7 +22,7 @@ A state transition is a change made when a transaction is applied to the current
 The state transitioning model does all all the necessary work to work out a valid new state root.
 
 1) Nonce handling
-2) Pre pay gas
+2) Pre pay computational effort required for the transaction
 3) Create a new state object if the recipient is \0*32
 4) Value transfer
 == If contract creation ==
@@ -33,15 +33,15 @@ The state transitioning model does all all the necessary work to work out a vali
 6) Derive new state root
 */
 type StateTransition struct {
-	gp         *GasPool
-	msg        Message
-	gas        uint64
-	gasPrice   *big.Int
-	initialGas uint64
-	value      *big.Int
-	data       []byte
-	state      vm.StateDB
-	evm        *vm.EVM
+	gp                     *GasPool
+	msg                    Message
+	computationalResources uint64
+	computeUnitPrice       *big.Int
+	initialGas             uint64
+	value                  *big.Int
+	data                   []byte
+	state                  vm.StateDB
+	evm                    *vm.EVM
 }
 
 // Message represents a message sent to a contract.
@@ -50,8 +50,8 @@ type Message interface {
 	//FromFrontier() (common.Address, error)
 	To() *common.Address
 
-	GasPrice() *big.Int
-	Gas() uint64
+	ComputeUnitPrice() *big.Int
+	ComputeLimit() uint64
 	Value() *big.Int
 
 	Nonce() uint64
@@ -59,16 +59,17 @@ type Message interface {
 	Data() []byte
 }
 
-// IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error) {
-	// Set the starting gas for the raw transaction
-	var gas uint64
-	if contractCreation && homestead {
-		gas = params.TxGasContractCreation
+// IntrinsicComputation computes the intrinsic computational effort required for a message
+// with the given data.
+func IntrinsicComputationalEffort(data []byte, contractCreation bool) (uint64, error) {
+	// Set the starting compute units required for the raw transaction
+	var units uint64
+	if contractCreation {
+		units = params.TxGasContractCreation
 	} else {
-		gas = params.TxGas
+		units = params.TxGas
 	}
-	// Bump the required gas by the amount of transactional data
+	// Bump the required compute units by the amount of transactional data
 	if len(data) > 0 {
 		// Zero and non-zero bytes are priced differently
 		var nz uint64
@@ -78,30 +79,30 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 			}
 		}
 		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
+		if (math.MaxUint64-units)/params.TxDataNonZeroGas < nz {
 			return 0, vm.ErrOutOfGas
 		}
-		gas += nz * params.TxDataNonZeroGas
+		units += nz * params.TxDataNonZeroGas
 
 		z := uint64(len(data)) - nz
-		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
+		if (math.MaxUint64-units)/params.TxDataZeroGas < z {
 			return 0, vm.ErrOutOfGas
 		}
-		gas += z * params.TxDataZeroGas
+		units += z * params.TxDataZeroGas
 	}
-	return gas, nil
+	return units, nil
 }
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
 	return &StateTransition{
-		gp:       gp,
-		evm:      evm,
-		msg:      msg,
-		gasPrice: msg.GasPrice(),
-		value:    msg.Value(),
-		data:     msg.Data(),
-		state:    evm.StateDB,
+		gp:               gp,
+		evm:              evm,
+		msg:              msg,
+		computeUnitPrice: msg.ComputeUnitPrice(),
+		value:            msg.Value(),
+		data:             msg.Data(),
+		state:            evm.StateDB,
 	}
 }
 
@@ -124,26 +125,26 @@ func (st *StateTransition) to() common.Address {
 	return *st.msg.To()
 }
 
-func (st *StateTransition) useGas(amount uint64) error {
-	if st.gas < amount {
+func (st *StateTransition) useComputeResources(amount uint64) error {
+	if st.computeLimit < amount {
 		return vm.ErrOutOfGas
 	}
-	st.gas -= amount
+	st.computeLimit -= amount
 
 	return nil
 }
 
-func (st *StateTransition) buyGas() error {
-	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+func (st *StateTransition) buyComputeUnits() error {
+	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.ComputeLimit()), st.computeUnitPrice)
 	if st.state.GetBalance(st.msg.From()).Cmp(mgval) < 0 {
-		return errInsufficientBalanceForGas
+		return errInsufficientBalanceForComputeUnits
 	}
-	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
+	if err := st.gp.SubGas(st.msg.ComputeLimit()); err != nil {
 		return err
 	}
-	st.gas += st.msg.Gas()
+	st.computeLimit += st.msg.ComputeLimit()
 
-	st.initialGas = st.msg.Gas()
+	st.initialGas = st.msg.ComputeLimit()
 	st.state.SubBalance(st.msg.From(), mgval)
 	return nil
 }
@@ -158,13 +159,13 @@ func (st *StateTransition) preCheck() error {
 			return ErrNonceTooLow
 		}
 	}
-	return st.buyGas()
+	return st.buyComputeUnits()
 }
 
 // TransitionDb will transition the state by applying the current message and
-// returning the result including the the used gas. It returns an error if it
+// returning the result including the the used compute units. It returns an error if it
 // failed. An error indicates a consensus issue.
-func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bool, err error) {
+func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, failed bool, err error) {
 	if err = st.preCheck(); err != nil {
 		return
 	}
@@ -172,8 +173,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	sender := vm.AccountRef(msg.From())
 	contractCreation := msg.To() == nil
 
-	// Pay intrinsic gas
-	gas, err := IntrinsicGas(st.data, contractCreation, true)
+	// Pay intrinsic compute units
+	gas, err := IntrinsicComputation(st.data, contractCreation)
 	if err != nil {
 		return nil, 0, false, err
 	}

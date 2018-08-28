@@ -2,7 +2,6 @@ package knode
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
@@ -16,7 +15,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
@@ -24,7 +22,6 @@ import (
 // KowalaAPIBackend implements kcoinapi.Backend for full nodes
 type KowalaAPIBackend struct {
 	kcoin *Kowala
-	gpo   *gasprice.Oracle
 }
 
 // ChainConfig returns the active chain configuration.
@@ -181,10 +178,6 @@ func (b *KowalaAPIBackend) Downloader() *downloader.Downloader {
 
 func (b *KowalaAPIBackend) ProtocolVersion() int {
 	return b.kcoin.EthVersion()
-}
-
-func (b *KowalaAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
-	return b.gpo.SuggestPrice(ctx)
 }
 
 func (b *KowalaAPIBackend) ChainDb() kcoindb.Database {

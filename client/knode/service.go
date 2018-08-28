@@ -26,7 +26,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/knode/filters"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/log"
@@ -66,14 +65,13 @@ type Kowala struct {
 
 	validator validator.Validator // consensus validator
 	consensus consensus.Consensus // consensus binding
-	gasPrice  *big.Int
 	coinbase  common.Address
 	deposit   *big.Int
 
 	networkID     uint64
 	netRPCService *kcoinapi.PublicNetAPI
 
-	lock       sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
+	lock       sync.RWMutex // Protects the variadic fields (e.g. coinbase)
 	serverPool *serverPool
 }
 
@@ -105,7 +103,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
-		gasPrice:       config.GasPrice,
 		coinbase:       config.Coinbase,
 		deposit:        config.Deposit,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
@@ -141,12 +138,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kcoin.txPool = core.NewTxPool(config.TxPool, kcoin.chainConfig, kcoin.blockchain)
 
-	kcoin.apiBackend = &KowalaAPIBackend{kcoin, nil}
-	gpoParams := config.GPO
-	if gpoParams.Default == nil {
-		gpoParams.Default = config.GasPrice
-	}
-	kcoin.apiBackend.gpo = gasprice.NewOracle(kcoin.apiBackend, gpoParams)
+	kcoin.apiBackend = &KowalaAPIBackend{kcoin}
 
 	// consensus manager
 	consensus, err := consensus.Binding(NewContractBackend(kcoin.apiBackend), chainConfig.ChainID)
