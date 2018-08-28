@@ -140,7 +140,7 @@ var ProxiedKNSRegistry = &contract{
 		runtimeCfg := contract.runtimeCfg
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0x75AD571eFAcC241B23099c724c4A71FE30659145"),
+			common.HexToAddress("0x2d7465b88a0A5A1bBff2671C8ED78F7506465ddc"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -232,7 +232,7 @@ var ProxiedFIFSRegistrar = &contract{
 		runtimeCfg.Origin = *args.multiSigCreator
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0x2A4443ec27BF5F849B2Da15eB697d3Ef5302f186"),
+			common.HexToAddress("0x3b058a1a62E59D185618f64BeBBAF3C52bf099E0"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -296,7 +296,7 @@ var ProxiedPublicResolver = &contract{
 		runtimeCfg := contract.runtimeCfg
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0xA08fCF0425736Ae7c10c0D3FCfB45C65f5f78212"),
+			common.HexToAddress("0xA275adEf1A19c815817910F2898e4134428e6ee4"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)

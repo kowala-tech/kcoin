@@ -9,7 +9,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
-//go:generate solc --allow-paths ., --abi --bin --overwrite --libraries NameHash:0x66DA4aC1767B04B0d99bC94CCaD6EEF8dA63Ae96 -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/oracle/OracleMgr.sol
+//go:generate solc --allow-paths ., --abi --bin --overwrite --libraries NameHash:0x6Eb2a774C270BA6af7e6C9CaE18499dA8A591b5e -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/oracle/OracleMgr.sol
 //go:generate ../../../build/bin/abigen -abi build/OracleMgr.abi -bin build/OracleMgr.bin -pkg oracle -type OracleMgr -out ./gen_manager.go
 
 type Manager struct {
