@@ -12,9 +12,9 @@ library NameHash
 
 
     /**
-     * Native namehash algorighm implementation in Solidity.
+     * Native namehash algorithm implementation in Solidity.
      * @param  _node The string over which the namehash algorithm will be applied.
-     * @return _namehash The result of namehash algorighm applied at _node.
+     * @return _namehash The result of namehash algorithm applied at _node.
      */
     function namehash(string _node) constant returns (bytes32 _namehash)
     {
