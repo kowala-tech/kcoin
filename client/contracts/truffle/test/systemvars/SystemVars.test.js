@@ -29,12 +29,28 @@ contract('System Vars', ([_, owner, anotherAccount]) => {
     await price.should.be.bignumber.equal(ether(10));
   });
 
-  // it('Should get mintedAmount', async () => {
-  //   // when
-  //   const mintedAmount = await this.sysvar.mintedAmount();
+  it('Should get mintedAmount', async () => {
+    // when
+    const mintedAmount = await this.sysvar.mintedAmount();
 
-  //   // then
-  //   await mintedAmount.should.be.bignumber.equal(ether(42));
-  // });
+    // then
+    await mintedAmount.should.be.bignumber.equal(1e12);
+  });
+
+  it('Should get oracle deduction', async () => {
+    // when
+    const deduction = await this.sysvar.oracleDeduction(100);
+
+    // then
+    await deduction.should.be.bignumber.equal(4);
+  });
+
+  it('Should get oracle reward', async () => {
+    // when
+    const reward = await this.sysvar.oracleReward();
+
+    // then
+    await reward.should.be.bignumber.equal(0);
+  });
 });
 
