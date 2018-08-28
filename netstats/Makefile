@@ -1,8 +1,9 @@
 IMAGE_NAME      ?= kowalatech/netstats
+NETWORK_NAME    ?= "zygote"
 URL             ?= "https://zygote.kowala.tech"
 EXPLORER_URL    ?= "https://explorer.zygote.kowala.tech"
 FAUCET_URL      ?= "https://faucet.zygote.kowala.tech"
-CDN_URL         ?= "https://cdn.kowala.io"
+CDN_URL         ?= "https://cdn.kowala.tech"
 WS_SECRET       ?= "abc123"
 
 .PHONY: run run-docker build-docker
@@ -20,4 +21,5 @@ build-docker:
 		--build-arg EXPLORER_URL=$(EXPLORER_URL) \
 		--build-arg FAUCET_URL=$(FAUCET_URL) \
 		--build-arg WS_SECRET=$(WS_SECRET) \
+		--build-arg NETWORK_NAME=$(NETWORK_NAME) \
 		.

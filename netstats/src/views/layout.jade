@@ -34,7 +34,7 @@ html(ng-app="netStatsApp")
       ul
         li
           a(href="@@explorerURL" rel="noopener" target="_blank") BLOCK EXPLORER
-        li
+        li(ng-if="'@@faucetURL'.length > 0")
           a(href="@@faucetURL" rel="noopener" target="_blank") GET TEST COINS
         li
           a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION
@@ -45,14 +45,13 @@ html(ng-app="netStatsApp")
         button
       .grid-container
         nav
-          .title
-            a(href="/")
-              img(src="@@cdnURL/images/kowala/kowala-white.svg" title="Kowala")
+          a.title(href="/")
+            img(src="@@cdnURL/images/kowala/kowala-white.svg" title="Kowala")
           .menu
             ul
               li
                 a(href="@@explorerURL" rel="noopener" target="_blank") BLOCK EXPLORER
-              li
+              li(ng-if="'@@faucetURL'.length > 0")
                 a(href="@@faucetURL" rel="noopener" target="_blank") GET TEST COINS
               li
                 a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION

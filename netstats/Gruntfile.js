@@ -49,6 +49,10 @@ module.exports = function(grunt) {
 						{
               match: 'faucetURL',
               replacement: '<%= process.env.FAUCET_URL %>'
+            },
+						{
+              match: 'networkName',
+              replacement: '<%= process.env.NETWORK_NAME %>'
             }
           ]
         },

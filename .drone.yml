@@ -236,9 +236,10 @@ pipeline:
     build_args:
       - URL=https://stats.kowala.tech
       - EXPLORER_URL=https://explorer.zygote.kowala.tech
-      - FAUCET_URL=https://faucet.zygote.kowala.tech
+      - FAUCET_URL=
       - CDN_URL=https://cdn.kowala.tech
       - WS_SECRET=abc123
+      - NETWORK_NAME="mainnet"
     when:
       branch: [master]
       event: [push, tag]

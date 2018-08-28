@@ -7,6 +7,10 @@ h3{
   font-weight: bold;
 }
 
+h4{
+  margin-bottom: 1em;
+}
+
 canvas{
   margin-top: 1em;
 }
@@ -22,4 +26,8 @@ h3.title{
 
 .disabled{
   opacity: 0.5;
+}
+
+#blockchain, #mining, #stability, #connected-nodes{
+  margin-bottom: 2em;
 }
