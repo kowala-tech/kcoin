@@ -3,19 +3,24 @@ package knode
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
 	"github.com/kowala-tech/kcoin/client/core/rawdb"
@@ -35,9 +40,11 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/rpc"
+	"github.com/pkg/errors"
 )
 
-// @TODO(rgeraldes) - we may need to enable transaction syncing right from the beginning (in StartValidating - check previous version)
+// Binding constructor creates a new contract binding
+type BindingConstructor func(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Binding, error)
 
 // Kowala implements the Kowala full node service.
 type Kowala struct {
@@ -64,9 +71,14 @@ type Kowala struct {
 	apiBackend *KowalaAPIBackend
 
 	validator validator.Validator // consensus validator
-	consensus consensus.Consensus // consensus binding
-	coinbase  common.Address
-	deposit   *big.Int
+
+	consensus *consensus.Consensus
+
+	bindingFuncs []BindingConstructor // binding constructors (in dependency order)
+	contracts    map[reflect.Type]bindings.Binding
+
+	coinbase common.Address
+	deposit  *big.Int
 
 	networkID     uint64
 	netRPCService *kcoinapi.PublicNetAPI
@@ -100,16 +112,27 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb),
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
 		coinbase:       config.Coinbase,
 		deposit:        config.Deposit,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
+		bindingFuncs: []BindingConstructor{
+			oracle.Bind,
+			consensus.Bind,
+			sysvars.Bind,
+			stability.Bind,
+		},
+		contracts: make(map[reflect.Type]bindings.Binding),
 	}
 
 	log.Info("Initialising Kowala protocol", "versions", protocol.Constants.Versions, "network", config.NetworkId)
+
+	kcoin.apiBackend = &KowalaAPIBackend{kcoin}
+
+	// consensus engine
+	kcoin.engine = CreateConsensusEngine(ctx, kcoin.config, kcoin.chainConfig, kcoin.chainDb)
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
@@ -125,6 +148,34 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	for _, constructor := range kcoin.bindingFuncs {
+		contract, err := constructor(NewContractBackend(kcoin.apiBackend), kcoin.chainConfig.ChainID)
+		if err != nil {
+			return nil, err
+		}
+		// build and save the binding
+		kind := reflect.TypeOf(contract)
+		if _, exists := kcoin.contracts[kind]; exists {
+			return nil, errors.New("duplicate contract")
+		}
+		kcoin.contracts[kind] = contract
+	}
+
+	var oracleMgr *oracle.Manager
+	if err := kcoin.Contract(&oracleMgr); err != nil {
+		return nil, err
+	}
+
+	var systemVars *sysvars.Vars
+	if err := kcoin.Contract(&systemVars); err != nil {
+		return nil, err
+	}
+
+	if err := kcoin.Contract(&kcoin.consensus); err != nil {
+		return nil, err
+	}
+
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -137,15 +188,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
 	kcoin.txPool = core.NewTxPool(config.TxPool, kcoin.chainConfig, kcoin.blockchain)
-
-	kcoin.apiBackend = &KowalaAPIBackend{kcoin}
-
-	// consensus manager
-	consensus, err := consensus.Binding(NewContractBackend(kcoin.apiBackend), chainConfig.ChainID)
-	if err != nil {
-		log.Crit("Failed to load the network contract", "err", err)
-	}
-	kcoin.consensus = consensus
 
 	kcoin.validator = validator.New(kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
 	kcoin.validator.SetExtra(makeExtraData(config.ExtraData))
@@ -370,9 +412,18 @@ func (s *Kowala) IsListening() bool                  { return true } // Always l
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkID }
 func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
-func (s *Kowala) Consensus() consensus.Consensus     { return s.consensus }
+func (s *Kowala) Consensus() *consensus.Consensus    { return s.consensus }
 func (s *Kowala) APIBackend() *KowalaAPIBackend      { return s.apiBackend }
 func (s *Kowala) ChainConfig() *params.ChainConfig   { return s.chainConfig }
+
+func (s *Kowala) Contract(contract interface{}) error {
+	element := reflect.ValueOf(contract).Elem()
+	if c, ok := s.contracts[element.Type()]; ok {
+		element.Set(reflect.ValueOf(c))
+		return nil
+	}
+	return errors.New("contract unknown")
+}
 
 func (s *Kowala) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
 	tx, blockHash, _, index := rawdb.ReadTransaction(s.chainDb, txHash)

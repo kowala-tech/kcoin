@@ -49,9 +49,21 @@ func (gen *generator) AddContract(contract *contract) {
 func Generate(opts Options) (*core.Genesis, error) {
 	gen := NewGenerator()
 	gen.AddContract(MultiSigContract)
+	gen.AddContract(UpgradeabilityProxyFactoryContract)
+	gen.AddContract(KNSRegistry)
+	gen.AddContract(ProxiedKNSRegistry)
+	gen.AddContract(FIFSRegistrar)
+	gen.AddContract(ProxiedFIFSRegistrar)
+	gen.AddContract(PublicResolver)
+	gen.AddContract(ProxiedPublicResolver)
 	gen.AddContract(MiningTokenContract)
+	gen.AddContract(StringsLibrary)
+	gen.AddContract(NameHashLibrary)
 	gen.AddContract(ValidatorMgrContract)
 	gen.AddContract(OracleMgrContract)
+	gen.AddContract(MultiSigNameRegister)
+	gen.AddContract(SystemVarsContract)
+	gen.AddContract(StabilityContract)
 
 	return gen.Generate(opts)
 }
@@ -67,6 +79,7 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 	}
 
 	genesis := &core.Genesis{
+		Number:    validOptions.blockNumber,
 		Timestamp: uint64(genesisTimestamp),
 		GasLimit:  4700000,
 		Alloc:     gen.alloc,
@@ -85,6 +98,7 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 	return genesis, nil
 }
 
+//genesisAllocFromOptions changes alloc property based on valid Genesis Options.
 func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 	if err := gen.deployContracts(opts); err != nil {
 		return err
@@ -99,9 +113,12 @@ func (gen *generator) genesisAllocFromOptions(opts *validGenesisOptions) error {
 func (gen *generator) deployContracts(opts *validGenesisOptions) error {
 	for _, contract := range gen.contracts {
 		contract.runtimeCfg = gen.getDefaultRuntimeConfig()
-		if err := contract.deploy(contract, opts); err != nil {
-			return err
+		if contract.deploy != nil {
+			if err := contract.deploy(contract, opts); err != nil {
+				return err
+			}
 		}
+
 		if contract.postDeploy != nil {
 			if err := contract.postDeploy(contract, opts); err != nil {
 				return err

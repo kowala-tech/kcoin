@@ -83,7 +83,7 @@ type validator struct {
 
 	walletAccount accounts.WalletAccount
 
-	consensus consensus.Consensus // consensus binding
+	consensus *consensus.Consensus // consensus binding
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
@@ -98,7 +98,7 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, consensus consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
 		config:    config,
 		backend:   backend,

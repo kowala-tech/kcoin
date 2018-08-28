@@ -21,7 +21,6 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.11
     commands:
-      # test_genesis should run before test
       - make test_genesis
       - make test
       - make lint
@@ -238,7 +237,6 @@ pipeline:
       - EXPLORER_URL=https://explorer.zygote.kowala.tech
       - FAUCET_URL=https://faucet.zygote.kowala.tech
       - CDN_URL=https://cdn.kowala.tech
-      - WS_SECRET=abc123
     when:
       branch: [master]
       event: [push, tag]
