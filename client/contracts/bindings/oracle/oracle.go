@@ -3,9 +3,8 @@ package oracle
 import (
 	"math/big"
 
-	"github.com/kowala-tech/kcoin/client/common/kns"
-
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/params"
 )
