@@ -519,7 +519,7 @@ pipeline:
       status: failure
       event: [push, tag, pull_request]
 
-services1:
+services:
   docker:
     image: docker:dind
     command: [ '-l', 'fatal' ]
