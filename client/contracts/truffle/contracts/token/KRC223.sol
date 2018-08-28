@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-contract ERC223 {
+contract KRC223 {
     uint public totalSupply;
   
     function balanceOf(address who) public view returns (uint);
