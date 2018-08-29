@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	errInsufficientBalanceForComputationalEffort = errors.New("insufficient balance to pay for computational resources")
+	errInsufficientBalanceForComputationalEffort = errors.New("insufficient balance to pay for the required computational resources")
 )
 
 /*
@@ -32,11 +32,11 @@ The state transitioning model does all all the necessary work to work out a vali
 5) Run Script section
 6) Derive new state root
 */
+
 type StateTransition struct {
-	gp                     *GasPool
+	crpool                 *CompResourcesPool
 	msg                    Message
 	computationalResources uint64
-	computeUnitPrice       *big.Int
 	initialGas             uint64
 	value                  *big.Int
 	data                   []byte
@@ -47,11 +47,9 @@ type StateTransition struct {
 // Message represents a message sent to a contract.
 type Message interface {
 	From() common.Address
-	//FromFrontier() (common.Address, error)
 	To() *common.Address
 
-	ComputeUnitPrice() *big.Int
-	ComputeLimit() uint64
+	ComputationalEffort() uint64
 	Value() *big.Int
 
 	Nonce() uint64
@@ -59,15 +57,15 @@ type Message interface {
 	Data() []byte
 }
 
-// IntrinsicComputation computes the intrinsic computational effort required for a message
-// with the given data.
+// IntrinsicComputationalEffort computes the intrinsic computational effort (in compute units)
+// required for a message with the given data.
 func IntrinsicComputationalEffort(data []byte, contractCreation bool) (uint64, error) {
 	// Set the starting compute units required for the raw transaction
-	var units uint64
+	var effort uint64
 	if contractCreation {
-		units = params.TxGasContractCreation
+		effort = params.TxContractCreationCompEffort
 	} else {
-		units = params.TxGas
+		effort = params.TxCompEffort
 	}
 	// Bump the required compute units by the amount of transactional data
 	if len(data) > 0 {
@@ -79,30 +77,29 @@ func IntrinsicComputationalEffort(data []byte, contractCreation bool) (uint64, e
 			}
 		}
 		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-units)/params.TxDataNonZeroGas < nz {
+		if (math.MaxUint64-effort)/params.TxDataNonZeroCompEffort < nz {
 			return 0, vm.ErrOutOfGas
 		}
-		units += nz * params.TxDataNonZeroGas
+		effort += nz * params.TxDataNonZeroCompEffort
 
 		z := uint64(len(data)) - nz
-		if (math.MaxUint64-units)/params.TxDataZeroGas < z {
+		if (math.MaxUint64-effort)/params.TxDataZeroCompEffort < z {
 			return 0, vm.ErrOutOfGas
 		}
-		units += z * params.TxDataZeroGas
+		effort += z * params.TxDataZeroCompEffort
 	}
-	return units, nil
+	return effort, nil
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
+func NewStateTransition(evm *vm.EVM, msg Message, crpool *CompResourcesPool) *StateTransition {
 	return &StateTransition{
-		gp:               gp,
-		evm:              evm,
-		msg:              msg,
-		computeUnitPrice: msg.ComputeUnitPrice(),
-		value:            msg.Value(),
-		data:             msg.Data(),
-		state:            evm.StateDB,
+		crpool: crpool,
+		evm:    evm,
+		msg:    msg,
+		value:  msg.Value(),
+		data:   msg.Data(),
+		state:  evm.StateDB,
 	}
 }
 
@@ -113,8 +110,8 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
-	return NewStateTransition(evm, msg, gp).TransitionDb()
+func ApplyMessage(evm *vm.EVM, msg Message, crpool *CompResourcesPool) ([]byte, uint64, bool, error) {
+	return NewStateTransition(evm, msg, crpool).TransitionDb()
 }
 
 // to returns the recipient of the message.
@@ -125,7 +122,7 @@ func (st *StateTransition) to() common.Address {
 	return *st.msg.To()
 }
 
-func (st *StateTransition) useComputeResources(amount uint64) error {
+func (st *StateTransition) useCompResources(amount uint64) error {
 	if st.computeLimit < amount {
 		return vm.ErrOutOfGas
 	}
@@ -134,12 +131,12 @@ func (st *StateTransition) useComputeResources(amount uint64) error {
 	return nil
 }
 
-func (st *StateTransition) buyComputeUnits() error {
+func (st *StateTransition) buyCompResources() error {
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.ComputeLimit()), st.computeUnitPrice)
 	if st.state.GetBalance(st.msg.From()).Cmp(mgval) < 0 {
-		return errInsufficientBalanceForComputeUnits
+		return errInsufficientBalanceForComputationalResources
 	}
-	if err := st.gp.SubGas(st.msg.ComputeLimit()); err != nil {
+	if err := st.crpool.AddResources(st.msg.ComputeLimit()); err != nil {
 		return err
 	}
 	st.computeLimit += st.msg.ComputeLimit()
@@ -159,7 +156,7 @@ func (st *StateTransition) preCheck() error {
 			return ErrNonceTooLow
 		}
 	}
-	return st.buyComputeUnits()
+	return st.buyCompResources()
 }
 
 // TransitionDb will transition the state by applying the current message and
@@ -174,7 +171,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, 
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic compute units
-	gas, err := IntrinsicComputation(st.data, contractCreation)
+	gas, err := IntrinsicComputationalEffort(st.data, contractCreation)
 	if err != nil {
 		return nil, 0, false, err
 	}
@@ -225,7 +222,7 @@ func (st *StateTransition) refundGas() {
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.
-	st.gp.AddGas(st.gas)
+	st.crpool.AddResources(st.gas)
 }
 
 // gasUsed returns the amount of gas used up by the state transition.

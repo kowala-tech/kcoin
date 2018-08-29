@@ -1,5 +1,11 @@
 package params
 
+import "math/big"
+
+var (
+	ComputeUnitPrice = new(big.Int).Mul(new(big.Int).SetUint64(400), new(big.Int).SetUint64(Shannon)) // Fixed compute unit price (400 Gwi/Shannon)
+)
+
 const (
 	ComputeCapacity    uint64 = 4712388 // Compute capacity
 	MinComputeCapacity uint64 = 5000    // Minimum the compute capacity may ever be.
@@ -9,7 +15,7 @@ const (
 	SloadCompEffort               uint64 = 50    // Multiplied by the number of 32-byte words that are copied (round up) for any *COPY operation and added.
 	CallValueTransferComputEffort uint64 = 9000  // Paid for CALL when the value transfer is non-zero.
 	CallNewAccountCompEffort      uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.
-	TxComputationalEffort         uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions.
+	TxCompEffort                  uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions.
 	TxContractCreationCompEffort  uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions.
 	TxDataZeroCompEffort          uint64 = 4     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions.
 	QuadCoeffDiv                  uint64 = 512   // Divisor for the quadratic particle of the memory cost equation.

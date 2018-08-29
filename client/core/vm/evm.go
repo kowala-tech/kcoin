@@ -47,14 +47,16 @@ type Context struct {
 	GetHash GetHashFunc
 
 	// Message information
-	Origin   common.Address // Provides information for ORIGIN
-	GasPrice *big.Int       // Provides information for GASPRICE
+	Origin common.Address // Provides information for ORIGIN
 
 	// Block information
-	Coinbase        common.Address // Provides information for COINBASE
-	ComputeCapacity uint64         // Provides information for COMPUTECAPACITY
-	BlockNumber     *big.Int       // Provides information for NUMBER
-	Time            *big.Int       // Provides information for TIME
+	Coinbase    common.Address // Provides information for COINBASE
+	BlockNumber *big.Int       // Provides information for NUMBER
+	Time        *big.Int       // Provides information for TIME
+
+	// Network information
+	ComputeCapacity  uint64   // Provides information for GASLIMIT
+	ComputeUnitPrice *big.Int // Provides information for GASPRICE
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides

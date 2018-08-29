@@ -251,7 +251,7 @@ func NewAndromedaInstructionSet() [256]operation {
 			valid:         true,
 		},
 		GASPRICE: {
-			execute:       opGasprice,
+			execute:       opComputeUnitPrice,
 			gasCost:       constGasFunc(GasQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
@@ -293,14 +293,8 @@ func NewAndromedaInstructionSet() [256]operation {
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
-		DIFFICULTY: {
-			execute:       opDifficulty,
-			gasCost:       constGasFunc(GasQuickStep),
-			validateStack: makeStackFunc(0, 1),
-			valid:         true,
-		},
 		GASLIMIT: {
-			execute:       opGasLimit,
+			execute:       opComputeCapacity,
 			gasCost:       constGasFunc(GasQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,

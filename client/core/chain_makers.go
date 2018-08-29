@@ -23,7 +23,7 @@ type BlockGen struct {
 	header      *types.Header
 	statedb     *state.StateDB
 
-	gasPool    *GasPool
+	crpool     *CompResourcesPool
 	txs        []*types.Transaction
 	receipts   []*types.Receipt
 	lastCommit *types.Commit
@@ -35,14 +35,19 @@ type BlockGen struct {
 // SetCoinbase sets the coinbase of the generated block.
 // It can be called at most once.
 func (b *BlockGen) SetCoinbase(addr common.Address) {
-	if b.gasPool != nil {
+	if b.crpool != nil {
 		if len(b.txs) > 0 {
 			panic("coinbase must be set before adding transactions")
 		}
 		panic("coinbase can only be set once")
 	}
 	b.header.Coinbase = addr
-	b.gasPool = new(GasPool).AddGas(b.header.GasLimit)
+
+	pool := new(CompResourcesPool)
+	if err := pool.AddResources(params.ComputeCapacity); err != nil {
+		panic(err)
+	}
+	b.crpool = pool
 }
 
 // SetExtra sets the extra data field of the generated block.
@@ -71,11 +76,11 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 // added. If contract code relies on the BLOCKHASH instruction,
 // the block in chain will be returned.
 func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
-	if b.gasPool == nil {
+	if b.crpool == nil {
 		b.SetCoinbase(common.Address{})
 	}
 	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
-	receipt, _, err := ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, &b.header.GasUsed, vm.Config{})
+	receipt, _, err := ApplyTransaction(b.config, bc, &b.header.Coinbase, b.crpool, b.statedb, b.header, tx, &b.header.ComputationalEffort, vm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -201,7 +206,6 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 		Root:       state.IntermediateRoot(true),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
-		GasLimit:   CalcGasLimit(parent),
 		Number:     new(big.Int).Add(parent.Number(), common.Big1),
 		Time:       time,
 	}

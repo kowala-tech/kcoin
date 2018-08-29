@@ -496,8 +496,8 @@ func opExtCodeCopy(pc *uint64, evm *EVM, contract *Contract, memory *Memory, sta
 	return nil, nil
 }
 
-func opGasprice(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(evm.interpreter.intPool.get().Set(evm.GasPrice))
+func opComputeUnitPrice(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	stack.push(evm.interpreter.intPool.get().Set(evm.ComputeUnitPrice))
 	return nil, nil
 }
 
@@ -529,13 +529,8 @@ func opNumber(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 	return nil, nil
 }
 
-func opDifficulty(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(math.U256(evm.interpreter.intPool.get().Set(evm.Difficulty)))
-	return nil, nil
-}
-
-func opGasLimit(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(math.U256(evm.interpreter.intPool.get().SetUint64(evm.GasLimit)))
+func opComputeCapacity(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	stack.push(math.U256(evm.interpreter.intPool.get().SetUint64(evm.ComputeCapacity)))
 	return nil, nil
 }
 
