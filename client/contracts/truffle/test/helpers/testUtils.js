@@ -1,4 +1,4 @@
-/* global web3 */
+/* global web3, assert */
 /* eslint no-unused-expressions: 0 */
 
 require('chai')
@@ -33,6 +33,23 @@ const addSeconds = seconds => (
     .then(mineBlock)
 );
 
+const getParamFromTxEvent = async (transaction, paramName, contractFactory, eventName) => {
+  assert.isObject(transaction);
+  let logs = transaction.logs;
+  if (eventName != null) {
+    logs = logs.filter(l => l.event === eventName);
+  }
+  assert.equal(logs.length, 1, 'too many logs found!');
+  const param = logs[0].args[paramName];
+  if (contractFactory != null) {
+    const contract = contractFactory.at(param);
+    assert.isObject(contract, `getting ${paramName} failed for ${param}`);
+    return contract;
+  }
+  return param;
+};
+
+
 const EVMError = message => `VM Exception while processing transaction: ${message}`;
 const ether = n => new web3.BigNumber(web3.toWei(n, 'ether'));
 
@@ -42,4 +59,5 @@ module.exports = {
   addSeconds,
   mineNBlocks,
   mineBlock,
+  getParamFromTxEvent,
 };
