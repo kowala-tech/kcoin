@@ -30,7 +30,6 @@ img.logo-default {
 }
 .page-head .page-title h1 small {
     font-size: 1em;
-    font-weight: 400;
 }
 .truncate-txhash, .truncate-addrhash{
 	white-space:nowrap;
@@ -82,7 +81,6 @@ img.logo-default {
 .eth-stat {
 	padding-bottom: 20px;
 	font-size: 14px;
-	font-weight: 600;
 	color: #7f90a4;
 }
 .eth-stat-title {
@@ -93,7 +91,6 @@ img.logo-default {
 
 	color: #5b9bd1;
 	font-size: 13px;
-	font-weight: 800;
 	text-align: center;
 }
 .fade {opacity: 0.6}
@@ -119,7 +116,6 @@ img.logo-default {
 	background: 0 0;
 }
 .dashboard-stat-light-text {
-	font-weight: 300;
 	font-size: 14px;
 	line-height: 20px;
 	letter-spacing: 1px;
@@ -158,7 +154,6 @@ img.logo-default {
 	letter-spacing: -10px;
     line-height: 128px;
     font-size: 128px;
-    font-weight: 300;
 }
 .page-404 .details {
     margin-left: 40px;
