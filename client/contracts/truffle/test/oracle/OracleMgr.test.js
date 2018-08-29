@@ -96,6 +96,17 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
         // then
         await expectedRegistrationFailure.should.eventually.be.rejectedWith(EVMError('revert'));
       });
+
+      it('should not register oracle when not super node', async () => {
+        const consensus = await ConsensusMock.new(false);
+        const resolver = await DomainResolverMock.new(consensus.address);
+        const oracleWithoutSuperNode = await OracleMgr.new(3, 1, 1, resolver.address, { from: owner });
+        // when
+        const expectedRegistrationFailure = oracleWithoutSuperNode.registerOracle({ from: newOwner });
+
+        // then
+        await expectedRegistrationFailure.should.eventually.be.rejectedWith(EVMError('revert'));
+      });
     });
 
     describe('deregistration', async () => {
