@@ -1,14 +1,33 @@
 h5{
-  font-size: 1.2em;
   text-transform: uppercase;
-}
-
-h4{
-  text-transform: uppercase;
-  margin-top: 2em;
 }
 
 h3{
-  font-size: 2em;
+  margin-bottom: 1em;
+  font-weight: bold;
+}
+
+h4{
+  margin-bottom: 1em;
+}
+
+canvas{
+  margin-top: 1em;
+}
+
+h3.title{
+  font-weight: normal;
+  text-transform: uppercase;
+  text-align: left;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  border-bottom: 1px dashed white;
+}
+
+.disabled{
+  opacity: 0.5;
+}
+
+#blockchain, #mining, #stability, #connected-nodes{
   margin-bottom: 2em;
 }

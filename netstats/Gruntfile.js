@@ -11,14 +11,11 @@ var scripts = [
 
 var vendor = [
 	'dist/js/lib/jquery-1.11.3.min.js',
-	'dist/js/lib/bootstrap.min.js',
 	'dist/js/lib/angular.min.js',
 	'dist/js/lib/ngStorage.min.js',
 	'dist/js/lib/lodash.min.js',
 	'dist/js/lib/d3.min.js',
 	'dist/js/lib/d3.tip.min.js',
-	'dist/js/lib/topojson.min.js',
-	'dist/js/lib/datamaps.min.js',
 	'dist/js/lib/moment.min.js',
 	'dist/js/lib/moment.en.min.js',
 	'dist/js/lib/toastr.min.js',
@@ -52,6 +49,10 @@ module.exports = function(grunt) {
 						{
               match: 'faucetURL',
               replacement: '<%= process.env.FAUCET_URL %>'
+            },
+						{
+              match: 'networkName',
+              replacement: '<%= process.env.NETWORK_NAME %>'
             }
           ]
         },
