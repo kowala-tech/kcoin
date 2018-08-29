@@ -133,6 +133,20 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
     });
 
     describe('setters and getters', async () => {
+      it('should have proper values at creation', async () => {
+        // when
+        const maxNumOracles = await this.oracle.maxNumOracles();
+        const syncFrequency = await this.oracle.syncFrequency();
+        const updatePeriod = await this.oracle.updatePeriod();
+        const knsResolver = await this.oracle.knsResolver();
+
+        // then
+        await maxNumOracles.should.be.bignumber.equal(3);
+        await syncFrequency.should.be.bignumber.equal(1);
+        await updatePeriod.should.be.bignumber.equal(1);
+        await knsResolver.should.be.equal(this.resolver.address);
+      });
+
       it('should get oracle`s price', async () => {
         // given
         await this.oracle.registerOracle({ from: newOwner });
@@ -167,7 +181,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
         await expectedPriceFailure.should.eventually.be.rejectedWith(EVMError('revert'));
       });
 
-      it('should not set price by not owner', async () => {
+      it('should not set price if not oracle', async () => {
         // given
         await this.oracle.registerOracle({ from: newOwner });
 

@@ -51,10 +51,10 @@ const getParamFromTxEvent = async (transaction, paramName, contractFactory, even
 
 
 const EVMError = message => `VM Exception while processing transaction: ${message}`;
-const ether = n => new web3.BigNumber(web3.toWei(n, 'ether'));
+const kcoin = n => new web3.BigNumber(web3.toWei(n, 'ether'));
 
 module.exports = {
-  ether,
+  kcoin,
   EVMError,
   addSeconds,
   mineNBlocks,

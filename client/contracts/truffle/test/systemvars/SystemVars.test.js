@@ -11,14 +11,14 @@ require('chai')
   .should();
 
 const {
-  EVMError, ether,
+  EVMError, kcoin,
 } = require('../helpers/testUtils.js');
 
 const SysVar = artifacts.require('SystemVars.sol');
 
 contract('System Vars', ([_, owner, anotherAccount]) => {
   beforeEach(async () => {
-    this.sysvar = await SysVar.new(ether(10), 100, { from: owner });
+    this.sysvar = await SysVar.new(kcoin(10), 100, { from: owner });
   });
 
   it('Should get current system`s currency price', async () => {
@@ -26,7 +26,7 @@ contract('System Vars', ([_, owner, anotherAccount]) => {
     const price = await this.sysvar.price();
 
     // then
-    await price.should.be.bignumber.equal(ether(10));
+    await price.should.be.bignumber.equal(kcoin(10));
   });
 
   it('Should get mintedAmount', async () => {

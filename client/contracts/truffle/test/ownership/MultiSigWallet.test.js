@@ -11,7 +11,7 @@ require('chai')
   .should();
 
 const {
-  EVMError, ether, getParamFromTxEvent,
+  EVMError, getParamFromTxEvent,
 } = require('../helpers/testUtils.js');
 
 const MultiSig = artifacts.require('MultiSigWallet.sol');
@@ -22,7 +22,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
   });
 
   describe('Owner operations', async () => {
-    it('Should add owner to the wallet', async () => {
+    it('should add owner to the wallet', async () => {
       // when
       const addOwnerData = this.multisig.contract.addOwner.getData(owner4);
       const transactionID = await getParamFromTxEvent(
@@ -38,7 +38,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await owners[3].should.be.equal(owner4);
     });
 
-    it('Should not add owner to the wallet via not owner when submitting transaction', async () => {
+    it('should not add owner to the wallet via not owner when submitting transaction', async () => {
       // when
       const addOwnerData = this.multisig.contract.addOwner.getData(owner4);
       const expectedAddOwnerFail = this.multisig.submitTransaction(this.multisig.address, 0, addOwnerData, { from: notOwner });
@@ -47,7 +47,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await expectedAddOwnerFail.should.eventually.be.rejectedWith(EVMError('revert'));
     });
 
-    it('Should not add owner to the wallet via not owner when confirming transaction', async () => {
+    it('should not add owner to the wallet via not owner when confirming transaction', async () => {
       // when
       const addOwnerData = this.multisig.contract.addOwner.getData(owner4);
       const transactionID = await getParamFromTxEvent(
@@ -62,7 +62,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await expectedAddOwnerFail.should.eventually.be.rejectedWith(EVMError('revert'));
     });
 
-    it('Should remove owner from the wallet', async () => {
+    it('should remove owner from the wallet', async () => {
       // given
       const addOwnerData = this.multisig.contract.addOwner.getData(owner4);
       const transactionID = await getParamFromTxEvent(
@@ -91,7 +91,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await owners.length.should.be.equal(3);
     });
 
-    it('Should not remove owner from the wallet via not owner when submitting transaction', async () => {
+    it('should not remove owner from the wallet via not owner when submitting transaction', async () => {
       // given
       const addOwnerData = this.multisig.contract.addOwner.getData(owner4);
       const transactionID = await getParamFromTxEvent(
@@ -114,7 +114,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await expectedRemoveOwnerFail.should.eventually.be.rejectedWith(EVMError('revert'));
     });
 
-    it('Should not remove owner from the wallet via not owner when confirming transaction', async () => {
+    it('should not remove owner from the wallet via not owner when confirming transaction', async () => {
       // given
       const addOwnerData = this.multisig.contract.addOwner.getData(owner4);
       const transactionID = await getParamFromTxEvent(
@@ -143,7 +143,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await expectedRemoveOwnerFail.should.eventually.be.rejectedWith(EVMError('revert'));
     });
 
-    it('Should replace owner to the wallet', async () => {
+    it('should replace owner to the wallet', async () => {
       // when
       const replaceOwnerData = this.multisig.contract.replaceOwner.getData(owner2, owner4);
       const transactionID = await getParamFromTxEvent(
@@ -159,7 +159,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await owners[1].should.be.equal(owner4);
     });
 
-    it('Should not replace owner via not owner when submitting transaction', async () => {
+    it('should not replace owner via not owner when submitting transaction', async () => {
       // when
       const replaceOwnerData = this.multisig.contract.replaceOwner.getData(owner2, owner4);
       const expectedReplaceOwnerFail = this.multisig.submitTransaction(this.multisig.address, 0, replaceOwnerData, { from: notOwner });
@@ -168,7 +168,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await expectedReplaceOwnerFail.should.eventually.be.rejectedWith(EVMError('revert'));
     });
 
-    it('Should not replace owner via not owner when confirming transaction', async () => {
+    it('should not replace owner via not owner when confirming transaction', async () => {
       // when
       const replaceOwnerData = this.multisig.contract.replaceOwner.getData(owner2, owner4);
       const transactionID = await getParamFromTxEvent(
@@ -185,7 +185,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
   });
 
   describe('Requirments change', async () => {
-    it('Should change requirements', async () => {
+    it('should change requirements', async () => {
       // when
       const requirmentsData = this.multisig.contract.changeRequirement.getData(3);
       const transactionID = await getParamFromTxEvent(
@@ -201,7 +201,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await required.should.be.bignumber.equal(3);
     });
 
-    it('Should not change requirements via not owner when submitting transaction', async () => {
+    it('should not change requirements via not owner when submitting transaction', async () => {
       // when
       const requirmentsData = this.multisig.contract.changeRequirement.getData(3);
       const expectedChangeRequirementsFail = this.multisig.submitTransaction(this.multisig.address, 0, requirmentsData, { from: notOwner });
@@ -210,7 +210,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await expectedChangeRequirementsFail.should.eventually.be.rejectedWith(EVMError('revert'));
     });
 
-    it('Should not change requirements via not owner when submitting transaction', async () => {
+    it('should not change requirements via not owner when submitting transaction', async () => {
       // when
       const requirmentsData = this.multisig.contract.changeRequirement.getData(3);
       const transactionID = await getParamFromTxEvent(
@@ -227,7 +227,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
   });
 
   describe('Transactions operations', async () => {
-    it('Should not confirm already confirmed transaction', async () => {
+    it('should not confirm already confirmed transaction', async () => {
       // when
       const requirmentsData = this.multisig.contract.changeRequirement.getData(3);
       const transactionID = await getParamFromTxEvent(
@@ -243,7 +243,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await expectedConfirmationFailure.should.eventually.be.rejectedWith(EVMError('revert'));
     });
 
-    it('Should expected 3 confirmation after change in requirments', async () => {
+    it('should expected 3 confirmation after change in requirments', async () => {
       // given
       const requirmentsData = this.multisig.contract.changeRequirement.getData(3);
       const transactionID = await getParamFromTxEvent(
@@ -273,7 +273,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await owners[3].should.be.equal(owner4);
     });
 
-    it('Should revoke confirmation', async () => {
+    it('should revoke confirmation', async () => {
       // given
       const requirmentsData = this.multisig.contract.changeRequirement.getData(3);
       const transactionID = await getParamFromTxEvent(
@@ -291,7 +291,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await confirmations.should.be.bignumber.equal(0);
     });
 
-    it('Should not execute unconfirmed transaction', async () => {
+    it('should not execute unconfirmed transaction', async () => {
       // given
       const requirmentsData = this.multisig.contract.changeRequirement.getData(3);
       const transactionID = await getParamFromTxEvent(
@@ -321,7 +321,7 @@ contract('MultiSigWallet', ([_, admin, owner, owner2, owner3, owner4, notOwner])
       await expectedExecutionFailure.should.eventually.be.rejectedWith(EVMError('revert'));
     });
 
-    it('Should not execute transaction via not owner', async () => {
+    it('should not execute transaction via not owner', async () => {
       // given
       const requirmentsData = this.multisig.contract.changeRequirement.getData(3);
       const transactionID = await getParamFromTxEvent(

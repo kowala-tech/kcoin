@@ -11,7 +11,7 @@ require('chai')
   .should();
 
 const {
-  EVMError, ether,
+  EVMError, kcoin,
 } = require('../helpers/testUtils.js');
 
 const Stability = artifacts.require('Stability.sol');
@@ -19,13 +19,13 @@ const SysVar = artifacts.require('SystemVars.sol');
 
 contract('Stability', ([_, owner, sub1, anotherAccount]) => {
   beforeEach(async () => {
-    this.sysvar = await SysVar.new(ether(10), 100, { from: owner });
-    this.stability = await Stability.new(ether(0.5), this.sysvar.address, { from: owner });
+    this.sysvar = await SysVar.new(kcoin(10), 100, { from: owner });
+    this.stability = await Stability.new(kcoin(0.5), this.sysvar.address, { from: owner });
   });
 
   it('Should subscribe to stability contract service', async () => {
     // when
-    await this.stability.subscribe({ from: sub1, value: ether(2) });
+    await this.stability.subscribe({ from: sub1, value: kcoin(2) });
 
     // then
     const subCount = await this.stability.getSubscriptionCount();
@@ -34,7 +34,7 @@ contract('Stability', ([_, owner, sub1, anotherAccount]) => {
 
   it('Should not subscribe to stability contract service when deposit is lower than minDeposit', async () => {
     // when
-    const expectedSubscribeFailure = this.stability.subscribe({ from: sub1, value: ether(0.4) });
+    const expectedSubscribeFailure = this.stability.subscribe({ from: sub1, value: kcoin(0.4) });
 
     // then
     await expectedSubscribeFailure.should.eventually.be.rejectedWith(EVMError('revert'));
@@ -42,7 +42,7 @@ contract('Stability', ([_, owner, sub1, anotherAccount]) => {
 
   it('Should unsubscribe from stability contract service', async () => {
     // given
-    await this.stability.subscribe({ from: sub1, value: ether(1) });
+    await this.stability.subscribe({ from: sub1, value: kcoin(1) });
 
     // when
     await this.stability.unsubscribe({ from: sub1 });
@@ -54,7 +54,7 @@ contract('Stability', ([_, owner, sub1, anotherAccount]) => {
 
   it('Should not unsubscribe from stability contract service when trying to unsubscribe different account than yours', async () => {
     // given
-    await this.stability.subscribe({ from: sub1, value: ether(1) });
+    await this.stability.subscribe({ from: sub1, value: kcoin(1) });
 
     // when
     const expectedUnsubscribeFailure = this.stability.unsubscribe({ from: anotherAccount });
@@ -65,20 +65,20 @@ contract('Stability', ([_, owner, sub1, anotherAccount]) => {
 
   it('Should increase deposit after subscribing the same address', async () => {
     // given
-    await this.stability.subscribe({ from: sub1, value: ether(1) });
+    await this.stability.subscribe({ from: sub1, value: kcoin(1) });
 
     // when
-    await this.stability.subscribe({ from: sub1, value: ether(1) });
+    await this.stability.subscribe({ from: sub1, value: kcoin(1) });
 
     // then
     const subDeposit = await this.stability.getSubscriptionAtIndex(0);
-    await subDeposit[1].should.be.bignumber.equal(ether(2));
+    await subDeposit[1].should.be.bignumber.equal(kcoin(2));
   });
-  it('Should not unsubscribe from stability contract service when trying to unsubscribe different account than yours', async () => {
+  it('Should not unsubscribe from stability contract service when price is not greater equal one', async () => {
     // given
-    const sysvar = await SysVar.new(ether(0.5), 100, { from: owner });
-    const stability = await Stability.new(ether(0.5), sysvar.address, { from: owner });
-    await stability.subscribe({ from: sub1, value: ether(1) });
+    const sysvar = await SysVar.new(kcoin(0.5), 100, { from: owner });
+    const stability = await Stability.new(kcoin(0.5), sysvar.address, { from: owner });
+    await stability.subscribe({ from: sub1, value: kcoin(1) });
 
     // when
     const expectedUnsubscribeFailure = stability.unsubscribe({ from: anotherAccount });
