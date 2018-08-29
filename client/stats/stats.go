@@ -59,17 +59,17 @@ type blockChain interface {
 type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
-	server    *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	kcoin     *knode.Kowala    // Full Kowala service if monitoring a full node
-	engine    engine.Engine // Consensus engine to retrieve variadic block fields
+	server *p2p.Server   // Peer-to-peer server to retrieve networking infos
+	kcoin  *knode.Kowala // Full Kowala service if monitoring a full node
+	engine engine.Engine // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
 	host string // Remote address of the monitoring service
 
-	oracleMgr *oracle.Manager
+	oracleMgr    *oracle.Manager
 	validatorMgr *consensus.Consensus
-	sysvars *sysvars.Vars
+	sysvars      *sysvars.Vars
 
 	pongCh chan struct{} // Pong notifications are fed into this channel
 	histCh chan []uint64 // History request block numbers are fed into this channel
@@ -87,31 +87,31 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 	engine := kowalaServ.Engine()
 
 	var oracleMgr *oracle.Manager
-	if err := kowalaServ.Contract(oracleMgr); err != nil {
-		return nil, fmt.Errorf("Failed to load the oracle contract %v", err)
+	if err := kowalaServ.Contract(&oracleMgr); err != nil {
+		return nil, fmt.Errorf("failed to load the oracle contract %v", err)
 	}
 
 	var validatorMgr *consensus.Consensus
-	if err := kowalaServ.Contract(validatorMgr); err != nil {
-		return nil, fmt.Errorf("Failed to load the consensus contract %v", err)
+	if err := kowalaServ.Contract(&validatorMgr); err != nil {
+		return nil, fmt.Errorf("failed to load the consensus contract %v", err)
 	}
 
 	var sysvars *sysvars.Vars
-	if err := kowalaServ.Contract(sysvars); err != nil {
-		return nil, fmt.Errorf("Failed to load the system vars contract %v", err)
+	if err := kowalaServ.Contract(&sysvars); err != nil {
+		return nil, fmt.Errorf("failed to load the system vars contract %v", err)
 	}
 
 	return &Service{
-		kcoin:     kowalaServ,
-		engine:    engine,
-		oracleMgr: oracleMgr,
+		kcoin:        kowalaServ,
+		engine:       engine,
+		oracleMgr:    oracleMgr,
 		validatorMgr: validatorMgr,
-		sysvars: sysvars,
-		node:      parts[1],
-		pass:      parts[3],
-		host:      parts[4],
-		pongCh:    make(chan struct{}),
-		histCh:    make(chan []uint64, 1),
+		sysvars:      sysvars,
+		node:         parts[1],
+		pass:         parts[3],
+		host:         parts[4],
+		pongCh:       make(chan struct{}),
+		histCh:       make(chan []uint64, 1),
 	}, nil
 }
 
