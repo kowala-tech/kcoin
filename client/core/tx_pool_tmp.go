@@ -2,16 +2,6 @@ package core
 
 /*
 
-
-// lockedReset is a wrapper around reset to allow calling it in a thread safe
-// manner. This method is only ever used in the tester!
-func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-
-	pool.reset(oldHead, newHead)
-}
-
 // reset retrieves the current state of the blockchain and ensures the content
 // of the transaction pool is valid with regard to the chain state.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
@@ -73,7 +63,6 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	}
 	pool.currentState = statedb
 	pool.pendingState = state.ManageState(statedb)
-	pool.currentComputeCapacity = newHead.GasLimit
 
 	// Inject any transactions discarded due to reorgs
 	log.Debug("Reinjecting stale transactions", "count", len(reinject))
@@ -94,6 +83,17 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// or remove those that have become invalid
 	pool.promoteExecutables(nil)
 }
+
+// lockedReset is a wrapper around reset to allow calling it in a thread safe
+// manner. This method is only ever used in the tester!
+func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pool.reset(oldHead, newHead)
+}
+
+
 
 // Stop terminates the transaction pool.
 func (pool *TxPool) Stop() {
@@ -136,8 +136,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if tx.Value().Sign() < 0 {
 		return ErrNegativeValue
 	}
-	// Ensure the transaction doesn't exceed the current compute capacity.
-	if pool.currentComputeCapacity < tx.Gas() {
+	// Ensure the transaction doesn't exceed the protocol compute capacity.
+	if params.ComputeCapacity < tx.Gas() {
 		return ErrComputeCapacity
 	}
 	// Make sure the transaction is signed properly

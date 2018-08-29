@@ -148,9 +148,8 @@ type TxPool struct {
 
 	signer types.Signer
 
-	currentState           *state.StateDB      // Current state in the blockchain head
-	pendingState           *state.ManagedState // Pending state tracking virtual nonces
-	currentComputeCapacity uint64              // Current compute capacity for transaction caps
+	currentState *state.StateDB      // Current state in the blockchain head
+	pendingState *state.ManagedState // Pending state tracking virtual nonces
 
 	locals  *accountSet // Set of local transactions
 	journal *txJournal  // Journal of local transactions to back up to disk

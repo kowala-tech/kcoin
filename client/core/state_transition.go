@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	errInsufficientBalanceForComputationalEffort = errors.New("insufficient balance to pay for the required computational resources")
+	errInsufficientBalanceForCompResouces = errors.New("insufficient balance to pay for the required computational resources")
 )
 
 /*
@@ -34,14 +34,14 @@ The state transitioning model does all all the necessary work to work out a vali
 */
 
 type StateTransition struct {
-	crpool                 *CompResourcesPool
-	msg                    Message
-	computationalResources uint64
-	initialGas             uint64
-	value                  *big.Int
-	data                   []byte
-	state                  vm.StateDB
-	evm                    *vm.EVM
+	crpool               *CompResourcesPool
+	msg                  Message
+	compResources        uint64
+	initialCompResources uint64
+	value                *big.Int
+	data                 []byte
+	state                vm.StateDB
+	evm                  *vm.EVM
 }
 
 // Message represents a message sent to a contract.
@@ -122,26 +122,26 @@ func (st *StateTransition) to() common.Address {
 	return *st.msg.To()
 }
 
-func (st *StateTransition) useCompResources(amount uint64) error {
-	if st.computeLimit < amount {
+func (st *StateTransition) useCompResources(units uint64) error {
+	if st.compResources < units {
 		return vm.ErrOutOfGas
 	}
-	st.computeLimit -= amount
+	st.compResources -= units
 
 	return nil
 }
 
 func (st *StateTransition) buyCompResources() error {
-	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.ComputeLimit()), st.computeUnitPrice)
+	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.ComputationalEffort()), st.evm.ComputeUnitPrice)
 	if st.state.GetBalance(st.msg.From()).Cmp(mgval) < 0 {
-		return errInsufficientBalanceForComputationalResources
+		return errInsufficientBalanceForCompResouces
 	}
-	if err := st.crpool.AddResources(st.msg.ComputeLimit()); err != nil {
+	if err := st.crpool.AddResources(st.msg.ComputationalEffort()); err != nil {
 		return err
 	}
-	st.computeLimit += st.msg.ComputeLimit()
+	st.compResources += st.msg.ComputationalEffort()
 
-	st.initialGas = st.msg.ComputeLimit()
+	st.initialCompResources = st.msg.ComputationalEffort()
 	st.state.SubBalance(st.msg.From(), mgval)
 	return nil
 }
@@ -175,7 +175,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, 
 	if err != nil {
 		return nil, 0, false, err
 	}
-	if err = st.useGas(gas); err != nil {
+	if err = st.useCompResources(gas); err != nil {
 		return nil, 0, false, err
 	}
 
@@ -187,11 +187,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, 
 		vmerr error
 	)
 	if contractCreation {
-		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
+		ret, _, st.compResources, vmerr = evm.Create(sender, st.data, st.compResources, st.value)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, st.value)
+		ret, st.compResources, vmerr = evm.Call(sender, st.to(), st.data, st.compResources, st.value)
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
@@ -202,30 +202,30 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, 
 			return nil, 0, false, vmerr
 		}
 	}
-	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	st.refundCompResources()
+	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.compResourcesUsed()), st.evm.ComputeUnitPrice))
 
-	return ret, st.gasUsed(), vmerr != nil, err
+	return ret, st.compResourcesUsed(), vmerr != nil, err
 }
 
-func (st *StateTransition) refundGas() {
+func (st *StateTransition) refundCompResources() {
 	// Apply refund counter, capped to half of the used gas.
-	refund := st.gasUsed() / 2
+	refund := st.compResourcesUsed() / 2
 	if refund > st.state.GetRefund() {
 		refund = st.state.GetRefund()
 	}
-	st.gas += refund
+	st.compResources += refund
 
-	// Return kUSD for remaining gas, exchanged at the original rate.
-	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
+	// Return kUSD for remaining computational resources.
+	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.compResources), st.evm.ComputeUnitPrice)
 	st.state.AddBalance(st.msg.From(), remaining)
 
 	// Also return remaining gas to the block gas counter so it is
 	// available for the next transaction.
-	st.crpool.AddResources(st.gas)
+	st.crpool.AddResources(st.compResources)
 }
 
-// gasUsed returns the amount of gas used up by the state transition.
-func (st *StateTransition) gasUsed() uint64 {
-	return st.initialGas - st.gas
+// gasUsed returns the computation resources (in compute units) used up by the state transition.
+func (st *StateTransition) compResourcesUsed() uint64 {
+	return st.initialCompResources - st.compResources
 }

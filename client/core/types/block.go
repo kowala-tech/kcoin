@@ -24,27 +24,27 @@ var (
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
-	ParentHash          common.Hash    `json:"parentHash"       gencodec:"required"`
-	Coinbase            common.Address `json:"miner"            gencodec:"required"`
-	Root                common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash              common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash         common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	ValidatorsHash      common.Hash    `json:"validators"       gencodec:"required"`
-	LastCommitHash      common.Hash    `json:"lastCommit"       gencodec:"required"`
-	Bloom               Bloom          `json:"logsBloom"        gencodec:"required"`
-	Number              *big.Int       `json:"number"           gencodec:"required"`
-	ComputationalEffort uint64         `json:"effort"           gencodec:"required"`
-	Time                *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra               []byte         `json:"extraData"        gencodec:"required"`
+	ParentHash     common.Hash    `json:"parentHash"       gencodec:"required"`
+	Coinbase       common.Address `json:"miner"            gencodec:"required"`
+	Root           common.Hash    `json:"stateRoot"        gencodec:"required"`
+	TxHash         common.Hash    `json:"transactionsRoot" gencodec:"required"`
+	ReceiptHash    common.Hash    `json:"receiptsRoot"     gencodec:"required"`
+	ValidatorsHash common.Hash    `json:"validators"       gencodec:"required"`
+	LastCommitHash common.Hash    `json:"lastCommit"       gencodec:"required"`
+	Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
+	Number         *big.Int       `json:"number"           gencodec:"required"`
+	ResourceUsage  uint64         `json:"resource"    gencodec:"required"`
+	Time           *big.Int       `json:"timestamp"        gencodec:"required"`
+	Extra          []byte         `json:"extraData"        gencodec:"required"`
 }
 
 // field type overrides for gencodec
 type headerMarshaling struct {
-	Number              *hexutil.Big
-	ComputationalEffort hexutil.Uint64
-	Time                *hexutil.Big
-	Extra               hexutil.Bytes
-	Hash                common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Number            *hexutil.Big
+	usedCompResources hexutil.Uint64
+	Time              *hexutil.Big
+	Extra             hexutil.Bytes
+	Hash              common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -65,7 +65,7 @@ func (h *Header) HashNoNonce() common.Hash {
 		h.LastCommitHash,
 		h.Bloom,
 		h.Number,
-		h.ComputationalEffort,
+		h.ResourceUsage,
 		h.Time,
 		h.Extra,
 	})
@@ -257,9 +257,9 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 
 func (b *Block) LastCommit() *Commit { return b.lastCommit }
 
-func (b *Block) Number() *big.Int            { return new(big.Int).Set(b.header.Number) }
-func (b *Block) ComputationalEffort() uint64 { return b.header.ComputationalEffort }
-func (b *Block) Time() *big.Int              { return new(big.Int).Set(b.header.Time) }
+func (b *Block) Number() *big.Int      { return new(big.Int).Set(b.header.Number) }
+func (b *Block) ResourceUsage() uint64 { return b.header.ResourceUsage }
+func (b *Block) Time() *big.Int        { return new(big.Int).Set(b.header.Time) }
 
 func (b *Block) NumberU64() uint64           { return b.header.Number.Uint64() }
 func (b *Block) Bloom() Bloom                { return b.header.Bloom }
