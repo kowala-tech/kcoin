@@ -13,8 +13,8 @@ html(ng-app="netStatsApp")
     meta(name='apple-mobile-web-app-title', content='Kowala Network Stats')
     meta(name='application-name', content='Kowala Network Stats')
     meta(name='msapplication-config', content='@@cdnURL/images/meta/browserconfig.xml')
-    meta(name='theme-color', content='#1d6986')
-    meta(name='apple-mobile-web-app-status-bar-style', content='#1d6986')
+    meta(name='theme-color', content='#29a5ff')
+    meta(name='apple-mobile-web-app-status-bar-style', content='#29a5ff')
     meta(property='og:url', content='@@URL')
     meta(property='og:title', content='Kowala Network Stats')
     meta(property='og:type', content='website')
@@ -28,14 +28,13 @@ html(ng-app="netStatsApp")
     link(rel="stylesheet", href="@@cdnURL/styles/kowala.css")
     link(rel='stylesheet', href='/css/netstats.min.css')
 
-
-  body.light-blue-background.light-#fff-textmake
+  body.light-blue-background.inverse-text
     #mobile-menu(data-reveal="")
       img(src="@@cdnURL/images/kowala/kowala-white.svg" title="Kowala")
       ul
         li
           a(href="@@explorerURL" rel="noopener" target="_blank") BLOCK EXPLORER
-        li
+        li(ng-if="'@@faucetURL'.length > 0")
           a(href="@@faucetURL" rel="noopener" target="_blank") GET TEST COINS
         li
           a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION
@@ -46,14 +45,13 @@ html(ng-app="netStatsApp")
         button
       .grid-container
         nav
-          .title
-            a(href="/")
-              img(src="@@cdnURL/images/kowala/kowala-white.svg" title="Kowala")
+          a.title(href="/")
+            img(src="@@cdnURL/images/kowala/kowala-white.svg" title="Kowala")
           .menu
             ul
               li
                 a(href="@@explorerURL" rel="noopener" target="_blank") BLOCK EXPLORER
-              li
+              li(ng-if="'@@faucetURL'.length > 0")
                 a(href="@@faucetURL" rel="noopener" target="_blank") GET TEST COINS
               li
                 a(href="https://docs.kowala.tech" rel="noopener" target="_blank") DOCUMENTATION

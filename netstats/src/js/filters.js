@@ -2,26 +2,6 @@
 
 angular
   .module("netStatsApp.filters", [])
-  .filter("nodesActiveClass", function() {
-    return function(active, total) {
-      var ratio = active / total;
-
-      if (ratio >= 0.9) return "text-success";
-
-      if (ratio >= 0.75) return "text-info";
-
-      if (ratio >= 0.5) return "text-warning";
-
-      return "text-danger";
-    };
-  })
-  .filter("nodePinClass", function() {
-    return function(pinned) {
-      if (pinned) return "icon-check-o";
-
-      return "icon-loader";
-    };
-  })
   .filter("mainClass", function() {
     return function(node, bestBlock) {
       return mainClass(node, bestBlock);
@@ -37,11 +17,6 @@ angular
       if (!active) return "text-gray";
 
       return !validating ? "text-danger" : "text-success";
-    };
-  })
-  .filter("validatingIconClass", function() {
-    return function(validating) {
-      return !validating ? "icon-cancel" : "icon-check";
     };
   })
   .filter("nodeVersion", function($sce) {
@@ -73,25 +48,22 @@ angular
       return "";
     };
   })
-  .filter("blockClass", function() {
-    return function(current, best) {
-      if (!current.active) return "text-gray";
-
-      return best - current.block.number < 1
-        ? "text-success"
-        : best - current.block.number === 1
-          ? "text-warning"
-          : best - current.block.number > 1 && best - current.block.number < 4
-            ? "text-orange"
-            : "text-danger";
-    };
-  })
+  .filter("usdPriceFilter", [
+    "$filter",
+    function(filter) {
+      var numberFilter = filter("currency");
+      return function(price) {
+        if ( typeof price === 'undefined' || price === null ) return "$0.00";
+        return numberFilter(price / Math.pow(10,18));
+      };
+    }
+  ])
   .filter("priceFilter", [
     "$filter",
     function(filter) {
       var numberFilter = filter("number");
       return function(price) {
-        if (typeof price === "undefined") return "0 wei";
+        if ( typeof price === 'undefined' || price === null ) return "0 wei";
 
         if (price.length < 4) return numberFilter(price) + " wei";
 
@@ -131,40 +103,6 @@ angular
       if (!active) return "text-gray";
 
       return timeClass(timestamp);
-    };
-  })
-  .filter("propagationTimeClass", function() {
-    return function(stats, bestBlock) {
-      if (!stats.active) return "text-gray";
-
-      if (stats.block.number < bestBlock) return "text-gray";
-
-      if (stats.block.propagation == 0) return "text-info";
-
-      if (stats.block.propagation < 1000) return "text-success";
-
-      if (stats.block.propagation < 3000) return "text-warning";
-
-      if (stats.block.propagation < 7000) return "text-orange";
-
-      return "text-danger";
-    };
-  })
-  .filter("propagationNodeAvgTimeClass", function() {
-    return function(stats, bestBlock) {
-      if (!stats.active) return "text-gray";
-
-      if (stats.block.number < bestBlock) return "text-gray";
-
-      if (stats.propagationAvg == 0) return "text-info";
-
-      if (stats.propagationAvg < 1000) return "text-success";
-
-      if (stats.propagationAvg < 3000) return "text-warning";
-
-      if (stats.propagationAvg < 7000) return "text-orange";
-
-      return "text-danger";
     };
   })
   .filter("propagationAvgTimeClass", function() {
@@ -413,18 +351,6 @@ angular
         return name;
 
       return address.replace("0x", "");
-    };
-  })
-  .filter("validatorBlocksClass", function() {
-    return function(blocks, prefix) {
-      if (typeof prefix === "undefined") prefix = "bg-";
-      if (blocks <= 6) return prefix + "success";
-
-      if (blocks <= 12) return prefix + "info";
-
-      if (blocks <= 18) return prefix + "warning";
-
-      return prefix + "danger";
     };
   })
   .filter("nodeClientClass", function() {
