@@ -6,7 +6,7 @@ import "../kns/DomainResolver.sol";
 import {NameHash} from "../utils/NameHash.sol";
 
 /**
-
+@title Oracle Manager contract
 */
 contract OracleMgr is Pausable {
      
@@ -16,7 +16,6 @@ contract OracleMgr is Pausable {
     uint public price;
     DomainResolver public knsResolver;
     bytes32 nodeNamehash;
-    bytes4 sig = bytes4(keccak256("isSuperNode(address)"));
 
     struct OraclePrice {
         uint price;
