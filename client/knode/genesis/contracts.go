@@ -151,6 +151,49 @@ var StabilityContract = &contract{
 
 		return nil
 	},
+}
+
+var ProxiedStability = &contract{
+	name: "Proxied Stability Contract",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.stability
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0xCdCA8b1B7EdFb0827F10F4ED3968D98FA5C90ea0"),
+			*opts.multiSig.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
+		abi, err := abi.JSON(strings.NewReader(stability.StabilityABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			args.minDeposit,
+			args.systemVarsAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize Proxied System Vars.", err)
+		}
+
+		return nil
+	},
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
 		return registerAddressToDomain(contract, opts, params.KNSDomains[params.StabilityDomain].Node())
 	},
