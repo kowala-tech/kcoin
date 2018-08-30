@@ -447,8 +447,6 @@ var MiningTokenContract = &contract{
 		contract.code = contractCode
 		contract.address = contractAddr
 
-		opts.validatorMgr.miningTokenAddr = contractAddr
-
 		return nil
 	},
 }
@@ -462,7 +460,7 @@ func mintTokens(contract *contract, opts *validGenesisOptions) error {
 	}
 
 	runtimeCfg := contract.runtimeCfg
-	runtimeCfg.Origin = args.owner
+	runtimeCfg.Origin = bindings.MultiSigWalletAddr
 	for _, holder := range args.holders {
 		mintParams, err := tokenABI.Pack(
 			"mint",
@@ -485,13 +483,13 @@ func mintTokens(contract *contract, opts *validGenesisOptions) error {
 var ProxiedMiningToken = &contract{
 	name: "Proxied Mining Token",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
-		args := opts.multiSig
+		args := opts.miningToken
 
 		runtimeCfg := contract.runtimeCfg
 
 		proxyContractAddr, code, err := createProxyFromContract(
 			common.HexToAddress("0x64c2a9CB0220D3e56783ed87cC1B20115Bc93F96"),
-			*args.multiSigCreator,
+			*opts.multiSig.multiSigCreator,
 			runtimeCfg,
 		)
 		if err != nil {
@@ -508,7 +506,10 @@ var ProxiedMiningToken = &contract{
 
 		initKnsParams, err := abi.Pack(
 			"initialize",
-			bindings.MultiSigWalletAddr,
+			args.name,
+			args.symbol,
+			args.cap,
+			uint8(args.decimals.Uint64()),
 		)
 		if err != nil {
 			return err
@@ -518,6 +519,8 @@ var ProxiedMiningToken = &contract{
 		if err != nil {
 			return fmt.Errorf("%s:%s", "Failed to initialize Proxied Mining Token.", err)
 		}
+
+		opts.validatorMgr.miningTokenAddr = *proxyContractAddr
 
 		return nil
 	},
@@ -758,4 +761,11 @@ func registerValidators(contract *contract, opts *validGenesisOptions) error {
 	}
 
 	return nil
+}
+
+var ProxiedValidatorManager = &contract{
+	name: "Proxied validator manager",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		return nil
+	},
 }

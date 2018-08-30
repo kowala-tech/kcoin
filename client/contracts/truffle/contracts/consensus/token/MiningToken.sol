@@ -17,4 +17,8 @@ contract MiningToken is CappedToken {
         symbol = _symbol;
         decimals = _decimals;
     }
+
+    function getOwner() public returns (address) {
+        return owner;
+    }
 }
