@@ -3,7 +3,7 @@ pragma solidity 0.4.24;
 /**
  * Mock contract for PublicResolver.
  */
-contract DomainResolver {
+contract DomainResolverMock {
 
     address domainAddr;
 
