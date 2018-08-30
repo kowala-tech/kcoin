@@ -91,6 +91,7 @@ var StabilityContract = &contract{
 		stabilityParams, err := stabilityABI.Pack(
 			"",
 			args.minDeposit,
+			args.initialReward,
 			args.systemVarsAddr,
 		)
 		if err != nil {

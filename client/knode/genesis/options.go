@@ -55,7 +55,8 @@ type Options struct {
 }
 
 type StabilityContractOpts struct {
-	MinDeposit uint64
+	MinDeposit    uint64
+	InitialReward uint64
 }
 
 type SystemVarsOpts struct {
@@ -146,6 +147,7 @@ type validSystemVarsOpts struct {
 
 type validStabilityContractOpts struct {
 	minDeposit     *big.Int
+	initialReward  *big.Int
 	systemVarsAddr common.Address
 	owner          common.Address
 }
@@ -244,6 +246,7 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// stability contract
 	minDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.StabilityContract.MinDeposit), big.NewInt(params.Kcoin))
+	initialReward := new(big.Int).Mul(new(big.Int).SetUint64(options.StabilityContract.InitialReward), big.NewInt(params.Kcoin))
 
 	// data feed system
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
@@ -307,7 +310,8 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			holders:  holders,
 		},
 		stability: &validStabilityContractOpts{
-			minDeposit: minDeposit,
+			minDeposit:    minDeposit,
+			initialReward: initialReward,
 		},
 		prefundedAccounts: validPrefundedAccounts,
 		ExtraData:         options.ExtraData,
