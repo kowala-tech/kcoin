@@ -4,13 +4,14 @@ import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "../../token/KRC223.sol";
 import "../../kns/DomainResolver.sol";
 import {NameHash} from "../../utils/NameHash.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
 // @NOTE (rgeraldes) - https://github.com/kowala-tech/kcoin/client/issues/284
 //import "github.com/kowala-tech/kcoin/client/contracts/token/contracts/TokenReceiver.sol" as receiver; 
 
 /**
  * @title Validator Manager for PoS consensus
  */
-contract ValidatorMgr is Pausable {
+contract ValidatorMgr is Pausable, Initializable{
     uint public baseDeposit;       
     uint public maxNumValidators;
     uint public freezePeriod;
@@ -80,6 +81,32 @@ contract ValidatorMgr is Pausable {
         uint _freezePeriod,
         uint _superNodeAmount,
         address _resolverAddr) 
+    public {
+        require(_maxNumValidators > 0);
+
+        baseDeposit = _baseDeposit;
+        maxNumValidators = _maxNumValidators;
+        freezePeriod = _freezePeriod * 1 days;
+        superNodeAmount = _superNodeAmount;
+        knsResolver = DomainResolver(_resolverAddr);
+        nodeNamehash = NameHash.namehash("miningtoken.kowala");
+    }
+
+    /**
+     * initialize function for Proxy Pattern.
+     * @param _baseDeposit base deposit for Validator
+     * @param _maxNumValidators Maximum numbers of Validators.
+     * @param _freezePeriod Freeze period for Validator's deposits.
+     * @param _superNodeAmount Amount required to be considered a super node.
+     * @param _resolverAddr Address of KNS Resolver.
+     */
+    function initialize(
+        uint _baseDeposit,
+        uint _maxNumValidators,
+        uint _freezePeriod,
+        uint _superNodeAmount,
+        address _resolverAddr) 
+    isInitializer
     public {
         require(_maxNumValidators > 0);
 

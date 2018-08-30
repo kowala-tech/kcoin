@@ -3,8 +3,9 @@ pragma solidity 0.4.24;
 import "./TokenReceiver.sol";
 import "./KRC223.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
 
-contract Token is KRC223  {
+contract Token is KRC223, Initializable  {
     using SafeMath for uint256;
 
     mapping(address => uint) balances;
