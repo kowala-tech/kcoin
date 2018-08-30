@@ -1,7 +1,6 @@
 package genesis
 
 import (
-	"fmt"
 	"math/big"
 	"math/rand"
 
@@ -92,11 +91,6 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 			Konsensus: getConsensusEngine(validOptions.consensusEngine),
 		},
 		ExtraData: getExtraData(opts.ExtraData),
-	}
-
-	fmt.Println("Please update the codebase with the following addresses (go bindings):")
-	for _, contract := range gen.contracts {
-		fmt.Printf("Contract: %s, Address: %s\n", contract.name, contract.address.Hex())
 	}
 
 	return genesis, nil
