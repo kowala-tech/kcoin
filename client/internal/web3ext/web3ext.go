@@ -455,6 +455,20 @@ web3._extend({
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({
+			name: 'cap',
+			call: 'mtoken_cap',
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'totalSupply',
+			call: 'mtoken_totalSupply',
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'mintingFinished',
+			call: 'mtoken_mintingFinished'
+		}),
+		new web3._extend.Method({
 			name: 'transfer',
 			call: 'mtoken_transfer',
 			params: 1,
