@@ -15,6 +15,12 @@ module.exports = {
             port: 30503,
             network_id: '*',
         },
+        coverage: {
+            host: '127.0.0.1',
+            network_id: '*',
+            port: 8545,
+            gasPrice: 0x1,
+          },
     },
     solc: {
         optimizer: {
