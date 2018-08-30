@@ -57,7 +57,7 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(PublicResolver)
 	gen.AddContract(ProxiedPublicResolver)
 	gen.AddContract(MiningTokenContract)
-	//gen.AddContract(ProxiedMiningToken) @TODO wait for contracts to have initialize enabled.
+	gen.AddContract(ProxiedMiningToken)
 	//gen.AddContract(StringsLibrary)
 	//gen.AddContract(NameHashLibrary)
 	//gen.AddContract(ValidatorMgrContract)
