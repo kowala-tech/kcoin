@@ -172,6 +172,10 @@ func (val *validator) run() {
 }
 
 func (val *validator) Stop() error {
+	if !val.Running() {
+		return nil
+	}
+
 	if !val.Validating() {
 		return ErrCantStopNonStartedValidator
 	}
