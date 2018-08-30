@@ -1,12 +1,12 @@
-[![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kcoin/status.svg)](http://ci.kowala.io/kowala-tech/kcoin) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://zygote.kowala.tech)
+[![Build Status](http://ci.kowala.io/api/badges/kowala-tech/kcoin/status.svg)](http://ci.kowala.io/kowala-tech/kcoin) [![Public testnet](https://img.shields.io/badge/alpha-main%20net-blue.svg)](http://kusd.kowala.tech) [![Public testnet](https://img.shields.io/badge/public-testnet-981071.svg)](http://zygote.kowala.tech)
 
 ## kCoin
 
-Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). The **`kcoin`** client is the main client for the Kowala network and it's capable of running a full node - the client offers a gateway to the Kowala network to other processes. To learn more about the project please visit the [official documentation](http://docs.kowala.tech/).
+Official implementation of the Kowala protocol based on the [go-ethereum client](https://github.com/ethereum/go-ethereum/). This monorepo contains the mining client and all its associated tools and public services. The **`kcoin`** mining client is the main access point to all kcoin networks, including kUSD, and we're working on other cool stuff too. To learn more about the project please visit the [Kowala website](https://kowala.tech) or read the [official technical documentation](http://docs.kowala.tech/).
 
 ## Getting Started
 
-[Join the public Zygote testnet](http://zygote.kowala.tech)
+[Join the public Zygote testnet](https://kowala.tech/testnet).
 
 ## Core Contributors
 
