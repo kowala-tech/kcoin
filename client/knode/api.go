@@ -1,6 +1,7 @@
 package knode
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -8,7 +9,6 @@ import (
 	"io"
 	"math/big"
 	"os"
-	"reflect"
 	"strings"
 	"time"
 
@@ -301,7 +301,7 @@ func (api *PublicTokenAPI) MintList() (ret PendingMintTransactions, err error) {
 			return ret, err
 		}
 
-		if !reflect.DeepEqual(output.Data[:4], mintMethodId) {
+		if !bytes.Equal(output.Data[:4], mintMethodId) {
 			continue
 		}
 
