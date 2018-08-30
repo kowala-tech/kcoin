@@ -90,6 +90,18 @@ func (tkn *mUSD) Name() (string, error) {
 	return tkn.MiningToken.Name(&bind.CallOpts{})
 }
 
+func (tkn *mUSD) Cap() (*big.Int, error) {
+	return tkn.MiningToken.Cap(&bind.CallOpts{})
+}
+
+func (tkn *mUSD) TotalSupply() (*big.Int, error) {
+	return tkn.MiningToken.TotalSupply(&bind.CallOpts{})
+}
+
+func (tkn *mUSD) MintingFinished() (bool, error) {
+	return tkn.MiningToken.MintingFinished(&bind.CallOpts{})
+}
+
 // Consensus is a gateway to the validators contracts on the network
 type Consensus struct {
 	manager         *ValidatorMgr

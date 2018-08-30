@@ -244,6 +244,18 @@ func (api *PublicTokenAPI) Confirm(from common.Address, transactionID *hexutil.B
 	return api.consensus.Confirm(tOpts, transactionID.ToInt())
 }
 
+func (api *PublicTokenAPI) Cap() (*big.Int, error) {
+	return api.consensus.Token().Cap()
+}
+
+func (api *PublicTokenAPI) TotalSupply() (*big.Int, error) {
+	return api.consensus.Token().TotalSupply()
+}
+
+func (api *PublicTokenAPI) MintingFinished() (bool, error) {
+	return api.consensus.Token().MintingFinished()
+}
+
 func (api *PublicTokenAPI) getWallet(addr common.Address) (*accounts.Account, accounts.WalletAccount, error) {
 	// Look up the wallet containing the requested signer
 	for _, wallet := range api.accountMgr.Wallets() {
