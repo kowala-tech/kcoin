@@ -46,7 +46,7 @@ var Networks = map[string]map[string]Options{
 				},
 			},
 			StabilityContract: &StabilityContractOpts{
-				MinDeposit:    50,
+				MinDeposit:    100,
 				InitialReward: 0,
 			},
 			DataFeedSystem: &DataFeedSystemOpts{
@@ -117,7 +117,7 @@ var Networks = map[string]map[string]Options{
 				},
 			},
 			StabilityContract: &StabilityContractOpts{
-				MinDeposit:    50,
+				MinDeposit:    100,
 				InitialReward: 0,
 			},
 			DataFeedSystem: &DataFeedSystemOpts{
