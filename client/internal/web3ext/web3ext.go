@@ -485,7 +485,12 @@ web3._extend({
 			call: 'mtoken_confirm',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.utils.fromDecimal]
+		}),
+		new web3._extend.Method({
+			name: 'mintList',
+			call: 'mtoken_mintList'
 		})
+
 	],
 	properties: []
 });
