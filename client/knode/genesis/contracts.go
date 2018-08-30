@@ -766,6 +766,46 @@ func registerValidators(contract *contract, opts *validGenesisOptions) error {
 var ProxiedValidatorManager = &contract{
 	name: "Proxied validator manager",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.validatorMgr
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0xb5822D5F8D221Ce2dc73e388629eCA256B0Aa4f2"),
+			*opts.multiSig.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
+		abi, err := abi.JSON(strings.NewReader(consensus.ValidatorMgrABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			args.baseDeposit,
+			args.maxNumValidators,
+			args.freezePeriod,
+			args.superNodeAmount,
+			bindings.ProxyResolverAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize Proxied Mining Token.", err)
+		}
+
+		opts.oracleMgr.validatorMgrAddr = *proxyContractAddr
+
 		return nil
 	},
 }
