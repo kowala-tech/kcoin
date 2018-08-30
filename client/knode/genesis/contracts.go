@@ -409,14 +409,6 @@ var MultiSigContract = &contract{
 	},
 }
 
-// MultiSigNameRegister is a contract just to register the multisig wallet to
-// the kns, due to its nature of first to be deployed.
-var MultiSigNameRegister = &contract{
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		return registerAddressToDomain(contract, opts, params.KNSDomains[params.MultiSigDomain].Node())
-	},
-}
-
 var MiningTokenContract = &contract{
 	name: "Mining Token",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
@@ -602,6 +594,50 @@ var OracleMgrContract = &contract{
 
 		return nil
 	},
+}
+
+var ProxiedOracleMgr = &contract{
+	name: "Proxied Oracle Mgr",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.oracleMgr
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0x616a77BA32aDC911dBa37f5883e4013B5278a279"),
+			*opts.multiSig.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
+		abi, err := abi.JSON(strings.NewReader(oracle.OracleMgrABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			args.maxNumOracles,
+			args.price.syncFrequency,
+			args.price.updatePeriod,
+			args.validatorMgrAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize Proxied Oracle Manager.", err)
+		}
+
+		return nil
+	},
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
 		return registerAddressToDomain(contract, opts, params.KNSDomains[params.OracleMgrDomain].Node())
 	},
@@ -720,14 +756,6 @@ var ValidatorMgrContract = &contract{
 
 		return nil
 	},
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		err := registerValidators(contract, opts)
-		if err != nil {
-			return err
-		}
-
-		return registerAddressToDomain(contract, opts, params.KNSDomains[params.ValidatorMgrDomain].Node())
-	},
 }
 
 func registerValidators(contract *contract, opts *validGenesisOptions) error {
@@ -807,5 +835,13 @@ var ProxiedValidatorManager = &contract{
 		opts.oracleMgr.validatorMgrAddr = *proxyContractAddr
 
 		return nil
+	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := registerValidators(contract, opts)
+		if err != nil {
+			return err
+		}
+
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.ValidatorMgrDomain].Node())
 	},
 }
