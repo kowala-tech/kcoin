@@ -64,7 +64,8 @@ func Generate(opts Options) (*core.Genesis, error) {
 	gen.AddContract(ProxiedValidatorManager)
 	gen.AddContract(OracleMgrContract)
 	gen.AddContract(ProxiedOracleMgr)
-	//gen.AddContract(SystemVarsContract)
+	gen.AddContract(SystemVarsContract)
+	gen.AddContract(ProxiedSystemVars)
 	//gen.AddContract(StabilityContract)
 
 	return gen.Generate(opts)
