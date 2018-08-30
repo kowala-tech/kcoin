@@ -316,7 +316,7 @@ func (api *PublicTokenAPI) MintList() (ret PendingMintTransactions, err error) {
 		})
 	}
 
-	return
+	return ret, nil
 }
 
 func (api *PublicTokenAPI) getWallet(addr common.Address) (*accounts.Account, accounts.WalletAccount, error) {
