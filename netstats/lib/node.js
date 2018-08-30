@@ -26,7 +26,8 @@ var Node = function(data) {
       arrival: 0,
       received: 0,
       propagation: 0,
-      transactions: []
+      transactions: [],
+      validator: ""
     },
     contracts: {
       deposit: 0,

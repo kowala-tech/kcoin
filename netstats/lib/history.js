@@ -434,8 +434,8 @@ History.prototype.getTransactionsCount = function() {
   return txCount;
 };
 
-History.prototype.getGasSpending = function() {
-  var gasSpending = _(this._items)
+History.prototype.getcomputeRewards = function() {
+  var computeRewards = _(this._items)
     .sortByOrder("height", false)
     .filter(function(item) {
       return item.block.trusted;
@@ -443,11 +443,11 @@ History.prototype.getGasSpending = function() {
     .slice(0, MAX_BINS)
     .reverse()
     .map(function(item) {
-      return item.block.gasUsed;
+      return item.block.gasUsed * item.gasPrice;
     })
     .value();
 
-  return gasSpending;
+  return computeRewards;
 };
 
 History.prototype.getValidatorsCount = function() {
@@ -494,10 +494,10 @@ History.prototype.getCharts = function() {
           height: item.height,
           blocktime: item.block.time / 1000,
           transactions: item.block.transactions.length,
-          gasSpending: item.block.gasUsed,
+          computeRewards: item.block.gasUsed,
           gasLimit: item.block.gasLimit,
           validator: item.block.validator,
-	      currencyPrice: item.block.currencyPrice,
+	        currencyPrice: (item.block.currencyPrice / Math.pow(10, 18))
         };
       })
       .value();
@@ -505,14 +505,13 @@ History.prototype.getCharts = function() {
     this._callback(null, {
       height: _.pluck(chartHistory, "height"),
       blocktime: _.pluck(chartHistory, "blocktime"),
-      // avgBlocktime : _.sum(_.pluck( chartHistory, 'blocktime' )) / (chartHistory.length === 0 ? 1 : chartHistory.length),
       avgBlocktime: this.getAvgBlocktime(),
       transactions: _.pluck(chartHistory, "transactions"),
-      gasSpending: _.pluck(chartHistory, "gasSpending"),
+      computeRewards: _.pluck(chartHistory, "computeRewards"),
       gasLimit: _.pluck(chartHistory, "gasLimit"),
       validators: this.getValidatorsCount(),
       propagation: this.getBlockPropagation(),
-      currencyPrice: _.pluck(chartHistory, "currencyPrice"),
+      currencyPrice: _.pluck(chartHistory, "currencyPrice")
     });
   }
 };
