@@ -450,7 +450,7 @@ pipeline:
     target: /
     when:
       event: [push, tag]
-      branch: [dev]
+      branch: [dev, master]
 
   upload_repository_index:
     image: kowalatech/go:1.0.11
