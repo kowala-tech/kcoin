@@ -137,7 +137,7 @@ var (
 	VersionRepository = cli.StringFlag{
 		Name:  "repository",
 		Usage: "Version repository url",
-		Value: "https://s3.amazonaws.com/releases.kowala.io",
+		Value: "https://s3.amazonaws.com/releases.kowala.tech",
 	}
 	FastSyncFlag = cli.BoolFlag{
 		Name:  "fast",
