@@ -73,6 +73,49 @@ var SystemVarsContract = &contract{
 
 		return nil
 	},
+}
+
+var ProxiedSystemVars = &contract{
+	name: "Proxied SystemVars contract",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.sysvars
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0xc3c45781031885313d5a598042950D6D7bE96350"),
+			*opts.multiSig.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
+		abi, err := abi.JSON(strings.NewReader(sysvars.SystemVarsABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			args.initialPrice,
+			args.initialSupply,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize Proxied System Vars.", err)
+		}
+
+		return nil
+	},
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
 		return registerAddressToDomain(contract, opts, params.KNSDomains[params.SystemVarsDomain].Node())
 	},
@@ -108,6 +151,49 @@ var StabilityContract = &contract{
 
 		return nil
 	},
+}
+
+var ProxiedStability = &contract{
+	name: "Proxied Stability Contract",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.stability
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0xCdCA8b1B7EdFb0827F10F4ED3968D98FA5C90ea0"),
+			*opts.multiSig.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
+		abi, err := abi.JSON(strings.NewReader(stability.StabilityABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			args.minDeposit,
+			args.systemVarsAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize Proxied System Vars.", err)
+		}
+
+		return nil
+	},
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
 		return registerAddressToDomain(contract, opts, params.KNSDomains[params.StabilityDomain].Node())
 	},
@@ -116,10 +202,8 @@ var StabilityContract = &contract{
 var KNSRegistry = &contract{
 	name: "KNSRegistry",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
-		args := opts.multiSig
-
 		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = *args.multiSigCreator
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
 		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.KNSRegistryBin), runtimeCfg)
 		if err != nil {
 			return err
@@ -140,7 +224,7 @@ var ProxiedKNSRegistry = &contract{
 		runtimeCfg := contract.runtimeCfg
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0x2d7465b88a0A5A1bBff2671C8ED78F7506465ddc"),
+			common.HexToAddress("0xBFb47D8008d1ccDCAF3a36110a9338a274e86343"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -207,10 +291,8 @@ var ProxiedKNSRegistry = &contract{
 var FIFSRegistrar = &contract{
 	name: "FIFSRegistrar",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
-		args := opts.multiSig
-
 		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = *args.multiSigCreator
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
 		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.FIFSRegistrarBin), runtimeCfg)
 		if err != nil {
 			return err
@@ -232,7 +314,7 @@ var ProxiedFIFSRegistrar = &contract{
 		runtimeCfg.Origin = *args.multiSigCreator
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0x3b058a1a62E59D185618f64BeBBAF3C52bf099E0"),
+			common.HexToAddress("0xe95d0D373E2FD320b84aaC705434b67B905092aE"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -272,10 +354,8 @@ var ProxiedFIFSRegistrar = &contract{
 var PublicResolver = &contract{
 	name: "PublicResolver",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
-		args := opts.multiSig
-
 		runtimeCfg := contract.runtimeCfg
-		runtimeCfg.Origin = *args.multiSigCreator
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
 		contractCode, contractAddr, _, err := runtime.Create(common.FromHex(kns.PublicResolverBin), runtimeCfg)
 		if err != nil {
 			return err
@@ -296,7 +376,7 @@ var ProxiedPublicResolver = &contract{
 		runtimeCfg := contract.runtimeCfg
 
 		proxyContractAddr, code, err := createProxyFromContract(
-			common.HexToAddress("0xA275adEf1A19c815817910F2898e4134428e6ee4"),
+			common.HexToAddress("0x7F0de05687a7cb9a05399a26f4D1519Ba6Afc95F"),
 			*args.multiSigCreator,
 			runtimeCfg,
 		)
@@ -307,10 +387,7 @@ var ProxiedPublicResolver = &contract{
 		contract.address = *proxyContractAddr
 		contract.code = code
 
-		// Init
-		validatorAddr := opts.prefundedAccounts[0].accountAddress
-
-		runtimeCfg.Origin = *validatorAddr
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
 
 		abi, err := abi.JSON(strings.NewReader(kns.PublicResolverABI))
 		if err != nil {
@@ -418,14 +495,6 @@ var MultiSigContract = &contract{
 	},
 }
 
-// MultiSigNameRegister is a contract just to register the multisig wallet to
-// the kns, due to its nature of first to be deployed.
-var MultiSigNameRegister = &contract{
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		return registerAddressToDomain(contract, opts, params.KNSDomains[params.MultiSigDomain].Node())
-	},
-}
-
 var MiningTokenContract = &contract{
 	name: "Mining Token",
 	deploy: func(contract *contract, opts *validGenesisOptions) error {
@@ -456,17 +525,7 @@ var MiningTokenContract = &contract{
 		contract.code = contractCode
 		contract.address = contractAddr
 
-		opts.validatorMgr.miningTokenAddr = contractAddr
-
 		return nil
-	},
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		err := mintTokens(contract, opts)
-		if err != nil {
-			return err
-		}
-
-		return registerAddressToDomain(contract, opts, params.KNSDomains[params.MiningTokenDomain].Node())
 	},
 }
 
@@ -479,7 +538,7 @@ func mintTokens(contract *contract, opts *validGenesisOptions) error {
 	}
 
 	runtimeCfg := contract.runtimeCfg
-	runtimeCfg.Origin = args.owner
+	runtimeCfg.Origin = bindings.MultiSigWalletAddr
 	for _, holder := range args.holders {
 		mintParams, err := tokenABI.Pack(
 			"mint",
@@ -497,6 +556,60 @@ func mintTokens(contract *contract, opts *validGenesisOptions) error {
 	}
 
 	return nil
+}
+
+var ProxiedMiningToken = &contract{
+	name: "Proxied Mining Token",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.miningToken
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0x64c2a9CB0220D3e56783ed87cC1B20115Bc93F96"),
+			*opts.multiSig.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
+		abi, err := abi.JSON(strings.NewReader(consensus.MiningTokenABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			args.name,
+			args.symbol,
+			args.cap,
+			uint8(args.decimals.Uint64()),
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize Proxied Mining Token.", err)
+		}
+
+		opts.validatorMgr.miningTokenAddr = *proxyContractAddr
+
+		return nil
+	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := mintTokens(contract, opts)
+		if err != nil {
+			return err
+		}
+
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.MiningTokenDomain].Node())
+	},
 }
 
 var StringsLibrary = &contract{
@@ -564,6 +677,50 @@ var OracleMgrContract = &contract{
 		}
 		contract.code = contractCode
 		contract.address = contractAddr
+
+		return nil
+	},
+}
+
+var ProxiedOracleMgr = &contract{
+	name: "Proxied Oracle Mgr",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.oracleMgr
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0x616a77BA32aDC911dBa37f5883e4013B5278a279"),
+			*opts.multiSig.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
+		abi, err := abi.JSON(strings.NewReader(oracle.OracleMgrABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			args.maxNumOracles,
+			args.price.syncFrequency,
+			args.price.updatePeriod,
+			args.validatorMgrAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize Proxied Oracle Manager.", err)
+		}
 
 		return nil
 	},
@@ -685,14 +842,6 @@ var ValidatorMgrContract = &contract{
 
 		return nil
 	},
-	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
-		err := registerValidators(contract, opts)
-		if err != nil {
-			return err
-		}
-
-		return registerAddressToDomain(contract, opts, params.KNSDomains[params.ValidatorMgrDomain].Node())
-	},
 }
 
 func registerValidators(contract *contract, opts *validGenesisOptions) error {
@@ -726,4 +875,59 @@ func registerValidators(contract *contract, opts *validGenesisOptions) error {
 	}
 
 	return nil
+}
+
+var ProxiedValidatorManager = &contract{
+	name: "Proxied validator manager",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.validatorMgr
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0xb5822D5F8D221Ce2dc73e388629eCA256B0Aa4f2"),
+			*opts.multiSig.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
+		abi, err := abi.JSON(strings.NewReader(consensus.ValidatorMgrABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			args.baseDeposit,
+			args.maxNumValidators,
+			args.freezePeriod,
+			args.superNodeAmount,
+			bindings.ProxyResolverAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize Proxied Mining Token.", err)
+		}
+
+		opts.oracleMgr.validatorMgrAddr = *proxyContractAddr
+
+		return nil
+	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		err := registerValidators(contract, opts)
+		if err != nil {
+			return err
+		}
+
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.ValidatorMgrDomain].Node())
+	},
 }
