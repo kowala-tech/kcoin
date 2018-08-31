@@ -6,7 +6,7 @@ Official implementation of the Kowala protocol based on the [go-ethereum client]
 
 ## Getting Started
 
-[Join the public Zygote testnet](https://kowala.tech/testnet).
+[Join the public testnet](https://kowala.tech/testnet).
 
 ## Core Contributors
 
