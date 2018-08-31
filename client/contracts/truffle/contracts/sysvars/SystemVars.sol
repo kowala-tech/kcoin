@@ -1,11 +1,12 @@
 pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/math/Math.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
 
 /**
  * @title System Variables
  */
-contract SystemVars {
+contract SystemVars is Initializable{
     
     uint constant INITIAL_MINTED_AMOUNT = 42 ether;
     uint constant INITIAL_CAP  = 82 ether;
@@ -27,6 +28,18 @@ contract SystemVars {
      * @param _initialSupply minted amount on the genesis block
      */
     function SystemVars(uint _initialPrice, uint _initialSupply) public {
+        prevCurrencyPrice = _initialPrice;
+        currencyPrice = _initialPrice;
+        mintedReward = _initialSupply;
+        currencySupply = _initialSupply;
+    }
+
+    /**
+     * initialize function for Proxy Pattern.
+     * @param _initialPrice initial price for the system's currency
+     * @param _initialSupply minted amount on the genesis block
+     */
+    function initialize(uint _initialPrice, uint _initialSupply) isInitializer public {
         prevCurrencyPrice = _initialPrice;
         currencyPrice = _initialPrice;
         mintedReward = _initialSupply;
