@@ -2,11 +2,13 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./PriceProvider.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
+
 
 /**
  * @title Stability contract supports network utility
  */
-contract Stability is Pausable {
+contract Stability is Pausable, Initializable{
 
     uint constant ONE = 1 ether;
     
@@ -44,6 +46,16 @@ contract Stability is Pausable {
      * @param _priceProviderAddr address of system variables contract
      */
     function Stability(uint _minDeposit, address _priceProviderAddr) public {
+        minDeposit = _minDeposit;
+        priceProvider = PriceProvider(_priceProviderAddr);
+    }
+
+    /**
+     * initialize function for Proxy Pattern.
+     * @param _minDeposit minimum deposit required to subscribe to the service
+     * @param _priceProviderAddr address of system variables contract
+     */
+    function initialize(uint _minDeposit, address _priceProviderAddr) isInitializer public {
         minDeposit = _minDeposit;
         priceProvider = PriceProvider(_priceProviderAddr);
     }

@@ -14,10 +14,10 @@ import (
 )
 
 // SystemVarsABI is the input ABI used to generate the binding from.
-const SystemVarsABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"mintedAmount\",\"type\":\"uint256\"}],\"name\":\"oracleDeduction\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"oracleReward\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"mintedReward\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"mintedAmount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currencyPrice\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"price\",\"outputs\":[{\"name\":\"price\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currencySupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"prevCurrencyPrice\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_initialPrice\",\"type\":\"uint256\"},{\"name\":\"_initialSupply\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
+const SystemVarsABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"mintedAmount\",\"type\":\"uint256\"}],\"name\":\"oracleDeduction\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"initialized\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"oracleReward\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"mintedReward\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"mintedAmount\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currencyPrice\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"price\",\"outputs\":[{\"name\":\"price\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"currencySupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_initialPrice\",\"type\":\"uint256\"},{\"name\":\"_initialSupply\",\"type\":\"uint256\"}],\"name\":\"initialize\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"prevCurrencyPrice\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_initialPrice\",\"type\":\"uint256\"},{\"name\":\"_initialSupply\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
 
 // SystemVarsBin is the compiled bytecode used for deploying new contracts.
-const SystemVarsBin = `608060405234801561001057600080fd5b5060405160408061041483398101806040528101908080519060200190929190805190602001909291905050508160008190555081600181905550806003819055508060028190555050506103aa8061006a6000396000f30060806040526004361061008d576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168062bf32ca1461009257806321873631146100d35780632af4f9c0146100fe5780632d380242146101295780636df566d714610154578063a035b1fe1461017f578063b0c6363d146101aa578063fc634f4b146101d5575b600080fd5b34801561009e57600080fd5b506100bd60048036038101908080359060200190929190505050610200565b6040518082815260200191505060405180910390f35b3480156100df57600080fd5b506100e8610219565b6040518082815260200191505060405180910390f35b34801561010a57600080fd5b50610113610249565b6040518082815260200191505060405180910390f35b34801561013557600080fd5b5061013e61024f565b6040518082815260200191505060405180910390f35b34801561016057600080fd5b506101696102d7565b6040518082815260200191505060405180910390f35b34801561018b57600080fd5b506101946102dd565b6040518082815260200191505060405180910390f35b3480156101b657600080fd5b506101bf6102e7565b6040518082815260200191505060405180910390f35b3480156101e157600080fd5b506101ea6102ed565b6040518082815260200191505060405180910390f35b600060648260040281151561021157fe5b049050919050565b6000610244670de0b6b3a76400003073ffffffffffffffffffffffffffffffffffffffff16316102f3565b905090565b60035481565b6000806001804301141561026e57680246ddf9797668000091506102d3565b61271060035481151561027d57fe5b04905060005460015411801561029c5750670de0b6b3a7640000600054115b156102bd576102b681600354016102b161030c565b6102f3565b91506102d3565b6102d0816003540364e8d4a5100061034d565b91505b5090565b60015481565b6000600154905090565b60025481565b60005481565b60008183106103025781610304565b825b905092915050565b600060018043011180156103245750610323610367565b5b61033757680471fa858b9e080000610348565b61271060025481151561034657fe5b045b905090565b60008183101561035d578161035f565b825b905092915050565b600069d3c21bcecceda100000060025410159050905600a165627a7a723058205e8eaf61aa78db4188aba27bcef805fa980076d0343fb92d736bb52d45a742b70029`
+const SystemVarsBin = `608060405234801561001057600080fd5b50604051604080610586833981018060405281019080805190602001909291908051906020019092919050505081600181905550816002819055508060048190555080600381905550505061051c8061006a6000396000f3006080604052600436106100a3576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168062bf32ca146100a8578063158ef93e146100e957806321873631146101185780632af4f9c0146101435780632d3802421461016e5780636df566d714610199578063a035b1fe146101c4578063b0c6363d146101ef578063e4a301161461021a578063fc634f4b14610251575b600080fd5b3480156100b457600080fd5b506100d36004803603810190808035906020019092919050505061027c565b6040518082815260200191505060405180910390f35b3480156100f557600080fd5b506100fe610295565b604051808215151515815260200191505060405180910390f35b34801561012457600080fd5b5061012d6102a7565b6040518082815260200191505060405180910390f35b34801561014f57600080fd5b506101586102d7565b6040518082815260200191505060405180910390f35b34801561017a57600080fd5b506101836102dd565b6040518082815260200191505060405180910390f35b3480156101a557600080fd5b506101ae610365565b6040518082815260200191505060405180910390f35b3480156101d057600080fd5b506101d961036b565b6040518082815260200191505060405180910390f35b3480156101fb57600080fd5b50610204610375565b6040518082815260200191505060405180910390f35b34801561022657600080fd5b5061024f600480360381019080803590602001909291908035906020019092919050505061037b565b005b34801561025d57600080fd5b5061026661045f565b6040518082815260200191505060405180910390f35b600060648260040281151561028d57fe5b049050919050565b6000809054906101000a900460ff1681565b60006102d2670de0b6b3a76400003073ffffffffffffffffffffffffffffffffffffffff1631610465565b905090565b60045481565b600080600180430114156102fc57680246ddf979766800009150610361565b61271060045481151561030b57fe5b04905060015460025411801561032a5750670de0b6b3a7640000600154115b1561034b57610344816004540161033f61047e565b610465565b9150610361565b61035e816004540364e8d4a510006104bf565b91505b5090565b60025481565b6000600254905090565b60035481565b6000809054906101000a900460ff16151515610425576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252602e8152602001807f436f6e747261637420696e7374616e63652068617320616c726561647920626581526020017f656e20696e697469616c697a656400000000000000000000000000000000000081525060400191505060405180910390fd5b8160018190555081600281905550806004819055508060038190555060016000806101000a81548160ff0219169083151502179055505050565b60015481565b60008183106104745781610476565b825b905092915050565b6000600180430111801561049657506104956104d9565b5b6104a957680471fa858b9e0800006104ba565b6127106003548115156104b857fe5b045b905090565b6000818310156104cf57816104d1565b825b905092915050565b600069d3c21bcecceda100000060035410159050905600a165627a7a723058206fe4f1f991942cb71ef574c8d7fffd57bd4a05e408f7df2f2c0ecd8fe40406390029`
 
 // DeploySystemVars deploys a new Kowala contract, binding an instance of SystemVars to it.
 func DeploySystemVars(auth *bind.TransactOpts, backend bind.ContractBackend, _initialPrice *big.Int, _initialSupply *big.Int) (common.Address, *types.Transaction, *SystemVars, error) {
@@ -226,6 +226,32 @@ func (_SystemVars *SystemVarsCallerSession) CurrencySupply() (*big.Int, error) {
 	return _SystemVars.Contract.CurrencySupply(&_SystemVars.CallOpts)
 }
 
+// Initialized is a free data retrieval call binding the contract method 0x158ef93e.
+//
+// Solidity: function initialized() constant returns(bool)
+func (_SystemVars *SystemVarsCaller) Initialized(opts *bind.CallOpts) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _SystemVars.contract.Call(opts, out, "initialized")
+	return *ret0, err
+}
+
+// Initialized is a free data retrieval call binding the contract method 0x158ef93e.
+//
+// Solidity: function initialized() constant returns(bool)
+func (_SystemVars *SystemVarsSession) Initialized() (bool, error) {
+	return _SystemVars.Contract.Initialized(&_SystemVars.CallOpts)
+}
+
+// Initialized is a free data retrieval call binding the contract method 0x158ef93e.
+//
+// Solidity: function initialized() constant returns(bool)
+func (_SystemVars *SystemVarsCallerSession) Initialized() (bool, error) {
+	return _SystemVars.Contract.Initialized(&_SystemVars.CallOpts)
+}
+
 // MintedAmount is a free data retrieval call binding the contract method 0x2d380242.
 //
 // Solidity: function mintedAmount() constant returns(uint256)
@@ -380,4 +406,25 @@ func (_SystemVars *SystemVarsSession) Price() (*big.Int, error) {
 // Solidity: function price() constant returns(price uint256)
 func (_SystemVars *SystemVarsCallerSession) Price() (*big.Int, error) {
 	return _SystemVars.Contract.Price(&_SystemVars.CallOpts)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0xe4a30116.
+//
+// Solidity: function initialize(_initialPrice uint256, _initialSupply uint256) returns()
+func (_SystemVars *SystemVarsTransactor) Initialize(opts *bind.TransactOpts, _initialPrice *big.Int, _initialSupply *big.Int) (*types.Transaction, error) {
+	return _SystemVars.contract.Transact(opts, "initialize", _initialPrice, _initialSupply)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0xe4a30116.
+//
+// Solidity: function initialize(_initialPrice uint256, _initialSupply uint256) returns()
+func (_SystemVars *SystemVarsSession) Initialize(_initialPrice *big.Int, _initialSupply *big.Int) (*types.Transaction, error) {
+	return _SystemVars.Contract.Initialize(&_SystemVars.TransactOpts, _initialPrice, _initialSupply)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0xe4a30116.
+//
+// Solidity: function initialize(_initialPrice uint256, _initialSupply uint256) returns()
+func (_SystemVars *SystemVarsTransactorSession) Initialize(_initialPrice *big.Int, _initialSupply *big.Int) (*types.Transaction, error) {
+	return _SystemVars.Contract.Initialize(&_SystemVars.TransactOpts, _initialPrice, _initialSupply)
 }

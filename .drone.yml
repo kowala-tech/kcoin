@@ -394,8 +394,8 @@ pipeline:
       - cd cdn
       - make build
     when:
-      branch: [develop, master]
-      event: [push,tag,test]
+      branch: [dev, master]
+      event: [push,tag]
 
   upload_cdn_to_s3_dev:
     group: build_artifacts
