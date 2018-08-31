@@ -54,7 +54,7 @@ func (ctx *Context) sendTokensAndWait(from, to accounts.Account, tokens int64) e
 }
 
 func (ctx *Context) checkTokenBalance(account accounts.Account, expectedMTokens int64) error {
-	weis := big.NewInt(expectedMTokens)
+	weis := toWei(expectedMTokens)
 	res := &cluster.ExecResponse{}
 	if err := ctx.execCommand(ctx.rpcNodeID, getTokenBalance(account.Address), res); err != nil {
 		return err

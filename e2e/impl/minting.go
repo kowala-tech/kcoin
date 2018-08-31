@@ -53,7 +53,7 @@ func (ctx *Context) mintTokensAndWait(governance []accounts.Account, to accounts
 }
 
 func (ctx *Context) submitTransactionToMint(c *consensus.Consensus, acct accounts.Account, to accounts.Account, tokens int64) (*big.Int, error) {
-	weis := big.NewInt(tokens)
+	weis := toWei(tokens)
 	var transaction common.Hash
 	var transactionID *big.Int
 
