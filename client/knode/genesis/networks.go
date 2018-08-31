@@ -58,7 +58,7 @@ var Networks = map[string]map[string]Options{
 			PrefundedAccounts: []PrefundedAccount{
 				{
 					Address: "0x6D5E05684c737D42F313d5B82A88090136e831F8",
-					Balance: 10,
+					Balance: 10000,
 				},
 				{
 					Address: "0x049ec8777b4806eff0Bb6039551690D8f650B25a",
