@@ -122,6 +122,9 @@ func (voters voters) Contains(addr common.Address) bool {
 	return voter != nil
 }
 
+// VotersChecksum lets a voter know if there are changes in the voters set
+type VotersChecksum [32]byte
+
 func NewDeposit(amount *big.Int, timeUnix int64) *Deposit {
 	return &Deposit{
 		amount:              amount,

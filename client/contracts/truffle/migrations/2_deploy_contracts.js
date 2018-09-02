@@ -1,10 +1,14 @@
 /* global artifacts, web3 */
 /* eslint-disable max-len */
 
-const KNS = artifacts.require('./ens/KNSRegistry.sol');
-const FIFSRegistrar = artifacts.require('./ens/FIFSRegistrar.sol');
-const PublicResolver = artifacts.require('./ens/PublicResolver.sol');
+const KNS = artifacts.require('./kns/KNSRegistry.sol');
+const FIFSRegistrar = artifacts.require('./kns/FIFSRegistrar.sol');
+const PublicResolver = artifacts.require('./kns/PublicResolver.sol');
 const namehash = require('../node_modules/eth-ens-namehash');
+
+const NameHash = artifacts.require('./utils/NameHash.sol');
+const OracleMgr = artifacts.require('./oracle/OracleMgr.sol');
+const ValidatorMgr = artifacts.require('./consensus/mgr/ValidatorMgr.sol');
 
 module.exports = (deployer) => {
   const domain = 'kowala';
@@ -15,6 +19,9 @@ module.exports = (deployer) => {
     sha3: web3.sha3(tld),
   };
 
+  deployer.deploy(NameHash);
+  deployer.link(NameHash, OracleMgr);
+  deployer.link(NameHash, ValidatorMgr);
 
   deployer.deploy(KNS)
     .then(() => deployer.deploy(FIFSRegistrar, KNS.address, rootNode.namehash))

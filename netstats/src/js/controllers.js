@@ -24,11 +24,16 @@ netStatsApp.controller("StatsCtrl", function(
   $scope.blockPropagationAvg = 0;
   $scope.bestStats = {};
 
-  $scope.lastGasLimit = _.fill(Array(MAX_BINS), 2);
-  $scope.lastBlocksTime = _.fill(Array(MAX_BINS), 2);
-  $scope.currencyPrice = _.fill(Array(MAX_BINS), 2);
-  $scope.transactionDensity = _.fill(Array(MAX_BINS), 2);
-  $scope.gasSpending = _.fill(Array(MAX_BINS), 2);
+  $scope.blockTimes = _.fill(Array(MAX_BINS), 0);
+  $scope.currencyPrices = _.fill(Array(MAX_BINS), 1);
+  $scope.transactions = _.fill(Array(MAX_BINS), 0);
+  $scope.oracleRewards = _.fill(Array(MAX_BINS), 0);
+  $scope.computeRewards = _.fill(Array(MAX_BINS), 0);
+  $scope.stabilityRewards = _.fill(Array(MAX_BINS), 0);
+  $scope.mintedRewards = _.fill(Array(MAX_BINS), 0);
+  $scope.stabilityFees = _.fill(Array(MAX_BINS), 0);
+  $scope.burnAmounts = _.fill(Array(MAX_BINS), 0);
+
   $scope.validators = [];
 
   $scope.nodes = [];
@@ -318,22 +323,16 @@ netStatsApp.controller("StatsCtrl", function(
           $scope.avgBlockTime = data.avgBlocktime;
 
         if (
-          !_.isEqual($scope.lastGasLimit, data.gasLimit) &&
-          data.gasLimit.length >= MAX_BINS
-        )
-          $scope.lastGasLimit = data.gasLimit;
-
-        if (
-          !_.isEqual($scope.lastBlocksTime, data.blocktime) &&
+          !_.isEqual($scope.blockTimes, data.blocktime) &&
           data.blocktime.length >= MAX_BINS
         )
-          $scope.lastBlocksTime = data.blocktime;
+          $scope.blockTimes = data.blocktime;
 
         if (
           !_.isEqual($scope.currencyPrice, data.currencyPrice) &&
           data.currencyPrice.length >= MAX_BINS
         )
-          $scope.currencyPrice = data.currencyPrice;
+          $scope.currencyPrices = data.currencyPrice;
 
 
         if (
@@ -344,16 +343,16 @@ netStatsApp.controller("StatsCtrl", function(
         }
 
         if (
-          !_.isEqual($scope.transactionDensity, data.transactions) &&
+          !_.isEqual($scope.transactions, data.transactions) &&
           data.transactions.length >= MAX_BINS
         )
-          $scope.transactionDensity = data.transactions;
+          $scope.transactions = data.transactions;
 
         if (
-          !_.isEqual($scope.gasSpending, data.gasSpending) &&
-          data.gasSpending.length >= MAX_BINS
+          !_.isEqual($scope.computeRewards, data.computeRewards) &&
+          data.computeRewards.length >= MAX_BINS
         )
-          $scope.gasSpending = data.gasSpending;
+          $scope.computeRewards = data.computeRewards;
 
         if (!_.isEqual($scope.validators, data.validators)) {
           $scope.validators = data.validators;

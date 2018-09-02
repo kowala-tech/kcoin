@@ -21,7 +21,6 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.11
     commands:
-      # test_genesis should run before test
       - make test_genesis
       - make test
       - make lint
@@ -214,6 +213,11 @@ pipeline:
       - DRONE_TAG
       - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
+      - URL=https://stats.zygote.kowala.tech
+      - EXPLORER_URL=https://explorer.zygote.kowala.tech
+      - FAUCET_URL=https://faucet.zygote.kowala.tech
+      - CDN_URL=https://cdn.kowala.io
+      - WS_SECRET=DuHLdsKV6cagynn9
     repo: kowalatech/netstats
     dockerfile: netstats/Dockerfile
     pull: true
@@ -234,11 +238,19 @@ pipeline:
     privileged: true
     auto_tag: true
     build_args:
-      - URL=https://stats.kowala.tech
-      - EXPLORER_URL=https://explorer.zygote.kowala.tech
-      - FAUCET_URL=https://faucet.zygote.kowala.tech
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+      - URL=https://stats.kusd.kowala.tech
+      - EXPLORER_URL=https://explorer.kusd.kowala.tech
+      - FAUCET_URL=https://faucet.kusd.kowala.tech
       - CDN_URL=https://cdn.kowala.tech
-      - WS_SECRET=abc123
+      - WS_SECRET=DuHLdsKV6cagynn9
     when:
       branch: [master]
       event: [push, tag]
@@ -382,8 +394,8 @@ pipeline:
       - cd cdn
       - make build
     when:
-      branch: [develop, master]
-      event: [push,tag,test]
+      branch: [dev, master]
+      event: [push,tag]
 
   upload_cdn_to_s3_dev:
     group: build_artifacts
@@ -438,7 +450,7 @@ pipeline:
     target: /
     when:
       event: [push, tag]
-      branch: [dev]
+      branch: [dev, master]
 
   upload_repository_index:
     image: kowalatech/go:1.0.11
