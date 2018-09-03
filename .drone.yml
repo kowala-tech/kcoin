@@ -15,7 +15,7 @@ pipeline:
       - make go_generate
       - make assert_no_changes
     when:
-      event: [push]
+      event: [pull_request]
 
   test_kcoin:
     group: testing
@@ -58,16 +58,6 @@ pipeline:
       - make e2e
     when:
       event: [pull_request]
-
-  docker_build:
-    image: kowalatech/go:1.0.11
-    environment:
-      - DOCKER_HOST=tcp://docker:2375
-      - DOCKER_PUBLIC_IP=docker
-    commands:
-      - make -j 4 dev_docker_images
-    when:
-      event: [push]
 
   docker_kusd:
     group: docker_deployment
