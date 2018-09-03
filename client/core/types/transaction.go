@@ -10,6 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rlp"
 )
 
@@ -54,6 +55,10 @@ type txdataMarshaling struct {
 	S            *hexutil.Big
 }
 
+func NewSimpleTransaction(nonce uint64, to common.Address, amount *big.Int) *Transaction {
+	return newTransaction(nonce, &to, amount, 0, []byte{})
+}
+
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, computeLimit uint64, data []byte) *Transaction {
 	return newTransaction(nonce, &to, amount, computeLimit, data)
 }
@@ -70,11 +75,15 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, computeLi
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      data,
-		Amount:       new(big.Int),
 		ComputeLimit: computeLimit,
+		Amount:       new(big.Int),
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
+	}
+	// simple transaction
+	if computeLimit == 0 {
+		d.ComputeLimit = params.TxCompEffort
 	}
 	if amount != nil {
 		d.Amount.Set(amount)
@@ -254,6 +263,13 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	cpy := &Transaction{data: tx.data}
 	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
 	return cpy, nil
+}
+
+// Cost returns amount + computational effort * compute unit price.
+func (tx *Transaction) Cost() *big.Int {
+	total := new(big.Int).Mul(params.ComputeUnitPrice, new(big.Int).SetUint64(tx.data.ComputeLimit))
+	total.Add(total, tx.data.Amount)
+	return total
 }
 
 func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {

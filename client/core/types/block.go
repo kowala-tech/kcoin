@@ -33,18 +33,18 @@ type Header struct {
 	LastCommitHash common.Hash    `json:"lastCommit"       gencodec:"required"`
 	Bloom          Bloom          `json:"logsBloom"        gencodec:"required"`
 	Number         *big.Int       `json:"number"           gencodec:"required"`
-	ResourceUsage  uint64         `json:"resource"    gencodec:"required"`
+	ResourceUsage  uint64         `json:"resourceUsage"    gencodec:"required"`
 	Time           *big.Int       `json:"timestamp"        gencodec:"required"`
 	Extra          []byte         `json:"extraData"        gencodec:"required"`
 }
 
 // field type overrides for gencodec
 type headerMarshaling struct {
-	Number            *hexutil.Big
-	usedCompResources hexutil.Uint64
-	Time              *hexutil.Big
-	Extra             hexutil.Bytes
-	Hash              common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Number        *hexutil.Big
+	ResourceUsage hexutil.Uint64
+	Time          *hexutil.Big
+	Extra         hexutil.Bytes
+	Hash          common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its

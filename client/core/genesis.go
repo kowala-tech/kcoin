@@ -37,9 +37,9 @@ type Genesis struct {
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
-	Number              uint64      `json:"number"`
-	ComputationalEffort uint64      `json:"effort"`
-	ParentHash          common.Hash `json:"parentHash"`
+	Number        uint64      `json:"number"`
+	ResourceUsage uint64      `json:"resourceUsage"`
+	ParentHash    common.Hash `json:"parentHash"`
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -221,13 +221,13 @@ func (g *Genesis) ToBlock(db kcoindb.Database) *types.Block {
 	}
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
-		Number:              new(big.Int).SetUint64(g.Number),
-		Time:                new(big.Int).SetUint64(g.Timestamp),
-		ParentHash:          g.ParentHash,
-		Extra:               g.ExtraData,
-		ComputationalEffort: g.ComputationalEffort,
-		Coinbase:            g.Coinbase,
-		Root:                root,
+		Number:        new(big.Int).SetUint64(g.Number),
+		Time:          new(big.Int).SetUint64(g.Timestamp),
+		ParentHash:    g.ParentHash,
+		Extra:         g.ExtraData,
+		ResourceUsage: g.ResourceUsage,
+		Coinbase:      g.Coinbase,
+		Root:          root,
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)

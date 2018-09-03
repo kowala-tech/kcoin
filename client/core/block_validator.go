@@ -58,10 +58,10 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 // transition, such as the computational effort, the receipt roots and the state root
 // itself. ValidateState returns a database batch if the validation was a success
 // otherwise nil and an error is returned.
-func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, computationalEffort uint64) error {
+func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, resourceUsage uint64) error {
 	header := block.Header()
-	if block.ComputationalEffort() != computationalEffort {
-		return fmt.Errorf("invalid computational effort (remote: %d local: %d)", block.ComputationalEffort(), computationalEffort)
+	if block.ResourceUsage() != resourceUsage {
+		return fmt.Errorf("invalid computational effort (remote: %d local: %d)", block.ResourceUsage(), resourceUsage)
 	}
 	// Validate the received block's bloom with the one derived from the generated receipts.
 	// For valid blocks this should always validate to true.

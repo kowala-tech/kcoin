@@ -9,6 +9,7 @@ var (
 const (
 	ComputeCapacity    uint64 = 4712388 // Compute capacity
 	MinComputeCapacity uint64 = 5000    // Minimum the compute capacity may ever be.
+	MaxTxSize float64 = 32 * 1024 // 32 KB 
 
 	// computational efforts
 	ExpByteCompEffort             uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.

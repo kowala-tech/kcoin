@@ -57,9 +57,9 @@ type Message interface {
 	Data() []byte
 }
 
-// IntrinsicComputationalEffort computes the intrinsic computational effort (in compute units)
+// IntrinsicCompEffort computes the intrinsic computational effort (in compute units)
 // required for a message with the given data.
-func IntrinsicComputationalEffort(data []byte, contractCreation bool) (uint64, error) {
+func IntrinsicCompEffort(data []byte, contractCreation bool) (uint64, error) {
 	// Set the starting compute units required for the raw transaction
 	var effort uint64
 	if contractCreation {
