@@ -34,7 +34,7 @@ nodes.nodeList = {
 		'abiList': [],
 		'estimateGas': false,
 		'service': 'Main net',
-		'lib': new nodes.customNode('https://rpc.kusd.kowala.tech', '30503'),
+		'lib': new nodes.customNode('https://rpc.kusd.kowala.tech', '30504'),
 	},
 	'kusd_testnet': {
 		'name': 'kUSD',
