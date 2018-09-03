@@ -368,7 +368,7 @@ pipeline:
       - make kcoin_cross
     when:
       event: [push, tag]
-      branch: [dev]
+      branch: [dev, master]
 
   compile_gource_video:
     group: build_artifacts
@@ -458,7 +458,7 @@ pipeline:
       - make go_repository_index_update
     when:
       event: [push, tag]
-      branch: [master,dev]
+      branch: [master, dev]
 
   upload_dev_docs_to_s3:
     group: asset_deployment
