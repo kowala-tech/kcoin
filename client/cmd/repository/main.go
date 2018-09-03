@@ -37,7 +37,7 @@ func main() {
 		log.Fatal("failed to list objects", err)
 	}
 
-	fmt.Printf("file %s updated n %s", IndexName, Bucket)
+	fmt.Printf("file %s updated in %s", IndexName, Bucket)
 }
 
 func listS3Objects(svc *s3.S3, bucket string) bytes.Buffer {
