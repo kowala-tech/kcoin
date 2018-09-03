@@ -506,7 +506,7 @@ pipeline:
         {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}> | <https://s3.amazonaws.com/kcoin-e2e/logs/${DRONE_BUILD_NUMBER}/e2e-build-${DRONE_BUILD_NUMBER}.zip|e2e logs>
     when:
       status: failure
-      event: [push, tag, pull_request]
+      event: [tag, pull_request]
 
 services:
   docker:
