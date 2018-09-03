@@ -8,4 +8,17 @@ contract MiningToken is CappedToken {
         symbol = _symbol;
         decimals = _decimals;
     }
+
+    function initialize(string _name, string _symbol, uint _cap, uint8 _decimals) isInitializer public {
+        require(_cap > 0);
+        cap = _cap;
+        owner = msg.sender;
+        name = _name;
+        symbol = _symbol;
+        decimals = _decimals;
+    }
+
+    function getOwner() public returns (address) {
+        return owner;
+    }
 }
