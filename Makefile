@@ -98,8 +98,11 @@ bindings:
 bindings_node_modules:
 	cd client/contracts/truffle && npm ci
 
+.PHONY: install_tools
+install_tools: notifications_dep wallet_backend_dep bindings_node_modules abigen moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
+
 .PHONY: go_generate
-go_generate: notifications_dep wallet_backend_dep bindings_node_modules abigen  moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
+go_generate:
 	# force namehash first because the other contracts depend on this libraries.
 	go generate ./client/contracts/bindings/utils/namehash.go
 	go generate ./...
