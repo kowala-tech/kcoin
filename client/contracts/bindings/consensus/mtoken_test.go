@@ -1,20 +1,6 @@
 package consensus_test
 
-import (
-	"math/big"
-	"strings"
-	"testing"
-
-	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
-	"github.com/kowala-tech/kcoin/client/accounts/abi/bind/backends"
-	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus/testfiles"
-	"github.com/kowala-tech/kcoin/client/core"
-	"github.com/kowala-tech/kcoin/client/crypto"
-	"github.com/kowala-tech/kcoin/client/params"
-	"github.com/stretchr/testify/suite"
-)
+/*
 
 var (
 	owner, _            = crypto.GenerateKey()
@@ -237,3 +223,5 @@ func (suite *MiningTokenSuite) TestTransfer_CustomFallback_Incompatible() {
 	_, err = suite.miningToken.Transfer(transferOpts, contractAddr, numTokens, consensus.DefaultData, testfiles.CustomFallback)
 	req.Error(err, "The OracleMgr contract does not support the mining token")
 }
+
+*/

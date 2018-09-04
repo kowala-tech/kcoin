@@ -9,19 +9,26 @@ clone:
     tags: true
 
 pipeline:
+  install_tools:
+    image: kowalatech/go:1.0.11
+    commands:
+      - make install_tools
+    when:
+      event: [pull_request]
+
   go_generate:
+    group: testing
     image: kowalatech/go:1.0.11
     commands:
       - make go_generate
       - make assert_no_changes
     when:
-      event: [push]
+      event: [pull_request]
 
   test_kcoin:
     group: testing
     image: kowalatech/go:1.0.11
     commands:
-      # test_genesis should run before test
       - make test_genesis
       - make test
       - make lint
@@ -59,16 +66,6 @@ pipeline:
       - make e2e
     when:
       event: [pull_request]
-
-  docker_build:
-    image: kowalatech/go:1.0.11
-    environment:
-      - DOCKER_HOST=tcp://docker:2375
-      - DOCKER_PUBLIC_IP=docker
-    commands:
-      - make -j 4 dev_docker_images
-    when:
-      event: [push]
 
   docker_kusd:
     group: docker_deployment
@@ -214,6 +211,11 @@ pipeline:
       - DRONE_TAG
       - DRONE_BUILD_NUMBER
       - DRONE_BUILD_EVENT
+      - URL=https://stats.zygote.kowala.tech
+      - EXPLORER_URL=https://explorer.zygote.kowala.tech
+      - FAUCET_URL=https://faucet.zygote.kowala.tech
+      - CDN_URL=https://cdn.kowala.io
+      - WS_SECRET=DuHLdsKV6cagynn9
     repo: kowalatech/netstats
     dockerfile: netstats/Dockerfile
     pull: true
@@ -234,11 +236,19 @@ pipeline:
     privileged: true
     auto_tag: true
     build_args:
-      - URL=https://stats.kowala.tech
-      - EXPLORER_URL=https://explorer.zygote.kowala.tech
-      - FAUCET_URL=https://faucet.zygote.kowala.tech
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+      - URL=https://stats.kusd.kowala.tech
+      - EXPLORER_URL=https://explorer.kusd.kowala.tech
+      - FAUCET_URL=https://faucet.kusd.kowala.tech
       - CDN_URL=https://cdn.kowala.tech
-      - WS_SECRET=abc123
+      - WS_SECRET=DuHLdsKV6cagynn9
     when:
       branch: [master]
       event: [push, tag]
@@ -356,7 +366,7 @@ pipeline:
       - make kcoin_cross
     when:
       event: [push, tag]
-      branch: [dev]
+      branch: [dev, master]
 
   compile_gource_video:
     group: build_artifacts
@@ -382,8 +392,8 @@ pipeline:
       - cd cdn
       - make build
     when:
-      branch: [develop, master]
-      event: [push,tag,test]
+      branch: [dev, master]
+      event: [push,tag]
 
   upload_cdn_to_s3_dev:
     group: build_artifacts
@@ -438,7 +448,7 @@ pipeline:
     target: /
     when:
       event: [push, tag]
-      branch: [dev]
+      branch: [dev, master]
 
   upload_repository_index:
     image: kowalatech/go:1.0.11
@@ -446,7 +456,7 @@ pipeline:
       - make go_repository_index_update
     when:
       event: [push, tag]
-      branch: [master,dev]
+      branch: [master, dev]
 
   upload_dev_docs_to_s3:
     group: asset_deployment
@@ -504,7 +514,7 @@ pipeline:
         {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}> | <https://s3.amazonaws.com/kcoin-e2e/logs/${DRONE_BUILD_NUMBER}/e2e-build-${DRONE_BUILD_NUMBER}.zip|e2e logs>
     when:
       status: failure
-      event: [push, tag, pull_request]
+      event: [tag, pull_request]
 
 services:
   docker:

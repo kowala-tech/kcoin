@@ -197,7 +197,7 @@ func (ctx *Context) runBootnode() error {
 func (ctx *Context) runGenesisValidator() error {
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.bootnode).
-		WithLogLevel(6).
+		WithLogLevel(4).
 		WithID("genesis-validator-"+ctx.nodeSuffix).
 		WithSyncMode("full").
 		WithNetworkId(ctx.chainID.String()).
@@ -286,9 +286,14 @@ func (ctx *Context) buildGenesis() error {
 	baseDeposit := uint64(1)
 
 	newGenesis, err := genesis.Generate(genesis.Options{
-		Network: "test",
+		Network:     genesis.TestNetwork,
+		BlockNumber: 0,
+		ExtraData:   "Kowala's first block",
+		SystemVars: &genesis.SystemVarsOpts{
+			InitialPrice: 1,
+		},
 		Consensus: &genesis.ConsensusOpts{
-			Engine:           "konsensus",
+			Engine:           genesis.KonsensusConsensus,
 			MaxNumValidators: 10,
 			FreezePeriod:     5,
 			BaseDeposit:      baseDeposit,
@@ -305,16 +310,16 @@ func (ctx *Context) buildGenesis() error {
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
-			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+			Origin:           "0xFF9DFBD395cD1C4a4F23C16aa8a5c44109Bc17DF",
 			Governors:        ctx.getGovernors(),
 			NumConfirmations: ctx.genesisOptions.requiredGovernanceConfirmations,
 		},
+		StabilityContract: &genesis.StabilityContractOpts{
+			MinDeposit: 50,
+		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{
 			MaxNumOracles: 10,
-			FreezePeriod:  0,
-			BaseDeposit:   0,
 			Price: genesis.PriceOpts{
-				InitialPrice:  1,
 				SyncFrequency: 600,
 				UpdatePeriod:  30,
 			},

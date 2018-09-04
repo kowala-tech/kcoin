@@ -16,8 +16,10 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
-	"github.com/kowala-tech/kcoin/client/consensus"
+	engine "github.com/kowala-tech/kcoin/client/consensus"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
@@ -57,14 +59,17 @@ type blockChain interface {
 type Service struct {
 	stack *node.Node // Temporary workaround, remove when API finalized
 
-	server    *p2p.Server      // Peer-to-peer server to retrieve networking infos
-	kcoin     *knode.Kowala    // Full Kowala service if monitoring a full node
-	engine    consensus.Engine // Consensus engine to retrieve variadic block fields
-	oracleMgr oracle.Manager   // oracle manager to retrieve oracle fields
+	server *p2p.Server   // Peer-to-peer server to retrieve networking infos
+	kcoin  *knode.Kowala // Full Kowala service if monitoring a full node
+	engine engine.Engine // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
 	host string // Remote address of the monitoring service
+
+	oracleMgr    *oracle.Manager
+	validatorMgr *consensus.Consensus
+	sysvars      *sysvars.Vars
 
 	pongCh chan struct{} // Pong notifications are fed into this channel
 	histCh chan []uint64 // History request block numbers are fed into this channel
@@ -80,20 +85,33 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 	}
 	// Assemble and return the stats service
 	engine := kowalaServ.Engine()
-	oracleMgr, err := oracle.Binding(knode.NewContractBackend(kowalaServ.APIBackend()), kowalaServ.ChainConfig().ChainID)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to load the network contract %v", err)
+
+	var oracleMgr *oracle.Manager
+	if err := kowalaServ.Contract(&oracleMgr); err != nil {
+		return nil, fmt.Errorf("failed to load the oracle contract %v", err)
+	}
+
+	var validatorMgr *consensus.Consensus
+	if err := kowalaServ.Contract(&validatorMgr); err != nil {
+		return nil, fmt.Errorf("failed to load the consensus contract %v", err)
+	}
+
+	var sysvars *sysvars.Vars
+	if err := kowalaServ.Contract(&sysvars); err != nil {
+		return nil, fmt.Errorf("failed to load the system vars contract %v", err)
 	}
 
 	return &Service{
-		kcoin:     kowalaServ,
-		engine:    engine,
-		oracleMgr: oracleMgr,
-		node:      parts[1],
-		pass:      parts[3],
-		host:      parts[4],
-		pongCh:    make(chan struct{}),
-		histCh:    make(chan []uint64, 1),
+		kcoin:        kowalaServ,
+		engine:       engine,
+		oracleMgr:    oracleMgr,
+		validatorMgr: validatorMgr,
+		sysvars:      sysvars,
+		node:         parts[1],
+		pass:         parts[3],
+		host:         parts[4],
+		pongCh:       make(chan struct{}),
+		histCh:       make(chan []uint64, 1),
 	}, nil
 }
 
@@ -550,11 +568,6 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 		return nil, err
 	}
 
-	currencyPrice, err := s.oracleMgr.Price()
-	if err != nil {
-		return nil, err
-	}
-
 	return &blockStats{
 		Number:         header.Number,
 		Hash:           header.Hash(),
@@ -570,7 +583,6 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 		ValidatorCount: validatorCount,
 		MaxValidators:  maxValidators,
 		OracleCount:    oracleCount,
-		CurrencyPrice:  currencyPrice,
 	}, nil
 }
 

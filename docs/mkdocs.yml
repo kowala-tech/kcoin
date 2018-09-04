@@ -48,6 +48,7 @@ pages:
       - 'Transaction': 'advanced/types/tx.md'
       - 'Account': 'advanced/types/account.md'
     - Automatic client updates: 'advanced/automatic-client-updates.md'
+    - Running local testnet: 'advanced/running-local-testnet.md'
   - Contributing:
     - 'Projects': 'contributing/projects.md'
   - About:

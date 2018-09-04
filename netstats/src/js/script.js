@@ -5,20 +5,6 @@
 		$(this).tooltip('hide');
 	});
 
-	$.fn.sparkline.defaults.bar.height = 63;
-	$.fn.sparkline.defaults.bar.barWidth = 6;
-	$.fn.sparkline.defaults.bar.barSpacing = 1;
-	$.fn.sparkline.defaults.bar.tooltipClassname = 'jqstooltip';
-	$.fn.sparkline.defaults.bar.tooltipOffsetX = 0;
-	$.fn.sparkline.defaults.bar.tooltipFormat = $.spformat('<div class="tooltip-arrow"></div><div class="tooltip-inner">{{prefix}}{{value}} {{suffix}}</div>');
-	$.fn.sparkline.defaults.bar.colorMap = $.range_map({
-		'0:6': '#fff',
-		'6:15': '#fff',
-		'15:40': '#fff',
-		'40:60': '#fff',
-		'60:': '#fff'
-	});
-
 	moment.relativeTimeThreshold('s', 60);
 	moment.relativeTimeThreshold('m', 60);
 	moment.relativeTimeThreshold('h', 24);
