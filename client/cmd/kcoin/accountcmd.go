@@ -303,8 +303,7 @@ func accountCreate(ctx *cli.Context) error {
 			utils.Fatalf("%v", err)
 		}
 	}
-	utils.SetNodeConfig(ctx, &cfg.Node)
-	cfg.Node.DataDir = getPathBasedOnCurrency(cfg)
+	utils.SetNodeConfig(ctx, &cfg.Node, &cfg.Kowala)
 	scryptN, scryptP, keydir, err := cfg.Node.AccountConfig()
 
 	if err != nil {
