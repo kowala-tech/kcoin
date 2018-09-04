@@ -139,6 +139,10 @@ var (
 		Usage: "Version repository url",
 		Value: "https://s3.amazonaws.com/releases.kowala.tech",
 	}
+	SelfUpdateEnabledFlag = cli.BoolFlag{
+		Name:  "selfupdate",
+		Usage: "Auto-updated binary to latest version",
+	}
 	FastSyncFlag = cli.BoolFlag{
 		Name:  "fast",
 		Usage: "Enable fast syncing through state downloads (replaced by --syncmode)",
