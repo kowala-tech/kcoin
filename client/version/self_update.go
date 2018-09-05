@@ -4,8 +4,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/internal/debug"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
-	"time"
 	"math/rand"
+	"time"
 )
 
 type SelfUpdater struct {
@@ -56,8 +56,9 @@ func (su *SelfUpdater) exit() {
 	debug.Exit()
 }
 
-func randomTo60SecDelay() time.Duration {
-	return time.Duration(randomIntInRange(1, 60) * int(time.Second))
+func randomTo60SecDelay() {
+	randomTo60 := time.Duration(randomIntInRange(1, 60) * int(time.Second))
+	time.Sleep(randomTo60)
 }
 
 func randomIntInRange(min, max int) int {
