@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/kowala-tech/kcoin/client/knode"
+
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
@@ -291,14 +293,17 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 
 // accountCreate creates a new account into the keystore defined by the CLI flags.
 func accountCreate(ctx *cli.Context) error {
-	cfg := kcoinConfig{Node: defaultNodeConfig()}
+	cfg := kcoinConfig{
+		Node:   defaultNodeConfig(),
+		Kowala: knode.DefaultConfig,
+	}
 	// Load config file.
 	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
 			utils.Fatalf("%v", err)
 		}
 	}
-	utils.SetNodeConfig(ctx, &cfg.Node)
+	utils.SetNodeConfig(ctx, &cfg.Node, &cfg.Kowala)
 	scryptN, scryptP, keydir, err := cfg.Node.AccountConfig()
 
 	if err != nil {
