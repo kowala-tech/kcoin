@@ -63,6 +63,7 @@ var (
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
 		utils.VersionRepository,
+		utils.SelfUpdateEnabledFlag,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
 		utils.CacheGCFlag,
@@ -307,6 +308,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			}
 		}
 	}()
+
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.ValidationEnabledFlag.Name) {
 		// Validation only makes sense if a full Kowala node is running
@@ -320,5 +322,12 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := kowala.StartValidating(); err != nil {
 			utils.Fatalf("Failed to start validation: %v", err)
 		}
+	}
+
+	// Start self update service if enabled
+	if ctx.GlobalBool(utils.SelfUpdateEnabledFlag.Name) {
+		repository := ctx.GlobalString(utils.VersionRepository.Name)
+		selfUpdater := version.NewSelfUpdater(repository, stack, getConsoleLogger())
+		go selfUpdater.Run()
 	}
 }
