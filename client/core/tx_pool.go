@@ -1,7 +1,11 @@
 package core
 
 import (
+	"container/heap"
+	"errors"
+	"fmt"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
@@ -10,7 +14,38 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/metrics"
 	"github.com/kowala-tech/kcoin/client/params"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+)
+
+const (
+	// chainHeadChSize is the size of the channel listening to the ChainHeadEvent.
+	chainHeadChSize = 10
+)
+
+var (
+	// ErrInvalidSender is returned if the transaction contains an invalid signature
+	ErrInvalidSender = errors.New("invalid sender")
+	// ErrNonceTooLow is returned if the nonce of a transaction is lower than the
+	// one present in the local chain.
+	ErrNonceTooLow = errors.New("nonce too low")
+	// ErrInsufficientFunds is returned if the total cost of executing a transaction
+	// is higher than the balance of the user's account.
+	ErrInsufficientFunds = errors.New("insufficient funds for compute units * price + value")
+	// ErrIntrinsicResources is returned if the transaction is specified
+	// to use less compute resources than required to start the invocation.
+	ErrIntrinsicResources = errors.New("intrinsic compute resources low")
+	// ErrComputeCapacity is returned if a transaction's requested compute
+	// resources exceeds the compute capacity of the current block.
+	ErrComputeCapacity = errors.New("exceeds block compute capacity")
+	// ErrNegativeValue is a sanity error to ensure none is able to specify a
+	// transaction with a negative value.
+	ErrNegativeValue = errors.New("negative value")
+	// ErrOversizedData is returned if the input data of a transaction is greater
+	// than some meaningful limit a user might use. This is not a consensus error
+	// making the transaction invalid, rather a DOS protection.
+	ErrOversizedData = errors.New("oversized data")
 )
 
 var (
@@ -18,7 +53,7 @@ var (
 	pendingNofundsCounter   = metrics.NewRegisteredCounter("txpool/pending/nofunds", nil)   // Dropped due to out-of-funds
 	pendingRateLimitCounter = metrics.NewRegisteredCounter("txpool/pending/ratelimit", nil) // Dropped due to rate limiting
 
-	// Metrics for the future queue 
+	// Metrics for the future queue
 	queuedNofundsCounter   = metrics.NewRegisteredCounter("txpool/queued/nofunds", nil)   // Dropped due to out-of-funds
 	queuedRateLimitCounter = metrics.NewRegisteredCounter("txpool/queued/ratelimit", nil) // Dropped due to rate limiting
 
@@ -92,6 +127,13 @@ func (config *TxPoolConfig) sanitize() TxPoolConfig {
 	}
 	return conf
 }
+
+type Transaction struct {
+	AddedAt time.Time
+	*types.Transaction
+}
+
+type Transactions []FutureTransaction
 
 // TxPool contains all currently known transactions.
 type TxPool struct {
@@ -222,7 +264,7 @@ func (pool *TxPool) loop() {
 				// Any non-locals old enough should be removed
 				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
 					for _, tx := range pool.queue[addr].Flatten() {
-						pool.removeTx(tx.Hash(), true)
+						pool.removeTx(tx.Hash())
 					}
 				}
 			}
@@ -412,7 +454,8 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
 	}
-	return pending, nil
+
+	return NewTransactionsByPriceAndNonce(pool.signer, pending), nil
 }
 
 // Locals retrieves the accounts currently considered local by the pool.
@@ -443,7 +486,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits (ex: size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Heuristic limit, reject transactions over the maximum size to prevent DOS attacks
-	if tx.Size() > params.MaxTxSize {
+	if tx.Size() > 32*1024 {
 		return ErrOversizedData
 	}
 	// Transactions can't be negative. This may never happen using RLP decoded
@@ -473,12 +516,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	// compute limit must cover the transaction's intrinsic computational effort.
-	intrCompEffort, err := IntrinsicCompEffort(tx.Data(), tx.To() == nil, true)
+	intrCompEffort, err := IntrinsicCompEffort(tx.Data(), tx.To() == nil)
 	if err != nil {
 		return err
 	}
 	if tx.ComputeLimit() < intrCompEffort {
-		return ErrIntrinsicCompEffort
+		return ErrIntrinsicResources
 	}
 	return nil
 }
@@ -509,9 +552,9 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) error {
 		overlapTxCounter.Inc(1)
 		return fmt.Errorf("known nonce: %d", tx.Nonce())
 	}
-	
+
 	pool.enqueueTx(hash, tx)
-	
+
 	if local {
 		pool.locals.add(from)
 	}
@@ -557,7 +600,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 		pool.pending[addr] = newTxList(true)
 	}
 	list := pool.pending[addr]
-	
+
 	list.Add(tx)
 
 	// Failsafe to work around direct pending inserts (tests)
@@ -627,7 +670,7 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 
 	for i, tx := range txs {
 		if errs[i] = pool.add(tx, local); errs[i] == nil {
-			from, _ := types.Sender(pool.signer, tx) // already validated
+			from, _ := types.TxSender(pool.signer, tx) // already validated
 			dirty[from] = struct{}{}
 		}
 	}
@@ -651,7 +694,7 @@ func (pool *TxPool) Status(hashes []common.Hash) []TxStatus {
 	status := make([]TxStatus, len(hashes))
 	for i, hash := range hashes {
 		if tx := pool.all.Get(hash); tx != nil {
-			from, _ := types.Sender(pool.signer, tx) // already validated
+			from, _ := types.TxSender(pool.signer, tx) // already validated
 			if pool.pending[from] != nil && pool.pending[from].txs.items[tx.Nonce()] != nil {
 				status[i] = TxStatusPending
 			} else {
@@ -679,7 +722,7 @@ func (pool *TxPool) removeTx(hash common.Hash) {
 	addr, _ := types.TxSender(pool.signer, tx) // already validated during insertion
 
 	pool.all.Remove(hash)
-	
+
 	// Remove the transaction from the lists and reset the account nonce
 	if pending := pool.pending[addr]; pending != nil {
 		if removed, invalids := pending.Remove(tx); removed {
@@ -775,7 +818,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	if pending > pool.config.GlobalSlots {
 		pendingBeforeCap := pending
 		// Assemble a spam order to penalize large transactors first
-		spammers := prque.New(nil)
+		spammers := prque.New()
 		for addr, list := range pool.pending {
 			// Only evict transactions from high rollers
 			if !pool.locals.contains(addr) && uint64(list.Len()) > pool.config.AccountSlots {
@@ -834,18 +877,18 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				}
 			}
 		}
-		pendingRateLimitCounter.Inc(int64(readyBeforeCap - pending))
+		pendingRateLimitCounter.Inc(int64(pendingBeforeCap - pending))
 	}
-	
+
 	// If we've queued more transactions than the hard limit, drop oldest ones
 	queued := uint64(0)
-	for _, list := range pool.queued {
+	for _, list := range pool.queue {
 		queued += uint64(list.Len())
 	}
 	if queued > pool.config.GlobalQueue {
 		// Sort all accounts with queued transactions by heartbeat
-		addresses := make(addresssByHeartbeat, 0, len(pool.queued))
-		for addr := range pool.queued {
+		addresses := make(addressesByHeartbeat, 0, len(pool.queue))
+		for addr := range pool.queue {
 			if !pool.locals.contains(addr) { // don't drop locals
 				addresses = append(addresses, addressByHeartbeat{addr, pool.beats[addr]})
 			}
@@ -893,7 +936,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Removed old transaction", "hash", hash)
 			pool.all.Remove(hash)
 		}
-		// Drop all transactions that are too costly (low balance or out of computation resources), 
+		// Drop all transactions that are too costly (low balance or out of computation resources),
 		// and queue any invalids back for later
 		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), params.ComputeCapacity)
 		for _, tx := range drops {
@@ -961,7 +1004,7 @@ func (as *accountSet) contains(addr common.Address) bool {
 // containsTx checks if the sender of a given tx is within the set. If the sender
 // cannot be derived, this method returns false.
 func (as *accountSet) containsTx(tx *types.Transaction) bool {
-	if addr, err := types.Sender(as.signer, tx); err == nil {
+	if addr, err := types.TxSender(as.signer, tx); err == nil {
 		return as.contains(addr)
 	}
 	return false
@@ -1049,4 +1092,77 @@ func (t *txLookup) Remove(hash common.Hash) {
 	defer t.lock.Unlock()
 
 	delete(t.all, hash)
+}
+
+// TxByTimestamp implements the heap interface, making it useful for all
+// at once sortingas well as individually adding and removing elements.
+type TxByTimestamp Transactions
+
+func (s TxByTimestamp) Len() int           { return len(s) }
+func (s TxByTimestamp) Less(i, j int) bool { return s[i].timestamp.After(s[j]) }
+func (s TxByTimestamp) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+func (s *TxByTimestamp) Push(x interface{}) {
+	*s = append(*s, x.(*Transaction))
+}
+
+func (s *TxByTimestamp) Pop() interface{} {
+	old := *s
+	n := len(old)
+	x := old[n-1]
+	*s = old[0 : n-1]
+	return x
+}
+
+type TransactionsByTimestampAndNonce struct {
+	txs    map[common.Address]Transactions // per account nonce-sorted list of transactions
+	heads  TxByTimestamp                   // Next transaction for each unique account (timestamp heap)
+	signer types.Signer                    // signer for the set of transactions
+}
+
+// @TODO (rgeraldes) - comment
+func NewTransactionsByTimestampAndNonce(signer types.Signer, txs map[common.Address]types.Transactions) *TransactionsByTimestampAndNonce {
+	heads := make(TxByTimestamp, 0, len(txs))
+	for _, accTxs := range txs {
+		heads = append(heads, accTxs[0])
+		// Ensure the sender address is from the signer
+		acc, _ := TxSender(signer, accTxs[0])
+		txs[acc] = accTxs[1:]
+		if from != acc {
+			delete(txs, from)
+		}
+	}
+	heap.Init(&heads)
+
+	return &TransactionsByTimestampAndNonce{
+		txs:    txs,
+		heads:  heads,
+		signer: signer,
+	}
+}
+
+// Peek returns the next transaction by price.
+func (t *TransactionsByTimestampAndNonce) Peek() *types.Transaction {
+	if len(t.heads) == 0 {
+		return nil
+	}
+	return t.heads[0]
+}
+
+// Shift replaces the current best head with the next one from the same account.
+func (t *TransactionsByTimestampAndNonce) Shift() {
+	acc, _ := types.TxSender(t.signer, t.heads[0])
+	if txs, ok := t.txs[acc]; ok && len(txs) > 0 {
+		t.heads[0], t.txs[acc] = txs[0], txs[1:]
+		heap.Fix(&t.heads, 0)
+	} else {
+		heap.Pop(&t.heads)
+	}
+}
+
+// Pop removes the best transaction, *not* replacing it with the next one from
+// the same account. This should be used when a transaction cannot be executed
+// and hence all subsequent ones should be discarded from the same account.
+func (t *TransactionsByTimestampAndNonce) Pop() {
+	heap.Pop(&t.heads)
 }

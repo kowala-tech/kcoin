@@ -17,14 +17,13 @@ var _ = (*genesisSpecMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (g Genesis) MarshalJSON() ([]byte, error) {
 	type Genesis struct {
-		Config              *params.ChainConfig                         `json:"config"`
-		Timestamp           math.HexOrDecimal64                         `json:"timestamp"`
-		ExtraData           hexutil.Bytes                               `json:"extraData"`
-		Coinbase            common.Address                              `json:"coinbase"`
-		Alloc               map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
-		Number              math.HexOrDecimal64                         `json:"number"`
-		ComputationalEffort math.HexOrDecimal64                         `json:"effort"`
-		ParentHash          common.Hash                                 `json:"parentHash"`
+		Config     *params.ChainConfig                         `json:"config"`
+		Timestamp  math.HexOrDecimal64                         `json:"timestamp"`
+		ExtraData  hexutil.Bytes                               `json:"extraData"`
+		Coinbase   common.Address                              `json:"coinbase"`
+		Alloc      map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
+		Number     math.HexOrDecimal64                         `json:"number"`
+		ParentHash common.Hash                                 `json:"parentHash"`
 	}
 	var enc Genesis
 	enc.Config = g.Config
@@ -38,7 +37,6 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		}
 	}
 	enc.Number = math.HexOrDecimal64(g.Number)
-	enc.ComputationalEffort = math.HexOrDecimal64(g.ComputationalEffort)
 	enc.ParentHash = g.ParentHash
 	return json.Marshal(&enc)
 }
@@ -46,14 +44,13 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (g *Genesis) UnmarshalJSON(input []byte) error {
 	type Genesis struct {
-		Config              *params.ChainConfig                         `json:"config"`
-		Timestamp           *math.HexOrDecimal64                        `json:"timestamp"`
-		ExtraData           *hexutil.Bytes                              `json:"extraData"`
-		Coinbase            *common.Address                             `json:"coinbase"`
-		Alloc               map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
-		Number              *math.HexOrDecimal64                        `json:"number"`
-		ComputationalEffort *math.HexOrDecimal64                        `json:"effort"`
-		ParentHash          *common.Hash                                `json:"parentHash"`
+		Config     *params.ChainConfig                         `json:"config"`
+		Timestamp  *math.HexOrDecimal64                        `json:"timestamp"`
+		ExtraData  *hexutil.Bytes                              `json:"extraData"`
+		Coinbase   *common.Address                             `json:"coinbase"`
+		Alloc      map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
+		Number     *math.HexOrDecimal64                        `json:"number"`
+		ParentHash *common.Hash                                `json:"parentHash"`
 	}
 	var dec Genesis
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -80,9 +77,6 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	}
 	if dec.Number != nil {
 		g.Number = uint64(*dec.Number)
-	}
-	if dec.ComputationalEffort != nil {
-		g.ComputationalEffort = uint64(*dec.ComputationalEffort)
 	}
 	if dec.ParentHash != nil {
 		g.ParentHash = *dec.ParentHash

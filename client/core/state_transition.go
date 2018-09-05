@@ -171,11 +171,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, 
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic compute units
-	gas, err := IntrinsicComputationalEffort(st.data, contractCreation)
+	effort, err := IntrinsicCompEffort(st.data, contractCreation)
 	if err != nil {
 		return nil, 0, false, err
 	}
-	if err = st.useCompResources(gas); err != nil {
+	if err = st.useCompResources(effort); err != nil {
 		return nil, 0, false, err
 	}
 

@@ -322,9 +322,8 @@ func (val *validator) AddVote(vote *types.Vote) error {
 	return nil
 }
 
-/*
-func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
-	gp := new(core.GasPool).AddGas(val.header.GasLimit)
+func (val *validator) commitTransactions(mux *event.TypeMux, txs *core.TransactionsByTimestampAndNonce, bc *core.BlockChain, coinbase common.Address) {
+	gp := new(core.CompResourcesPool).AddResources(params.ComputeCapacity)
 
 	var coalescedLogs []*types.Log
 
@@ -336,8 +335,6 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 		}
 		// Error may be ignored here. The error has already been checked
 		// during transaction acceptance is the transaction pool.
-		//
-		// We use the eip155 signer regardless of the current hf.
 		from, _ := types.TxSender(val.signer, tx)
 
 		// Start executing the transaction
@@ -345,8 +342,8 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 
 		err, logs := val.commitTransaction(tx, bc, coinbase, gp)
 		switch err {
-		case core.ErrGasLimitReached:
-			// Pop the current out-of-gas transaction without shifting in the next from the account
+		case core.ErrComputeCapacityReached:
+			// Pop the current out-of-resources transaction without shifting in the next from the account
 			log.Trace("Gas limit exceeded for current block", "sender", from)
 			txs.Pop()
 
@@ -357,7 +354,7 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 
 		case core.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
-			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			log.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Pop()
 
 		case nil:
@@ -407,7 +404,6 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 
 	return nil, receipt.Logs
 }
-*/
 
 func (val *validator) leave() {
 	txHash, err := val.consensus.Leave(val.walletAccount)
@@ -445,7 +441,6 @@ func (val *validator) createBlock() *types.Block {
 		ParentHash:     parent.Hash(),
 		Coinbase:       val.walletAccount.Account().Address,
 		Number:         blockNumber.Add(blockNumber, common.Big1),
-		GasLimit:       core.CalcGasLimit(parent),
 		Time:           big.NewInt(tstamp),
 		ValidatorsHash: val.voters.Hash(),
 	}
@@ -472,13 +467,11 @@ func (val *validator) createBlock() *types.Block {
 		return nil
 	}
 
-	pending, err := val.backend.TxPool().Pending()
+	txs, err := val.backend.TxPool().Pending()
 	if err != nil {
 		log.Crit("Failed to fetch pending transactions", "err", err)
 	}
-
-	txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
-	//val.commitTransactions(val.eventMux, txs, val.chain, val.walletAccount.Account().Address)
+	val.commitTransactions(val.eventMux, txs, val.chain, val.walletAccount.Account().Address)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block

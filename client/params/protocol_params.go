@@ -9,7 +9,17 @@ var (
 const (
 	ComputeCapacity    uint64 = 4712388 // Compute capacity
 	MinComputeCapacity uint64 = 5000    // Minimum the compute capacity may ever be.
-	MaxTxSize float64 = 32 * 1024 // 32 KB 
+
+	StackLimit uint64 = 1024 // Maximum size of VM stack allowed.
+
+	// Proof of Stake - timeouts
+	ProposeDuration        uint64 = 500
+	ProposeDeltaDuration   uint64 = 25
+	PreVoteDuration        uint64 = 200
+	PreVoteDeltaDuration   uint64 = 25
+	PreCommitDuration      uint64 = 200
+	PreCommitDeltaDuration uint64 = 25
+	BlockTime              uint64 = 1000
 
 	// computational efforts
 	ExpByteCompEffort             uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
@@ -43,10 +53,7 @@ const (
 	MemoryCompEffort        uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL.
 	TxDataNonZeroCompEffort uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
 
-	StackLimit uint64 = 1024 // Maximum size of VM stack allowed.
-
-	// Precompiled contract gas prices
-
+	// Precompiled contract comp efforts
 	EcrecoverCompEffort            uint64 = 3000   // Elliptic curve sender recovery gas price
 	Sha256BaseCompEffort           uint64 = 60     // Base price for a SHA256 operation
 	Sha256PerWordCompEffort        uint64 = 12     // Per-word price for a SHA256 operation
@@ -59,13 +66,4 @@ const (
 	Bn256ScalarMulCompEffort       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
 	Bn256PairingBaseCompEffort     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointCompEffort uint64 = 80000  // Per-point price for an elliptic curve pairing check
-
-	// Proof of Stake - timeouts
-	ProposeDuration        uint64 = 500
-	ProposeDeltaDuration   uint64 = 25
-	PreVoteDuration        uint64 = 200
-	PreVoteDeltaDuration   uint64 = 25
-	PreCommitDuration      uint64 = 200
-	PreCommitDeltaDuration uint64 = 25
-	BlockTime              uint64 = 1000
 )

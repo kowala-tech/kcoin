@@ -601,8 +601,8 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
-	gp := new(core.GasPool).AddGas(math.MaxUint64)
-	res, gas, failed, err := core.ApplyMessage(evm, msg, gp)
+	crpool := new(core.CompResourcesPool).AddResources(math.MaxUint64)
+	res, gas, failed, err := core.ApplyMessage(evm, msg, crpool)
 	if err := vmError(); err != nil {
 		if err != nil {
 			log.Error("an error while setting GasPrice", "err", err)

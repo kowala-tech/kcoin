@@ -37,9 +37,8 @@ type Genesis struct {
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
-	Number        uint64      `json:"number"`
-	ResourceUsage uint64      `json:"resourceUsage"`
-	ParentHash    common.Hash `json:"parentHash"`
+	Number     uint64      `json:"number"`
+	ParentHash common.Hash `json:"parentHash"`
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -68,11 +67,10 @@ type GenesisAccount struct {
 
 // field type overrides for gencodec
 type genesisSpecMarshaling struct {
-	Timestamp           math.HexOrDecimal64
-	ExtraData           hexutil.Bytes
-	ComputationalEffort math.HexOrDecimal64
-	Number              math.HexOrDecimal64
-	Alloc               map[common.UnprefixedAddress]GenesisAccount
+	Timestamp math.HexOrDecimal64
+	ExtraData hexutil.Bytes
+	Number    math.HexOrDecimal64
+	Alloc     map[common.UnprefixedAddress]GenesisAccount
 }
 
 type genesisAccountMarshaling struct {
@@ -221,13 +219,12 @@ func (g *Genesis) ToBlock(db kcoindb.Database) *types.Block {
 	}
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
-		Number:        new(big.Int).SetUint64(g.Number),
-		Time:          new(big.Int).SetUint64(g.Timestamp),
-		ParentHash:    g.ParentHash,
-		Extra:         g.ExtraData,
-		ResourceUsage: g.ResourceUsage,
-		Coinbase:      g.Coinbase,
-		Root:          root,
+		Number:     new(big.Int).SetUint64(g.Number),
+		Time:       new(big.Int).SetUint64(g.Timestamp),
+		ParentHash: g.ParentHash,
+		Extra:      g.ExtraData,
+		Coinbase:   g.Coinbase,
+		Root:       root,
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
