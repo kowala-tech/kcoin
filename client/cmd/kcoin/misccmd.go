@@ -10,6 +10,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/kowala-tech/kcoin/client/version"
+	"github.com/kowala-tech/kcoin/client/log"
+	"os"
 )
 
 var (
@@ -89,18 +91,22 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with knode. If not, see <http://www.gnu.org/licenses/>.
-`)
+along with knode. If not, see <http://www.gnu.org/licenses/>.`)
 	return nil
 }
 
 func latest(ctx *cli.Context) error {
 	repository := ctx.GlobalString(utils.VersionRepository.Name)
-
-	updater, err := version.NewUpdater(repository)
+	updater, err := version.NewUpdater(repository, getConsoleLogger())
 	if err != nil {
 		return err
 	}
-
 	return updater.Update()
+}
+
+func getConsoleLogger() log.Logger {
+	glogger := log.NewGlogHandler(log.StreamHandler(os.Stdout, log.TerminalFormat(true)))
+	glogger.Verbosity(log.Lvl(3))
+	log.Root().SetHandler(glogger)
+	return log.Root()
 }
