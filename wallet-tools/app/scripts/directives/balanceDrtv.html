@@ -29,8 +29,14 @@
     <h5 translate="sidebar_AccountBal">Account Balance</h5>
     <ul class="account-info point">
       <li>
-        <span class="mono wrap">{{wallet.balance}}</span> {{ajaxReq.type}}
+        <span class="mono wrap">{{wallet.balance}}</span> kUSD
       </li>
+    </ul>
+    <h5 >mTokens</h5>
+    <ul class="account-info point">
+        <li>
+            <span class="mono wrap">{{wallet.getMUsd()}}</span> mUSD
+        </li>
     </ul>
     <h5 translate="sidebar_TransHistory"> Transaction History</h5>
     <ul class="account-info">
