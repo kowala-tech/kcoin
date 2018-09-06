@@ -3,7 +3,6 @@ package kcoinapi
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
@@ -24,7 +23,6 @@ type Backend interface {
 	// General Ethereum API
 	Downloader() *downloader.Downloader
 	ProtocolVersion() int
-	SuggestPrice(ctx context.Context) (*big.Int, error)
 	ChainDb() kcoindb.Database
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager

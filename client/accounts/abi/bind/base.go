@@ -194,9 +194,9 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 		}
 		// If the contract surely has code (or code is not needed), estimate the transaction
 		msg := kcoin.CallMsg{From: opts.From, To: contract, Value: value, Data: input}
-		computeLimit, err = c.transactor.EstimateGas(ensureContext(opts.Context), msg)
+		computeLimit, err = c.transactor.EstimateComputationalEffort(ensureContext(opts.Context), msg)
 		if err != nil {
-			return nil, fmt.Errorf("failed to estimate gas needed: %v", err)
+			return nil, fmt.Errorf("failed to estimate required computational effort: %v", err)
 		}
 	}
 	// Create the transaction, sign it and schedule it for execution

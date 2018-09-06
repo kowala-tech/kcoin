@@ -58,11 +58,6 @@ func NewPrivateValidatorAPI(kcoin *Kowala) *PrivateValidatorAPI {
 func (api *PrivateValidatorAPI) Start(deposit *big.Int) error {
 	// Start the validator and return
 	if !api.kcoin.IsValidating() {
-		// Propagate the initial price point to the transaction pool
-		api.kcoin.lock.RLock()
-		price := api.kcoin.gasPrice
-		api.kcoin.lock.RUnlock()
-
 		if deposit != nil {
 			err := api.kcoin.SetDeposit(deposit)
 			if err != nil && err != validator.ErrIsNotRunning {
@@ -70,7 +65,6 @@ func (api *PrivateValidatorAPI) Start(deposit *big.Int) error {
 			}
 		}
 
-		api.kcoin.txPool.SetGasPrice(price)
 		return api.kcoin.StartValidating()
 	}
 	return nil
@@ -88,16 +82,6 @@ func (api *PrivateValidatorAPI) SetExtra(extra string) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-// SetGasPrice sets the minimum accepted gas price for the validator.
-func (api *PrivateValidatorAPI) SetGasPrice(gasPrice hexutil.Big) bool {
-	api.kcoin.lock.Lock()
-	api.kcoin.gasPrice = (*big.Int)(&gasPrice)
-	api.kcoin.lock.Unlock()
-
-	api.kcoin.txPool.SetGasPrice((*big.Int)(&gasPrice))
-	return true
 }
 
 // SetCoinbase sets the coinbase of the validator

@@ -457,12 +457,6 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers
-	if s.config.LightServ > 0 {
-		maxPeers -= s.config.LightPeers
-		if maxPeers < srvr.MaxPeers/2 {
-			maxPeers = srvr.MaxPeers / 2
-		}
-	}
 
 	//fixme: should be removed after develop light client
 	if srvr.DiscoveryV5 {

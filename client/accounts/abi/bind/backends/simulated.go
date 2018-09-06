@@ -189,15 +189,9 @@ func (b *SimulatedBackend) PendingNonceAt(ctx context.Context, account common.Ad
 	return b.pendingState.GetOrNewStateObject(account).Nonce(), nil
 }
 
-// SuggestGasPrice implements ContractTransactor.SuggestGasPrice. Since the simulated
-// chain doens't have miners, we just return a gas price of 1 for any call.
-func (b *SimulatedBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	return big.NewInt(1), nil
-}
-
-// EstimateGas executes the requested code against the currently pending block/state and
-// returns the used amount of gas.
-func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg) (uint64, error) {
+// EstimateComputationalEffort executes the requested code against the currently pending block/state and
+// returns the computational resources usage in compute units.
+func (b *SimulatedBackend) EstimateComputationalEffort(ctx context.Context, call kowala.CallMsg) (uint64, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -207,16 +201,16 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg)
 		hi  uint64
 		cap uint64
 	)
-	if call.Gas >= params.TxCompEffort {
-		hi = call.Gas
+	if call.ComputeLimit >= params.TxCompEffort {
+		hi = call.ComputeLimit
 	} else {
 		hi = params.ComputeCapacity
 	}
 	cap = hi
 
 	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64) bool {
-		call.Gas = gas
+	executable := func(computeLimit uint64) bool {
+		call.ComputeLimit = computeLimit
 
 		snapshot := b.pendingState.Snapshot()
 		_, _, failed, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
@@ -253,11 +247,8 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg)
 // state is modified during execution, make sure to copy it if necessary.
 func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, uint64, bool, error) {
 	// Ensure message is initialized properly.
-	if call.GasPrice == nil {
-		call.GasPrice = big.NewInt(1)
-	}
-	if call.Gas == 0 {
-		call.Gas = 50000000
+	if call.ComputeLimit == 0 {
+		call.ComputeLimit = 50000000
 	}
 	if call.Value == nil {
 		call.Value = new(big.Int)
@@ -272,7 +263,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})
-	crpool := new(core.CompResourcesPool).AddGas(math.MaxUint64)
+	crpool := new(core.CompResourcesPool).AddResources(math.MaxUint64)
 
 	return core.NewStateTransition(vmenv, msg, crpool).TransitionDb()
 }
@@ -390,14 +381,13 @@ type callmsg struct {
 	kowala.CallMsg
 }
 
-func (m callmsg) From() common.Address { return m.CallMsg.From }
-func (m callmsg) Nonce() uint64        { return 0 }
-func (m callmsg) CheckNonce() bool     { return false }
-func (m callmsg) To() *common.Address  { return m.CallMsg.To }
-func (m callmsg) GasPrice() *big.Int   { return m.CallMsg.GasPrice }
-func (m callmsg) Gas() uint64          { return m.CallMsg.Gas }
-func (m callmsg) Value() *big.Int      { return m.CallMsg.Value }
-func (m callmsg) Data() []byte         { return m.CallMsg.Data }
+func (m callmsg) From() common.Address        { return m.CallMsg.From }
+func (m callmsg) Nonce() uint64               { return 0 }
+func (m callmsg) CheckNonce() bool            { return false }
+func (m callmsg) To() *common.Address         { return m.CallMsg.To }
+func (m callmsg) ComputationalEffort() uint64 { return m.CallMsg.ComputeLimit }
+func (m callmsg) Value() *big.Int             { return m.CallMsg.Value }
+func (m callmsg) Data() []byte                { return m.CallMsg.Data }
 
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.
