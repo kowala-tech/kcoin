@@ -396,7 +396,7 @@ MSG_verify                      :  'Verify Message',
 
 MYWAL_Address                   :  'Wallet Address',
 MYWAL_Bal                       :  'Balance',
-MYWAL_Dep                       :  'Deposit',
+MYWAL_Dep                       :  'mTokens',
 MYWAL_Content_1                 :  'Warning! You are about to remove your wallet',
 MYWAL_Content_2                 :  'Be sure you have **saved the private key and/or Keystore File and the password** before you remove it.',
 MYWAL_Content_3                 :  'If you want to use this wallet with your Kowala Wallet Tools CX in the future, you will need to manually re-add it using the private key/JSON and password.',

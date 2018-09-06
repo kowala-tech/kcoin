@@ -323,7 +323,6 @@ var decryptWalletCtrl = function($scope, $sce, walletService) {
     }
     $scope.ledgerCallback = function(result, error) {
         if (typeof result != "undefined") {
-            console.log("The address get issssss ", result)
             $scope.HWWalletCreate(result['publicKey'], result['chainCode'], "ledger", $scope.getLedgerPath());
         }
         else {

@@ -1,11 +1,13 @@
 'use strict';
+
 var customNode = function(srvrUrl, port, httpBasicAuthentication) {
     this.SERVERURL = port ? srvrUrl + ':' + port : srvrUrl;
     if (httpBasicAuthentication) {
         var authorization = 'Basic ' + btoa(httpBasicAuthentication.user + ":" + httpBasicAuthentication.password);
         this.config.headers['Authorization'] = authorization;
     }
-}
+};
+
 customNode.prototype.config = {
     headers: {
         'Content-Type': 'application/json; charset=UTF-8'
@@ -19,7 +21,8 @@ customNode.prototype.getCurrentBlock = function(callback) {
         if (data.error) callback({ error: true, msg: data.error.message, data: '' });
         else callback({ error: false, msg: '', data: new BigNumber(data.result).toString() });
     });
-}
+};
+
 customNode.prototype.getChainId = function(callback) {
     this.post({
         method: 'net_version'
@@ -27,7 +30,8 @@ customNode.prototype.getChainId = function(callback) {
         if (data.error) callback({ error: true, msg: data.error.message, data: '' });
         else callback({ error: false, msg: '', data: parseInt(data.result) });
     });
-}
+};
+
 customNode.prototype.getBalance = function(addr, callback) {
     this.post({
         method: 'eth_getBalance',
@@ -36,7 +40,55 @@ customNode.prototype.getBalance = function(addr, callback) {
         if (data.error) callback({ error: true, msg: data.error.message, data: '' });
         else callback({ error: false, msg: '', data: { address: addr, balance: new BigNumber(data.result).toString() } });
     });
-}
+};
+
+customNode.prototype.getMUsd = function(addr, callback) {
+    // Get Token Contract Addr
+    var knsLib = new kns();
+    knsLib.getKNSAddressFromDomain("miningtoken.kowala", function(data) {
+        if (data.error) {
+            console.log("Error getting the address. " + data.message);
+        } else {
+            var miningTokenAddr = data.address;
+
+            var funcSig = ethFuncs.getFunctionSignature("balanceOf(address)");
+            var input = '0x' + funcSig + ethUtil.solidityCoder.encodeParam("address", addr)
+
+            ajaxReq.getEthCall(
+                {
+                    to: miningTokenAddr,
+                    data: input,
+                },
+                function (data) {
+                    console.log(data)
+                    if (data.error) {
+                        callback(
+                            {
+                                error  : true,
+                                message: data.message,
+                                balance: null,
+                            },
+                        );
+                    } else {
+                        var balance = 0;
+                        if (data.data !== "0x") {
+                            balance = ethUtil.solidityCoder.decodeParam("uint", data.data.replace('0x', ''));
+                        }
+
+                        callback(
+                            {
+                                error  : false,
+                                message: "",
+                                balance: balance,
+                            },
+                        );
+                    }
+                },
+            );
+        }
+    });
+};
+
 customNode.prototype.getTransaction = function(txHash, callback) {
     this.post({
         method: 'eth_getTransactionByHash',
@@ -45,7 +97,8 @@ customNode.prototype.getTransaction = function(txHash, callback) {
         if (data.error) callback({ error: true, msg: data.error.message, data: '' });
         else callback({ error: false, msg: '', data: data.result });
     });
-}
+};
+
 customNode.prototype.getTransactionData = function(addr, callback) {
     var response = { error: false, msg: '', data: { address: addr, balance: '', gasprice: '', nonce: '' } };
     var parentObj = this;
@@ -66,7 +119,8 @@ customNode.prototype.getTransactionData = function(addr, callback) {
         response.data.nonce = data[2].result;
         callback(response);
     });
-}
+};
+
 customNode.prototype.sendRawTx = function(rawTx, callback) {
     this.post({
         method: 'eth_sendRawTransaction',
@@ -75,7 +129,8 @@ customNode.prototype.sendRawTx = function(rawTx, callback) {
         if (data.error) callback({ error: true, msg: data.error.message, data: '' });
         else callback({ error: false, msg: '', data: data.result });
     });
-}
+};
+
 customNode.prototype.getEstimatedGas = function(txobj, callback) {
     txobj.value = ethFuncs.trimHexZero(txobj.value);
     this.post({
@@ -85,7 +140,8 @@ customNode.prototype.getEstimatedGas = function(txobj, callback) {
         if (data.error) callback({ error: true, msg: data.error.message, data: '' });
         else callback({ error: false, msg: '', data: data.result });
     });
-}
+};
+
 var ethCallArr = {
     calls: [],
     callbacks: [],
@@ -108,7 +164,8 @@ customNode.prototype.getEthCall = function(txobj, callback) {
     }
     ethCallArr.calls.push({ "id": parentObj.getRandomID(), "jsonrpc": "2.0", "method": "eth_call", "params": [{ to: txobj.to, data: txobj.data }, 'pending'] });
     ethCallArr.callbacks.push(callback);
-}
+};
+
 customNode.prototype.getTraceCall = function(txobj, callback) {
     this.post({
         method: 'trace_call',
@@ -117,20 +174,24 @@ customNode.prototype.getTraceCall = function(txobj, callback) {
         if (data.error) callback({ error: true, msg: data.error.message, data: '' });
         else callback({ error: false, msg: '', data: data.result });
     });
-}
+};
+
 customNode.prototype.rawPost = function(data, callback) {
     ajaxReq.http.post(this.SERVERURL, JSON.stringify(data), this.config).then(function(data) {
         callback(data.data);
     }, function(data) {
         callback({ error: true, msg: "connection error", data: "" });
     });
-}
+};
+
 customNode.prototype.getRandomID = function() {
     return globalFuncs.getRandomBytes(16).toString('hex');
-}
+};
+
 customNode.prototype.post = function(data, callback) {
     data.id = this.getRandomID();
     data.jsonrpc = "2.0";
     this.rawPost(data, callback);
-}
+};
+
 module.exports = customNode;

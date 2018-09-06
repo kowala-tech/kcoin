@@ -861,7 +861,7 @@
                     Balance
                 </th>
                 <th translate="MYWAL_Dep">
-                    Deposit
+                    mTokens
                 </th>
             </tr>
             <tr ng-repeat="wallet in HDWallet.wallets track by $index">
@@ -883,14 +883,14 @@
                 <a href="{{ajaxReq.blockExplorerAddr.replace('[[address]]', wallet.getAddressString())}}"
                    target="_blank"
                    rel="noopener noreferrer">
-                  {{wallet.getBalance()}} {{ajaxReq.type}}
+                  {{wallet.getBalance()}} kUSD
                 </a>
               </td>
                 <td>
                     <a href="{{ajaxReq.blockExplorerAddr.replace('[[address]]', wallet.getAddressString())}}"
                         target="_blank"
                         rel="noopener noreferrer">
-                        {{wallet.getBalance()}} {{ajaxReq.type}}
+                        {{wallet.getMUsd()}} mUSD
                     </a>
                 </td>
             </tr>

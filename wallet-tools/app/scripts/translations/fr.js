@@ -462,6 +462,7 @@ MSG_info3                   : 'Inclure une raison spécifique pour le message af
 MYWAL_Nick                  : 'Nom du portefeuille',
 MYWAL_Address               : 'Adresse du portefeuille',
 MYWAL_Bal                   : 'Solde',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Modifier',
 MYWAL_View                  : 'Voir',
 MYWAL_Remove                : 'Supprimer',
