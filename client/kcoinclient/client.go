@@ -519,11 +519,9 @@ func toCallArg(msg kowala.CallMsg) interface{} {
 	if msg.Value != nil {
 		arg["value"] = (*hexutil.Big)(msg.Value)
 	}
-	if msg.Gas != 0 {
-		arg["gas"] = hexutil.Uint64(msg.Gas)
+	if msg.ComputeLimit != 0 {
+		arg["computeLimit"] = hexutil.Uint64(msg.ComputeLimit)
 	}
-	if msg.GasPrice != nil {
-		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
-	}
+
 	return arg
 }

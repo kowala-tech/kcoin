@@ -30,11 +30,11 @@ type Transaction struct {
 }
 
 type txdata struct {
-	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
-	ComputeLimit uint64          `json:"limit"    gencodec:"required"`
-	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
-	Amount       *big.Int        `json:"value"    gencodec:"required"`
-	Payload      []byte          `json:"input"    gencodec:"required"`
+	AccountNonce uint64          `json:"nonce"           gencodec:"required"`
+	ComputeLimit uint64          `json:"computeLimit"    gencodec:"required"`
+	Recipient    *common.Address `json:"to"              rlp:"nil"` // nil means contract creation
+	Amount       *big.Int        `json:"value"           gencodec:"required"`
+	Payload      []byte          `json:"input"           gencodec:"required"`
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`

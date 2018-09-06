@@ -186,16 +186,6 @@ var (
 		Usage: "Time interval to regenerate the local transaction journal",
 		Value: core.DefaultTxPoolConfig.Rejournal,
 	}
-	TxPoolPriceLimitFlag = cli.Uint64Flag{
-		Name:  "txpool.pricelimit",
-		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: knode.DefaultConfig.TxPool.PriceLimit,
-	}
-	TxPoolPriceBumpFlag = cli.Uint64Flag{
-		Name:  "txpool.pricebump",
-		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: knode.DefaultConfig.TxPool.PriceBump,
-	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
 		Usage: "Minimum number of executable transaction slots guaranteed per account",
@@ -221,6 +211,8 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: knode.DefaultConfig.TxPool.Lifetime,
 	}
+	// fixme: (rgeraldes) - report stats
+
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
@@ -254,23 +246,12 @@ var (
 		// @TODO (rgeraldes) - default could be set to the minimum required
 	}
 
-	TargetGasLimitFlag = cli.Uint64Flag{
-		Name:  "targetgaslimit",
-		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
-		Value: params.GenesisGasLimit,
-	}
 	CoinbaseFlag = cli.StringFlag{
 		Name:  "coinbase",
 		Usage: "Public address for block validation rewards (default = first account created)",
 		Value: "0",
 	}
 
-	// @TODO(rgeraldes) - review
-	GasPriceFlag = BigFlag{
-		Name:  "gasprice",
-		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: knode.DefaultConfig.GasPrice,
-	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
 		Usage: "Block extra data set by the consensus validator (default = client version)",
@@ -856,12 +837,6 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolRejournalFlag.Name) {
 		cfg.Rejournal = ctx.GlobalDuration(TxPoolRejournalFlag.Name)
 	}
-	if ctx.GlobalIsSet(TxPoolPriceLimitFlag.Name) {
-		cfg.PriceLimit = ctx.GlobalUint64(TxPoolPriceLimitFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolPriceBumpFlag.Name) {
-		cfg.PriceBump = ctx.GlobalUint64(TxPoolPriceBumpFlag.Name)
-	}
 	if ctx.GlobalIsSet(TxPoolAccountSlotsFlag.Name) {
 		cfg.AccountSlots = ctx.GlobalUint64(TxPoolAccountSlotsFlag.Name)
 	}
@@ -965,9 +940,6 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
 	}
-	if ctx.GlobalIsSet(GasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
-	}
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
@@ -979,9 +951,6 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	case ctx.GlobalBool(DevModeFlag.Name):
 		cfg.Genesis = core.DevGenesisBlock()
-		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
-			cfg.GasPrice = new(big.Int)
-		}
 	}
 	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
@@ -1015,12 +984,6 @@ func RegisterKowalaStatsService(stack *node.Node, url string) {
 	}); err != nil {
 		Fatalf("Failed to register the Kowala Stats service: %v", err)
 	}
-}
-
-// SetupNetwork configures the system for either the main net or some test network.
-func SetupNetwork(ctx *cli.Context) {
-	// TODO(fjl): move target gas limit into config
-	params.TargetGasLimit = ctx.GlobalUint64(TargetGasLimitFlag.Name)
 }
 
 func SetupMetrics(ctx *cli.Context) {

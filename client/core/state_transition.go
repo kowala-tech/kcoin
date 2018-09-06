@@ -136,9 +136,7 @@ func (st *StateTransition) buyCompResources() error {
 	if st.state.GetBalance(st.msg.From()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForCompResouces
 	}
-	if err := st.crpool.AddResources(st.msg.ComputationalEffort()); err != nil {
-		return err
-	}
+	st.crpool.AddResources(st.msg.ComputationalEffort())
 	st.compResources += st.msg.ComputationalEffort()
 
 	st.initialCompResources = st.msg.ComputationalEffort()

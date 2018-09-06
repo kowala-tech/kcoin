@@ -140,7 +140,7 @@ func (s *PublicTxPoolAPI) Inspect() map[string]map[string]map[string]string {
 		if to := tx.To(); to != nil {
 			return fmt.Sprintf("%s: %v wei + %v gas", tx.To().Hex(), tx.Value(), tx.ComputeLimit())
 		}
-		return fmt.Sprintf("contract creation: %v wei + %v compute limit", tx.Value(), tx.Gas())
+		return fmt.Sprintf("contract creation: %v wei + %v compute limit", tx.Value(), tx.ComputeLimit())
 	}
 	// Flatten the pending transactions
 	for account, txs := range pending {
@@ -572,7 +572,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 
 	// Create new call message
-	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, false)
+	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, args.Data, false)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
@@ -624,19 +624,14 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr r
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (hexutil.Uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
-		lo  uint64 = params.TxGas - 1
+		lo  uint64 = params.TxCompEffort - 1
 		hi  uint64
 		cap uint64
 	)
-	if uint64(args.Gas) >= params.TxGas {
+	if uint64(args.Gas) >= params.TxCompEffort {
 		hi = uint64(args.Gas)
 	} else {
-		// Retrieve the current pending block to act as the gas ceiling
-		block, err := s.b.BlockByNumber(ctx, rpc.PendingBlockNumber)
-		if err != nil {
-			return 0, err
-		}
-		hi = block.GasLimit()
+		hi = params.ComputeCapacity
 	}
 	cap = hi
 
@@ -747,8 +742,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		"miner":            head.Coinbase,
 		"extraData":        hexutil.Bytes(head.Extra),
 		"size":             hexutil.Uint64(b.Size()),
-		"gasLimit":         hexutil.Uint64(head.GasLimit),
-		"gasUsed":          hexutil.Uint64(head.GasUsed),
+		"resourceUsage":    hexutil.Uint64(head.ResourceUsage),
 		"timestamp":        (*hexutil.Big)(head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
@@ -797,8 +791,7 @@ type RPCTransaction struct {
 	BlockHash        common.Hash     `json:"blockHash"`
 	BlockNumber      *hexutil.Big    `json:"blockNumber"`
 	From             common.Address  `json:"from"`
-	Gas              hexutil.Uint64  `json:"gas"`
-	GasPrice         *hexutil.Big    `json:"gasPrice"`
+	ComputeLimit     hexutil.Uint64  `json:"computeLimit"`
 	Hash             common.Hash     `json:"hash"`
 	Input            hexutil.Bytes   `json:"input"`
 	Nonce            hexutil.Uint64  `json:"nonce"`
@@ -819,17 +812,16 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	v, r, s := tx.RawSignatureValues()
 
 	result := &RPCTransaction{
-		From:     from,
-		Gas:      hexutil.Uint64(tx.Gas()),
-		GasPrice: (*hexutil.Big)(tx.GasPrice()),
-		Hash:     tx.Hash(),
-		Input:    hexutil.Bytes(tx.Data()),
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       tx.To(),
-		Value:    (*hexutil.Big)(tx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
+		From:         from,
+		ComputeLimit: hexutil.Uint64(tx.ComputeLimit()),
+		Hash:         tx.Hash(),
+		Input:        hexutil.Bytes(tx.Data()),
+		Nonce:        hexutil.Uint64(tx.Nonce()),
+		To:           tx.To(),
+		Value:        (*hexutil.Big)(tx.Value()),
+		V:            (*hexutil.Big)(v),
+		R:            (*hexutil.Big)(r),
+		S:            (*hexutil.Big)(s),
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
@@ -1099,9 +1091,9 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 		input = *args.Input
 	}
 	if args.To == nil {
-		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
+		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), input)
 	}
-	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
+	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), input)
 }
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.

@@ -45,9 +45,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		crpool   = new(CompResourcesPool)
 	)
 
-	if err := crpool.AddResources(params.ComputeCapacity); err != nil {
-		return nil, nil, 0, err
-	}
+	crpool.AddResources(params.ComputeCapacity)
 
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
