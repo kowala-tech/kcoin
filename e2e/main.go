@@ -4,7 +4,6 @@ import (
 	"flag"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/DATA-DOG/godog"
 )
@@ -43,7 +42,7 @@ func main() {
 		Format:        "progress",
 		Concurrency:   2,
 		Paths:         []string(featuresFlag),
-		Randomize:     time.Now().UTC().UnixNano(),
+		Randomize:     -1,
 		StopOnFailure: true,
 	})
 
