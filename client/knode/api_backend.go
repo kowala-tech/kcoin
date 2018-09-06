@@ -140,16 +140,13 @@ func (b *KowalaAPIBackend) SendTx(ctx context.Context, signedTx *types.Transacti
 	return b.kcoin.txPool.AddLocal(signedTx)
 }
 
-func (b *KowalaAPIBackend) GetPoolTransactions() (types.Transactions, error) {
-	pending, err := b.kcoin.txPool.Pending()
-	if err != nil {
-		return nil, err
-	}
+func (b *KowalaAPIBackend) GetPoolTransactions() types.Transactions {
+	pending := b.kcoin.txPool.Pending()
 	var txs types.Transactions
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
-	return txs, nil
+	return txs
 }
 
 func (b *KowalaAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {

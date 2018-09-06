@@ -61,8 +61,6 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.GCModeFlag,
 			utils.KowalaStatsURLFlag,
 			utils.IdentityFlag,
-			utils.LightServFlag,
-			utils.LightPeersFlag,
 			utils.LightKDFFlag,
 			utils.VersionRepository,
 		},
@@ -73,8 +71,6 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.TxPoolNoLocalsFlag,
 			utils.TxPoolJournalFlag,
 			utils.TxPoolRejournalFlag,
-			utils.TxPoolPriceLimitFlag,
-			utils.TxPoolPriceBumpFlag,
 			utils.TxPoolAccountSlotsFlag,
 			utils.TxPoolGlobalSlotsFlag,
 			utils.TxPoolAccountQueueFlag,
@@ -141,16 +137,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.ValidationEnabledFlag,
 			utils.ValidatorDepositFlag,
 			utils.CoinbaseFlag,
-			utils.TargetGasLimitFlag,
-			utils.GasPriceFlag,
 			utils.ExtraDataFlag,
-		},
-	},
-	{
-		Name: "GAS PRICE ORACLE",
-		Flags: []cli.Flag{
-			utils.GpoBlocksFlag,
-			utils.GpoPercentileFlag,
 		},
 	},
 	{
@@ -182,7 +169,6 @@ var AppHelpFlagGroups = []flagGroup{
 		Name: "DEPRECATED",
 		Flags: []cli.Flag{
 			utils.FastSyncFlag,
-			utils.LightModeFlag,
 		},
 	},
 	{

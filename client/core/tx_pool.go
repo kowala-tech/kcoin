@@ -429,17 +429,25 @@ func (pool *TxPool) stats() (int, int) {
 
 // Content retrieves the data content of the transaction pool, returning all the
 // pending as well as queued transactions, grouped by account and sorted by nonce.
-func (pool *TxPool) Content() (map[common.Address]ValidTransactions, map[common.Address]ValidTransactions) {
+func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	pending := make(map[common.Address]ValidTransactions)
+	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
-		pending[addr] = list.Flatten()
+		txs := make(types.Transactions, 0, list.Len())
+		for _, validTx := range list.Flatten() {
+			txs = append(txs, validTx.Transaction)
+		}
+		pending[addr] = txs
 	}
-	queued := make(map[common.Address]ValidTransactions)
+	queued := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.queue {
-		queued[addr] = list.Flatten()
+		txs := make(types.Transactions, 0, list.Len())
+		for _, validTx := range list.Flatten() {
+			txs = append(txs, validTx.Transaction)
+		}
+		queued[addr] = txs
 	}
 	return pending, queued
 }
@@ -447,7 +455,25 @@ func (pool *TxPool) Content() (map[common.Address]ValidTransactions, map[common.
 // Pending retrieves all currently processable transactions, groupped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
-func (pool *TxPool) Pending() (*TransactionsByTimestampAndNonce, error) {
+func (pool *TxPool) Pending() map[common.Address]types.Transactions {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pending := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.pending {
+		txs := make(types.Transactions, 0, list.Len())
+		for _, validTx := range list.Flatten() {
+			txs = append(txs, validTx.Transaction)
+		}
+		pending[addr] = txs
+	}
+
+	return pending
+}
+
+// Transactions retrieves a transaction set that can retrieve timestamp sorted
+// processable transactions in a nonce-honouring way.
+func (pool *TxPool) Transactions() *TransactionsByTimestampAndNonce {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
@@ -456,7 +482,7 @@ func (pool *TxPool) Pending() (*TransactionsByTimestampAndNonce, error) {
 		pending[addr] = list.Flatten()
 	}
 
-	return NewTransactionsByTimestampAndNonce(pool.signer, pending), nil
+	return NewTransactionsByTimestampAndNonce(pool.signer, pending)
 }
 
 // Locals retrieves the accounts currently considered local by the pool.
@@ -713,8 +739,8 @@ func (pool *TxPool) Status(hashes []common.Hash) []TxStatus {
 
 // Get returns a transaction if it is contained in the pool
 // and nil otherwise.
-func (pool *TxPool) Get(hash common.Hash) *ValidTransaction {
-	return pool.all.Get(hash)
+func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
+	return pool.all.Get(hash).Transaction
 }
 
 // removeTx removes a single transaction from the queue, moving all subsequent

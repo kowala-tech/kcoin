@@ -11,5 +11,4 @@ type Transaction struct {
 	Timestamp   *big.Int `json:"timestamp"`
 	BlockHeight *big.Int `json:"block_height"`
 	GasUsed     *big.Int `json:"gas_used"`
-	GasPrice    *big.Int `json:"gas_price"`
 }

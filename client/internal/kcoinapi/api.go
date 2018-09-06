@@ -1197,10 +1197,7 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
 func (s *PublicTransactionPoolAPI) PendingTransactions() ([]*RPCTransaction, error) {
-	pending, err := s.b.GetPoolTransactions()
-	if err != nil {
-		return nil, err
-	}
+	pending := s.b.GetPoolTransactions()
 	accounts := make(map[common.Address]struct{})
 	for _, wallet := range s.b.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {

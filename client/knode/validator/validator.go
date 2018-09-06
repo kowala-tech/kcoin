@@ -429,6 +429,9 @@ func (val *validator) createProposalBlock() *types.Block {
 
 func (val *validator) createBlock() *types.Block {
 	log.Info("Creating a new block")
+
+	var err error
+
 	// new block header
 	parent := val.chain.CurrentBlock()
 	blockNumber := parent.Number()
@@ -467,11 +470,7 @@ func (val *validator) createBlock() *types.Block {
 		return nil
 	}
 
-	txs, err := val.backend.TxPool().Pending()
-	if err != nil {
-		log.Crit("Failed to fetch pending transactions", "err", err)
-	}
-	val.commitTransactions(val.eventMux, txs, val.chain, val.walletAccount.Account().Address)
+	val.commitTransactions(val.eventMux, val.backend.TxPool().Transactions(), val.chain, val.walletAccount.Account().Address)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
