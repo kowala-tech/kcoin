@@ -4,6 +4,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/internal/debug"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
+	"math/rand"
 	"time"
 )
 
@@ -28,6 +29,8 @@ func (su *SelfUpdater) Run() {
 		return
 	}
 
+	randomTo60SecDelay()
+
 	for range time.Tick(time.Minute) {
 		su.logger.Debug("Checking if newer version is available")
 		isLatest, err := updater.IsCurrentLatest()
@@ -51,4 +54,14 @@ func (su *SelfUpdater) exit() {
 	time.Sleep(time.Second * 10)
 
 	debug.Exit()
+}
+
+func randomTo60SecDelay() {
+	randomTo60 := time.Duration(randomIntInRange(1, 60) * int(time.Second))
+	time.Sleep(randomTo60)
+}
+
+func randomIntInRange(min, max int) int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(max-min) + min
 }
