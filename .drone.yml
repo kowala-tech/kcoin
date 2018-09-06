@@ -18,7 +18,7 @@ pipeline:
       event: [pull_request]
 
   go_generate:
-    group: setup
+    group: generate
     image: kowalatech/go:1.0.11
     commands:
       - make go_generate
