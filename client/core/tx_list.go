@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
@@ -48,9 +32,9 @@ func (h *nonceHeap) Pop() interface{} {
 // txSortedMap is a nonce->tx pool transaction hash map with a heap based index to allow
 // iterating over the contents in a nonce-incrementing way.
 type txSortedMap struct {
-	items map[uint64]Transaction // Hash map storing the transaction data
-	index *nonceHeap             // Heap of nonces of all the stored transactions (non-strict mode)
-	cache Transactions           // Cache of the transactions already sorted
+	items map[uint64]*Transaction // Hash map storing the transaction data
+	index *nonceHeap              // Heap of nonces of all the stored transactions (non-strict mode)
+	cache Transactions            // Cache of the transactions already sorted
 }
 
 // newTxSortedMap creates a new nonce-sorted transaction map.
@@ -97,7 +81,7 @@ func (m *txSortedMap) Forward(threshold uint64) Transactions {
 
 // Filter iterates over the list of transactions and removes all of them for which
 // the specified function evaluates to true.
-func (m *txSortedMap) Filter(filter func(*types.Transaction) bool) Transactions {
+func (m *txSortedMap) Filter(filter func(*Transaction) bool) Transactions {
 	var removed Transactions
 
 	// Collect all the transactions to filter out
@@ -205,7 +189,7 @@ func (m *txSortedMap) Flatten() Transactions {
 		for _, tx := range m.items {
 			m.cache = append(m.cache, tx)
 		}
-		sort.Sort(types.TxByNonce(m.cache))
+		sort.Sort(TxByNonce(m.cache))
 	}
 	// Copy the cache to prevent accidental modifications
 	txs := make(Transactions, len(m.cache))
@@ -241,7 +225,7 @@ func (l *txList) Overlaps(tx *types.Transaction) bool {
 
 // Add tries inserts a new transaction into the list. The lists' cost and compute
 // thresholds are also potentially updated.
-func (l *txList) Add(tx *types.Transaction) {
+func (l *txList) Add(tx *Transaction) {
 	l.txs.Put(tx)
 	if cost := tx.Cost(); l.costCap.Cmp(cost) < 0 {
 		l.costCap = cost
@@ -254,7 +238,7 @@ func (l *txList) Add(tx *types.Transaction) {
 // Forward removes all transactions from the list with a nonce lower than the
 // provided threshold. Every removed transaction is returned for any post-removal
 // maintenance.
-func (l *txList) Forward(threshold uint64) types.Transactions {
+func (l *txList) Forward(threshold uint64) Transactions {
 	return l.txs.Forward(threshold)
 }
 
@@ -276,7 +260,7 @@ func (l *txList) Filter(costLimit *big.Int, computeLimit uint64) (types.Transact
 	l.computeCap = computeLimit
 
 	// Filter out all the transactions above the account's funds
-	removed := l.txs.Filter(func(tx *types.Transaction) bool {
+	removed := l.txs.Filter(func(tx *Transaction) bool {
 		return tx.Cost().Cmp(costLimit) > 0 || tx.ComputeLimit() > computeLimit
 	})
 
@@ -290,21 +274,21 @@ func (l *txList) Filter(costLimit *big.Int, computeLimit uint64) (types.Transact
 				lowest = nonce
 			}
 		}
-		invalids = l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
+		invalids = l.txs.Filter(func(tx *Transaction) bool { return tx.Nonce() > lowest })
 	}
 	return removed, invalids
 }
 
 // Cap places a hard limit on the number of items, returning all transactions
 // exceeding that limit.
-func (l *txList) Cap(threshold int) types.Transactions {
+func (l *txList) Cap(threshold int) Transactions {
 	return l.txs.Cap(threshold)
 }
 
 // Remove deletes a transaction from the maintained list, returning whether the
 // transaction was found, and also returning any transaction invalidated due to
 // the deletion (strict mode only).
-func (l *txList) Remove(tx *types.Transaction) (bool, types.Transactions) {
+func (l *txList) Remove(tx *Transaction) (bool, Transactions) {
 	// Remove the transaction from the set
 	nonce := tx.Nonce()
 	if removed := l.txs.Remove(nonce); !removed {
@@ -312,7 +296,7 @@ func (l *txList) Remove(tx *types.Transaction) (bool, types.Transactions) {
 	}
 	// In strict mode, filter out non-executable transactions
 	if l.strict {
-		return true, l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > nonce })
+		return true, l.txs.Filter(func(tx *Transaction) bool { return tx.Nonce() > nonce })
 	}
 	return true, nil
 }
@@ -324,7 +308,7 @@ func (l *txList) Remove(tx *types.Transaction) (bool, types.Transactions) {
 // Note, all transactions with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
-func (l *txList) Ready(start uint64) types.Transactions {
+func (l *txList) Ready(start uint64) Transactions {
 	return l.txs.Ready(start)
 }
 
@@ -341,6 +325,6 @@ func (l *txList) Empty() bool {
 // Flatten creates a nonce-sorted slice of transactions based on the loosely
 // sorted internal representation. The result of the sorting is cached in case
 // it's requested again before any modifications are made to the contents.
-func (l *txList) Flatten() types.Transactions {
+func (l *txList) Flatten() Transactions {
 	return l.txs.Flatten()
 }

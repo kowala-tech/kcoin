@@ -1,7 +1,6 @@
 package core
 
 import (
-	"container/heap"
 	"errors"
 	"fmt"
 	"math"
@@ -27,9 +26,6 @@ const (
 var (
 	// ErrInvalidSender is returned if the transaction contains an invalid signature
 	ErrInvalidSender = errors.New("invalid sender")
-	// ErrNonceTooLow is returned if the nonce of a transaction is lower than the
-	// one present in the local chain.
-	ErrNonceTooLow = errors.New("nonce too low")
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
 	// is higher than the balance of the user's account.
 	ErrInsufficientFunds = errors.New("insufficient funds for compute units * price + value")
@@ -127,13 +123,6 @@ func (config *TxPoolConfig) sanitize() TxPoolConfig {
 	}
 	return conf
 }
-
-type Transaction struct {
-	AddedAt time.Time
-	*types.Transaction
-}
-
-type Transactions []FutureTransaction
 
 // TxPool contains all currently known transactions.
 type TxPool struct {
@@ -395,7 +384,7 @@ func (pool *TxPool) SubscribeNewTxsEvent(ch chan<- NewTxsEvent) event.Subscripti
 	return pool.scope.Track(pool.txFeed.Subscribe(ch))
 }
 
-// PendingState returns the virtual managed state of the transaction pool.
+// State returns the virtual managed state of the transaction pool.
 func (pool *TxPool) State() *state.ManagedState {
 	pool.mu.RLock()
 	defer pool.mu.RUnlock()
@@ -446,7 +435,7 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 // Pending retrieves all currently processable transactions, groupped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
-func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
+func (pool *TxPool) Pending() (*TransactionsByTimestampAndNonce, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
@@ -455,7 +444,7 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 		pending[addr] = list.Flatten()
 	}
 
-	return NewTransactionsByPriceAndNonce(pool.signer, pending), nil
+	return NewTransactionsByTimestampAndNonce(pool.signer, pending), nil
 }
 
 // Locals retrieves the accounts currently considered local by the pool.
@@ -1092,77 +1081,4 @@ func (t *txLookup) Remove(hash common.Hash) {
 	defer t.lock.Unlock()
 
 	delete(t.all, hash)
-}
-
-// TxByTimestamp implements the heap interface, making it useful for all
-// at once sortingas well as individually adding and removing elements.
-type TxByTimestamp Transactions
-
-func (s TxByTimestamp) Len() int           { return len(s) }
-func (s TxByTimestamp) Less(i, j int) bool { return s[i].timestamp.After(s[j]) }
-func (s TxByTimestamp) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-
-func (s *TxByTimestamp) Push(x interface{}) {
-	*s = append(*s, x.(*Transaction))
-}
-
-func (s *TxByTimestamp) Pop() interface{} {
-	old := *s
-	n := len(old)
-	x := old[n-1]
-	*s = old[0 : n-1]
-	return x
-}
-
-type TransactionsByTimestampAndNonce struct {
-	txs    map[common.Address]Transactions // per account nonce-sorted list of transactions
-	heads  TxByTimestamp                   // Next transaction for each unique account (timestamp heap)
-	signer types.Signer                    // signer for the set of transactions
-}
-
-// @TODO (rgeraldes) - comment
-func NewTransactionsByTimestampAndNonce(signer types.Signer, txs map[common.Address]types.Transactions) *TransactionsByTimestampAndNonce {
-	heads := make(TxByTimestamp, 0, len(txs))
-	for _, accTxs := range txs {
-		heads = append(heads, accTxs[0])
-		// Ensure the sender address is from the signer
-		acc, _ := TxSender(signer, accTxs[0])
-		txs[acc] = accTxs[1:]
-		if from != acc {
-			delete(txs, from)
-		}
-	}
-	heap.Init(&heads)
-
-	return &TransactionsByTimestampAndNonce{
-		txs:    txs,
-		heads:  heads,
-		signer: signer,
-	}
-}
-
-// Peek returns the next transaction by price.
-func (t *TransactionsByTimestampAndNonce) Peek() *types.Transaction {
-	if len(t.heads) == 0 {
-		return nil
-	}
-	return t.heads[0]
-}
-
-// Shift replaces the current best head with the next one from the same account.
-func (t *TransactionsByTimestampAndNonce) Shift() {
-	acc, _ := types.TxSender(t.signer, t.heads[0])
-	if txs, ok := t.txs[acc]; ok && len(txs) > 0 {
-		t.heads[0], t.txs[acc] = txs[0], txs[1:]
-		heap.Fix(&t.heads, 0)
-	} else {
-		heap.Pop(&t.heads)
-	}
-}
-
-// Pop removes the best transaction, *not* replacing it with the next one from
-// the same account. This should be used when a transaction cannot be executed
-// and hence all subsequent ones should be discarded from the same account.
-func (t *TransactionsByTimestampAndNonce) Pop() {
-	heap.Pop(&t.heads)
 }
