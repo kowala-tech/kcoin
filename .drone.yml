@@ -10,6 +10,7 @@ clone:
 
 pipeline:
   install_tools:
+    group: setup
     image: kowalatech/go:1.0.11
     commands:
       - make install_tools
@@ -17,7 +18,7 @@ pipeline:
       event: [pull_request]
 
   go_generate:
-    group: testing
+    group: generate
     image: kowalatech/go:1.0.11
     commands:
       - make go_generate
@@ -56,7 +57,7 @@ pipeline:
       event: [pull_request]
 
   e2e:
-    group: testing
+    group: e2e
     image: kowalatech/go:1.0.11
     environment:
       - DOCKER_HOST=tcp://docker:2375
