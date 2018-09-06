@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/DATA-DOG/godog"
@@ -40,9 +39,12 @@ func main() {
 			logsToStdout: stdErrLogsFlag,
 		})
 	}, godog.Options{
-		Format:      "progress",
-		Concurrency: runtime.NumCPU(),
-		Paths:       []string(featuresFlag),
+		Format:        "progress",
+		Concurrency:   2,
+		Paths:         []string(featuresFlag),
+		Randomize:     -1,
+		StopOnFailure: true,
 	})
+
 	os.Exit(status)
 }
