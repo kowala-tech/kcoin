@@ -22,9 +22,9 @@ import (
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode/filters"
 
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
-	"github.com/kowala-tech/kcoin/client/log"
 )
 
 var errBlockNumberUnsupported = errors.New("SimulatedBackend cannot access blocks other than the latest block")
@@ -203,14 +203,14 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg)
 
 	// Determine the lowest and highest possible gas limits to binary search in between
 	var (
-		lo  uint64 = params.TxGas - 1
+		lo  uint64 = params.TxCompEffort - 1
 		hi  uint64
 		cap uint64
 	)
-	if call.Gas >= params.TxGas {
+	if call.Gas >= params.TxCompEffort {
 		hi = call.Gas
 	} else {
-		hi = b.pendingBlock.GasLimit()
+		hi = params.ComputeCapacity
 	}
 	cap = hi
 
@@ -272,9 +272,9 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})
-	gaspool := new(core.GasPool).AddGas(math.MaxUint64)
+	crpool := new(core.CompResourcesPool).AddGas(math.MaxUint64)
 
-	return core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
+	return core.NewStateTransition(vmenv, msg, crpool).TransitionDb()
 }
 
 // SendTransaction updates the pending block to include the given transaction.
@@ -406,8 +406,8 @@ type filterBackend struct {
 	bc *core.BlockChain
 }
 
-func (fb *filterBackend) ChainDb() kcoindb.Database  { return fb.db }
-func (fb *filterBackend) EventMux() *event.TypeMux { panic("not supported") }
+func (fb *filterBackend) ChainDb() kcoindb.Database { return fb.db }
+func (fb *filterBackend) EventMux() *event.TypeMux  { panic("not supported") }
 
 func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {
 	if block == rpc.LatestBlockNumber {

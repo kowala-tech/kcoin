@@ -105,15 +105,13 @@ func (journal *txJournal) insert(tx *types.Transaction) error {
 	if journal.writer == nil {
 		return errNoActiveJournal
 	}
-	if err := rlp.Encode(journal.writer, tx); err != nil {
-		return err
-	}
-	return nil
+
+	return rlp.Encode(journal.writer, tx)
 }
 
 // rotate regenerates the transaction journal based on the current contents of
 // the transaction pool.
-func (journal *txJournal) rotate(all map[common.Address]types.Transactions) error {
+func (journal *txJournal) rotate(all map[common.Address]ValidTransactions) error {
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
 		if err := journal.writer.Close(); err != nil {
@@ -129,7 +127,7 @@ func (journal *txJournal) rotate(all map[common.Address]types.Transactions) erro
 	journaled := 0
 	for _, txs := range all {
 		for _, tx := range txs {
-			if err = rlp.Encode(replacement, tx); err != nil {
+			if err = rlp.Encode(replacement, tx.Transaction); err != nil {
 				replacement.Close()
 				return err
 			}

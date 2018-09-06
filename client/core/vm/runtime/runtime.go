@@ -16,16 +16,16 @@ import (
 // Config is a basic type specifying certain configuration flags for running
 // the EVM.
 type Config struct {
-	ChainConfig *params.ChainConfig
-	Origin      common.Address
-	Coinbase    common.Address
-	BlockNumber *big.Int
-	Time        *big.Int
-	GasLimit    uint64
-	GasPrice    *big.Int
-	Value       *big.Int
-	Debug       bool
-	EVMConfig   vm.Config
+	ChainConfig      *params.ChainConfig
+	Origin           common.Address
+	Coinbase         common.Address
+	BlockNumber      *big.Int
+	Time             *big.Int
+	ComputeLimit     uint64
+	ComputeUnitPrice *big.Int
+	Value            *big.Int
+	Debug            bool
+	EVMConfig        vm.Config
 
 	State     *state.StateDB
 	GetHashFn func(n uint64) common.Hash
@@ -42,11 +42,11 @@ func setDefaults(cfg *Config) {
 	if cfg.Time == nil {
 		cfg.Time = big.NewInt(time.Now().Unix())
 	}
-	if cfg.GasLimit == 0 {
-		cfg.GasLimit = math.MaxUint64
+	if cfg.ComputeLimit == 0 {
+		cfg.ComputeLimit = math.MaxUint64
 	}
-	if cfg.GasPrice == nil {
-		cfg.GasPrice = new(big.Int)
+	if cfg.ComputeUnitPrice == nil {
+		cfg.ComputeUnitPrice = new(big.Int)
 	}
 	if cfg.Value == nil {
 		cfg.Value = new(big.Int)
@@ -88,7 +88,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 		sender,
 		common.BytesToAddress([]byte("contract")),
 		input,
-		cfg.GasLimit,
+		cfg.ComputeLimit,
 		cfg.Value,
 	)
 
@@ -114,7 +114,7 @@ func Create(input []byte, cfg *Config) ([]byte, common.Address, uint64, error) {
 	code, address, leftOverGas, err := vmenv.Create(
 		sender,
 		input,
-		cfg.GasLimit,
+		cfg.ComputeLimit,
 		cfg.Value,
 	)
 	return code, address, leftOverGas, err
@@ -132,13 +132,13 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, uint64, er
 
 	sender := cfg.State.GetOrNewStateObject(cfg.Origin)
 	// Call the code with the given configuration.
-	ret, leftOverGas, err := vmenv.Call(
+	ret, leftOverCompResources, err := vmenv.Call(
 		sender,
 		address,
 		input,
-		cfg.GasLimit,
+		cfg.ComputeLimit,
 		cfg.Value,
 	)
 
-	return ret, leftOverGas, err
+	return ret, leftOverCompResources, err
 }

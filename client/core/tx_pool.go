@@ -1,6 +1,7 @@
 package core
 
 import (
+	"container/heap"
 	"errors"
 	"fmt"
 	"math"
@@ -77,6 +78,17 @@ type blockChain interface {
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
 }
+
+type ValidTransaction struct {
+	AddedAt time.Time
+	*types.Transaction
+}
+
+// ValidTransactions represents a set of txs verified by the tx pool
+type ValidTransactions []*ValidTransaction
+
+// Len returns the length of s.
+func (s ValidTransactions) Len() int { return len(s) }
 
 // TxPoolConfig are the configurable parameters of the transaction pool.
 type TxPoolConfig struct {
@@ -417,15 +429,15 @@ func (pool *TxPool) stats() (int, int) {
 
 // Content retrieves the data content of the transaction pool, returning all the
 // pending as well as queued transactions, grouped by account and sorted by nonce.
-func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
+func (pool *TxPool) Content() (map[common.Address]ValidTransactions, map[common.Address]ValidTransactions) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	pending := make(map[common.Address]types.Transactions)
+	pending := make(map[common.Address]ValidTransactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
 	}
-	queued := make(map[common.Address]types.Transactions)
+	queued := make(map[common.Address]ValidTransactions)
 	for addr, list := range pool.queue {
 		queued[addr] = list.Flatten()
 	}
@@ -439,7 +451,7 @@ func (pool *TxPool) Pending() (*TransactionsByTimestampAndNonce, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	pending := make(map[common.Address]types.Transactions)
+	pending := make(map[common.Address]ValidTransactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
 	}
@@ -458,8 +470,8 @@ func (pool *TxPool) Locals() []common.Address {
 // local retrieves all currently known local transactions, groupped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
-func (pool *TxPool) local() map[common.Address]types.Transactions {
-	txs := make(map[common.Address]types.Transactions)
+func (pool *TxPool) local() map[common.Address]ValidTransactions {
+	txs := make(map[common.Address]ValidTransactions)
 	for addr := range pool.locals.accounts {
 		if pending := pool.pending[addr]; pending != nil {
 			txs[addr] = append(txs[addr], pending.Flatten()...)
@@ -542,13 +554,18 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) error {
 		return fmt.Errorf("known nonce: %d", tx.Nonce())
 	}
 
-	pool.enqueueTx(hash, tx)
+	validTx := &ValidTransaction{
+		AddedAt:     time.Now(),
+		Transaction: tx,
+	}
+
+	pool.enqueueTx(hash, validTx)
 
 	if local {
 		pool.locals.add(from)
 	}
 
-	pool.journalTx(from, tx)
+	pool.journalTx(from, validTx.Transaction)
 
 	log.Trace("Pooled new future transaction", "hash", hash, "from", from, "to", tx.To())
 	return nil
@@ -557,14 +574,14 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) error {
 // enqueueTx inserts a new transaction into the non-executable transaction queue.
 //
 // Note, this method assumes the pool lock is held!
-func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) {
-	from, _ := types.TxSender(pool.signer, tx)
+func (pool *TxPool) enqueueTx(hash common.Hash, validTx *ValidTransaction) {
+	from, _ := types.TxSender(pool.signer, validTx.Transaction)
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
 	}
-	pool.queue[from].Add(tx)
+	pool.queue[from].Add(validTx)
 	if pool.all.Get(hash) == nil {
-		pool.all.Add(tx)
+		pool.all.Add(validTx)
 	}
 }
 
@@ -583,22 +600,22 @@ func (pool *TxPool) journalTx(from common.Address, tx *types.Transaction) {
 // promoteTx adds a transaction to the pending (processable) list of transactions.
 //
 // Note, this method assumes the pool lock is held!
-func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.Transaction) bool {
+func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, validTx *ValidTransaction) bool {
 	// Try to insert the transaction into the pending queue
 	if pool.pending[addr] == nil {
 		pool.pending[addr] = newTxList(true)
 	}
 	list := pool.pending[addr]
 
-	list.Add(tx)
+	list.Add(validTx)
 
 	// Failsafe to work around direct pending inserts (tests)
 	if pool.all.Get(hash) == nil {
-		pool.all.Add(tx)
+		pool.all.Add(validTx)
 	}
 	// Set the potentially new pending nonce and notify any subsystems of the new tx
 	pool.beats[addr] = time.Now()
-	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
+	pool.pendingState.SetNonce(addr, validTx.Nonce()+1)
 
 	return true
 }
@@ -683,7 +700,7 @@ func (pool *TxPool) Status(hashes []common.Hash) []TxStatus {
 	status := make([]TxStatus, len(hashes))
 	for i, hash := range hashes {
 		if tx := pool.all.Get(hash); tx != nil {
-			from, _ := types.TxSender(pool.signer, tx) // already validated
+			from, _ := types.TxSender(pool.signer, tx.Transaction) // already validated
 			if pool.pending[from] != nil && pool.pending[from].txs.items[tx.Nonce()] != nil {
 				status[i] = TxStatusPending
 			} else {
@@ -696,7 +713,7 @@ func (pool *TxPool) Status(hashes []common.Hash) []TxStatus {
 
 // Get returns a transaction if it is contained in the pool
 // and nil otherwise.
-func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
+func (pool *TxPool) Get(hash common.Hash) *ValidTransaction {
 	return pool.all.Get(hash)
 }
 
@@ -708,7 +725,7 @@ func (pool *TxPool) removeTx(hash common.Hash) {
 	if tx == nil {
 		return
 	}
-	addr, _ := types.TxSender(pool.signer, tx) // already validated during insertion
+	addr, _ := types.TxSender(pool.signer, tx.Transaction) // already validated during insertion
 
 	pool.all.Remove(hash)
 
@@ -778,7 +795,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			hash := tx.Hash()
 			if pool.promoteTx(addr, hash, tx) {
 				log.Trace("Promoting queued transaction", "hash", hash)
-				promoted = append(promoted, tx)
+				promoted = append(promoted, tx.Transaction)
 			}
 		}
 		// Drop all transactions over the allowed limit
@@ -1028,19 +1045,19 @@ func (as *accountSet) flatten() []common.Address {
 // peeking into the pool in TxPool.Get without having to acquire the widely scoped
 // TxPool.mu mutex.
 type txLookup struct {
-	all  map[common.Hash]*types.Transaction
+	all  map[common.Hash]*ValidTransaction
 	lock sync.RWMutex
 }
 
 // newTxLookup returns a new txLookup structure.
 func newTxLookup() *txLookup {
 	return &txLookup{
-		all: make(map[common.Hash]*types.Transaction),
+		all: make(map[common.Hash]*ValidTransaction),
 	}
 }
 
 // Range calls f on each key and value present in the map.
-func (t *txLookup) Range(f func(hash common.Hash, tx *types.Transaction) bool) {
+func (t *txLookup) Range(f func(hash common.Hash, tx *ValidTransaction) bool) {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
@@ -1052,7 +1069,7 @@ func (t *txLookup) Range(f func(hash common.Hash, tx *types.Transaction) bool) {
 }
 
 // Get returns a transaction if it exists in the lookup, or nil if not found.
-func (t *txLookup) Get(hash common.Hash) *types.Transaction {
+func (t *txLookup) Get(hash common.Hash) *ValidTransaction {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
@@ -1068,7 +1085,7 @@ func (t *txLookup) Count() int {
 }
 
 // Add adds a transaction to the lookup.
-func (t *txLookup) Add(tx *types.Transaction) {
+func (t *txLookup) Add(tx *ValidTransaction) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -1081,4 +1098,91 @@ func (t *txLookup) Remove(hash common.Hash) {
 	defer t.lock.Unlock()
 
 	delete(t.all, hash)
+}
+
+// TxByNonce implements the sort interface to allow sorting a list of transactions
+// by their nonces. This is usually only useful for sorting transactions from a
+// single account, otherwise a nonce comparison doesn't make much sense.
+type TxByNonce ValidTransactions
+
+func (s TxByNonce) Len() int { return len(s) }
+func (s TxByNonce) Less(i, j int) bool {
+	return s[i].Nonce() < s[j].Nonce()
+}
+func (s TxByNonce) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+// TxByTimestamp implements the heap interface, making it useful for all
+// at once sortingas well as individually adding and removing elements.
+type TxByTimestamp ValidTransactions
+
+func (s TxByTimestamp) Len() int           { return len(s) }
+func (s TxByTimestamp) Less(i, j int) bool { return s[i].AddedAt.After(s[j].AddedAt) }
+func (s TxByTimestamp) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+func (s *TxByTimestamp) Push(x interface{}) {
+	*s = append(*s, x.(*ValidTransaction))
+}
+
+func (s *TxByTimestamp) Pop() interface{} {
+	old := *s
+	n := len(old)
+	x := old[n-1]
+	*s = old[0 : n-1]
+	return x
+}
+
+// TransactionsByTimestampAndNonce represents a set of transactions that can return
+// transactions in a timestamp and nonce-honouring order.
+type TransactionsByTimestampAndNonce struct {
+	txs    map[common.Address]ValidTransactions // per account nonce-sorted list of transactions
+	heads  TxByTimestamp                        // Next transaction for each unique account (timestamp heap)
+	signer types.Signer                         // signer for the set of transactions
+}
+
+// NewTransactionsByTimestampAndNonce creates a transaction set that can retrieve
+// timestamp sorted transactions in a nonce-honouring way.
+func NewTransactionsByTimestampAndNonce(signer types.Signer, txs map[common.Address]ValidTransactions) *TransactionsByTimestampAndNonce {
+	heads := make(TxByTimestamp, 0, len(txs))
+	for from, accTxs := range txs {
+		heads = append(heads, accTxs[0])
+		// Ensure the sender address is from the signer
+		acc, _ := types.TxSender(signer, accTxs[0].Transaction)
+		txs[acc] = accTxs[1:]
+		if from != acc {
+			delete(txs, from)
+		}
+	}
+	heap.Init(&heads)
+
+	return &TransactionsByTimestampAndNonce{
+		txs:    txs,
+		heads:  heads,
+		signer: signer,
+	}
+}
+
+// Peek returns the next transaction by price.
+func (t *TransactionsByTimestampAndNonce) Peek() *types.Transaction {
+	if len(t.heads) == 0 {
+		return nil
+	}
+	return t.heads[0].Transaction
+}
+
+// Shift replaces the current best head with the next one from the same account.
+func (t *TransactionsByTimestampAndNonce) Shift() {
+	acc, _ := types.TxSender(t.signer, t.heads[0].Transaction)
+	if txs, ok := t.txs[acc]; ok && len(txs) > 0 {
+		t.heads[0], t.txs[acc] = txs[0], txs[1:]
+		heap.Fix(&t.heads, 0)
+	} else {
+		heap.Pop(&t.heads)
+	}
+}
+
+// Pop removes the best transaction, *not* replacing it with the next one from
+// the same account. This should be used when a transaction cannot be executed
+// and hence all subsequent ones should be discarded from the same account.
+func (t *TransactionsByTimestampAndNonce) Pop() {
+	heap.Pop(&t.heads)
 }
