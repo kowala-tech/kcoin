@@ -60,7 +60,6 @@ customNode.prototype.getMUsd = function(addr, callback) {
                     data: input,
                 },
                 function (data) {
-                    console.log(data)
                     if (data.error) {
                         callback(
                             {

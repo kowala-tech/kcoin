@@ -136,7 +136,11 @@ Wallet.prototype.setBalance = function(callback) {
     });
 
     ajaxReq.getMUsd(parentObj.getAddressString(), function (data) {
-        parentObj.mUsd = data.balance;
+        if (data.error && callback) {
+            callback(data);
+        } else {
+            parentObj.mUsd = data.balance;
+        }
     });
 };
 
