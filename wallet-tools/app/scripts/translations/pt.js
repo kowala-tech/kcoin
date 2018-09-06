@@ -454,6 +454,7 @@ OFFLINE_Step3_Label_1       : 'Cole a transação assinada do Passo 2 e aperte o
 MYWAL_Nick                  : 'Apelido da Carteira ',
 MYWAL_Address               : 'Endereço da Carteira ',
 MYWAL_Bal                   : 'Saldo ',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Editar ',
 MYWAL_View                  : 'Ver ',
 MYWAL_Remove                : 'Remover ',
