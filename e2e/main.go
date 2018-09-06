@@ -40,10 +40,11 @@ func main() {
 			logsToStdout: stdErrLogsFlag,
 		})
 	}, godog.Options{
-		Format:      "progress",
-		Concurrency: 2,
-		Paths:       []string(featuresFlag),
-		Randomize:   time.Now().UTC().UnixNano(),
+		Format:        "progress",
+		Concurrency:   2,
+		Paths:         []string(featuresFlag),
+		Randomize:     time.Now().UTC().UnixNano(),
+		StopOnFailure: true,
 	})
 
 	os.Exit(status)
