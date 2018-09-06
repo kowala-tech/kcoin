@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"os"
-	"runtime"
 	"strings"
+	"time"
 
 	"github.com/DATA-DOG/godog"
 )
@@ -41,8 +41,10 @@ func main() {
 		})
 	}, godog.Options{
 		Format:      "progress",
-		Concurrency: runtime.NumCPU(),
+		Concurrency: 2,
 		Paths:       []string(featuresFlag),
+		Randomize:   time.Now().UTC().UnixNano(),
 	})
+
 	os.Exit(status)
 }
