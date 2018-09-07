@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/DATA-DOG/godog"
@@ -40,7 +41,7 @@ func main() {
 		})
 	}, godog.Options{
 		Format:        "progress",
-		Concurrency:   2,
+		Concurrency:   runtime.NumCPU(),
 		Paths:         []string(featuresFlag),
 		Randomize:     -1,
 		StopOnFailure: true,
