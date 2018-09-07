@@ -155,6 +155,7 @@ func init() {
 		licenseCommand,
 		// See config.go
 		dumpConfigCommand,
+		showAddressesCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
