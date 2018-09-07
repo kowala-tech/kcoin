@@ -712,11 +712,11 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 			from, _ := types.TxSender(signer, transactions[j])
 			receipts[j].ContractAddress = crypto.CreateAddress(from, transactions[j].Nonce())
 		}
-		// The used gas can be calculated based on previous receipts
+		// The used computational resources can be calculated based on previous receipts
 		if j == 0 {
-			receipts[j].GasUsed = receipts[j].CumulativeGasUsed
+			receipts[j].ResourceUsage = receipts[j].CumulativeResourceUsage
 		} else {
-			receipts[j].GasUsed = receipts[j].CumulativeGasUsed - receipts[j-1].CumulativeGasUsed
+			receipts[j].ResourceUsage = receipts[j].CumulativeResourceUsage - receipts[j-1].CumulativeResourceUsage
 		}
 		// The derived log fields can simply be set from the block and transaction
 		for k := 0; k < len(receipts[j].Logs); k++ {
@@ -1080,13 +1080,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
+		receipts, logs, resourceUsage, err := bc.processor.Process(block, state, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
 		// Validate the state using the default validator
-		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
+		err = bc.Validator().ValidateState(block, parent, state, receipts, resourceUsage)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
@@ -1119,7 +1119,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			events = append(events, ChainSideEvent{block})
 		}
 		stats.processed++
-		stats.usedGas += usedGas
+		stats.resourceUsage += resourceUsage
 
 		cache, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
@@ -1134,7 +1134,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 // insertStats tracks and reports on block insertion.
 type insertStats struct {
 	queued, processed, ignored int
-	usedGas                    uint64
+	resourceUsage              uint64
 	lastIndex                  int
 	startTime                  mclock.AbsTime
 }
@@ -1158,8 +1158,8 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 			txs = countTransactions(chain[st.lastIndex : index+1])
 		)
 		context := []interface{}{
-			"blocks", st.processed, "txs", txs, "mgas", float64(st.usedGas) / 1000000,
-			"elapsed", common.PrettyDuration(elapsed), "mgasps", float64(st.usedGas) * 1000 / float64(elapsed),
+			"blocks", st.processed, "txs", txs, "mgas", float64(st.resourceUsage) / 1000000,
+			"elapsed", common.PrettyDuration(elapsed), "mgasps", float64(st.resourceUsage) * 1000 / float64(elapsed),
 			"number", end.Number(), "hash", end.Hash(), "cache", cache,
 		}
 		if st.queued > 0 {

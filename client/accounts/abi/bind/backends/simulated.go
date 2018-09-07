@@ -28,7 +28,7 @@ import (
 )
 
 var errBlockNumberUnsupported = errors.New("SimulatedBackend cannot access blocks other than the latest block")
-var errGasEstimationFailed = errors.New("gas required exceeds allowance or always failing transaction")
+var errComputationalEffortEstimationFailed = errors.New("required computational effort exceeds allowance or always failing transaction")
 
 // SimulatedBackend implements bind.ContractBackend, simulating a blockchain in
 // the background. Its main purpose is to allow easily testing contract bindings.
@@ -195,7 +195,7 @@ func (b *SimulatedBackend) EstimateComputationalEffort(ctx context.Context, call
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	// Determine the lowest and highest possible gas limits to binary search in between
+	// Determine the lowest and highest possible compute limits to binary search in between
 	var (
 		lo  uint64 = params.TxCompEffort - 1
 		hi  uint64
@@ -208,24 +208,23 @@ func (b *SimulatedBackend) EstimateComputationalEffort(ctx context.Context, call
 	}
 	cap = hi
 
-	// Create a helper to check if a gas allowance results in an executable transaction
+	// Create a helper to check if a computational resources allowance results in an executable transaction
 	executable := func(computeLimit uint64) bool {
 		call.ComputeLimit = computeLimit
 
 		snapshot := b.pendingState.Snapshot()
 		_, _, failed, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
 		b.pendingState.RevertToSnapshot(snapshot)
-
 		if err != nil || failed {
 			if err != nil {
-				log.Error("can't estimate gas limit", "err", err)
+				log.Error("can't estimate computational effort", "err", err)
 			}
 
 			return false
 		}
 		return true
 	}
-	// Execute the binary search and hone in on an executable gas limit
+	// Execute the binary search and hone in on an executable compute limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
 		if !executable(mid) {
@@ -237,7 +236,7 @@ func (b *SimulatedBackend) EstimateComputationalEffort(ctx context.Context, call
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
 		if !executable(hi) {
-			return 0, errGasEstimationFailed
+			return 0, errComputationalEffortEstimationFailed
 		}
 	}
 	return hi, nil

@@ -161,7 +161,7 @@ var (
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.nolocals",
-		Usage: "Disables price exemptions for locally submitted transactions",
+		Usage: "Disables distinction between local and remote transactions",
 	}
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",

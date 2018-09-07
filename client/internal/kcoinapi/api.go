@@ -132,7 +132,7 @@ func (s *PublicTxPoolAPI) Inspect() map[string]map[string]map[string]string {
 	// Define a formatter to flatten a transaction into a string
 	var format = func(tx *types.Transaction) string {
 		if to := tx.To(); to != nil {
-			return fmt.Sprintf("%s: %v wei + %v gas", tx.To().Hex(), tx.Value(), tx.ComputeLimit())
+			return fmt.Sprintf("%s: %v wei + %v compute limit", tx.To().Hex(), tx.Value(), tx.ComputeLimit())
 		}
 		return fmt.Sprintf("contract creation: %v wei + %v compute limit", tx.Value(), tx.ComputeLimit())
 	}
@@ -562,7 +562,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), computeLimit, args.Data, false)
 
 	// Setup context so it may be cancelled the call has completed
-	// or, in case of unmetered gas, setup a context with a timeout.
+	// or, in case of unmetered computational effort, setup a context with a timeout.
 	var cancel context.CancelFunc
 	if timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, timeout)
@@ -586,17 +586,17 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 		evm.Cancel()
 	}()
 
-	// Setup the gas pool (also for unmetered requests)
+	// Setup the computational resources pool (also for unmetered requests)
 	// and apply the message.
 	crpool := new(core.CompResourcesPool).AddResources(math.MaxUint64)
-	res, gas, failed, err := core.ApplyMessage(evm, msg, crpool)
+	res, effort, failed, err := core.ApplyMessage(evm, msg, crpool)
 	if err := vmError(); err != nil {
 		if err != nil {
-			log.Error("an error while setting GasPrice", "err", err)
+			log.Error(err)
 		}
 		return nil, 0, false, err
 	}
-	return res, gas, failed, err
+	return res, effort, failed, err
 }
 
 // Call executes the given transaction on the state for the given block number.
@@ -609,7 +609,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr r
 // EstimateComputationalEffort returns an estimate of the computational effort in compute units required to execute the
 // given transaction against the current pending block.
 func (s *PublicBlockChainAPI) EstimateComputationalEffort(ctx context.Context, args CallArgs) (hexutil.Uint64, error) {
-	// Binary search the gas requirement, as it may be higher than the amount used
+	// Binary search the required computational effort, as it may be higher than the amount used
 	var (
 		lo  uint64 = params.TxCompEffort - 1
 		hi  uint64
@@ -622,21 +622,21 @@ func (s *PublicBlockChainAPI) EstimateComputationalEffort(ctx context.Context, a
 	}
 	cap = hi
 
-	// Create a helper to check if a gas allowance results in an executable transaction
+	// Create a helper to check if a computational resources allowance results in an executable transaction
 	executable := func(computeLimit uint64) bool {
 		args.ComputeLimit = hexutil.Uint64(computeLimit)
 
 		_, _, failed, err := s.doCall(ctx, args, rpc.PendingBlockNumber, vm.Config{}, 0)
 		if err != nil || failed {
 			if err != nil {
-				log.Error("can't estimate gas limit", "err", err)
+				log.Error("can't estimate computational effort", "err", err)
 			}
 
 			return false
 		}
 		return true
 	}
-	// Execute the binary search and hone in on an executable gas limit
+	// Execute the binary search and hone in on an executable computational effort
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
 		if !executable(mid) {
@@ -648,7 +648,7 @@ func (s *PublicBlockChainAPI) EstimateComputationalEffort(ctx context.Context, a
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
 		if !executable(hi) {
-			return 0, fmt.Errorf("gas required exceeds allowance or always failing transaction")
+			return 0, fmt.Errorf("computational effort required exceeds allowance or always failing transaction")
 		}
 	}
 	return hexutil.Uint64(hi), nil
@@ -656,26 +656,26 @@ func (s *PublicBlockChainAPI) EstimateComputationalEffort(ctx context.Context, a
 
 // ExecutionResult groups all structured logs emitted by the EVM
 // while replaying a transaction in debug mode as well as transaction
-// execution status, the amount of gas used and the return value
+// execution status, the amount of computational resources used and the return value
 type ExecutionResult struct {
-	Gas         uint64         `json:"gas"`
-	Failed      bool           `json:"failed"`
-	ReturnValue string         `json:"returnValue"`
-	StructLogs  []StructLogRes `json:"structLogs"`
+	ResourceUsage uint64         `json:"resourceUsage"`
+	Failed        bool           `json:"failed"`
+	ReturnValue   string         `json:"returnValue"`
+	StructLogs    []StructLogRes `json:"structLogs"`
 }
 
 // StructLogRes stores a structured log emitted by the EVM while replaying a
 // transaction in debug mode
 type StructLogRes struct {
-	Pc      uint64             `json:"pc"`
-	Op      string             `json:"op"`
-	Gas     uint64             `json:"gas"`
-	GasCost uint64             `json:"gasCost"`
-	Depth   int                `json:"depth"`
-	Error   error              `json:"error,omitempty"`
-	Stack   *[]string          `json:"stack,omitempty"`
-	Memory  *[]string          `json:"memory,omitempty"`
-	Storage *map[string]string `json:"storage,omitempty"`
+	Pc                  uint64             `json:"pc"`
+	Op                  string             `json:"op"`
+	ComputationalEffort uint64             `json:"compEffort"`
+	ComputeUnitPrice    uint64             `json:"compUnitPrice"`
+	Depth               int                `json:"depth"`
+	Error               error              `json:"error,omitempty"`
+	Stack               *[]string          `json:"stack,omitempty"`
+	Memory              *[]string          `json:"memory,omitempty"`
+	Storage             *map[string]string `json:"storage,omitempty"`
 }
 
 // formatLogs formats EVM returned structured logs for json output
@@ -683,12 +683,12 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 	formatted := make([]StructLogRes, len(logs))
 	for index, trace := range logs {
 		formatted[index] = StructLogRes{
-			Pc:      trace.Pc,
-			Op:      trace.Op.String(),
-			Gas:     trace.Gas,
-			GasCost: trace.GasCost,
-			Depth:   trace.Depth,
-			Error:   trace.Err,
+			Pc:                  trace.Pc,
+			Op:                  trace.Op.String(),
+			ComputationalEffort: trace.ComputationalEffort,
+			ComputeUnitPrice:    trace.ComputeUnitPrice,
+			Depth:               trace.Depth,
+			Error:               trace.Err,
 		}
 		if trace.Stack != nil {
 			stack := make([]string, len(trace.Stack))
@@ -971,17 +971,17 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	from, _ := types.TxSender(signer, tx)
 
 	fields := map[string]interface{}{
-		"blockHash":         blockHash,
-		"blockNumber":       hexutil.Uint64(blockNumber),
-		"transactionHash":   hash,
-		"transactionIndex":  hexutil.Uint64(index),
-		"from":              from,
-		"to":                tx.To(),
-		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
-		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
-		"contractAddress":   nil,
-		"logs":              receipt.Logs,
-		"logsBloom":         receipt.Bloom,
+		"blockHash":               blockHash,
+		"blockNumber":             hexutil.Uint64(blockNumber),
+		"transactionHash":         hash,
+		"transactionIndex":        hexutil.Uint64(index),
+		"from":                    from,
+		"to":                      tx.To(),
+		"resourceUsage":           hexutil.Uint64(receipt.ResourceUsage),
+		"cumulativeResourceUsage": hexutil.Uint64(receipt.CumulativeResourceUsage),
+		"contractAddress":         nil,
+		"logs":                    receipt.Logs,
+		"logsBloom":               receipt.Bloom,
 	}
 
 	// Assign receipt status or post state.

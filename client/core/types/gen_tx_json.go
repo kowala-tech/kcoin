@@ -16,11 +16,11 @@ var _ = (*txdataMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (t txdata) MarshalJSON() ([]byte, error) {
 	type txdata struct {
-		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`
-		ComputeLimit hexutil.Uint64  `json:"limit"    gencodec:"required"`
-		Recipient    *common.Address `json:"to"       rlp:"nil"`
-		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
-		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
+		AccountNonce hexutil.Uint64  `json:"nonce"           gencodec:"required"`
+		ComputeLimit hexutil.Uint64  `json:"computeLimit"    gencodec:"required"`
+		Recipient    *common.Address `json:"to"              rlp:"nil"`
+		Amount       *hexutil.Big    `json:"value"           gencodec:"required"`
+		Payload      hexutil.Bytes   `json:"input"           gencodec:"required"`
 		V            *hexutil.Big    `json:"v" gencodec:"required"`
 		R            *hexutil.Big    `json:"r" gencodec:"required"`
 		S            *hexutil.Big    `json:"s" gencodec:"required"`
@@ -42,11 +42,11 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (t *txdata) UnmarshalJSON(input []byte) error {
 	type txdata struct {
-		AccountNonce *hexutil.Uint64 `json:"nonce"    gencodec:"required"`
-		ComputeLimit *hexutil.Uint64 `json:"limit"    gencodec:"required"`
-		Recipient    *common.Address `json:"to"       rlp:"nil"`
-		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
-		Payload      *hexutil.Bytes  `json:"input"    gencodec:"required"`
+		AccountNonce *hexutil.Uint64 `json:"nonce"           gencodec:"required"`
+		ComputeLimit *hexutil.Uint64 `json:"computeLimit"    gencodec:"required"`
+		Recipient    *common.Address `json:"to"              rlp:"nil"`
+		Amount       *hexutil.Big    `json:"value"           gencodec:"required"`
+		Payload      *hexutil.Bytes  `json:"input"           gencodec:"required"`
 		V            *hexutil.Big    `json:"v" gencodec:"required"`
 		R            *hexutil.Big    `json:"r" gencodec:"required"`
 		S            *hexutil.Big    `json:"s" gencodec:"required"`
@@ -61,7 +61,7 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 	}
 	t.AccountNonce = uint64(*dec.AccountNonce)
 	if dec.ComputeLimit == nil {
-		return errors.New("missing required field 'limit' for txdata")
+		return errors.New("missing required field 'computeLimit' for txdata")
 	}
 	t.ComputeLimit = uint64(*dec.ComputeLimit)
 	if dec.Recipient != nil {

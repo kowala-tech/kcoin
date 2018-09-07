@@ -56,26 +56,26 @@ type LogConfig struct {
 // StructLog is emitted to the EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
 type StructLog struct {
-	Pc         uint64                      `json:"pc"`
-	Op         OpCode                      `json:"op"`
-	Gas        uint64                      `json:"gas"`
-	GasCost    uint64                      `json:"gasCost"`
-	Memory     []byte                      `json:"memory"`
-	MemorySize int                         `json:"memSize"`
-	Stack      []*big.Int                  `json:"stack"`
-	Storage    map[common.Hash]common.Hash `json:"-"`
-	Depth      int                         `json:"depth"`
-	Err        error                       `json:"-"`
+	Pc                  uint64                      `json:"pc"`
+	Op                  OpCode                      `json:"op"`
+	ComputationalEffort uint64                      `json:"compEffort"`
+	ComputeUnitPrice    uint64                      `json:"compUnitprice"`
+	Memory              []byte                      `json:"memory"`
+	MemorySize          int                         `json:"memSize"`
+	Stack               []*big.Int                  `json:"stack"`
+	Storage             map[common.Hash]common.Hash `json:"-"`
+	Depth               int                         `json:"depth"`
+	Err                 error                       `json:"-"`
 }
 
 // overrides for gencodec
 type structLogMarshaling struct {
-	Stack       []*math.HexOrDecimal256
-	Gas         math.HexOrDecimal64
-	GasCost     math.HexOrDecimal64
-	Memory      hexutil.Bytes
-	OpName      string `json:"opName"` // adds call to OpName() in MarshalJSON
-	ErrorString string `json:"error"`  // adds call to ErrorString() in MarshalJSON
+	Stack               []*math.HexOrDecimal256
+	ComputationalEffort math.HexOrDecimal64
+	ComputeUnitPrice    math.HexOrDecimal64
+	Memory              hexutil.Bytes
+	OpName              string `json:"opName"` // adds call to OpName() in MarshalJSON
+	ErrorString         string `json:"error"`  // adds call to ErrorString() in MarshalJSON
 }
 
 // OpName formats the operand name in a human-readable format.
@@ -97,9 +97,9 @@ func (s *StructLog) ErrorString() string {
 // Note that reference types are actual VM data structures; make copies
 // if you need to retain them beyond the current call.
 type Tracer interface {
-	CaptureStart(from common.Address, to common.Address, call bool, input []byte, gas uint64, value *big.Int) error
-	CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
-	CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
+	CaptureStart(from common.Address, to common.Address, call bool, input []byte, resourceUsage uint64, value *big.Int) error
+	CaptureState(env *EVM, pc uint64, op OpCode, resourceUsage, price uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
+	CaptureFault(env *EVM, pc uint64, op OpCode, resourceUsage, price uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
 	CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error
 }
 
@@ -214,7 +214,7 @@ func (l *StructLogger) Output() []byte { return l.output }
 // WriteTrace writes a formatted trace to the given writer
 func WriteTrace(writer io.Writer, logs []StructLog) {
 	for _, log := range logs {
-		fmt.Fprintf(writer, "%-16spc=%08d gas=%v cost=%v", log.Op, log.Pc, log.Gas, log.GasCost)
+		fmt.Fprintf(writer, "%-16spc=%08d resourceUsage=%v price=%v", log.Op, log.Pc, log.ComputationalEffort, log.ComputeUnitPrice)
 		if log.Err != nil {
 			fmt.Fprintf(writer, " ERROR: %v", log.Err)
 		}

@@ -34,7 +34,7 @@ type TransactOpts struct {
 	Signer SignerFn       // Method to use for signing the transaction (mandatory)
 
 	Value        *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
-	ComputeLimit uint64   // Gas limit to set for the transaction execution (0 = estimate)
+	ComputeLimit uint64   // Compute limit to set for the transaction execution (0 = estimate)
 
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 }
