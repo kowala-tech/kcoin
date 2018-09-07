@@ -455,6 +455,7 @@ OFFLINE_Step3_Label_1       : 'Επικολλήστε την υπογεγραμ�
 MYWAL_Nick                  : 'Ψευδώνυμο πορτοφολιού ',
 MYWAL_Address               : 'Διεύθυνση πορτοφολιού ',
 MYWAL_Bal                   : 'Υπόλοιπο ',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Επεξεργασία ',
 MYWAL_View                  : 'Προβολή ',
 MYWAL_Remove                : 'Αφαίρεση ',

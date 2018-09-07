@@ -134,10 +134,22 @@ Wallet.prototype.setBalance = function(callback) {
             });
         }
     });
-}
+
+    ajaxReq.getMUsd(parentObj.getAddressString(), function (data) {
+        if (data.error && callback) {
+            callback(data);
+        } else {
+            parentObj.mUsd = data.balance;
+        }
+    });
+};
+
 Wallet.prototype.getBalance = function() {
     return this.balance;
-}
+};
+Wallet.prototype.getMUsd = function() {
+    return this.mUsd;
+};
 Wallet.prototype.getPath = function() {
     return this.path;
 }
