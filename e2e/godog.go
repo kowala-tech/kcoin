@@ -2,8 +2,10 @@ package main
 
 import (
 	"log"
+	"math/rand"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/gherkin"
@@ -21,7 +23,10 @@ type FeatureContextOpts struct {
 }
 
 func FeatureContext(opts *FeatureContextOpts) {
-	context := impl.NewTestContext(chainID, opts.logsToStdout)
+
+	networkID := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(1000) + 1000
+
+	context := impl.NewTestContext(chainID, networkID, opts.logsToStdout)
 	validationCtx := impl.NewValidationContext(context)
 	walletBackendCtx := impl.NewWalletBackendContext(context)
 	faucetCtx := impl.NewFaucetContext(context)
