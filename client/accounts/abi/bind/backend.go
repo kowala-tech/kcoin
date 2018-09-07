@@ -57,10 +57,10 @@ type ContractTransactor interface {
 	PendingNonceAt(ctx context.Context, account common.Address) (uint64, error)
 	// EstimateComputationalEffort tries to estimate the required computational effort
 	// to execute a specific transaction based on the current pending state of the backend blockchain.
-	// There is no guarantee that this is the true gas limit requirement as other
+	// There is no guarantee that this is the final required computational effort as other
 	// transactions may be added or removed by miners, but it should provide a basis
 	// for setting a reasonable default.
-	EstimateComputationalEffort(ctx context.Context, call kcoin.CallMsg) (gas uint64, err error)
+	EstimateComputationalEffort(ctx context.Context, call kcoin.CallMsg) (effort uint64, err error)
 	// SendTransaction injects the transaction into the pending pool for execution.
 	SendTransaction(ctx context.Context, tx *types.Transaction) error
 }
