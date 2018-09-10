@@ -169,9 +169,9 @@ func (self *StateDB) Preimages() map[common.Hash][]byte {
 	return self.preimages
 }
 
-func (self *StateDB) AddRefund(gas uint64) {
+func (self *StateDB) AddRefund(resources uint64) {
 	self.journal.append(refundChange{prev: self.refund})
-	self.refund += gas
+	self.refund += resources
 }
 
 // Exist reports whether the given account address exists in the state.
@@ -536,7 +536,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 		stateObject, exist := s.stateObjects[addr]
 		if !exist {
 			// ripeMD is 'touched' at block 1714175, in tx 0x1237f737031e40bcde4a8b7e717b2d15e3ecadfe49bb1bbc71ee9deb09c6fcf2
-			// That tx goes out of gas, and although the notion of 'touched' does not exist there, the
+			// That tx goes out of computational resources, and although the notion of 'touched' does not exist there, the
 			// touch-event will still be recorded in the journal. Since ripeMD is a special snowflake,
 			// it will persist in the journal even though the journal is reverted. In this special circumstance,
 			// it may exist in `s.journal.dirties` but not in `s.stateObjects`.

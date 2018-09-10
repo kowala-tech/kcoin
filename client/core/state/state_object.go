@@ -269,8 +269,8 @@ func (self *stateObject) setBalance(amount *big.Int) {
 	self.data.Balance = amount
 }
 
-// Return the gas back to the origin. Used by the Virtual machine or Closures
-func (c *stateObject) ReturnGas(gas *big.Int) {}
+// Return the computational resources back to the origin. Used by the Virtual machine or Closures
+func (c *stateObject) ReturnComputationalResources(resources *big.Int) {}
 
 func (self *stateObject) deepCopy(db *StateDB) *stateObject {
 	stateObject := newObject(db, self.address, self.data)

@@ -1138,11 +1138,11 @@ func (s TxByNonce) Less(i, j int) bool {
 func (s TxByNonce) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 // TxByTimestamp implements the heap interface, making it useful for all
-// at once sortingas well as individually adding and removing elements.
+// at once sorting as well as individually adding and removing elements.
 type TxByTimestamp ValidTransactions
 
 func (s TxByTimestamp) Len() int           { return len(s) }
-func (s TxByTimestamp) Less(i, j int) bool { return s[i].AddedAt.After(s[j].AddedAt) }
+func (s TxByTimestamp) Less(i, j int) bool { return s[i].AddedAt.Before(s[j].AddedAt) }
 func (s TxByTimestamp) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 func (s *TxByTimestamp) Push(x interface{}) {

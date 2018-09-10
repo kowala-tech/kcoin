@@ -177,12 +177,12 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		if operation.memorySize != nil {
 			memSize, overflow := bigUint64(operation.memorySize(stack))
 			if overflow {
-				return nil, errGasUintOverflow
+				return nil, errComputationalEffortUintOverflow
 			}
 			// memory is expanded in words of 32 bytes. Gas
 			// is also calculated in words.
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
-				return nil, errGasUintOverflow
+				return nil, errComputationalEffortUintOverflow
 			}
 		}
 		// consume the gas and return an error if not enough gas is available.

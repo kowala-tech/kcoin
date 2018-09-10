@@ -249,7 +249,7 @@ func (l *txList) Forward(threshold uint64) ValidTransactions {
 //
 // This method uses the cached costCap and computeCap to quickly decide if there's even
 // a point in calculating all the costs or if the balance covers all. If the threshold
-// is lower than the costgas cap, the caps will be reset to a new high after removing
+// is lower than the cost cap, the caps will be reset to a new high after removing
 // the newly invalidated transactions.
 func (l *txList) Filter(costLimit *big.Int, computeLimit uint64) (ValidTransactions, ValidTransactions) {
 	// If all transactions are below the threshold, short circuit

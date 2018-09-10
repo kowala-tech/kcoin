@@ -34,15 +34,15 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 // the processor (coinbase) and any included uncles.
 //
 // Process returns the receipts and logs accumulated during the process and
-// returns the amount of gas that was used in the process. If any of the
-// transactions failed to execute due to insufficient gas it will return an error.
+// returns the amount of computational resources that was used in the process. If any of the
+// transactions failed to execute due to insufficient computational resources it will return an error.
 func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
 	var (
-		receipts types.Receipts
-		usedGas  = new(uint64)
-		header   = block.Header()
-		allLogs  []*types.Log
-		crpool   = new(CompResourcesPool)
+		receipts                   types.Receipts
+		usedComputationalResources = new(uint64)
+		header                     = block.Header()
+		allLogs                    []*types.Log
+		crpool                     = new(CompResourcesPool)
 	)
 
 	crpool.AddResources(params.ComputeCapacity)
@@ -50,7 +50,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, crpool, statedb, header, tx, usedGas, cfg)
+		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, crpool, statedb, header, tx, usedComputationalResources, cfg)
 		if err != nil {
 			return nil, nil, 0, err
 		}
@@ -60,14 +60,14 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.LastCommit(), receipts)
 
-	return receipts, allLogs, *usedGas, nil
+	return receipts, allLogs, *usedComputationalResources, nil
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database
 // and uses the input parameters for its environment. It returns the receipt
-// for the transaction, gas used and an error if the transaction failed,
+// for the transaction, computational resources used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, crpool *CompResourcesPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, uint64, error) {
+func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, crpool *CompResourcesPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedComputationalResources *uint64, cfg vm.Config) (*types.Receipt, uint64, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
 	if err != nil {
 		return nil, 0, err
@@ -78,7 +78,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// about the transaction and calling mechanisms.
 	env := vm.New(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
-	_, gas, failed, err := ApplyMessage(env, msg, crpool)
+	_, computationalResources, failed, err := ApplyMessage(env, msg, crpool)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -86,13 +86,13 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	var root []byte
 	statedb.Finalise(true)
 
-	*usedGas += gas
+	*usedComputationalResources += computationalResources
 
-	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
+	// Create a new receipt for the transaction, storing the intermediate root and computational resources used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
-	receipt := types.NewReceipt(root, failed, *usedGas)
+	receipt := types.NewReceipt(root, failed, *usedComputationalResources)
 	receipt.TxHash = tx.Hash()
-	receipt.ResourceUsage = gas
+	receipt.ResourceUsage = computationalResources
 	// if the transaction created a contract, store the creation address in the receipt.
 	if msg.To() == nil {
 		receipt.ContractAddress = crypto.CreateAddress(env.Context.Origin, tx.Nonce())
@@ -101,5 +101,5 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
-	return receipt, gas, err
+	return receipt, computationalResources, err
 }

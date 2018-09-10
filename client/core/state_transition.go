@@ -34,14 +34,14 @@ The state transitioning model does all all the necessary work to work out a vali
 */
 
 type StateTransition struct {
-	crpool               *CompResourcesPool
-	msg                  Message
-	compResources        uint64
-	initialCompResources uint64
-	value                *big.Int
-	data                 []byte
-	state                vm.StateDB
-	vm                   *vm.VM
+	crpool                        *CompResourcesPool
+	msg                           Message
+	computationalResources        uint64
+	initialComputationalResources uint64
+	value                         *big.Int
+	data                          []byte
+	state                         vm.StateDB
+	vm                            *vm.VM
 }
 
 // Message represents a message sent to a contract.
@@ -107,7 +107,7 @@ func NewStateTransition(vm *vm.VM, msg Message, crpool *CompResourcesPool) *Stat
 // against the old state within the environment.
 //
 // ApplyMessage returns the bytes returned by any VM execution (if it took place),
-// the gas used (which includes gas refunds) and an error if it failed. An error always
+// the computational resources used (which includes computational resources refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
 func ApplyMessage(vm *vm.VM, msg Message, crpool *CompResourcesPool) ([]byte, uint64, bool, error) {
@@ -123,10 +123,10 @@ func (st *StateTransition) to() common.Address {
 }
 
 func (st *StateTransition) useCompResources(units uint64) error {
-	if st.compResources < units {
+	if st.computationalResources < units {
 		return vm.ErrOutOfComputationalResources
 	}
-	st.compResources -= units
+	st.computationalResources -= units
 
 	return nil
 }
@@ -137,9 +137,9 @@ func (st *StateTransition) buyCompResources() error {
 		return errInsufficientBalanceForCompResouces
 	}
 	st.crpool.AddResources(st.msg.ComputationalEffort())
-	st.compResources += st.msg.ComputationalEffort()
+	st.computationalResources += st.msg.ComputationalEffort()
 
-	st.initialCompResources = st.msg.ComputationalEffort()
+	st.initialComputationalResources = st.msg.ComputationalEffort()
 	st.state.SubBalance(st.msg.From(), mgval)
 	return nil
 }
@@ -185,11 +185,11 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, 
 		vmerr error
 	)
 	if contractCreation {
-		ret, _, st.compResources, vmerr = env.Create(sender, st.data, st.compResources, st.value)
+		ret, _, st.computationalResources, vmerr = env.Create(sender, st.data, st.computationalResources, st.value)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		ret, st.compResources, vmerr = env.Call(sender, st.to(), st.data, st.compResources, st.value)
+		ret, st.computationalResources, vmerr = env.Call(sender, st.to(), st.data, st.computationalResources, st.value)
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
@@ -201,29 +201,29 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, 
 		}
 	}
 	st.refundCompResources()
-	st.state.AddBalance(st.vm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.compResourcesUsed()), st.vm.ComputeUnitPrice))
+	st.state.AddBalance(st.vm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.computationalResourcesUsed()), st.vm.ComputeUnitPrice))
 
-	return ret, st.compResourcesUsed(), vmerr != nil, err
+	return ret, st.computationalResourcesUsed(), vmerr != nil, err
 }
 
 func (st *StateTransition) refundCompResources() {
-	// Apply refund counter, capped to half of the used gas.
-	refund := st.compResourcesUsed() / 2
+	// Apply refund counter, capped to half of the used computational resources.
+	refund := st.computationalResourcesUsed() / 2
 	if refund > st.state.GetRefund() {
 		refund = st.state.GetRefund()
 	}
-	st.compResources += refund
+	st.computationalResources += refund
 
 	// Return kUSD for remaining computational resources.
-	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.compResources), st.vm.ComputeUnitPrice)
+	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.computationalResources), st.vm.ComputeUnitPrice)
 	st.state.AddBalance(st.msg.From(), remaining)
 
-	// Also return remaining gas to the block gas counter so it is
+	// Also return remaining computational resources to the block computational resources counter so it is
 	// available for the next transaction.
-	st.crpool.AddResources(st.compResources)
+	st.crpool.AddResources(st.computationalResources)
 }
 
-// gasUsed returns the computation resources (in compute units) used up by the state transition.
-func (st *StateTransition) compResourcesUsed() uint64 {
-	return st.initialCompResources - st.compResources
+// computationalResourcesUsed returns the computation resources (in compute units) used up by the state transition.
+func (st *StateTransition) computationalResourcesUsed() uint64 {
+	return st.initialComputationalResources - st.computationalResources
 }

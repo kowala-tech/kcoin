@@ -151,13 +151,13 @@ func (r *Receipt) Size() common.StorageSize {
 
 func (r *Receipt) String() string {
 	return fmt.Sprintf(`
-TxHash:			 	%s
-ContractAddress: 	%s
-GasUsed:		 	%d
-CumulativeGasUsed:	%d
-Status: 			%d
-Size: 				%s
-Logs: %v
+TxHash:			 	        %s
+ContractAddress: 	        %s
+ResourceUsage:		 	    %d
+CumulativeResourceUsage:	%d
+Status: 			        %d
+Size: 				        %s
+Logs:                       %v
 `, r.TxHash.String(), r.ContractAddress.String(), r.CumulativeResourceUsage, r.ResourceUsage, r.Status, r.Size().String(), r.Logs)
 }
 

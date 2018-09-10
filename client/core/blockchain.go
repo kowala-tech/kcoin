@@ -1158,8 +1158,8 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 			txs = countTransactions(chain[st.lastIndex : index+1])
 		)
 		context := []interface{}{
-			"blocks", st.processed, "txs", txs, "mgas", float64(st.resourceUsage) / 1000000,
-			"elapsed", common.PrettyDuration(elapsed), "mgasps", float64(st.resourceUsage) * 1000 / float64(elapsed),
+			"blocks", st.processed, "txs", txs, "m computational resources", float64(st.resourceUsage) / 1000000,
+			"elapsed", common.PrettyDuration(elapsed), "m computational resources ps", float64(st.resourceUsage) * 1000 / float64(elapsed),
 			"number", end.Number(), "hash", end.Hash(), "cache", cache,
 		}
 		if st.queued > 0 {
