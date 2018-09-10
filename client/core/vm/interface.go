@@ -68,11 +68,11 @@ type StateDB interface {
 // depends on this context being implemented for doing subcalls and initialising new VM contracts.
 type CallContext interface {
 	// Call another contract
-	Call(env *VM, me ContractRef, addr common.Address, data []byte, gas, value *big.Int) ([]byte, error)
+	Call(env *VM, me ContractRef, addr common.Address, data []byte, computeLimit, value *big.Int) ([]byte, error)
 	// Take another's contract code and execute within our own context
-	CallCode(env *VM, me ContractRef, addr common.Address, data []byte, gas, value *big.Int) ([]byte, error)
+	CallCode(env *VM, me ContractRef, addr common.Address, data []byte, computeLimit, value *big.Int) ([]byte, error)
 	// Same as CallCode except sender and value is propagated from parent to child scope
-	DelegateCall(env *VM, me ContractRef, addr common.Address, data []byte, gas *big.Int) ([]byte, error)
+	DelegateCall(env *VM, me ContractRef, addr common.Address, data []byte, computeLimit *big.Int) ([]byte, error)
 	// Create a new contract
-	Create(env *VM, me ContractRef, data []byte, gas, value *big.Int) ([]byte, common.Address, error)
+	Create(env *VM, me ContractRef, data []byte, computeLimit, value *big.Int) ([]byte, common.Address, error)
 }

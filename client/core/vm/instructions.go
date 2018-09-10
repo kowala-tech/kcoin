@@ -622,7 +622,7 @@ func opMsize(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stac
 	return nil, nil
 }
 
-func opGas(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+func opResourcesLeft(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	stack.push(vm.interpreter.intPool.get().SetUint64(contract.ComputationalResources))
 	return nil, nil
 }
@@ -660,9 +660,9 @@ func opCreate(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Sta
 }
 
 func opCall(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	// Pop gas. The actual gas in in vm.callGasTemp.
+	// Pop computational resources. The actual computational resources in in vm.callCompResourcesTemp.
 	vm.interpreter.intPool.put(stack.pop())
-	gas := vm.callGasTemp
+	resources := vm.callCompResourcesTemp
 	// Pop other call parameters.
 	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := common.BigToAddress(addr)
@@ -671,9 +671,9 @@ func opCall(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stack
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
-		gas += params.CallStipend
+		resources += params.CallStipend
 	}
-	ret, returnGas, err := vm.Call(contract, toAddr, args, gas, value)
+	ret, returnCompResources, err := vm.Call(contract, toAddr, args, resources, value)
 	if err != nil {
 		stack.push(vm.interpreter.intPool.getZero())
 	} else {
@@ -682,16 +682,16 @@ func opCall(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stack
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
-	contract.ComputationalResources += returnGas
+	contract.ComputationalResources += returnCompResources
 
 	vm.interpreter.intPool.put(addr, value, inOffset, inSize, retOffset, retSize)
 	return ret, nil
 }
 
 func opCallCode(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	// Pop gas. The actual gas is in vm.callGasTemp.
+	// Pop computational resources. The actual computational resources is in vm.callCompResourcesTemp.
 	vm.interpreter.intPool.put(stack.pop())
-	gas := vm.callGasTemp
+	resources := vm.callCompResourcesTemp
 	// Pop other call parameters.
 	addr, value, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := common.BigToAddress(addr)
@@ -700,9 +700,9 @@ func opCallCode(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *S
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
-		gas += params.CallStipend
+		resources += params.CallStipend
 	}
-	ret, returnGas, err := vm.CallCode(contract, toAddr, args, gas, value)
+	ret, returnCompResources, err := vm.CallCode(contract, toAddr, args, resources, value)
 	if err != nil {
 		stack.push(vm.interpreter.intPool.getZero())
 	} else {
@@ -711,23 +711,23 @@ func opCallCode(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *S
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
-	contract.ComputationalResources += returnGas
+	contract.ComputationalResources += returnCompResources
 
 	vm.interpreter.intPool.put(addr, value, inOffset, inSize, retOffset, retSize)
 	return ret, nil
 }
 
 func opDelegateCall(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	// Pop gas. The actual gas is in vm.callGasTemp.
+	// Pop computational resources. The actual computational resources is in vm.callCompResourcesTemp.
 	vm.interpreter.intPool.put(stack.pop())
-	gas := vm.callGasTemp
+	resources := vm.callCompResourcesTemp
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := common.BigToAddress(addr)
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
-	ret, returnGas, err := vm.DelegateCall(contract, toAddr, args, gas)
+	ret, returnCompResources, err := vm.DelegateCall(contract, toAddr, args, resources)
 	if err != nil {
 		stack.push(vm.interpreter.intPool.getZero())
 	} else {
@@ -736,23 +736,23 @@ func opDelegateCall(pc *uint64, vm *VM, contract *Contract, memory *Memory, stac
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
-	contract.ComputationalResources += returnGas
+	contract.ComputationalResources += returnCompResources
 
 	vm.interpreter.intPool.put(addr, inOffset, inSize, retOffset, retSize)
 	return ret, nil
 }
 
 func opStaticCall(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	// Pop gas. The actual gas is in vm.callGasTemp.
+	// Pop computational resources. The actual computational resources is in vm.callCompResourcesTemp.
 	vm.interpreter.intPool.put(stack.pop())
-	gas := vm.callGasTemp
+	resources := vm.callCompResourcesTemp
 	// Pop other call parameters.
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := common.BigToAddress(addr)
 	// Get arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
-	ret, returnGas, err := vm.StaticCall(contract, toAddr, args, gas)
+	ret, returnCompResources, err := vm.StaticCall(contract, toAddr, args, resources)
 	if err != nil {
 		stack.push(vm.interpreter.intPool.getZero())
 	} else {
@@ -761,7 +761,7 @@ func opStaticCall(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack 
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
-	contract.ComputationalResources += returnGas
+	contract.ComputationalResources += returnCompResources
 
 	vm.interpreter.intPool.put(addr, inOffset, inSize, retOffset, retSize)
 	return ret, nil

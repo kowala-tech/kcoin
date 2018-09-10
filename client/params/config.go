@@ -73,11 +73,11 @@ func (c *ChainConfig) String() string {
 	)
 }
 
-// GasTable returns the gas table corresponding to the current phase (andromeda).
+// ComputationalEffortTable returns the computational requirements table corresponding to the current phase (andromeda).
 //
-// The returned GasTable's fields shouldn't, under any circumstances, be changed.
-func (c *ChainConfig) GasTable(num *big.Int) GasTable {
-	return GasTableAndromeda
+// The returned ComputationalEffortTable's fields shouldn't, under any circumstances, be changed.
+func (c *ChainConfig) ComputationalEffortTable(num *big.Int) ComputationalEffortTable {
+	return ComputationalEffortAndromeda
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported

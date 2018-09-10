@@ -100,7 +100,7 @@ type Tracer interface {
 	CaptureStart(from common.Address, to common.Address, call bool, input []byte, resourceUsage uint64, value *big.Int) error
 	CaptureState(env *VM, pc uint64, op OpCode, resourceUsage, price uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
 	CaptureFault(env *VM, pc uint64, op OpCode, resourceUsage, price uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error
-	CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error
+	CaptureEnd(output []byte, resourceUsage uint64, t time.Duration, err error) error
 }
 
 // StructLogger is an VM state logger and implements Tracer.
@@ -129,14 +129,14 @@ func NewStructLogger(cfg *LogConfig) *StructLogger {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (l *StructLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
+func (l *StructLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, resourceUsage uint64, value *big.Int) error {
 	return nil
 }
 
 // CaptureState logs a new structured log message and pushes it out to the environment
 //
 // CaptureState also tracks SSTORE ops to track dirty values.
-func (l *StructLogger) CaptureState(env *VM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
+func (l *StructLogger) CaptureState(env *VM, pc uint64, op OpCode, resourceUsage, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
 	// check if already accumulated the specified number of logs
 	if l.cfg.Limit != 0 && l.cfg.Limit <= len(l.logs) {
 		return ErrTraceLimitReached
@@ -177,7 +177,7 @@ func (l *StructLogger) CaptureState(env *VM, pc uint64, op OpCode, gas, cost uin
 		storage = l.changedValues[contract.Address()].Copy()
 	}
 	// create a new snaptshot of the VM.
-	log := StructLog{pc, op, gas, cost, mem, memory.Len(), stck, storage, depth, err}
+	log := StructLog{pc, op, resourceUsage, cost, mem, memory.Len(), stck, storage, depth, err}
 
 	l.logs = append(l.logs, log)
 	return nil
@@ -185,12 +185,12 @@ func (l *StructLogger) CaptureState(env *VM, pc uint64, op OpCode, gas, cost uin
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (l *StructLogger) CaptureFault(env *VM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
+func (l *StructLogger) CaptureFault(env *VM, pc uint64, op OpCode, resourceUsage, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
 	return nil
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
-func (l *StructLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+func (l *StructLogger) CaptureEnd(output []byte, resourceUsage uint64, t time.Duration, err error) error {
 	l.output = output
 	l.err = err
 	if l.cfg.Debug {

@@ -55,8 +55,8 @@ type Context struct {
 	Time        *big.Int       // Provides information for TIME
 
 	// Network information
-	ComputeCapacity  uint64   // Provides information for GASLIMIT
-	ComputeUnitPrice *big.Int // Provides information for GASPRICE
+	ComputeCapacity  uint64   // Provides information for COMPUTECAPACITY
+	ComputeUnitPrice *big.Int // Provides information for COMPUTEUNITPRICE
 }
 
 // VM represents the Kowala Virtual Machine base object and provides
@@ -89,10 +89,10 @@ type VM struct {
 	// abort is used to abort the VM calling operations
 	// NOTE: must be set atomically
 	abort int32
-	// callGasTemp holds the gas available for the current call. This is needed because the
-	// available gas is calculated in gasCall* according to the 63/64 rule and later
+	// callCompResourcesTemp holds the computational resources available for the current call. This is needed because the
+	// available computational resources are calculated in compResourcesCall* according to the 63/64 rule and later
 	// applied in opCall*.
-	callGasTemp uint64
+	callCompResourcesTemp uint64
 }
 
 // New returns a new VM. The returned VM is not thread safe and should
@@ -120,18 +120,18 @@ func (vm *VM) Cancel() {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
-func (vm *VM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (vm *VM) Call(caller ContractRef, addr common.Address, input []byte, computeLimit uint64, value *big.Int) (ret []byte, leftOverCompResources uint64, err error) {
 	if vm.vmConfig.NoRecursion && vm.depth > 0 {
-		return nil, gas, nil
+		return nil, computeLimit, nil
 	}
 
 	// Fail if we're trying to execute above the call depth limit
 	if vm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth
+		return nil, computeLimit, ErrDepth
 	}
 	// Fail if we're trying to transfer more than the available balance
 	if !vm.Context.CanTransfer(vm.StateDB, caller.Address(), value) {
-		return nil, gas, ErrInsufficientBalance
+		return nil, computeLimit, ErrInsufficientBalance
 	}
 
 	var (
@@ -143,10 +143,10 @@ func (vm *VM) Call(caller ContractRef, addr common.Address, input []byte, gas ui
 		if precompiles[addr] == nil && value.Sign() == 0 {
 			// Calling a non existing account, don't do antything, but ping the tracer
 			if vm.vmConfig.Debug && vm.depth == 0 {
-				vm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+				vm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, computeLimit, value)
 				vm.vmConfig.Tracer.CaptureEnd(ret, 0, 0, nil)
 			}
-			return nil, gas, nil
+			return nil, computeLimit, nil
 		}
 		vm.StateDB.CreateAccount(addr)
 	}
@@ -154,24 +154,24 @@ func (vm *VM) Call(caller ContractRef, addr common.Address, input []byte, gas ui
 
 	// Initialise a new contract and set the code that is to be used by the VM.
 	// The contract is a scoped environment for this execution context only.
-	contract := NewContract(caller, to, value, gas)
+	contract := NewContract(caller, to, value, computeLimit)
 	contract.SetCallCode(&addr, vm.StateDB.GetCodeHash(addr), vm.StateDB.GetCode(addr))
 
 	start := time.Now()
 
 	// Capture the tracer start/end events in debug mode
 	if vm.vmConfig.Debug && vm.depth == 0 {
-		vm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+		vm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, computeLimit, value)
 
 		defer func() { // Lazy evaluation of the parameters
-			vm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.ComputationalResources, time.Since(start), err)
+			vm.vmConfig.Tracer.CaptureEnd(ret, computeLimit-contract.ComputationalResources, time.Since(start), err)
 		}()
 	}
 	ret, err = run(vm, contract, input)
 
 	// When an error was returned by the VM or when setting the creation code
-	// above we revert to the snapshot and consume any gas remaining. Additionally
-	// when we're in homestead this also counts for code storage gas errors.
+	// above we revert to the snapshot and consume any computational resources remaining. Additionally
+	// when we're in homestead this also counts for code storage compute limit errors.
 	if err != nil {
 		vm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
@@ -188,18 +188,18 @@ func (vm *VM) Call(caller ContractRef, addr common.Address, input []byte, gas ui
 //
 // CallCode differs from Call in the sense that it executes the given address'
 // code with the caller as context.
-func (vm *VM) CallCode(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (vm *VM) CallCode(caller ContractRef, addr common.Address, input []byte, computeLimit uint64, value *big.Int) (ret []byte, leftOverCompResources uint64, err error) {
 	if vm.vmConfig.NoRecursion && vm.depth > 0 {
-		return nil, gas, nil
+		return nil, computeLimit, nil
 	}
 
 	// Fail if we're trying to execute above the call depth limit
 	if vm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth
+		return nil, computeLimit, ErrDepth
 	}
 	// Fail if we're trying to transfer more than the available balance
 	if !vm.CanTransfer(vm.StateDB, caller.Address(), value) {
-		return nil, gas, ErrInsufficientBalance
+		return nil, computeLimit, ErrInsufficientBalance
 	}
 
 	var (
@@ -209,7 +209,7 @@ func (vm *VM) CallCode(caller ContractRef, addr common.Address, input []byte, ga
 	// initialise a new contract and set the code that is to be used by the
 	// VM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, to, value, gas)
+	contract := NewContract(caller, to, value, computeLimit)
 	contract.SetCallCode(&addr, vm.StateDB.GetCodeHash(addr), vm.StateDB.GetCode(addr))
 
 	ret, err = run(vm, contract, input)
@@ -227,13 +227,13 @@ func (vm *VM) CallCode(caller ContractRef, addr common.Address, input []byte, ga
 //
 // DelegateCall differs from CallCode in the sense that it executes the given address'
 // code with the caller as context and the caller is set to the caller of the caller.
-func (vm *VM) DelegateCall(caller ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
+func (vm *VM) DelegateCall(caller ContractRef, addr common.Address, input []byte, computeLimit uint64) (ret []byte, leftOverCompResources uint64, err error) {
 	if vm.vmConfig.NoRecursion && vm.depth > 0 {
-		return nil, gas, nil
+		return nil, computeLimit, nil
 	}
 	// Fail if we're trying to execute above the call depth limit
 	if vm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth
+		return nil, computeLimit, ErrDepth
 	}
 
 	var (
@@ -242,7 +242,7 @@ func (vm *VM) DelegateCall(caller ContractRef, addr common.Address, input []byte
 	)
 
 	// Initialise a new contract and make initialise the delegate values
-	contract := NewContract(caller, to, nil, gas).AsDelegate()
+	contract := NewContract(caller, to, nil, computeLimit).AsDelegate()
 	contract.SetCallCode(&addr, vm.StateDB.GetCodeHash(addr), vm.StateDB.GetCode(addr))
 
 	ret, err = run(vm, contract, input)
@@ -259,13 +259,13 @@ func (vm *VM) DelegateCall(caller ContractRef, addr common.Address, input []byte
 // as parameters while disallowing any modifications to the state during the call.
 // Opcodes that attempt to perform such modifications will result in exceptions
 // instead of performing the modifications.
-func (vm *VM) StaticCall(caller ContractRef, addr common.Address, input []byte, gas uint64) (ret []byte, leftOverGas uint64, err error) {
+func (vm *VM) StaticCall(caller ContractRef, addr common.Address, input []byte, computeLimit uint64) (ret []byte, leftOverCompResources uint64, err error) {
 	if vm.vmConfig.NoRecursion && vm.depth > 0 {
-		return nil, gas, nil
+		return nil, computeLimit, nil
 	}
 	// Fail if we're trying to execute above the call depth limit
 	if vm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth
+		return nil, computeLimit, ErrDepth
 	}
 	// Make sure the readonly is only set if we aren't in readonly yet
 	// this makes also sure that the readonly flag isn't removed for
@@ -282,12 +282,12 @@ func (vm *VM) StaticCall(caller ContractRef, addr common.Address, input []byte, 
 	// Initialise a new contract and set the code that is to be used by the
 	// VM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, to, new(big.Int), gas)
+	contract := NewContract(caller, to, new(big.Int), computeLimit)
 	contract.SetCallCode(&addr, vm.StateDB.GetCodeHash(addr), vm.StateDB.GetCode(addr))
 
 	// When an error was returned by the VM or when setting the creation code
-	// above we revert to the snapshot and consume any gas remaining. Additionally
-	// when we're in Homestead this also counts for code storage gas errors.
+	// above we revert to the snapshot and consume any computational resources remaining. Additionally
+	// when we're in Homestead this also counts for code storage compute limit errors.
 	ret, err = run(vm, contract, input)
 	if err != nil {
 		vm.StateDB.RevertToSnapshot(snapshot)
@@ -299,14 +299,14 @@ func (vm *VM) StaticCall(caller ContractRef, addr common.Address, input []byte, 
 }
 
 // Create creates a new contract using code as deployment code.
-func (vm *VM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+func (vm *VM) Create(caller ContractRef, code []byte, computeLimit uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverCompResources uint64, err error) {
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if vm.depth > int(params.CallCreateDepth) {
-		return nil, common.Address{}, gas, ErrDepth
+		return nil, common.Address{}, computeLimit, ErrDepth
 	}
 	if !vm.CanTransfer(vm.StateDB, caller.Address(), value) {
-		return nil, common.Address{}, gas, ErrInsufficientBalance
+		return nil, common.Address{}, computeLimit, ErrInsufficientBalance
 	}
 	// Ensure there's no existing contract already at the designated address
 	nonce := vm.StateDB.GetNonce(caller.Address())
@@ -327,15 +327,15 @@ func (vm *VM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int
 	// initialise a new contract and set the code that is to be used by the
 	// VM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
+	contract := NewContract(caller, AccountRef(contractAddr), value, computeLimit)
 	contract.SetCallCode(&contractAddr, crypto.Keccak256Hash(code), code)
 
 	if vm.vmConfig.NoRecursion && vm.depth > 0 {
-		return nil, contractAddr, gas, nil
+		return nil, contractAddr, computeLimit, nil
 	}
 
 	if vm.vmConfig.Debug && vm.depth == 0 {
-		vm.vmConfig.Tracer.CaptureStart(caller.Address(), contractAddr, true, code, gas, value)
+		vm.vmConfig.Tracer.CaptureStart(caller.Address(), contractAddr, true, code, computeLimit, value)
 	}
 	start := time.Now()
 
@@ -344,12 +344,12 @@ func (vm *VM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int
 	// check whether the max code size has been exceeded
 	maxCodeSizeExceeded := len(ret) > params.MaxCodeSize
 	// if the contract creation ran successfully and no errors were returned
-	// calculate the gas required to store the code. If the code could not
-	// be stored due to not enough gas set an error and let it be handled
+	// calculate the computational effort required to store the code. If the code could not
+	// be stored due to not enough computational resources set an error and let it be handled
 	// by the error checking condition below.
 	if err == nil && !maxCodeSizeExceeded {
-		createDataGas := uint64(len(ret)) * params.CreateDataCompEffort
-		if contract.UseResources(createDataGas) {
+		createDataCompEffort := uint64(len(ret)) * params.CreateDataCompEffort
+		if contract.UseResources(createDataCompEffort) {
 			vm.StateDB.SetCode(contractAddr, ret)
 		} else {
 			err = ErrCodeStoreOutOfComputationalResources
@@ -357,8 +357,8 @@ func (vm *VM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int
 	}
 
 	// When an error was returned by the VM or when setting the creation code
-	// above we revert to the snapshot and consume any gas remaining. Additionally
-	// when we're in homestead this also counts for code storage gas errors.
+	// above we revert to the snapshot and consume any computational resources remaining. Additionally
+	// when we're in homestead this also counts for code storage compute limit errors.
 	if maxCodeSizeExceeded || (err != nil && err != ErrCodeStoreOutOfComputationalResources) {
 		vm.StateDB.RevertToSnapshot(snapshot)
 		if err != errExecutionReverted {
@@ -370,7 +370,7 @@ func (vm *VM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int
 		err = errMaxCodeSizeExceeded
 	}
 	if vm.vmConfig.Debug && vm.depth == 0 {
-		vm.vmConfig.Tracer.CaptureEnd(ret, gas-contract.ComputationalResources, time.Since(start), err)
+		vm.vmConfig.Tracer.CaptureEnd(ret, computeLimit-contract.ComputationalResources, time.Since(start), err)
 	}
 	return ret, contractAddr, contract.ComputationalResources, err
 }

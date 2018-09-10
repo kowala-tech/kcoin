@@ -97,8 +97,8 @@ type sha256hash struct{}
 
 // RequiredComputationalEffort returns the computational effort required to execute the pre-compiled contract.
 //
-// This method does not require any overflow checking as the input size gas costs
-// required for anything significant is so high it's impossible to pay for.
+// This method does not require any overflow checking as the input size computational
+// effort required for anything significant is so high it's impossible to pay for.
 func (c *sha256hash) RequiredComputationalEffort(input []byte) uint64 {
 	return uint64(len(input)+31)/32*params.Sha256PerWordCompEffort + params.Sha256BaseCompEffort
 }
@@ -112,7 +112,7 @@ type ripemd160hash struct{}
 
 // RequiredComputationalEffort returns the computational effort required to execute the pre-compiled contract.
 //
-// This method does not require any overflow checking as the input size gas costs
+// This method does not require any overflow checking as the input size computational effort
 // required for anything significant is so high it's impossible to pay for.
 func (c *ripemd160hash) RequiredComputationalEffort(input []byte) uint64 {
 	return uint64(len(input)+31)/32*params.Ripemd160PerWordCompEffort + params.Ripemd160BaseCompEffort
@@ -128,7 +128,7 @@ type dataCopy struct{}
 
 // RequiredComputationalEffort returns the computational effort required to execute the pre-compiled contract.
 //
-// This method does not require any overflow checking as the input size gas costs
+// This method does not require any overflow checking as the input size computational effort
 // required for anything significant is so high it's impossible to pay for.
 func (c *dataCopy) RequiredComputationalEffort(input []byte) uint64 {
 	return uint64(len(input)+31)/32*params.IdentityPerWordCompEffort + params.IdentityBaseCompEffort
@@ -189,29 +189,29 @@ func (c *bigModExp) RequiredComputationalEffort(input []byte) uint64 {
 	}
 	adjExpLen.Add(adjExpLen, big.NewInt(int64(msb)))
 
-	// Calculate the gas cost of the operation
-	gas := new(big.Int).Set(math.BigMax(modLen, baseLen))
+	// Calculate the computational effort of the operation
+	effort := new(big.Int).Set(math.BigMax(modLen, baseLen))
 	switch {
-	case gas.Cmp(big64) <= 0:
-		gas.Mul(gas, gas)
-	case gas.Cmp(big1024) <= 0:
-		gas = new(big.Int).Add(
-			new(big.Int).Div(new(big.Int).Mul(gas, gas), big4),
-			new(big.Int).Sub(new(big.Int).Mul(big96, gas), big3072),
+	case effort.Cmp(big64) <= 0:
+		effort.Mul(effort, effort)
+	case effort.Cmp(big1024) <= 0:
+		effort = new(big.Int).Add(
+			new(big.Int).Div(new(big.Int).Mul(effort, effort), big4),
+			new(big.Int).Sub(new(big.Int).Mul(big96, effort), big3072),
 		)
 	default:
-		gas = new(big.Int).Add(
-			new(big.Int).Div(new(big.Int).Mul(gas, gas), big16),
-			new(big.Int).Sub(new(big.Int).Mul(big480, gas), big199680),
+		effort = new(big.Int).Add(
+			new(big.Int).Div(new(big.Int).Mul(effort, effort), big16),
+			new(big.Int).Sub(new(big.Int).Mul(big480, effort), big199680),
 		)
 	}
-	gas.Mul(gas, math.BigMax(adjExpLen, big1))
-	gas.Div(gas, new(big.Int).SetUint64(params.ModExpQuadCoeffDiv))
+	effort.Mul(effort, math.BigMax(adjExpLen, big1))
+	effort.Div(effort, new(big.Int).SetUint64(params.ModExpQuadCoeffDiv))
 
-	if gas.BitLen() > 64 {
+	if effort.BitLen() > 64 {
 		return math.MaxUint64
 	}
-	return gas.Uint64()
+	return effort.Uint64()
 }
 
 func (c *bigModExp) Run(input []byte) ([]byte, error) {

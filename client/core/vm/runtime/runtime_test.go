@@ -16,17 +16,13 @@ func TestDefaults(t *testing.T) {
 	cfg := new(Config)
 	setDefaults(cfg)
 
-	if cfg.Difficulty == nil {
-		t.Error("expected difficulty to be non nil")
-	}
-
 	if cfg.Time == nil {
 		t.Error("expected time to be non nil")
 	}
-	if cfg.GasLimit == 0 {
+	if cfg.ComputeLimit == 0 {
 		t.Error("didn't expect gaslimit to be zero")
 	}
-	if cfg.GasPrice == nil {
+	if cfg.ComputeUnitPrice == nil {
 		t.Error("expected time to be non nil")
 	}
 	if cfg.Value == nil {
@@ -48,9 +44,8 @@ func TestEVM(t *testing.T) {
 	}()
 
 	Execute([]byte{
-		byte(vm.DIFFICULTY),
 		byte(vm.TIMESTAMP),
-		byte(vm.GASLIMIT),
+		byte(vm.COMPUTECAPACITY),
 		byte(vm.PUSH1),
 		byte(vm.ORIGIN),
 		byte(vm.BLOCKHASH),

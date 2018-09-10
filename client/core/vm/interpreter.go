@@ -41,15 +41,15 @@ type Config struct {
 	JumpTable [256]operation
 }
 
-// Interpreter is used to run Ethereum based contracts and will utilise the
+// Interpreter is used to run contracts and will utilise the
 // passed environment to query external sources for state information.
 // The Interpreter will run the byte code VM based on the passed
 // configuration.
 type Interpreter struct {
-	vm       *VM
-	cfg      Config
-	gasTable params.GasTable
-	intPool  *intPool
+	vm          *VM
+	cfg         Config
+	effortTable params.ComputationalEffortTable
+	intPool     *intPool
 
 	readOnly   bool   // Whether to throw on stateful modifications
 	returnData []byte // Last CALL's return data for subsequent reuse
@@ -68,9 +68,9 @@ func NewInterpreter(vm *VM, cfg Config) *Interpreter {
 	}
 
 	return &Interpreter{
-		vm:       vm,
-		cfg:      cfg,
-		gasTable: vm.ChainConfig().GasTable(vm.BlockNumber),
+		vm:          vm,
+		cfg:         cfg,
+		effortTable: vm.ChainConfig().ComputationalEffortTable(vm.BlockNumber),
 	}
 }
 
@@ -92,8 +92,8 @@ func (in *Interpreter) enforceRestrictions(op OpCode, operation operation, stack
 // the return byte-slice and an error if one occurred.
 //
 // It's important to note that any errors returned by the interpreter should be
-// considered a revert-and-consume-all-gas operation except for
-// errExecutionReverted which means revert-and-keep-gas-left.
+// considered a revert-and-consume-all-computational-resources operation except for
+// errExecutionReverted which means revert-and-keep-computational-resources-left.
 func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	if in.intPool == nil {
 		in.intPool = poolOfIntPools.get()
@@ -126,9 +126,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		pc   = uint64(0) // program counter
 		cost uint64
 		// copies used by tracer
-		pcCopy  uint64 // needed for the deferred Tracer
-		gasCopy uint64 // for Tracer to log gas remaining before execution
-		logged  bool   // deferred Tracer should ignore already logged steps
+		pcCopy        uint64 // needed for the deferred Tracer
+		resourcesCopy uint64 // for Tracer to log resources remaining before execution
+		logged        bool   // deferred Tracer should ignore already logged steps
 	)
 	contract.Input = input
 
@@ -139,9 +139,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		defer func() {
 			if err != nil {
 				if !logged {
-					in.cfg.Tracer.CaptureState(in.vm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.vm.depth, err)
+					in.cfg.Tracer.CaptureState(in.vm, pcCopy, op, resourcesCopy, cost, mem, stack, contract, in.vm.depth, err)
 				} else {
-					in.cfg.Tracer.CaptureFault(in.vm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.vm.depth, err)
+					in.cfg.Tracer.CaptureFault(in.vm, pcCopy, op, resourcesCopy, cost, mem, stack, contract, in.vm.depth, err)
 				}
 			}
 		}()
@@ -153,7 +153,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 	for atomic.LoadInt32(&in.vm.abort) == 0 {
 		if in.cfg.Debug {
 			// Capture pre-execution values for tracing.
-			logged, pcCopy, gasCopy = false, pc, contract.ComputationalResources
+			logged, pcCopy, resourcesCopy = false, pc, contract.ComputationalResources
 		}
 
 		// Get the operation from the jump table and validate the stack to ensure there are
@@ -179,15 +179,15 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 			if overflow {
 				return nil, errComputationalEffortUintOverflow
 			}
-			// memory is expanded in words of 32 bytes. Gas
-			// is also calculated in words.
+			// memory is expanded in words of 32 bytes. Computational resources
+			// are also calculated in words.
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
 				return nil, errComputationalEffortUintOverflow
 			}
 		}
-		// consume the gas and return an error if not enough gas is available.
+		// use the computational resources and return an error if not enough computational resources are available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
-		cost, err = operation.gasCost(in.gasTable, in.vm, contract, stack, mem, memorySize)
+		cost, err = operation.computationalEffort(in.effortTable, in.vm, contract, stack, mem, memorySize)
 		if err != nil || !contract.UseResources(cost) {
 			return nil, ErrOutOfComputationalResources
 		}
@@ -196,7 +196,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.vm, pc, op, gasCopy, cost, mem, stack, contract, in.vm.depth, err)
+			in.cfg.Tracer.CaptureState(in.vm, pc, op, resourcesCopy, cost, mem, stack, contract, in.vm.depth, err)
 			logged = true
 		}
 

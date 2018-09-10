@@ -37,12 +37,12 @@ const (
 )
 
 // calcComputationalEffort returns the actual computational effort required by the call.
-func calcComputationalEffort(gasTable params.GasTable, availableComputationalResources, base uint64, callCost *big.Int) (uint64, error) {
-	if gasTable.CreateBySuicide > 0 {
+func calcComputationalEffort(effortTable params.ComputationalEffortTable, availableComputationalResources, base uint64, callCost *big.Int) (uint64, error) {
+	if effortTable.CreateBySuicide > 0 {
 		availableComputationalResources = availableComputationalResources - base
 		effort := availableComputationalResources - availableComputationalResources/64
-		// If the bit length exceeds 64 bit we know that the newly calculated "gas" for EIP150
-		// is smaller than the requested amount. Therefor we return the new gas instead
+		// If the bit length exceeds 64 bit we know that the newly calculated "computational effort" for EIP150
+		// is smaller than the requested amount. Therefor we return the new computational effort instead
 		// of returning an error.
 		if callCost.BitLen() > 64 || effort < callCost.Uint64() {
 			return effort, nil
