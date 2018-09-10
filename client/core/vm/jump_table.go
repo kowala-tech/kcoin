@@ -8,13 +8,13 @@ import (
 )
 
 type (
-	executionFunc       func(pc *uint64, env *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error)
-	gasFunc             func(params.GasTable, *EVM, *Contract, *Stack, *Memory, uint64) (uint64, error) // last parameter is the requested memory size as a uint64
+	executionFunc       func(pc *uint64, env *VM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error)
+	gasFunc             func(params.GasTable, *VM, *Contract, *Stack, *Memory, uint64) (uint64, error) // last parameter is the requested memory size as a uint64
 	stackValidationFunc func(*Stack) error
 	memorySizeFunc      func(*Stack) *big.Int
 )
 
-var errGasUintOverflow = errors.New("gas uint64 overflow")
+var errComputationalEffortUintOverflow = errors.New("computational effort uint64 overflow")
 
 type operation struct {
 	// execute is the operation function
@@ -51,55 +51,55 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		ADD: {
 			execute:       opAdd,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		MUL: {
 			execute:       opMul,
-			gasCost:       constGasFunc(GasFastStep),
+			gasCost:       constGasFunc(CompEffortFastStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		SUB: {
 			execute:       opSub,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		DIV: {
 			execute:       opDiv,
-			gasCost:       constGasFunc(GasFastStep),
+			gasCost:       constGasFunc(CompEffortFastStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		SDIV: {
 			execute:       opSdiv,
-			gasCost:       constGasFunc(GasFastStep),
+			gasCost:       constGasFunc(CompEffortFastStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		MOD: {
 			execute:       opMod,
-			gasCost:       constGasFunc(GasFastStep),
+			gasCost:       constGasFunc(CompEffortFastStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		SMOD: {
 			execute:       opSmod,
-			gasCost:       constGasFunc(GasFastStep),
+			gasCost:       constGasFunc(CompEffortFastStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		ADDMOD: {
 			execute:       opAddmod,
-			gasCost:       constGasFunc(GasMidStep),
+			gasCost:       constGasFunc(CompEffortMidStep),
 			validateStack: makeStackFunc(3, 1),
 			valid:         true,
 		},
 		MULMOD: {
 			execute:       opMulmod,
-			gasCost:       constGasFunc(GasMidStep),
+			gasCost:       constGasFunc(CompEffortMidStep),
 			validateStack: makeStackFunc(3, 1),
 			valid:         true,
 		},
@@ -111,73 +111,73 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		SIGNEXTEND: {
 			execute:       opSignExtend,
-			gasCost:       constGasFunc(GasFastStep),
+			gasCost:       constGasFunc(CompEffortFastStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		LT: {
 			execute:       opLt,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		GT: {
 			execute:       opGt,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		SLT: {
 			execute:       opSlt,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		SGT: {
 			execute:       opSgt,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		EQ: {
 			execute:       opEq,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		ISZERO: {
 			execute:       opIszero,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(1, 1),
 			valid:         true,
 		},
 		AND: {
 			execute:       opAnd,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		XOR: {
 			execute:       opXor,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		OR: {
 			execute:       opOr,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		NOT: {
 			execute:       opNot,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(1, 1),
 			valid:         true,
 		},
 		BYTE: {
 			execute:       opByte,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
@@ -190,7 +190,7 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		ADDRESS: {
 			execute:       opAddress,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
@@ -202,31 +202,31 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		ORIGIN: {
 			execute:       opOrigin,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		CALLER: {
 			execute:       opCaller,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		CALLVALUE: {
 			execute:       opCallValue,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		CALLDATALOAD: {
 			execute:       opCallDataLoad,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(1, 1),
 			valid:         true,
 		},
 		CALLDATASIZE: {
 			execute:       opCallDataSize,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
@@ -239,7 +239,7 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		CODESIZE: {
 			execute:       opCodeSize,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
@@ -251,8 +251,8 @@ func NewAndromedaInstructionSet() [256]operation {
 			valid:         true,
 		},
 		GASPRICE: {
-			execute:       opGasprice,
-			gasCost:       constGasFunc(GasQuickStep),
+			execute:       opComputeUnitPrice,
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
@@ -271,43 +271,37 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		BLOCKHASH: {
 			execute:       opBlockhash,
-			gasCost:       constGasFunc(GasExtStep),
+			gasCost:       constGasFunc(CompEffortExtStep),
 			validateStack: makeStackFunc(1, 1),
 			valid:         true,
 		},
 		COINBASE: {
 			execute:       opCoinbase,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		TIMESTAMP: {
 			execute:       opTimestamp,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		NUMBER: {
 			execute:       opNumber,
-			gasCost:       constGasFunc(GasQuickStep),
-			validateStack: makeStackFunc(0, 1),
-			valid:         true,
-		},
-		DIFFICULTY: {
-			execute:       opDifficulty,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		GASLIMIT: {
-			execute:       opGasLimit,
-			gasCost:       constGasFunc(GasQuickStep),
+			execute:       opComputeCapacity,
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		POP: {
 			execute:       opPop,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(1, 0),
 			valid:         true,
 		},
@@ -348,39 +342,39 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		JUMP: {
 			execute:       opJump,
-			gasCost:       constGasFunc(GasMidStep),
+			gasCost:       constGasFunc(CompEffortMidStep),
 			validateStack: makeStackFunc(1, 0),
 			jumps:         true,
 			valid:         true,
 		},
 		JUMPI: {
 			execute:       opJumpi,
-			gasCost:       constGasFunc(GasSlowStep),
+			gasCost:       constGasFunc(CompEffortSlowStep),
 			validateStack: makeStackFunc(2, 0),
 			jumps:         true,
 			valid:         true,
 		},
 		PC: {
 			execute:       opPc,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		MSIZE: {
 			execute:       opMsize,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		GAS: {
 			execute:       opGas,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
 		JUMPDEST: {
 			execute:       opJumpdest,
-			gasCost:       constGasFunc(params.JumpdestGas),
+			gasCost:       constGasFunc(params.JumpdestCompEffort),
 			validateStack: makeStackFunc(0, 0),
 			valid:         true,
 		},
@@ -867,7 +861,7 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		RETURNDATASIZE: {
 			execute:       opReturnDataSize,
-			gasCost:       constGasFunc(GasQuickStep),
+			gasCost:       constGasFunc(CompEffortQuickStep),
 			validateStack: makeStackFunc(0, 1),
 			valid:         true,
 		},
@@ -889,19 +883,19 @@ func NewAndromedaInstructionSet() [256]operation {
 		},
 		SHL: {
 			execute:       opSHL,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		SHR: {
 			execute:       opSHR,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},
 		SAR: {
 			execute:       opSAR,
-			gasCost:       constGasFunc(GasFastestStep),
+			gasCost:       constGasFunc(CompEffortFastestStep),
 			validateStack: makeStackFunc(2, 1),
 			valid:         true,
 		},

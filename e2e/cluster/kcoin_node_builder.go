@@ -37,7 +37,6 @@ func NewKcoinNodeBuilder() *KcoinNodeBuilder {
 func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 	cmd := []string{
 		"--testnet",
-		"--gasprice", "1",
 		"--networkid", builder.networkId,
 		"--bootnodesv5", builder.bootnode,
 		"--syncmode", builder.syncMode,

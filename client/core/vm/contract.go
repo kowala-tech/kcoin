@@ -56,8 +56,8 @@ type Contract struct {
 	CodeAddr *common.Address
 	Input    []byte
 
-	Gas   uint64
-	value *big.Int
+	ComputationalResources uint64
+	value                  *big.Int
 
 	Args []byte
 
@@ -65,7 +65,7 @@ type Contract struct {
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uint64) *Contract {
+func NewContract(caller ContractRef, object ContractRef, value *big.Int, resources uint64) *Contract {
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil}
 
 	if parent, ok := caller.(*Contract); ok {
@@ -75,9 +75,9 @@ func NewContract(caller ContractRef, object ContractRef, value *big.Int, gas uin
 		c.jumpdests = make(destinations)
 	}
 
-	// Gas should be a pointer so it can safely be reduced through the run
+	// ComputationalResources should be a pointer so it can safely be reduced through the run
 	// This pointer will be off the state transition
-	c.Gas = gas
+	c.ComputationalResources = resources
 	// ensures a value is set
 	c.value = value
 
@@ -119,12 +119,12 @@ func (c *Contract) Caller() common.Address {
 	return c.CallerAddress
 }
 
-// UseGas attempts the use gas and subtracts it and returns true on success
-func (c *Contract) UseGas(gas uint64) (ok bool) {
-	if c.Gas < gas {
+// UseResources attempts the use computational resources and subtracts it and returns true on success
+func (c *Contract) UseResources(resources uint64) (ok bool) {
+	if c.ComputationalResources < resources {
 		return false
 	}
-	c.Gas -= gas
+	c.ComputationalResources -= resources
 	return true
 }
 

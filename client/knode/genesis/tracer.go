@@ -22,7 +22,7 @@ func newVmTracer() *vmTracer {
 	}
 }
 
-func (vmt *vmTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+func (vmt *vmTracer) CaptureState(env *vm.VM, pc uint64, op vm.OpCode, resourceUsage, price uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (vmt *vmTracer) setAddrStorage(contractAddress common.Address, addrStorage 
 	vmt.Unlock()
 }
 
-func (vmt *vmTracer) CaptureStart(from common.Address, to common.Address, call bool, input []byte, gas uint64, value *big.Int) error {
+func (vmt *vmTracer) CaptureStart(from common.Address, to common.Address, call bool, input []byte, resourceUsage uint64, value *big.Int) error {
 	return nil
 }
 
@@ -60,6 +60,6 @@ func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, 
 	return nil
 }
 
-func (vmt *vmTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+func (vmt *vmTracer) CaptureFault(env *vm.VM, pc uint64, op vm.OpCode, resourceUsage, price uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
 	return nil
 }

@@ -32,14 +32,12 @@ type Genesis struct {
 	Config    *params.ChainConfig `json:"config"`
 	Timestamp uint64              `json:"timestamp"`
 	ExtraData []byte              `json:"extraData"`
-	GasLimit  uint64              `json:"gasLimit"   gencodec:"required"`
 	Coinbase  common.Address      `json:"coinbase"`
 	Alloc     GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
 	Number     uint64      `json:"number"`
-	GasUsed    uint64      `json:"gasUsed"`
 	ParentHash common.Hash `json:"parentHash"`
 }
 
@@ -71,8 +69,6 @@ type GenesisAccount struct {
 type genesisSpecMarshaling struct {
 	Timestamp math.HexOrDecimal64
 	ExtraData hexutil.Bytes
-	GasLimit  math.HexOrDecimal64
-	GasUsed   math.HexOrDecimal64
 	Number    math.HexOrDecimal64
 	Alloc     map[common.UnprefixedAddress]GenesisAccount
 }
@@ -227,13 +223,8 @@ func (g *Genesis) ToBlock(db kcoindb.Database) *types.Block {
 		Time:       new(big.Int).SetUint64(g.Timestamp),
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
-		GasLimit:   g.GasLimit,
-		GasUsed:    g.GasUsed,
 		Coinbase:   g.Coinbase,
 		Root:       root,
-	}
-	if g.GasLimit == 0 {
-		head.GasLimit = params.GenesisGasLimit
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true)
@@ -283,7 +274,6 @@ func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:    params.MainnetChainConfig,
 		ExtraData: hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:  5000,
 		Alloc:     decodePrealloc(mainnetAllocData),
 	}
 }
@@ -293,7 +283,6 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:    params.TestnetChainConfig,
 		ExtraData: hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
-		GasLimit:  16777216,
 		Alloc:     decodePrealloc(testnetAllocData),
 	}
 }
@@ -301,9 +290,8 @@ func DefaultTestnetGenesisBlock() *Genesis {
 // DevGenesisBlock returns the 'kcoin --dev' genesis block.
 func DevGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:   params.AllKonsensusProtocolChanges,
-		GasLimit: 4712388,
-		Alloc:    decodePrealloc(devAllocData),
+		Config: params.AllKonsensusProtocolChanges,
+		Alloc:  decodePrealloc(devAllocData),
 	}
 }
 

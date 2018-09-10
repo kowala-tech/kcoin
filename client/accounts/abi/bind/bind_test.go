@@ -30,6 +30,8 @@ import (
 	"golang.org/x/tools/imports"
 )
 
+// fixme
+
 var bindTests = []struct {
 	name     string
 	contract string
@@ -425,7 +427,7 @@ var bindTests = []struct {
 			}
 		`,
 	},
-	// Tests that gas estimation works for contracts with weird gas mechanics too.
+	// Tests that computational effort estimation works for contracts with weird gas mechanics too.
 	{
 		`FunkyGasPattern`,
 		`

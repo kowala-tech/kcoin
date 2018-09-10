@@ -16,24 +16,24 @@ var _ = (*structLogMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (s StructLog) MarshalJSON() ([]byte, error) {
 	type StructLog struct {
-		Pc          uint64                      `json:"pc"`
-		Op          OpCode                      `json:"op"`
-		Gas         math.HexOrDecimal64         `json:"gas"`
-		GasCost     math.HexOrDecimal64         `json:"gasCost"`
-		Memory      hexutil.Bytes               `json:"memory"`
-		MemorySize  int                         `json:"memSize"`
-		Stack       []*math.HexOrDecimal256     `json:"stack"`
-		Storage     map[common.Hash]common.Hash `json:"-"`
-		Depth       int                         `json:"depth"`
-		Err         error                       `json:"-"`
-		OpName      string                      `json:"opName"`
-		ErrorString string                      `json:"error"`
+		Pc                  uint64                      `json:"pc"`
+		Op                  OpCode                      `json:"op"`
+		ComputationalEffort math.HexOrDecimal64         `json:"compEffort"`
+		ComputeUnitPrice    math.HexOrDecimal64         `json:"compUnitprice"`
+		Memory              hexutil.Bytes               `json:"memory"`
+		MemorySize          int                         `json:"memSize"`
+		Stack               []*math.HexOrDecimal256     `json:"stack"`
+		Storage             map[common.Hash]common.Hash `json:"-"`
+		Depth               int                         `json:"depth"`
+		Err                 error                       `json:"-"`
+		OpName              string                      `json:"opName"`
+		ErrorString         string                      `json:"error"`
 	}
 	var enc StructLog
 	enc.Pc = s.Pc
 	enc.Op = s.Op
-	enc.Gas = math.HexOrDecimal64(s.Gas)
-	enc.GasCost = math.HexOrDecimal64(s.GasCost)
+	enc.ComputationalEffort = math.HexOrDecimal64(s.ComputationalEffort)
+	enc.ComputeUnitPrice = math.HexOrDecimal64(s.ComputeUnitPrice)
 	enc.Memory = s.Memory
 	enc.MemorySize = s.MemorySize
 	if s.Stack != nil {
@@ -53,16 +53,16 @@ func (s StructLog) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (s *StructLog) UnmarshalJSON(input []byte) error {
 	type StructLog struct {
-		Pc         *uint64                     `json:"pc"`
-		Op         *OpCode                     `json:"op"`
-		Gas        *math.HexOrDecimal64        `json:"gas"`
-		GasCost    *math.HexOrDecimal64        `json:"gasCost"`
-		Memory     *hexutil.Bytes              `json:"memory"`
-		MemorySize *int                        `json:"memSize"`
-		Stack      []*math.HexOrDecimal256     `json:"stack"`
-		Storage    map[common.Hash]common.Hash `json:"-"`
-		Depth      *int                        `json:"depth"`
-		Err        error                       `json:"-"`
+		Pc                  *uint64                     `json:"pc"`
+		Op                  *OpCode                     `json:"op"`
+		ComputationalEffort *math.HexOrDecimal64        `json:"compEffort"`
+		ComputeUnitPrice    *math.HexOrDecimal64        `json:"compUnitprice"`
+		Memory              *hexutil.Bytes              `json:"memory"`
+		MemorySize          *int                        `json:"memSize"`
+		Stack               []*math.HexOrDecimal256     `json:"stack"`
+		Storage             map[common.Hash]common.Hash `json:"-"`
+		Depth               *int                        `json:"depth"`
+		Err                 error                       `json:"-"`
 	}
 	var dec StructLog
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -74,11 +74,11 @@ func (s *StructLog) UnmarshalJSON(input []byte) error {
 	if dec.Op != nil {
 		s.Op = *dec.Op
 	}
-	if dec.Gas != nil {
-		s.Gas = uint64(*dec.Gas)
+	if dec.ComputationalEffort != nil {
+		s.ComputationalEffort = uint64(*dec.ComputationalEffort)
 	}
-	if dec.GasCost != nil {
-		s.GasCost = uint64(*dec.GasCost)
+	if dec.ComputeUnitPrice != nil {
+		s.ComputeUnitPrice = uint64(*dec.ComputeUnitPrice)
 	}
 	if dec.Memory != nil {
 		s.Memory = *dec.Memory

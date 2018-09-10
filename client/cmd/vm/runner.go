@@ -11,8 +11,8 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/cmd/evm/internal/compiler"
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
+	"github.com/kowala-tech/kcoin/client/cmd/vm/internal/compiler"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
@@ -139,14 +139,13 @@ func runCmd(ctx *cli.Context) error {
 		code = common.Hex2Bytes(bin)
 	}
 
-	initialGas := ctx.GlobalUint64(GasFlag.Name)
 	runtimeConfig := runtime.Config{
-		Origin:      sender,
-		State:       statedb,
-		GasLimit:    initialGas,
-		GasPrice:    utils.GlobalBig(ctx, PriceFlag.Name),
-		Value:       utils.GlobalBig(ctx, ValueFlag.Name),
-		BlockNumber: new(big.Int).SetUint64(blockNumber),
+		Origin:           sender,
+		State:            statedb,
+		ComputeLimit:     params.ComputeCapacity,
+		ComputeUnitPrice: params.ComputeUnitPrice,
+		Value:            utils.GlobalBig(ctx, ValueFlag.Name),
+		BlockNumber:      new(big.Int).SetUint64(blockNumber),
 		EVMConfig: vm.Config{
 			Tracer: tracer,
 			Debug:  ctx.GlobalBool(DebugFlag.Name) || ctx.GlobalBool(MachineFlag.Name),
@@ -170,15 +169,15 @@ func runCmd(ctx *cli.Context) error {
 		runtimeConfig.ChainConfig = chainConfig
 	}
 	tstart := time.Now()
-	var leftOverGas uint64
+	var resourceUsage uint64
 	if ctx.GlobalBool(CreateFlag.Name) {
 		input := append(code, common.Hex2Bytes(ctx.GlobalString(InputFlag.Name))...)
-		ret, _, leftOverGas, err = runtime.Create(input, &runtimeConfig)
+		ret, _, resourceUsage, err = runtime.Create(input, &runtimeConfig)
 	} else {
 		if len(code) > 0 {
 			statedb.SetCode(receiver, code)
 		}
-		ret, leftOverGas, err = runtime.Call(receiver, common.Hex2Bytes(ctx.GlobalString(InputFlag.Name)), &runtimeConfig)
+		ret, resourceUsage, err = runtime.Call(receiver, common.Hex2Bytes(ctx.GlobalString(InputFlag.Name)), &runtimeConfig)
 	}
 	execTime := time.Since(tstart)
 
@@ -217,9 +216,9 @@ heap objects:       %d
 allocations:        %d
 total allocations:  %d
 GC calls:           %d
-Gas used:           %d
+Resource Usage:     %d
 
-`, execTime, mem.HeapObjects, mem.Alloc, mem.TotalAlloc, mem.NumGC, initialGas-leftOverGas)
+`, execTime, mem.HeapObjects, mem.Alloc, mem.TotalAlloc, mem.NumGC, params.ComputeCapacity-resourceUsage)
 	}
 	if tracer == nil {
 		fmt.Printf("0x%x\n", ret)
