@@ -573,27 +573,24 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	// Get a new instance of the EVM.
-	evm, vmError, err := s.b.GetEVM(ctx, msg, state, header, vmCfg)
+	// Get a new instance of the VM.
+	vmachine, vmError, err := s.b.GetVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
-		log.Error("an error while the blockchain do a call. can't get a EVM instance", "err", err)
+		log.Error("an error while the blockchain do a call. can't get a VM instance", "err", err)
 		return nil, 0, false, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
-	// EVM has finished, cancelling may be done (repeatedly)
+	// VM has finished, cancelling may be done (repeatedly)
 	go func() {
 		<-ctx.Done()
-		evm.Cancel()
+		vmachine.Cancel()
 	}()
 
 	// Setup the computational resources pool (also for unmetered requests)
 	// and apply the message.
 	crpool := new(core.CompResourcesPool).AddResources(math.MaxUint64)
-	res, effort, failed, err := core.ApplyMessage(evm, msg, crpool)
+	res, effort, failed, err := core.ApplyMessage(vmachine, msg, crpool)
 	if err := vmError(); err != nil {
-		if err != nil {
-			log.Error(err)
-		}
 		return nil, 0, false, err
 	}
 	return res, effort, failed, err

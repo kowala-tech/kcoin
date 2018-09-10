@@ -41,7 +41,7 @@ type StateTransition struct {
 	value                *big.Int
 	data                 []byte
 	state                vm.StateDB
-	evm                  *vm.EVM
+	vm                   *vm.VM
 }
 
 // Message represents a message sent to a contract.
@@ -78,13 +78,13 @@ func IntrinsicCompEffort(data []byte, contractCreation bool) (uint64, error) {
 		}
 		// Make sure we don't exceed uint64 for all data combinations
 		if (math.MaxUint64-effort)/params.TxDataNonZeroCompEffort < nz {
-			return 0, vm.ErrOutOfGas
+			return 0, vm.ErrOutOfComputationalResources
 		}
 		effort += nz * params.TxDataNonZeroCompEffort
 
 		z := uint64(len(data)) - nz
 		if (math.MaxUint64-effort)/params.TxDataZeroCompEffort < z {
-			return 0, vm.ErrOutOfGas
+			return 0, vm.ErrOutOfComputationalResources
 		}
 		effort += z * params.TxDataZeroCompEffort
 	}
@@ -92,26 +92,26 @@ func IntrinsicCompEffort(data []byte, contractCreation bool) (uint64, error) {
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(evm *vm.EVM, msg Message, crpool *CompResourcesPool) *StateTransition {
+func NewStateTransition(vm *vm.VM, msg Message, crpool *CompResourcesPool) *StateTransition {
 	return &StateTransition{
 		crpool: crpool,
-		evm:    evm,
+		vm:     vm,
 		msg:    msg,
 		value:  msg.Value(),
 		data:   msg.Data(),
-		state:  evm.StateDB,
+		state:  vm.StateDB,
 	}
 }
 
 // ApplyMessage computes the new state by applying the given message
 // against the old state within the environment.
 //
-// ApplyMessage returns the bytes returned by any EVM execution (if it took place),
+// ApplyMessage returns the bytes returned by any VM execution (if it took place),
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *vm.EVM, msg Message, crpool *CompResourcesPool) ([]byte, uint64, bool, error) {
-	return NewStateTransition(evm, msg, crpool).TransitionDb()
+func ApplyMessage(vm *vm.VM, msg Message, crpool *CompResourcesPool) ([]byte, uint64, bool, error) {
+	return NewStateTransition(vm, msg, crpool).TransitionDb()
 }
 
 // to returns the recipient of the message.
@@ -124,7 +124,7 @@ func (st *StateTransition) to() common.Address {
 
 func (st *StateTransition) useCompResources(units uint64) error {
 	if st.compResources < units {
-		return vm.ErrOutOfGas
+		return vm.ErrOutOfComputationalResources
 	}
 	st.compResources -= units
 
@@ -132,7 +132,7 @@ func (st *StateTransition) useCompResources(units uint64) error {
 }
 
 func (st *StateTransition) buyCompResources() error {
-	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.ComputationalEffort()), st.evm.ComputeUnitPrice)
+	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.ComputationalEffort()), st.vm.ComputeUnitPrice)
 	if st.state.GetBalance(st.msg.From()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForCompResouces
 	}
@@ -178,18 +178,18 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, 
 	}
 
 	var (
-		evm = st.evm
+		env = st.vm
 		// vm errors do not effect consensus and are therefor
 		// not assigned to err, except for insufficient balance
 		// error.
 		vmerr error
 	)
 	if contractCreation {
-		ret, _, st.compResources, vmerr = evm.Create(sender, st.data, st.compResources, st.value)
+		ret, _, st.compResources, vmerr = env.Create(sender, st.data, st.compResources, st.value)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		ret, st.compResources, vmerr = evm.Call(sender, st.to(), st.data, st.compResources, st.value)
+		ret, st.compResources, vmerr = env.Call(sender, st.to(), st.data, st.compResources, st.value)
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
@@ -201,7 +201,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedComputeUnits uint64, 
 		}
 	}
 	st.refundCompResources()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.compResourcesUsed()), st.evm.ComputeUnitPrice))
+	st.state.AddBalance(st.vm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.compResourcesUsed()), st.vm.ComputeUnitPrice))
 
 	return ret, st.compResourcesUsed(), vmerr != nil, err
 }
@@ -215,7 +215,7 @@ func (st *StateTransition) refundCompResources() {
 	st.compResources += refund
 
 	// Return kUSD for remaining computational resources.
-	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.compResources), st.evm.ComputeUnitPrice)
+	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.compResources), st.vm.ComputeUnitPrice)
 	st.state.AddBalance(st.msg.From(), remaining)
 
 	// Also return remaining gas to the block gas counter so it is

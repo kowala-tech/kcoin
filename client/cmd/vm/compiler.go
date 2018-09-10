@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/kowala-tech/kcoin/client/cmd/evm/internal/compiler"
+	"github.com/kowala-tech/kcoin/client/cmd/vm/internal/compiler"
 
 	cli "gopkg.in/urfave/cli.v1"
 )

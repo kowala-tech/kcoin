@@ -258,10 +258,10 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg
 	// Execute the call.
 	msg := callmsg{call}
 
-	evmContext := core.NewEVMContext(msg, block.Header(), b.BlockChain, nil)
+	vmContext := core.NewVMContext(msg, block.Header(), b.BlockChain, nil)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
-	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})
+	vmenv := vm.New(vmContext, statedb, b.config, vm.Config{})
 	crpool := new(core.CompResourcesPool).AddResources(math.MaxUint64)
 
 	return core.NewStateTransition(vmenv, msg, crpool).TransitionDb()

@@ -39,7 +39,7 @@ const (
 	SstoreResetCompEffort   uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.
 	SstoreClearCompEffort   uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.
 	SstoreRefundCompEffort  uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.
-	JumpdestCompEffort      uint64 = 1     // Refunded gas, once per SSTORE operation if the zeroness changes to zero.
+	JumpdestCompEffort      uint64 = 1     // Refunded computational resources, once per SSTORE operation if the zeroness changes to zero.
 	CallCompEffort          uint64 = 40    // Once per CALL operation & message call transaction.
 	CreateDataCompEffort    uint64 = 200   //
 	CallCreateDepth         uint64 = 1024  // Maximum depth of call/create stack.
@@ -54,7 +54,7 @@ const (
 	TxDataNonZeroCompEffort uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
 
 	// Precompiled contract comp efforts
-	EcrecoverCompEffort            uint64 = 3000   // Elliptic curve sender recovery gas price
+	EcrecoverCompEffort            uint64 = 3000   // Elliptic curve sender recovery computational effort
 	Sha256BaseCompEffort           uint64 = 60     // Base price for a SHA256 operation
 	Sha256PerWordCompEffort        uint64 = 12     // Per-word price for a SHA256 operation
 	Ripemd160BaseCompEffort        uint64 = 600    // Base price for a RIPEMD160 operation
@@ -62,8 +62,8 @@ const (
 	IdentityBaseCompEffort         uint64 = 15     // Base price for a data copy operation
 	IdentityPerWordCompEffort      uint64 = 3      // Per-work price for a data copy operation
 	ModExpQuadCoeffDiv             uint64 = 20     // Divisor for the quadratic particle of the big int modular exponentiation
-	Bn256AddCompEffort             uint64 = 500    // Gas needed for an elliptic curve addition
-	Bn256ScalarMulCompEffort       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
+	Bn256AddCompEffort             uint64 = 500    // computational resources needed for an elliptic curve addition
+	Bn256ScalarMulCompEffort       uint64 = 40000  // computational resources needed for an elliptic curve scalar multiplication
 	Bn256PairingBaseCompEffort     uint64 = 100000 // Base price for an elliptic curve pairing check
 	Bn256PairingPerPointCompEffort uint64 = 80000  // Per-point price for an elliptic curve pairing check
 )

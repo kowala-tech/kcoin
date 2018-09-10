@@ -108,12 +108,12 @@ func (b *KowalaAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*
 	return logs, nil
 }
 
-func (b *KowalaAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
+func (b *KowalaAPIBackend) GetVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.VM, func() error, error) {
 	state.SetBalance(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
 
-	context := core.NewEVMContext(msg, header, b.kcoin.BlockChain(), nil)
-	return vm.NewEVM(context, state, b.kcoin.chainConfig, vmCfg), vmError, nil
+	context := core.NewVMContext(msg, header, b.kcoin.BlockChain(), nil)
+	return vm.New(context, state, b.kcoin.chainConfig, vmCfg), vmError, nil
 }
 
 func (b *KowalaAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {

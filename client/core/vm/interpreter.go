@@ -19,7 +19,7 @@ package vm
 import (
 	"fmt"
 	"sync/atomic"
-	
+
 	"github.com/kowala-tech/kcoin/client/common/math"
 	"github.com/kowala-tech/kcoin/client/params"
 )
@@ -35,7 +35,7 @@ type Config struct {
 	NoRecursion bool
 	// Enable recording of SHA3/keccak preimages
 	EnablePreimageRecording bool
-	// JumpTable contains the EVM instruction table. This
+	// JumpTable contains the VM instruction table. This
 	// may be left uninitialised and will be set to the default
 	// table.
 	JumpTable [256]operation
@@ -46,7 +46,7 @@ type Config struct {
 // The Interpreter will run the byte code VM based on the passed
 // configuration.
 type Interpreter struct {
-	evm      *EVM
+	vm       *VM
 	cfg      Config
 	gasTable params.GasTable
 	intPool  *intPool
@@ -56,7 +56,7 @@ type Interpreter struct {
 }
 
 // NewInterpreter returns a new instance of the Interpreter.
-func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
+func NewInterpreter(vm *VM, cfg Config) *Interpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
@@ -68,9 +68,9 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	}
 
 	return &Interpreter{
-		evm:      evm,
+		vm:       vm,
 		cfg:      cfg,
-		gasTable: evm.ChainConfig().GasTable(evm.BlockNumber),
+		gasTable: vm.ChainConfig().GasTable(vm.BlockNumber),
 	}
 }
 
@@ -104,8 +104,8 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 	}
 
 	// Increment the call depth which is restricted to 1024
-	in.evm.depth++
-	defer func() { in.evm.depth-- }()
+	in.vm.depth++
+	defer func() { in.vm.depth-- }()
 
 	// Reset the previous call's return data. It's unimportant to preserve the old buffer
 	// as every returning call will return new data anyway.
@@ -139,9 +139,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		defer func() {
 			if err != nil {
 				if !logged {
-					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+					in.cfg.Tracer.CaptureState(in.vm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.vm.depth, err)
 				} else {
-					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+					in.cfg.Tracer.CaptureFault(in.vm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.vm.depth, err)
 				}
 			}
 		}()
@@ -150,10 +150,10 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
 	// the execution of one of the operations or until the done flag is set by the
 	// parent context.
-	for atomic.LoadInt32(&in.evm.abort) == 0 {
+	for atomic.LoadInt32(&in.vm.abort) == 0 {
 		if in.cfg.Debug {
 			// Capture pre-execution values for tracing.
-			logged, pcCopy, gasCopy = false, pc, contract.Gas
+			logged, pcCopy, gasCopy = false, pc, contract.ComputationalResources
 		}
 
 		// Get the operation from the jump table and validate the stack to ensure there are
@@ -187,21 +187,21 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
-		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
-		if err != nil || !contract.UseGas(cost) {
-			return nil, ErrOutOfGas
+		cost, err = operation.gasCost(in.gasTable, in.vm, contract, stack, mem, memorySize)
+		if err != nil || !contract.UseResources(cost) {
+			return nil, ErrOutOfComputationalResources
 		}
 		if memorySize > 0 {
 			mem.Resize(memorySize)
 		}
 
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+			in.cfg.Tracer.CaptureState(in.vm, pc, op, gasCopy, cost, mem, stack, contract, in.vm.depth, err)
 			logged = true
 		}
 
 		// execute the operation
-		res, err := operation.execute(&pc, in.evm, contract, mem, stack)
+		res, err := operation.execute(&pc, in.vm, contract, mem, stack)
 		// verifyPool is a build flag. Pool verification makes sure the integrity
 		// of the integer pool by comparing values to a default value.
 		if verifyPool {

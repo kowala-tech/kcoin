@@ -6,7 +6,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/vm"
 )
 
-func NewEnv(cfg *Config) *vm.EVM {
+func NewEnv(cfg *Config) *vm.VM {
 	context := vm.Context{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
@@ -20,5 +20,5 @@ func NewEnv(cfg *Config) *vm.EVM {
 		ComputeUnitPrice: cfg.ComputeUnitPrice,
 	}
 
-	return vm.NewEVM(context, cfg.State, cfg.ChainConfig, cfg.EVMConfig)
+	return vm.New(context, cfg.State, cfg.ChainConfig, cfg.EVMConfig)
 }
