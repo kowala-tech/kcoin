@@ -33,7 +33,7 @@ var (
 	// means that all fields must be set at all times. This forces
 	// anyone adding flags to the config to also have to set these
 	// fields.
-	AllKonsensusProtocolChanges = &ChainConfig{big.NewInt(1337), new(KonsensusConfig)}
+	AllKonsensusProtocolChanges = &ChainConfig{big.NewInt(2), new(KonsensusConfig)}
 	TestChainConfig             = &ChainConfig{big.NewInt(1), new(KonsensusConfig)}
 	TestRules                   = TestChainConfig.Rules(new(big.Int))
 )
