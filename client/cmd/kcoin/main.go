@@ -25,6 +25,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/node"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/kowala-tech/kcoin/client/version"
+	"github.com/blang/semver"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 const (
@@ -254,6 +256,11 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
 	setupLogging(ctx)
 
+	// make use client runs latest major version if not in testnet mode, need to check pre Start node!
+	if !ctx.GlobalBool(utils.TestnetFlag.Name) {
+		mustBeLatestMajorVersion(ctx)
+	}
+
 	// Start up the node itself
 	utils.StartNode(stack)
 
@@ -329,5 +336,28 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		repository := ctx.GlobalString(utils.VersionRepository.Name)
 		selfUpdater := version.NewSelfUpdater(repository, stack, getConsoleLogger())
 		go selfUpdater.Run()
+	}
+}
+
+func mustBeLatestMajorVersion(ctx *cli.Context) {
+	repository := ctx.GlobalString(utils.VersionRepository.Name)
+	finder := version.NewFinder(repository)
+	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
+	if err != nil {
+		log.Error("Error parsing current version, exiting checker", "err", err)
+		return
+	}
+
+	current, err := semver.Make(params.Version)
+	if err != nil {
+		log.Error("Error parsing current version, exiting checker", "err", err)
+		return
+	}
+
+	assetVersion := latest.Semver()
+	if assetVersion.Major > current.Major {
+		log.Warn("Exiting client version is outdated", "current", current.String(), "latest", latest.Semver().String())
+		debug.Exit()
+		os.Exit(1)
 	}
 }
