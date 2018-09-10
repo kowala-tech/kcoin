@@ -241,7 +241,6 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kcoindb.Da
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Kowala service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database) engine.Engine {
-	// @TODO (rgeraldes) - complete with konsensus config if necessary, set rewarded to true
 	engine := konsensus.New(&params.KonsensusConfig{})
 	return engine
 }
@@ -327,11 +326,6 @@ func (s *Kowala) Deposit() (*big.Int, error) {
 	s.lock.RLock()
 	deposit := s.deposit
 	s.lock.RUnlock()
-
-	// @TODO(rgeraldes) - as soon as we have the dynamic validator set contract
-	// if there are spots available for validators & value > min value
-	// else if there are no spots available check if deposit is bigger than the the
-	// smallest one
 
 	return deposit, nil
 }
