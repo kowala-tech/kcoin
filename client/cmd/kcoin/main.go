@@ -355,7 +355,7 @@ func mustBeLatestMajorVersion(ctx *cli.Context) {
 	}
 
 	assetVersion := latest.Semver()
-	if assetVersion.Major >= current.Major {
+	if assetVersion.Major > current.Major {
 		log.Warn("Exiting client version is outdated", "current", current.String(), "latest", latest.Semver().String())
 		debug.Exit()
 		os.Exit(1)
