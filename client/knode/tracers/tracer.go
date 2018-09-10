@@ -290,11 +290,11 @@ type Tracer struct {
 	contractWrapper *contractWrapper // Wrapper around the contract object
 	dbWrapper       *dbWrapper       // Wrapper around the VM environment
 
-	pcValue    *uint   // Swappable pc value wrapped by a log accessor
-	gasValue   *uint   // Swappable gas value wrapped by a log accessor
-	costValue  *uint   // Swappable cost value wrapped by a log accessor
-	depthValue *uint   // Swappable depth value wrapped by a log accessor
-	errorValue *string // Swappable error value wrapped by a log accessor
+	pcValue            *uint   // Swappable pc value wrapped by a log accessor
+	resourceUsageValue *uint   // Swappable resource usage value wrapped by a log accessor
+	costValue          *uint   // Swappable cost value wrapped by a log accessor
+	depthValue         *uint   // Swappable depth value wrapped by a log accessor
+	errorValue         *string // Swappable error value wrapped by a log accessor
 
 	ctx map[string]interface{} // Transaction context gathered throughout execution
 	err error                  // Error, if one has occurred
@@ -312,17 +312,17 @@ func New(code string) (*Tracer, error) {
 		code = tracer
 	}
 	tracer := &Tracer{
-		vm:              duktape.New(),
-		ctx:             make(map[string]interface{}),
-		opWrapper:       new(opWrapper),
-		stackWrapper:    new(stackWrapper),
-		memoryWrapper:   new(memoryWrapper),
-		contractWrapper: new(contractWrapper),
-		dbWrapper:       new(dbWrapper),
-		pcValue:         new(uint),
-		gasValue:        new(uint),
-		costValue:       new(uint),
-		depthValue:      new(uint),
+		vm:                 duktape.New(),
+		ctx:                make(map[string]interface{}),
+		opWrapper:          new(opWrapper),
+		stackWrapper:       new(stackWrapper),
+		memoryWrapper:      new(memoryWrapper),
+		contractWrapper:    new(contractWrapper),
+		dbWrapper:          new(dbWrapper),
+		pcValue:            new(uint),
+		resourceUsageValue: new(uint),
+		costValue:          new(uint),
+		depthValue:         new(uint),
 	}
 	// Set up builtins for this environment
 	tracer.vm.PushGlobalGoFunction("toHex", func(ctx *duktape.Context) int {
@@ -433,8 +433,8 @@ func New(code string) (*Tracer, error) {
 	tracer.vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushUint(*tracer.pcValue); return 1 })
 	tracer.vm.PutPropString(logObject, "getPC")
 
-	tracer.vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushUint(*tracer.gasValue); return 1 })
-	tracer.vm.PutPropString(logObject, "getGas")
+	tracer.vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushUint(*tracer.resourceUsageValue); return 1 })
+	tracer.vm.PutPropString(logObject, "getResouceUsage")
 
 	tracer.vm.PushGoFunction(func(ctx *duktape.Context) int { ctx.PushUint(*tracer.costValue); return 1 })
 	tracer.vm.PutPropString(logObject, "getCost")
@@ -495,7 +495,7 @@ func wrapError(context string, err error) error {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (jst *Tracer) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
+func (jst *Tracer) CaptureStart(from common.Address, to common.Address, create bool, input []byte, resourceUsage uint64, value *big.Int) error {
 	jst.ctx["type"] = "CALL"
 	if create {
 		jst.ctx["type"] = "CREATE"
@@ -503,14 +503,14 @@ func (jst *Tracer) CaptureStart(from common.Address, to common.Address, create b
 	jst.ctx["from"] = from
 	jst.ctx["to"] = to
 	jst.ctx["input"] = input
-	jst.ctx["gas"] = gas
+	jst.ctx["resourceUsage"] = resourceUsage
 	jst.ctx["value"] = value
 
 	return nil
 }
 
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
-func (jst *Tracer) CaptureState(env *vm.VM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+func (jst *Tracer) CaptureState(env *vm.VM, pc uint64, op vm.OpCode, resourceUsage, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
 	if jst.err == nil {
 		// Initialize the context if it wasn't done yet
 		if !jst.inited {
@@ -529,7 +529,7 @@ func (jst *Tracer) CaptureState(env *vm.VM, pc uint64, op vm.OpCode, gas, cost u
 		jst.dbWrapper.db = env.StateDB
 
 		*jst.pcValue = uint(pc)
-		*jst.gasValue = uint(gas)
+		*jst.resourceUsageValue = uint(resourceUsage)
 		*jst.costValue = uint(cost)
 		*jst.depthValue = uint(depth)
 
@@ -548,7 +548,7 @@ func (jst *Tracer) CaptureState(env *vm.VM, pc uint64, op vm.OpCode, gas, cost u
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (jst *Tracer) CaptureFault(env *vm.VM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+func (jst *Tracer) CaptureFault(env *vm.VM, pc uint64, op vm.OpCode, resourceUsage, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
 	if jst.err == nil {
 		// Apart from the error, everything matches the previous invocation
 		jst.errorValue = new(string)
@@ -563,9 +563,9 @@ func (jst *Tracer) CaptureFault(env *vm.VM, pc uint64, op vm.OpCode, gas, cost u
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
-func (jst *Tracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+func (jst *Tracer) CaptureEnd(output []byte, resourceUsage uint64, t time.Duration, err error) error {
 	jst.ctx["output"] = output
-	jst.ctx["gasUsed"] = gasUsed
+	jst.ctx["resourceUsage"] = resourceUsage
 	jst.ctx["time"] = t.String()
 
 	if err != nil {

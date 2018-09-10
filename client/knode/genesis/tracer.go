@@ -56,7 +56,7 @@ func (vmt *vmTracer) CaptureStart(from common.Address, to common.Address, call b
 	return nil
 }
 
-func (vmt *vmTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+func (vmt *vmTracer) CaptureEnd(output []byte, resourceUsage uint64, t time.Duration, err error) error {
 	return nil
 }
 

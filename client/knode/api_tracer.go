@@ -593,7 +593,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message core.Message, v
 	// Run the transaction with tracing enabled.
 	vmenv := vm.New(vmctx, statedb, api.config, vm.Config{Debug: true, Tracer: tracer})
 
-	ret, gas, failed, err := core.ApplyMessage(vmenv, message, new(core.CompResourcesPool).AddResources(message.ComputationalEffort()))
+	ret, resourceUsage, failed, err := core.ApplyMessage(vmenv, message, new(core.CompResourcesPool).AddResources(message.ComputationalEffort()))
 	if err != nil {
 		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
@@ -601,7 +601,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message core.Message, v
 	switch tracer := tracer.(type) {
 	case *vm.StructLogger:
 		return &kcoinapi.ExecutionResult{
-			ResourceUsage: gas,
+			ResourceUsage: resourceUsage,
 			Failed:        failed,
 			ReturnValue:   fmt.Sprintf("%x", ret),
 			StructLogs:    kcoinapi.FormatLogs(tracer.StructLogs()),
