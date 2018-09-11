@@ -85,7 +85,7 @@ func (u *updater) Update() error {
 
 func (u *updater) download(asset Asset) error {
 	assetUrl := u.repository + "/" + asset.Path()
-	u.logger.Info("downloading latest version")
+	u.logger.Info("Downloading latest version")
 
 	out, err := os.Create(asset.Path())
 	if err != nil {
@@ -113,7 +113,7 @@ func (u *updater) unzip(asset Asset) error {
 	}
 	defer r.Close()
 
-	u.logger.Info("unziping file")
+	u.logger.Info("Unzipping file")
 
 	for _, f := range r.File {
 		rc, err := f.Open()
@@ -155,7 +155,7 @@ func (u *updater) backupCurrentBinary() error {
 
 	backupFile := absdir + "/backup_" + filename
 
-	u.logger.Info("backing up binary")
+	u.logger.Info("Backing up binary")
 
 	if err = os.Rename(file, backupFile); err != nil {
 		return err
