@@ -231,7 +231,11 @@ var decryptWalletCtrl = function($scope, $sce, walletService) {
                 $scope.HDWallet.wallets.push(new Wallet(undefined, derivedKey.publicKey, $scope.HDWallet.dPath + "/" + i, $scope.walletType));
             }
             $scope.HDWallet.wallets[$scope.HDWallet.wallets.length - 1].type = "addressOnly";
-            $scope.HDWallet.wallets[$scope.HDWallet.wallets.length - 1].setBalance(false);
+            $scope.HDWallet.wallets[$scope.HDWallet.wallets.length - 1].setBalance(function (data) {
+                if (data.error) {
+                    $scope.notifier.danger(globalFuncs.errorMsgs[32])
+                }
+            });
         }
         $scope.HDWallet.id = 0;
         $scope.HDWallet.numWallets = start + limit;
