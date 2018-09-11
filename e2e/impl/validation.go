@@ -188,6 +188,22 @@ func (ctx *ValidationContext) Reset() {
 	ctx.nodeRunning = false
 }
 
+func (ctx *ValidationContext) CrashMyNode() error {
+	ctx.Reset()
+	return ctx.globalCtx.nodeRunner.Stop(ctx.nodeID())
+}
+
+func (ctx *ValidationContext) IRestartTheValidator() error {
+	if err := ctx.IHaveMyNodeRunning("A"); err != nil {
+		return err
+	}
+	if err := ctx.MyNodeIsAlreadySynchronised(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
 	return common.WaitFor("node is synchronised", 200*time.Millisecond, time.Second*20, func() error {
 		res := &cluster.ExecResponse{}

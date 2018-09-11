@@ -78,6 +78,8 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^there should be (\d+) mTokens? available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
 	opts.suite.Step(`^My node should be not be a validator$`, validationCtx.MyNodeShouldBeNotBeAValidator)
 	opts.suite.Step(`^I wait for my node to be synced$`, validationCtx.IWaitForMyNodeToBeSynced)
+	opts.suite.Step(`^crash my node validator$`, validationCtx.CrashMyNode)
+	opts.suite.Step(`^I restart the validator$`, validationCtx.IRestartTheValidator)
 
 	// mTokens
 	opts.suite.Step(`^the token balance of (\w+) should be (\d+) mTokens?$`, context.IsMTokensBalanceExact)
@@ -93,8 +95,6 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^my node should not sync with the network$`, context.MyNodeShouldNotSyncWithTheNetwork)
 	opts.suite.Step(`^I start a new node with a different chain ID$`, context.IStartANewNodeWithADifferentChainID)
 	opts.suite.Step(`^I start validator with (\d+) deposit and coinbase A$`, context.IStartValidatorWithDepositAndCoinbaseA)
-	opts.suite.Step(`^crash my node validator$`, context.CrashMyNode)
-	opts.suite.Step(`^I restart the validator$`, context.IRestartTheValidator)
 
 	// Wallet backend
 	opts.suite.Step(`^the wallet backend node is running$`, walletBackendCtx.TheWalletBackendNodeIsRunning)
