@@ -37,8 +37,8 @@ func NewUpdater(repository string, logger log.Logger) (*updater, error) {
 	}, nil
 }
 
-func (u *updater) IsCurrentLatest() (bool, error) {
-	latestAsset, err := u.latestAsset()
+func (u *updater) isCurrentLatestForMajor() (bool, error) {
+	latestAsset, err := u.latestAssetForMajor()
 	if err != nil {
 		return true, err
 	}
@@ -46,12 +46,12 @@ func (u *updater) IsCurrentLatest() (bool, error) {
 	return u.current.GTE(latestAsset.Semver()), nil
 }
 
-func (u *updater) latestAsset() (Asset, error) {
-	return u.finder.Latest(runtime.GOOS, runtime.GOARCH)
+func (u *updater) latestAssetForMajor() (Asset, error) {
+	return u.finder.LatestForMajor(runtime.GOOS, runtime.GOARCH, u.current.Major)
 }
 
 func (u *updater) Update() error {
-	latestAsset, err := u.latestAsset()
+	latestAsset, err := u.latestAssetForMajor()
 	if err != nil {
 		return err
 	}
