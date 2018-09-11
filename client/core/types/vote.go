@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"github.com/kowala-tech/kcoin/client/log"
 	"io"
 	"math/big"
 	"sync"
@@ -244,6 +245,9 @@ func (v *VotesSet) Add(vote *Vote) {
 		v.nilVotes[vote.Hash()] = vote
 		return
 	}
+
+	log.Error("!!! add vote", "type", vote.data.Type, "number", vote.data.BlockNumber.String(),
+		"round", vote.data.Round, "hash", vote.data.BlockHash.String())
 
 	v.m[vote.Hash()] = vote
 	v.counter[vote.data.BlockHash]++

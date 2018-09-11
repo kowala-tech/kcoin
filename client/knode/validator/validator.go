@@ -561,6 +561,7 @@ func (val *validator) preCommit() {
 		if val.lockedBlock != nil {
 			val.lockedRound = 0
 			val.lockedBlock = nil
+			val.state.RevertToSnapshot(val.state.Snapshot())
 		}
 	case val.lockedBlock != nil && currentLeader == val.lockedBlock.Hash():
 		log.Debug("Majority of validators pre-voted the locked block", "block", val.lockedBlock.Hash())
@@ -696,9 +697,16 @@ func (val *validator) makeCurrent(parent *types.Block) error {
 }
 
 func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
+	log.Error("!!! updating a list of validators 2")
 	validators, err := val.consensus.Validators()
 	if err != nil {
 		return err
+	}
+
+	if val.voters != nil {
+		log.Error("!!! updating a list of validators 3", "was", val.voters.Len(), "now", validators.Len())
+	} else {
+		log.Error("!!! updating a list of validators 3", "was", "nil", "now", validators.Len())
 	}
 
 	val.voters = validators

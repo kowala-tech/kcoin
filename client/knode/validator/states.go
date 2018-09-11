@@ -1,8 +1,10 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"github.com/kowala-tech/kcoin/client/common"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -113,6 +115,7 @@ func (val *validator) newRoundState() stateFn {
 		val.proposal = nil
 		val.block = nil
 		val.blockFragments = nil
+		val.state.RevertToSnapshot(val.state.Snapshot())
 	}
 
 	return val.newProposalState
@@ -155,6 +158,7 @@ func (val *validator) preVoteWaitState() stateFn {
 	select {
 	case <-val.majority.Chan():
 		log.Info("There's a majority in the pre-vote sub-election!")
+		// fixme shall we do something here with current stateDB?
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
 	}
@@ -177,7 +181,8 @@ func (val *validator) preCommitWaitState() stateFn {
 	select {
 	case event := <-val.majority.Chan():
 		log.Info("There's a majority in the pre-commit sub-election!", "event", spew.Sdump(event))
-		if val.block == nil {
+		if val.block == nil || bytes.Equal(val.block.Hash().Bytes(), common.Hash{}.Bytes()) {
+			log.Info("No one block wins!!!")
 			return val.newRoundState
 		}
 		return val.commitState
@@ -209,6 +214,9 @@ func (val *validator) commitState() stateFn {
 	for _, log := range val.work.state.Logs() {
 		log.BlockHash = block.Hash()
 	}
+
+	fmt.Println("!!!!! STATES", work.state, val.work.state)
+	fmt.Println("!!!!! STATES", spew.Sdump(work.state), spew.Sdump(val.work.state))
 
 	_, err = val.chain.WriteBlockWithState(block, val.work.receipts, val.work.state)
 	if err != nil {

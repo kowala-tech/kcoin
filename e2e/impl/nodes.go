@@ -2,6 +2,7 @@ package impl
 
 import (
 	"github.com/DATA-DOG/godog"
+	"time"
 )
 
 func (ctx *Context) IStartANewNode() error {
@@ -37,7 +38,13 @@ func (ctx *Context) IStartValidatorWithDepositAndCoinbaseA(deposit int) error {
 }
 
 func (ctx *Context) CrashMyNode() error {
-	return ctx.nodeRunner.Stop(ctx.genesisValidatorNodeID)
+	err := ctx.nodeRunner.Stop(ctx.genesisValidatorNodeID)
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(20*time.Second)
+	return nil
 }
 
 func (ctx *Context) IRestartTheValidator() error {
