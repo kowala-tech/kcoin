@@ -57,19 +57,7 @@ func (f *finder) Latest(os, arch string) (Asset, error) {
 		return asset{}, err
 	}
 
-	if len(assets) == 0 {
-		return asset{}, errors.New("no version found")
-	}
-
-	latest := assets[0]
-	for _, asset := range assets {
-		// is this new greater then the one we have
-		if asset.Semver().GT(latest.Semver()) {
-			latest = asset
-		}
-	}
-
-	return latest, nil
+	return f.latest(assets)
 }
 
 func (f *finder) LatestForMajor(os, arch string, major uint64) (Asset, error) {
@@ -78,14 +66,17 @@ func (f *finder) LatestForMajor(os, arch string, major uint64) (Asset, error) {
 		return asset{}, err
 	}
 
+	return f.latest(assets)
+}
+
+func (f *finder) latest(assets []Asset) (Asset, error) {
 	if len(assets) == 0 {
 		return asset{}, errors.New("no version found")
 	}
 
 	latest := assets[0]
 	for _, asset := range assets {
-		if asset.Semver().Major == major &&
-			asset.Semver().GT(latest.Semver()) {
+		if asset.Semver().GT(latest.Semver()) {
 			latest = asset
 		}
 	}
