@@ -93,6 +93,8 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^my node should not sync with the network$`, context.MyNodeShouldNotSyncWithTheNetwork)
 	opts.suite.Step(`^I start a new node with a different chain ID$`, context.IStartANewNodeWithADifferentChainID)
 	opts.suite.Step(`^I start validator with (\d+) deposit and coinbase A$`, context.IStartValidatorWithDepositAndCoinbaseA)
+	opts.suite.Step(`^crash my node validator$`, context.CrashMyNode)
+	opts.suite.Step(`^I restart the validator$`, context.IRestartTheValidator)
 
 	// Wallet backend
 	opts.suite.Step(`^the wallet backend node is running$`, walletBackendCtx.TheWalletBackendNodeIsRunning)
