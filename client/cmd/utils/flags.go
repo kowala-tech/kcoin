@@ -1003,7 +1003,7 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	case ctx.GlobalBool(DevModeFlag.Name):
 		// Use the main net network ID. This allows us to test the p2p under realistic conditions
-		cfg.NetworkId = 1
+		cfg.NetworkId = params.MainnetChainConfig.ChainID.Uint64()
 	}
 	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
