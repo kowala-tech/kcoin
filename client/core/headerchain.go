@@ -362,6 +362,7 @@ func (hc *HeaderChain) HasHeader(hash common.Hash, number uint64) bool {
 func (hc *HeaderChain) GetHeaderByNumber(number uint64) *types.Header {
 	hash := rawdb.ReadCanonicalHash(hc.chainDb, number)
 	if hash == (common.Hash{}) {
+		fmt.Println("=== headers debug HeaderChain.GetHeaderByNumber hash==nil", )
 		return nil
 	}
 	return hc.GetHeader(hash, number)

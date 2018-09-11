@@ -13,6 +13,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
+	"fmt"
 )
 
 // work is the proposer current environment and holds all of the current state information
@@ -215,6 +216,7 @@ func (val *validator) commitState() stateFn {
 		return nil
 	}
 
+	fmt.Println("=== DEBUG", block.Header() == nil)
 	// Broadcast the block and announce chain insertion event
 	go val.eventMux.Post(core.NewMinedBlockEvent{Block: block})
 	var (
