@@ -192,10 +192,11 @@ func initGenesis(ctx *cli.Context) error {
 //if --testnet is set, network key would be testnet, main otherwise.
 func extractNetworkKey(ctx *cli.Context) string {
 	isTestNet := ctx.GlobalBool(utils.TestnetFlag.Name)
+	isDevNet := ctx.GlobalBool(utils.DevModeFlag.Name)
 
 	var networkKey string
 
-	if isTestNet {
+	if isTestNet || isDevNet {
 		networkKey = genesisgen.TestNetwork
 	} else {
 		networkKey = genesisgen.MainNetwork
