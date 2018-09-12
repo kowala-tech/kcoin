@@ -72,6 +72,7 @@ test_genesis: all
 .PHONY: test_notifications
 test_notifications: dep
 	cd notifications && \
+	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go test ./... -tags=integration
 
 .PHONY: test_truffle
@@ -116,11 +117,13 @@ assert_no_changes:
 
 .PHONY: notifications_dep
 notifications_dep: dep
-	cd notifications
+	cd notifications && \
+	$(GOPATH)/bin/dep ensure --vendor-only
 
 .PHONY: wallet_backend_dep
 wallet_backend_dep: dep
-	cd wallet-backend
+	cd wallet-backend && \
+	$(GOPATH)/bin/dep ensure --vendor-only
 
 # Cross Compilation Targets (xgo)
 
@@ -177,6 +180,7 @@ endif
 .PHONY: e2e
 e2e: dep
 	cd e2e && \
+	$(GOPATH)/bin/dep ensure --vendor-only && \
 	go build -a && \
 	./e2e --features ./features
 
