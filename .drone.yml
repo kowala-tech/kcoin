@@ -58,6 +58,7 @@ pipeline:
 
   e2e:
     group: e2e
+    # 1.0.12 doesn't seem to work for some reason. See #739
     image: kowalatech/go:1.0.11
     environment:
       - DOCKER_HOST=tcp://docker:2375
