@@ -186,7 +186,7 @@ func (ctx *Context) buildTx(from, to accounts.Account, kcoin int64) (*types.Tran
 func (ctx *Context) getTxParams(from, to accounts.Account, kcoin int64) (uint64, uint64, error) {
 	nonce, err := ctx.client.NonceAt(context.Background(), from.Address, nil)
 	if err != nil {
-		return 0, nil, 0, err
+		return 0, 0, err
 	}
 
 	effort, err := ctx.client.EstimateComputationalEffort(context.Background(), kowala.CallMsg{
@@ -195,7 +195,7 @@ func (ctx *Context) getTxParams(from, to accounts.Account, kcoin int64) (uint64,
 		Value: toWei(kcoin),
 	})
 	if err != nil {
-		return 0, nil, 0, err
+		return 0, 0, err
 	}
 	return nonce, effort, nil
 }
