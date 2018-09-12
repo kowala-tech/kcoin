@@ -2,7 +2,6 @@ package impl
 
 import (
 	"github.com/DATA-DOG/godog"
-	"time"
 )
 
 func (ctx *Context) IStartANewNode() error {
