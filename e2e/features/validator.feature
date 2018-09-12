@@ -48,4 +48,4 @@ Feature: Joining network as a validator
     And crash my node validator
     And I restart the validator
     And I wait for my node to be synced
-    And the token balance of A should be 15 mTokens
+    And My node should be a validator

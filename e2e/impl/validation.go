@@ -184,6 +184,18 @@ func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
 	return nil
 }
 
+func (ctx *ValidationContext) MyNodeShouldBeAValidator() error {
+	res := &cluster.ExecResponse{}
+	if err := ctx.globalCtx.execCommand(ctx.nodeID(), isValidatingCommand(), res); err != nil {
+		return err
+	}
+	if strings.TrimSpace(res.StdOut) != "true" {
+		log.Debug(res.StdOut)
+		return errors.New("validator is not running")
+	}
+	return nil
+}
+
 func (ctx *ValidationContext) Reset() {
 	ctx.nodeRunning = false
 }
