@@ -6,7 +6,7 @@ import "math/big"
 // aren't necesarilly consensus related.
 
 var (
-	// ComputeUnitPrice represents the network's fixed compute unit price (400 Gwei/Shannon)
+	// ComputeUnitPrice represents the networks' fixed compute unit price (400 Gwei/Shannon)
 	ComputeUnitPrice = new(big.Int).Mul(new(big.Int).SetUint64(400), new(big.Int).SetUint64(Shannon))
 )
 
