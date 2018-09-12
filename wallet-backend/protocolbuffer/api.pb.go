@@ -35,7 +35,7 @@ func (m *RegisterRequest) Reset()         { *m = RegisterRequest{} }
 func (m *RegisterRequest) String() string { return proto.CompactTextString(m) }
 func (*RegisterRequest) ProtoMessage()    {}
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_api_1932a18a4b3013da, []int{0}
+	return fileDescriptor_00212fb1f9d3bf1c, []int{0}
 }
 func (m *RegisterRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RegisterRequest.Unmarshal(m, b)
@@ -80,7 +80,7 @@ func (m *UnregisterRequest) Reset()         { *m = UnregisterRequest{} }
 func (m *UnregisterRequest) String() string { return proto.CompactTextString(m) }
 func (*UnregisterRequest) ProtoMessage()    {}
 func (*UnregisterRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_api_1932a18a4b3013da, []int{1}
+	return fileDescriptor_00212fb1f9d3bf1c, []int{1}
 }
 func (m *UnregisterRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UnregisterRequest.Unmarshal(m, b)
@@ -117,7 +117,7 @@ func (m *RegisterReply) Reset()         { *m = RegisterReply{} }
 func (m *RegisterReply) String() string { return proto.CompactTextString(m) }
 func (*RegisterReply) ProtoMessage()    {}
 func (*RegisterReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_api_1932a18a4b3013da, []int{2}
+	return fileDescriptor_00212fb1f9d3bf1c, []int{2}
 }
 func (m *RegisterReply) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RegisterReply.Unmarshal(m, b)
@@ -147,7 +147,7 @@ func (m *UnregisterReply) Reset()         { *m = UnregisterReply{} }
 func (m *UnregisterReply) String() string { return proto.CompactTextString(m) }
 func (*UnregisterReply) ProtoMessage()    {}
 func (*UnregisterReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_api_1932a18a4b3013da, []int{3}
+	return fileDescriptor_00212fb1f9d3bf1c, []int{3}
 }
 func (m *UnregisterReply) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UnregisterReply.Unmarshal(m, b)
@@ -178,7 +178,7 @@ func (m *GetTransactionsRequest) Reset()         { *m = GetTransactionsRequest{}
 func (m *GetTransactionsRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTransactionsRequest) ProtoMessage()    {}
 func (*GetTransactionsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_api_1932a18a4b3013da, []int{4}
+	return fileDescriptor_00212fb1f9d3bf1c, []int{4}
 }
 func (m *GetTransactionsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTransactionsRequest.Unmarshal(m, b)
@@ -216,7 +216,7 @@ func (m *GetTransactionsReply) Reset()         { *m = GetTransactionsReply{} }
 func (m *GetTransactionsReply) String() string { return proto.CompactTextString(m) }
 func (*GetTransactionsReply) ProtoMessage()    {}
 func (*GetTransactionsReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_api_1932a18a4b3013da, []int{5}
+	return fileDescriptor_00212fb1f9d3bf1c, []int{5}
 }
 func (m *GetTransactionsReply) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTransactionsReply.Unmarshal(m, b)
@@ -261,7 +261,7 @@ func (m *Transaction) Reset()         { *m = Transaction{} }
 func (m *Transaction) String() string { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()    {}
 func (*Transaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_api_1932a18a4b3013da, []int{6}
+	return fileDescriptor_00212fb1f9d3bf1c, []int{6}
 }
 func (m *Transaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Transaction.Unmarshal(m, b)
@@ -516,9 +516,9 @@ var _TransactionService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "api.proto",
 }
 
-func init() { proto.RegisterFile("api.proto", fileDescriptor_api_1932a18a4b3013da) }
+func init() { proto.RegisterFile("api.proto", fileDescriptor_00212fb1f9d3bf1c) }
 
-var fileDescriptor_api_1932a18a4b3013da = []byte{
+var fileDescriptor_00212fb1f9d3bf1c = []byte{
 	// 405 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x52, 0x5d, 0x8f, 0xd2, 0x40,
 	0x14, 0xb5, 0xb0, 0x0b, 0xf4, 0x82, 0xdb, 0xec, 0xcd, 0x66, 0x33, 0xb2, 0x9a, 0x5d, 0x1a, 0x63,

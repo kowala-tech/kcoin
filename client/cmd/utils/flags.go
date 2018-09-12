@@ -113,11 +113,11 @@ var (
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
-		Usage: "Ropsten network: pre-configured proof-of-work test network",
+		Usage: "Zygote network: pre-configured proof-of-stake test network",
 	}
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
-		Usage: "Developer mode: pre-configured private network with several debugging flags",
+		Usage: "Developer mode: pre-configured private test network",
 	}
 	IdentityFlag = cli.StringFlag{
 		Name:  "identity",
@@ -515,6 +515,8 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		}
 	case ctx.GlobalBool(TestnetFlag.Name):
 		urls = params.TestnetBootnodes
+	case ctx.GlobalBool(DevModeFlag.Name):
+		urls = params.DevnetBootnodes
 	}
 
 	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
@@ -532,8 +534,12 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 // flags, reverting to pre-configured ones if none have been specified.
 func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 	urls := params.MainnetDiscoveryV5Bootnodes
-	if ctx.GlobalBool(TestnetFlag.Name) {
+
+	switch {
+	case ctx.GlobalBool(TestnetFlag.Name):
 		urls = params.TestnetDiscoveryV5Bootnodes
+	case ctx.GlobalBool(DevModeFlag.Name):
+		urls = params.DevnetDiscoveryV5Bootnodes
 	}
 
 	switch {
@@ -777,15 +783,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		}
 		cfg.NetRestrict = list
 	}
-
-	if ctx.GlobalBool(DevModeFlag.Name) {
-		// --dev mode can't use p2p networking.
-		cfg.MaxPeers = 0
-		cfg.ListenAddr = ":0"
-		cfg.DiscoveryV5Addr = ":0"
-		cfg.NoDiscovery = true
-		cfg.DiscoveryV5 = false
-	}
 }
 
 // SetNodeConfig applies node-related command line flags to the config.
@@ -799,8 +796,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config, kowalaCfg *knode.Config) 
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
-	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.DataDir = filepath.Join(os.TempDir(), "kowala_dev_mode")
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -932,7 +927,8 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	case ctx.GlobalBool(TestnetFlag.Name):
 		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.Genesis = core.DevGenesisBlock()
+		// Use the main net network ID. This allows us to test the p2p under realistic conditions
+		cfg.NetworkId = params.MainnetChainConfig.ChainID.Uint64()
 	}
 	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
@@ -1006,10 +1002,8 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) kcoindb.Database {
 func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	var genesis *core.Genesis
 	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
+	case ctx.GlobalBool(TestnetFlag.Name), ctx.GlobalBool(DevModeFlag.Name):
 		genesis = core.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(DevModeFlag.Name):
-		genesis = core.DevGenesisBlock()
 	}
 	return genesis
 }
