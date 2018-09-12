@@ -195,43 +195,33 @@ func (val *validator) preCommitWaitState() stateFn {
 func (val *validator) commitState() stateFn {
 	log.Info("Commit state")
 
-	block := val.block
-	work := val.work
-
-	_, err := work.state.Commit(true)
-	if err != nil {
-		log.Error("Failed writing block to chain", "err", err)
-		return nil
-	}
+	blockHash := val.block.Hash()
 
 	// update block hash since it is now available and not when
 	// the receipt/log of individual transactions were created
 	for _, r := range val.work.receipts {
 		for _, l := range r.Logs {
-			l.BlockHash = block.Hash()
+			l.BlockHash = blockHash
 		}
 	}
 	for _, log := range val.work.state.Logs() {
-		log.BlockHash = block.Hash()
+		log.BlockHash = blockHash
 	}
 
-	fmt.Println("!!!!! STATES", work.state, val.work.state)
-	fmt.Println("!!!!! STATES", spew.Sdump(work.state), spew.Sdump(val.work.state))
-
-	_, err = val.chain.WriteBlockWithState(block, val.work.receipts, val.work.state)
+	_, err := val.chain.WriteBlockWithState(val.block, val.work.receipts, val.work.state)
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return nil
 	}
 
 	// Broadcast the block and announce chain insertion event
-	go val.eventMux.Post(core.NewMinedBlockEvent{Block: block})
+	go val.eventMux.Post(core.NewMinedBlockEvent{Block: val.block})
 	var (
 		events []interface{}
-		logs   = work.state.Logs()
+		logs   = val.work.state.Logs()
 	)
-	events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-	events = append(events, core.ChainHeadEvent{Block: block})
+	events = append(events, core.ChainEvent{Block: val.block, Hash: val.block.Hash(), Logs: logs})
+	events = append(events, core.ChainHeadEvent{Block: val.block})
 	val.chain.PostChainEvents(events, logs)
 
 	// election state updates
