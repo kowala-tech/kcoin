@@ -8,6 +8,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/log"
+	effrt "github.com/kowala-tech/kcoin/client/params/effort"
 )
 
 var (
@@ -59,10 +60,10 @@ type Message interface {
 func IntrinsicEffort(data []byte, contractCreation bool) (uint64, error) {
 	// Set the starting effort for the raw transaction
 	var effort uint64
-	if contractCreation && homestead {
-		effort = effort.TxContractCreation
+	if contractCreation {
+		effort = effrt.TxContractCreation
 	} else {
-		effort = effort.Tx
+		effort = effrt.Tx
 	}
 	// Bump the required effort by the amount of transactional data
 	if len(data) > 0 {
@@ -74,16 +75,16 @@ func IntrinsicEffort(data []byte, contractCreation bool) (uint64, error) {
 			}
 		}
 		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-effort)/effort.TxDataNonZero < nz {
+		if (math.MaxUint64-effort)/effrt.TxDataNonZero < nz {
 			return 0, vm.ErrOutOfComputationalResource
 		}
-		effort += nz * effort.TxDataNonZero
+		effort += nz * effrt.TxDataNonZero
 
 		z := uint64(len(data)) - nz
-		if (math.MaxUint64-effort)/effort.TxDataZero < z {
+		if (math.MaxUint64-effort)/effrt.TxDataZero < z {
 			return 0, vm.ErrOutOfComputationalResource
 		}
-		effort += z * effort.TxDataZero
+		effort += z * effrt.TxDataZero
 	}
 	return effort, nil
 }
@@ -139,7 +140,7 @@ func (st *StateTransition) buyResource() error {
 	st.resource += st.msg.ComputeLimit()
 
 	st.initialResource = st.msg.ComputeLimit()
-	st.state.SubResource(st.msg.From(), mgval)
+	st.state.SubBalance(st.msg.From(), mgval)
 	return nil
 }
 
@@ -168,7 +169,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, resourceUsage uint64, fai
 	contractCreation := msg.To() == nil
 
 	// Pay intrinsic computational effort
-	effort, err := IntrinsicEffort(st.data, contractCreation, true)
+	effort, err := IntrinsicEffort(st.data, contractCreation)
 	if err != nil {
 		return nil, 0, false, err
 	}
@@ -177,18 +178,18 @@ func (st *StateTransition) TransitionDb() (ret []byte, resourceUsage uint64, fai
 	}
 
 	var (
-		vm = st.vm
+		env = st.vm
 		// vm errors do not effect consensus and are therefor
 		// not assigned to err, except for insufficient balance
 		// error.
 		vmerr error
 	)
 	if contractCreation {
-		ret, _, st.resource, vmerr = vm.Create(sender, st.data, st.resource, st.value)
+		ret, _, st.resource, vmerr = env.Create(sender, st.data, st.resource, st.value)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		ret, st.resource, vmerr = vm.Call(sender, st.to(), st.data, st.resource, st.value)
+		ret, st.resource, vmerr = env.Call(sender, st.to(), st.data, st.resource, st.value)
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)

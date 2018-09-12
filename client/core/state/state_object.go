@@ -270,9 +270,9 @@ func (so *stateObject) setBalance(amount *big.Int) {
 }
 
 // Return the computational resource back to the origin. Used by the Virtual machine or Closures
-func (c *stateObject) ReturnComputationalResource(resource *big.Int) {}
+func (so *stateObject) ReturnComputationalResource(resource *big.Int) {}
 
-func (c *stateObject) deepCopy(db *StateDB) *stateObject {
+func (so *stateObject) deepCopy(db *StateDB) *stateObject {
 	stateObject := newObject(db, so.address, so.data)
 	if so.trie != nil {
 		stateObject.trie = db.db.CopyTrie(so.trie)
@@ -336,7 +336,7 @@ func (so *stateObject) SetNonce(nonce uint64) {
 }
 
 func (so *stateObject) setNonce(nonce uint64) {
-	os.data.Nonce = nonce
+	so.data.Nonce = nonce
 }
 
 func (so *stateObject) CodeHash() []byte {

@@ -263,7 +263,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.New(vmContext, statedb, b.config, vm.Config{})
-	crpool := new(core.ComputationalResourcesPool).AddResources(math.MaxUint64)
+	crpool := new(core.ComputationalResourcePool).AddResource(math.MaxUint64)
 
 	return core.NewStateTransition(vmenv, msg, crpool).TransitionDb()
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/params/effort"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -95,9 +96,9 @@ type VM struct {
 	callResourceTemp uint64
 }
 
-// NewEVM returns a new VM. The returned VM is not thread safe and should
+// New returns a new VM. The returned VM is not thread safe and should
 // only ever be used *once*.
-func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmConfig Config) *VM {
+func New(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmConfig Config) *VM {
 	vm := &VM{
 		Context:     ctx,
 		StateDB:     statedb,

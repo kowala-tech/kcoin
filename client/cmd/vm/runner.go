@@ -147,7 +147,7 @@ func runCmd(ctx *cli.Context) error {
 		ComputeUnitPrice: utils.GlobalBig(ctx, PriceFlag.Name),
 		Value:            utils.GlobalBig(ctx, ValueFlag.Name),
 		BlockNumber:      new(big.Int).SetUint64(blockNumber),
-		EVMConfig: vm.Config{
+		VMConfig: vm.Config{
 			Tracer: tracer,
 			Debug:  ctx.GlobalBool(DebugFlag.Name) || ctx.GlobalBool(MachineFlag.Name),
 		},

@@ -25,7 +25,7 @@ type Config struct {
 	ComputeUnitPrice *big.Int
 	Value            *big.Int
 	Debug            bool
-	EVMConfig        vm.Config
+	VMConfig         vm.Config
 
 	State     *state.StateDB
 	GetHashFn func(n uint64) common.Hash

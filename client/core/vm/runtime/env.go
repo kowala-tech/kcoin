@@ -20,5 +20,5 @@ func NewEnv(cfg *Config) *vm.VM {
 		ComputeUnitPrice: cfg.ComputeUnitPrice,
 	}
 
-	return vm.NewVM(context, cfg.State, cfg.ChainConfig, cfg.VMConfig)
+	return vm.New(context, cfg.State, cfg.ChainConfig, cfg.VMConfig)
 }

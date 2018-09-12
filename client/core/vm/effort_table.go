@@ -19,8 +19,7 @@ package vm
 import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/math"
-	"github.com/kowala-tech/kcoin/client/params"
-	"github.com/kowala-tech/kcoin/client/params/effort"
+	effrt "github.com/kowala-tech/kcoin/client/params/effort"
 )
 
 // memoryEffort calculates the quadratic computational effort for memory expansion. It does so
@@ -46,8 +45,8 @@ func memoryEffort(mem *Memory, newMemSize uint64) (uint64, error) {
 
 	if newMemSize > uint64(mem.Len()) {
 		square := newMemSizeWords * newMemSizeWords
-		linCoef := newMemSizeWords * effort.Memory
-		quadCoef := square / params.QuadCoeffDiv
+		linCoef := newMemSizeWords * effrt.Memory
+		quadCoef := square / effrt.QuadCoeffDiv
 		newTotalFee := linCoef + quadCoef
 
 		fee := newTotalFee - mem.lastResourceUsage
@@ -59,12 +58,12 @@ func memoryEffort(mem *Memory, newMemSize uint64) (uint64, error) {
 }
 
 func constEffortFunc(effort uint64) effortFunc {
-	return func(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+	return func(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 		return effort, nil
 	}
 }
 
-func effortCallDataCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortCallDataCopy(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
 		return 0, err
@@ -80,7 +79,7 @@ func effortCallDataCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stac
 		return 0, errEffortUintOverflow
 	}
 
-	if words, overflow = math.SafeMul(toWordSize(words), effort.Copy); overflow {
+	if words, overflow = math.SafeMul(toWordSize(words), effrt.Copy); overflow {
 		return 0, errEffortUintOverflow
 	}
 
@@ -90,7 +89,7 @@ func effortCallDataCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stac
 	return effort, nil
 }
 
-func effortReturnDataCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortReturnDataCopy(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
 		return 0, err
@@ -106,7 +105,7 @@ func effortReturnDataCopy(gt effort.Table, vm *VM, contract *Contract, stack *St
 		return 0, errEffortUintOverflow
 	}
 
-	if words, overflow = math.SafeMul(toWordSize(words), effort.Copy); overflow {
+	if words, overflow = math.SafeMul(toWordSize(words), effrt.Copy); overflow {
 		return 0, errEffortUintOverflow
 	}
 
@@ -116,7 +115,7 @@ func effortReturnDataCopy(gt effort.Table, vm *VM, contract *Contract, stack *St
 	return effort, nil
 }
 
-func effortSStore(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortSStore(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var (
 		y, x = stack.Back(1), stack.Back(0)
 		val  = vm.StateDB.GetState(contract.Address(), common.BigToHash(x))
@@ -127,19 +126,19 @@ func effortSStore(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem
 	// 3. From a non-zero to a non-zero                         (CHANGE)
 	if val == (common.Hash{}) && y.Sign() != 0 {
 		// 0 => non 0
-		return effort.SstoreSet, nil
+		return effrt.SstoreSet, nil
 	} else if val != (common.Hash{}) && y.Sign() == 0 {
 		// non 0 => 0
-		vm.StateDB.AddRefund(effort.SstoreRefund)
-		return effort.SstoreClear, nil
+		vm.StateDB.AddRefund(effrt.SstoreRefund)
+		return effrt.SstoreClear, nil
 	} else {
 		// non 0 => non 0 (or 0 => 0)
-		return effort.SstoreReset, nil
+		return effrt.SstoreReset, nil
 	}
 }
 
 func makeEffortLog(n uint64) effortFunc {
-	return func(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+	return func(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 		requestedSize, overflow := bigUint64(stack.Back(1))
 		if overflow {
 			return 0, errEffortUintOverflow
@@ -150,15 +149,15 @@ func makeEffortLog(n uint64) effortFunc {
 			return 0, err
 		}
 
-		if effort, overflow = math.SafeAdd(effort, effort.Log); overflow {
+		if effort, overflow = math.SafeAdd(effort, effrt.Log); overflow {
 			return 0, errEffortUintOverflow
 		}
-		if effort, overflow = math.SafeAdd(effort, n*effort.LogTopic); overflow {
+		if effort, overflow = math.SafeAdd(effort, n*effrt.LogTopic); overflow {
 			return 0, errEffortUintOverflow
 		}
 
 		var memorySizeEffort uint64
-		if memorySizeEffort, overflow = math.SafeMul(requestedSize, effort.LogData); overflow {
+		if memorySizeEffort, overflow = math.SafeMul(requestedSize, effrt.LogData); overflow {
 			return 0, errEffortUintOverflow
 		}
 		if effort, overflow = math.SafeAdd(effort, memorySizeEffort); overflow {
@@ -168,14 +167,14 @@ func makeEffortLog(n uint64) effortFunc {
 	}
 }
 
-func effortSha3(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortSha3(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var overflow bool
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
 		return 0, err
 	}
 
-	if effort, overflow = math.SafeAdd(effort, effort.Sha3); overflow {
+	if effort, overflow = math.SafeAdd(effort, effrt.Sha3); overflow {
 		return 0, errEffortUintOverflow
 	}
 
@@ -183,7 +182,7 @@ func effortSha3(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *
 	if overflow {
 		return 0, errEffortUintOverflow
 	}
-	if wordEffort, overflow = math.SafeMul(toWordSize(wordEffort), effort.Sha3Word); overflow {
+	if wordEffort, overflow = math.SafeMul(toWordSize(wordEffort), effrt.Sha3Word); overflow {
 		return 0, errEffortUintOverflow
 	}
 	if effort, overflow = math.SafeAdd(effort, wordEffort); overflow {
@@ -192,7 +191,7 @@ func effortSha3(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *
 	return effort, nil
 }
 
-func effortCodeCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortCodeCopy(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
 		return 0, err
@@ -207,7 +206,7 @@ func effortCodeCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stack, m
 	if overflow {
 		return 0, errEffortUintOverflow
 	}
-	if wordEffort, overflow = math.SafeMul(toWordSize(wordEffort), params.CopyEffort); overflow {
+	if wordEffort, overflow = math.SafeMul(toWordSize(wordEffort), effrt.Copy); overflow {
 		return 0, errEffortUintOverflow
 	}
 	if effort, overflow = math.SafeAdd(effort, wordEffort); overflow {
@@ -216,7 +215,7 @@ func effortCodeCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stack, m
 	return effort, nil
 }
 
-func effortExtCodeCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortExtCodeCopy(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
 		return 0, err
@@ -232,7 +231,7 @@ func effortExtCodeCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stack
 		return 0, errEffortUintOverflow
 	}
 
-	if wordEffort, overflow = math.SafeMul(toWordSize(wordEffort), effort.Copy); overflow {
+	if wordEffort, overflow = math.SafeMul(toWordSize(wordEffort), effrt.Copy); overflow {
 		return 0, errEffortUintOverflow
 	}
 
@@ -242,7 +241,7 @@ func effortExtCodeCopy(gt effort.Table, vm *VM, contract *Contract, stack *Stack
 	return effort, nil
 }
 
-func effortMLoad(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortMLoad(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var overflow bool
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
@@ -254,7 +253,7 @@ func effortMLoad(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem 
 	return effort, nil
 }
 
-func effortMStore8(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortMStore8(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var overflow bool
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
@@ -266,7 +265,7 @@ func effortMStore8(gt effort.Table, vm *VM, contract *Contract, stack *Stack, me
 	return effort, nil
 }
 
-func effortMStore(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortMStore(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var overflow bool
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
@@ -278,44 +277,44 @@ func effortMStore(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem
 	return effort, nil
 }
 
-func effortCreate(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortCreate(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var overflow bool
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
 		return 0, err
 	}
-	if effort, overflow = math.SafeAdd(effort, effort.Create); overflow {
+	if effort, overflow = math.SafeAdd(effort, effrt.Create); overflow {
 		return 0, errEffortUintOverflow
 	}
 	return effort, nil
 }
 
-func effortBalance(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortBalance(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return gt.Balance, nil
 }
 
-func effortExtCodeSize(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortExtCodeSize(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return gt.ExtcodeSize, nil
 }
 
-func effortSLoad(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortSLoad(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return gt.SLoad, nil
 }
 
-func effortExp(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortExp(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	expByteLen := uint64((stack.data[stack.len()-2].BitLen() + 7) / 8)
 
 	var (
 		effort   = expByteLen * gt.ExpByte // no overflow check required. Max is 256 * ExpByte effort
 		overflow bool
 	)
-	if effoert, overflow = math.SafeAdd(effort, EffortSlowStep); overflow {
+	if effort, overflow = math.SafeAdd(effort, EffortSlowStep); overflow {
 		return 0, errEffortUintOverflow
 	}
 	return effort, nil
 }
 
-func effortCall(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortCall(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var (
 		effort         = gt.Calls
 		transfersValue = stack.Back(2).Sign() != 0
@@ -323,11 +322,11 @@ func effortCall(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *
 	)
 
 	if transfersValue && vm.StateDB.Empty(address) {
-		effort += effort.CallNewAccount
+		effort += effrt.CallNewAccount
 	}
 
 	if transfersValue {
-		effort += effort.CallValueTransfer
+		effort += effrt.CallValueTransfer
 	}
 	memoryEffort, err := memoryEffort(mem, memorySize)
 	if err != nil {
@@ -338,20 +337,20 @@ func effortCall(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *
 		return 0, errEffortUintOverflow
 	}
 
-	vm.callEffortTemp, err = callEffort(gt, contract.ComputationalResource, effort, stack.Back(0))
+	vm.callResourceTemp, err = callEffort(gt, contract.ComputationalResource, effort, stack.Back(0))
 	if err != nil {
 		return 0, err
 	}
-	if effort, overflow = math.SafeAdd(effort, vm.callEffortTemp); overflow {
+	if effort, overflow = math.SafeAdd(effort, vm.callResourceTemp); overflow {
 		return 0, errEffortUintOverflow
 	}
 	return effort, nil
 }
 
-func effortCallCode(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortCallCode(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	effort := gt.Calls
 	if stack.Back(2).Sign() != 0 {
-		effort += effort.CallValueTransfer
+		effort += effrt.CallValueTransfer
 	}
 	memoryEffort, err := memoryEffort(mem, memorySize)
 	if err != nil {
@@ -362,25 +361,25 @@ func effortCallCode(gt effort.Table, vm *VM, contract *Contract, stack *Stack, m
 		return 0, errEffortUintOverflow
 	}
 
-	vm.callEffortTemp, err = callEffort(gt, contract.ComputationalResource, effort, stack.Back(0))
+	vm.callResourceTemp, err = callEffort(gt, contract.ComputationalResource, effort, stack.Back(0))
 	if err != nil {
 		return 0, err
 	}
-	if effort, overflow = math.SafeAdd(effort, vm.callEffortTemp); overflow {
+	if effort, overflow = math.SafeAdd(effort, vm.callResourceTemp); overflow {
 		return 0, errEffortUintOverflow
 	}
 	return effort, nil
 }
 
-func effortReturn(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortReturn(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return memoryEffort(mem, memorySize)
 }
 
-func effortRevert(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortRevert(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return memoryEffort(mem, memorySize)
 }
 
-func effortSuicide(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortSuicide(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var effort uint64
 
 	effort = gt.Suicide
@@ -394,12 +393,12 @@ func effortSuicide(gt effort.Table, vm *VM, contract *Contract, stack *Stack, me
 	}
 
 	if !vm.StateDB.HasSuicided(contract.Address()) {
-		vm.StateDB.AddRefund(effort.SuicideRefund)
+		vm.StateDB.AddRefund(effrt.SuicideRefund)
 	}
 	return effort, nil
 }
 
-func effortDelegateCall(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortDelegateCall(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
 		return 0, err
@@ -409,17 +408,17 @@ func effortDelegateCall(gt effort.Table, vm *VM, contract *Contract, stack *Stac
 		return 0, errEffortUintOverflow
 	}
 
-	vm.callEffortTemp, err = callEffort(gt, contract.ComputationalResource, effort, stack.Back(0))
+	vm.callResourceTemp, err = callEffort(gt, contract.ComputationalResource, effort, stack.Back(0))
 	if err != nil {
 		return 0, err
 	}
-	if effort, overflow = math.SafeAdd(effort, vm.callEffortTemp); overflow {
+	if effort, overflow = math.SafeAdd(effort, vm.callResourceTemp); overflow {
 		return 0, errEffortUintOverflow
 	}
 	return effort, nil
 }
 
-func effortStaticCall(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortStaticCall(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	effort, err := memoryEffort(mem, memorySize)
 	if err != nil {
 		return 0, err
@@ -429,24 +428,24 @@ func effortStaticCall(gt effort.Table, vm *VM, contract *Contract, stack *Stack,
 		return 0, errEffortUintOverflow
 	}
 
-	vm.callEffortTemp, err = callEffort(gt, contract.ComputationalResource, effort, stack.Back(0))
+	vm.callResourceTemp, err = callEffort(gt, contract.ComputationalResource, effort, stack.Back(0))
 	if err != nil {
 		return 0, err
 	}
-	if effort, overflow = math.SafeAdd(effort, vm.callEffortTemp); overflow {
+	if effort, overflow = math.SafeAdd(effort, vm.callResourceTemp); overflow {
 		return 0, errEffortUintOverflow
 	}
 	return effort, nil
 }
 
-func effortPush(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortPush(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return EffortFastestStep, nil
 }
 
-func effortSwap(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortSwap(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return EffortFastestStep, nil
 }
 
-func effortDup(gt effort.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
+func effortDup(gt effrt.Table, vm *VM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	return EffortFastestStep, nil
 }

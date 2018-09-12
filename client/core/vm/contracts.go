@@ -25,8 +25,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/math"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/crypto/bn256"
-	"github.com/kowala-tech/kcoin/client/params"
-	"github.com/kowala-tech/kcoin/client/params/effort"
+	effrt "github.com/kowala-tech/kcoin/client/params/effort"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -64,7 +63,7 @@ func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contr
 type ecrecover struct{}
 
 func (c *ecrecover) RequiredComputationalEffort(input []byte) uint64 {
-	return effort.Ecrecover
+	return effrt.Ecrecover
 }
 
 func (c *ecrecover) Run(input []byte) ([]byte, error) {
@@ -101,7 +100,7 @@ type sha256hash struct{}
 // This method does not require any overflow checking as the input size resource costs
 // required for anything significant is so high it's impossible to pay for.
 func (c *sha256hash) RequiredComputationalEffort(input []byte) uint64 {
-	return uint64(len(input)+31)/32*effort.Sha256PerWord + effort.Sha256Base
+	return uint64(len(input)+31)/32*effrt.Sha256PerWord + effrt.Sha256Base
 }
 func (c *sha256hash) Run(input []byte) ([]byte, error) {
 	h := sha256.Sum256(input)
@@ -116,7 +115,7 @@ type ripemd160hash struct{}
 // This method does not require any overflow checking as the input size resource costs
 // required for anything significant is so high it's impossible to pay for.
 func (c *ripemd160hash) RequiredComputationalEffort(input []byte) uint64 {
-	return uint64(len(input)+31)/32*effort.Ripemd160PerWord + effort.Ripemd160Base
+	return uint64(len(input)+31)/32*effrt.Ripemd160PerWord + effrt.Ripemd160Base
 }
 func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
 	ripemd := ripemd160.New()
@@ -132,7 +131,7 @@ type dataCopy struct{}
 // This method does not require any overflow checking as the input size resource costs
 // required for anything significant is so high it's impossible to pay for.
 func (c *dataCopy) RequiredComputationalEffort(input []byte) uint64 {
-	return uint64(len(input)+31)/32*effort.IdentityPerWord + effort.IdentityBase
+	return uint64(len(input)+31)/32*effrt.IdentityPerWord + effrt.IdentityBase
 }
 func (c *dataCopy) Run(in []byte) ([]byte, error) {
 	return in, nil
@@ -207,7 +206,7 @@ func (c *bigModExp) RequiredComputationalEffort(input []byte) uint64 {
 		)
 	}
 	effort.Mul(effort, math.BigMax(adjExpLen, big1))
-	effort.Div(effort, new(big.Int).SetUint64(params.ModExpQuadCoeffDiv))
+	effort.Div(effort, new(big.Int).SetUint64(effrt.ModExpQuadCoeffDiv))
 
 	if effort.BitLen() > 64 {
 		return math.MaxUint64
@@ -268,7 +267,7 @@ type bn256Add struct{}
 
 // RequiredComputationalEffort returns the computational effort required to execute the pre-compiled contract.
 func (c *bn256Add) RequiredComputationalEffort(input []byte) uint64 {
-	return effort.Bn256Add
+	return effrt.Bn256Add
 }
 
 func (c *bn256Add) Run(input []byte) ([]byte, error) {
@@ -290,7 +289,7 @@ type bn256ScalarMul struct{}
 
 // RequiredComputationalEffort returns the computational effort required to execute the pre-compiled contract.
 func (c *bn256ScalarMul) RequiredComputationalEffort(input []byte) uint64 {
-	return effort.Bn256ScalarMul
+	return effrt.Bn256ScalarMul
 }
 
 func (c *bn256ScalarMul) Run(input []byte) ([]byte, error) {
@@ -319,7 +318,7 @@ type bn256Pairing struct{}
 
 // RequiredComputationalEffort returns the computational effort required to execute the pre-compiled contract.
 func (c *bn256Pairing) RequiredComputationalEffort(input []byte) uint64 {
-	return effort.Bn256PairingBase + uint64(len(input)/192)*effort.Bn256PairingPerPoint
+	return effrt.Bn256PairingBase + uint64(len(input)/192)*effrt.Bn256PairingPerPoint
 }
 
 func (c *bn256Pairing) Run(input []byte) ([]byte, error) {

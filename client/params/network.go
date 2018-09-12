@@ -24,9 +24,6 @@ const (
 	// contains.
 	BloomBitsBlocks uint64 = 4096
 
-	// StackLimit is the maximum size of VM stack allowed.
-	StackLimit uint64 = 1024
-
 	// MaximumExtraDataSize maximum size extra data may be after Genesis.
 	MaximumExtraDataSize uint64 = 32
 

@@ -23,6 +23,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/params/effort"
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -534,7 +535,7 @@ type CallArgs struct {
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration) ([]byte, uint64, bool, error) {
-	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
+	defer func(start time.Time) { log.Debug("Executing VM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
@@ -589,7 +590,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Setup the computational resource pool (also for unmetered requests)
 	// and apply the message.
 	crpool := new(core.ComputationalResourcePool).AddResource(math.MaxUint64)
-	res, resourceUsage, failed, err := core.ApplyMessage(evm, msg, gp)
+	res, resourceUsage, failed, err := core.ApplyMessage(vmachine, msg, crpool)
 	if err := vmError(); err != nil {
 		return nil, 0, false, err
 	}
@@ -651,41 +652,41 @@ func (s *PublicBlockChainAPI) EstimateComputationalEffort(ctx context.Context, a
 	return hexutil.Uint64(hi), nil
 }
 
-// ExecutionResult groups all structured logs emitted by the EVM
+// ExecutionResult groups all structured logs emitted by the VM
 // while replaying a transaction in debug mode as well as transaction
 // execution status, the resource usage and the return value
 type ExecutionResult struct {
-	ResourceUsage         uint64         `json:"resourceUsage"`
-	Failed      		  bool           `json:"failed"`
-	ReturnValue           string         `json:"returnValue"`
-	StructLogs  []StructLogRes `json:"structLogs"`
+	ResourceUsage uint64         `json:"resourceUsage"`
+	Failed        bool           `json:"failed"`
+	ReturnValue   string         `json:"returnValue"`
+	StructLogs    []StructLogRes `json:"structLogs"`
 }
 
-// StructLogRes stores a structured log emitted by the EVM while replaying a
+// StructLogRes stores a structured log emitted by the VM while replaying a
 // transaction in debug mode
 type StructLogRes struct {
-	Pc      uint64             `json:"pc"`
-	Op      string             `json:"op"`
-	ComputationalResource     uint64             `json:"compResource"`
-	ComputeUnitPrice uint64             `json:"compUnitPrice"`
-	Depth   int                `json:"depth"`
-	Error   error              `json:"error,omitempty"`
-	Stack   *[]string          `json:"stack,omitempty"`
-	Memory  *[]string          `json:"memory,omitempty"`
-	Storage *map[string]string `json:"storage,omitempty"`
+	Pc                    uint64             `json:"pc"`
+	Op                    string             `json:"op"`
+	ComputationalResource uint64             `json:"compResource"`
+	ComputeUnitPrice      uint64             `json:"compUnitPrice"`
+	Depth                 int                `json:"depth"`
+	Error                 error              `json:"error,omitempty"`
+	Stack                 *[]string          `json:"stack,omitempty"`
+	Memory                *[]string          `json:"memory,omitempty"`
+	Storage               *map[string]string `json:"storage,omitempty"`
 }
 
-// formatLogs formats EVM returned structured logs for json output
+// formatLogs formats VM returned structured logs for json output
 func FormatLogs(logs []vm.StructLog) []StructLogRes {
 	formatted := make([]StructLogRes, len(logs))
 	for index, trace := range logs {
 		formatted[index] = StructLogRes{
-			Pc:      trace.Pc,
-			Op:      trace.Op.String(),
-			ComputationalResource:     trace.ComputationalResource,
-			ComputeUnitPrice: trace.ComputeUnitPrice,
-			Depth:   trace.Depth,
-			Error:   trace.Err,
+			Pc: trace.Pc,
+			Op: trace.Op.String(),
+			ComputationalResource: trace.Resource,
+			ComputeUnitPrice:      trace.ComputeUnitPrice,
+			Depth:                 trace.Depth,
+			Error:                 trace.Err,
 		}
 		if trace.Stack != nil {
 			stack := make([]string, len(trace.Stack))
@@ -726,7 +727,7 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 		"miner":            head.Coinbase,
 		"extraData":        hexutil.Bytes(head.Extra),
 		"size":             hexutil.Uint64(b.Size()),
-		"resourceUsage":          hexutil.Uint64(head.ResourceUsage),
+		"resourceUsage":    hexutil.Uint64(head.ResourceUsage),
 		"timestamp":        (*hexutil.Big)(head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
@@ -774,7 +775,7 @@ type RPCTransaction struct {
 	BlockHash        common.Hash     `json:"blockHash"`
 	BlockNumber      *hexutil.Big    `json:"blockNumber"`
 	From             common.Address  `json:"from"`
-	ComputeLimit              hexutil.Uint64  `json:"computeLimit"`
+	ComputeLimit     hexutil.Uint64  `json:"computeLimit"`
 	Hash             common.Hash     `json:"hash"`
 	Input            hexutil.Bytes   `json:"input"`
 	Nonce            hexutil.Uint64  `json:"nonce"`
@@ -795,16 +796,16 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	v, r, s := tx.RawSignatureValues()
 
 	result := &RPCTransaction{
-		From:     from,
-		ComputeLimit:      hexutil.Uint64(tx.ComputeLimit()),
-		Hash:     tx.Hash(),
-		Input:    hexutil.Bytes(tx.Data()),
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       tx.To(),
-		Value:    (*hexutil.Big)(tx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
+		From:         from,
+		ComputeLimit: hexutil.Uint64(tx.ComputeLimit()),
+		Hash:         tx.Hash(),
+		Input:        hexutil.Bytes(tx.Data()),
+		Nonce:        hexutil.Uint64(tx.Nonce()),
+		To:           tx.To(),
+		Value:        (*hexutil.Big)(tx.Value()),
+		V:            (*hexutil.Big)(v),
+		R:            (*hexutil.Big)(r),
+		S:            (*hexutil.Big)(s),
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
@@ -967,17 +968,17 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	from, _ := types.TxSender(signer, tx)
 
 	fields := map[string]interface{}{
-		"blockHash":         blockHash,
-		"blockNumber":       hexutil.Uint64(blockNumber),
-		"transactionHash":   hash,
-		"transactionIndex":  hexutil.Uint64(index),
-		"from":              from,
-		"to":                tx.To(),
+		"blockHash":               blockHash,
+		"blockNumber":             hexutil.Uint64(blockNumber),
+		"transactionHash":         hash,
+		"transactionIndex":        hexutil.Uint64(index),
+		"from":                    from,
+		"to":                      tx.To(),
 		"resourceUsage":           hexutil.Uint64(receipt.ResourceUsage),
 		"cumulativeResourceUsage": hexutil.Uint64(receipt.CumulativeResourceUsage),
-		"contractAddress":   nil,
-		"logs":              receipt.Logs,
-		"logsBloom":         receipt.Bloom,
+		"contractAddress":         nil,
+		"logs":                    receipt.Logs,
+		"logsBloom":               receipt.Bloom,
 	}
 
 	// Assign receipt status or post state.
@@ -1013,11 +1014,11 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	ComputeLimit      *hexutil.Uint64 `json:"computeLimit"`
-	Value    *hexutil.Big    `json:"value"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
+	From         common.Address  `json:"from"`
+	To           *common.Address `json:"to"`
+	ComputeLimit *hexutil.Uint64 `json:"computeLimit"`
+	Value        *hexutil.Big    `json:"value"`
+	Nonce        *hexutil.Uint64 `json:"nonce"`
 	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
 	// newer name and should be preferred by clients.
 	Data  *hexutil.Bytes `json:"data"`

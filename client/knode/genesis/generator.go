@@ -126,7 +126,7 @@ func (gen *generator) deployContracts(opts *validGenesisOptions) error {
 	for _, contract := range gen.contracts {
 		// @NOTE (rgeraldes) - storage needs to be addressed in the end as
 		// contracts can interact with each other modifying each other's state
-		contract.storage = contract.runtimeCfg.EVMConfig.Tracer.(*vmTracer).data[contract.address]
+		contract.storage = contract.runtimeCfg.VMConfig.Tracer.(*vmTracer).data[contract.address]
 		gen.alloc[contract.address] = contract.AsGenesisAccount()
 	}
 
@@ -137,7 +137,7 @@ func (gen *generator) getDefaultRuntimeConfig() *runtime.Config {
 	return &runtime.Config{
 		State:       gen.sharedState,
 		BlockNumber: common.Big0,
-		EVMConfig: vm.Config{
+		VMConfig: vm.Config{
 			Debug:  true,
 			Tracer: gen.sharedTracer,
 		},

@@ -449,7 +449,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 		msg, _ := tx.AsMessage(signer)
 		vmctx := core.NewVMContext(msg, block.Header(), api.kcoin.blockchain, nil)
 
-		vmenv := vm.NewVM(vmctx, statedb, api.config, vm.Config{})
+		vmenv := vm.New(vmctx, statedb, api.config, vm.Config{})
 		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.ComputationalResourcePool).AddResource(msg.ComputeLimit())); err != nil {
 			failed = err
 			break
@@ -591,7 +591,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message core.Message, v
 		tracer = vm.NewStructLogger(config.LogConfig)
 	}
 	// Run the transaction with tracing enabled.
-	vmenv := vm.NewVM(vmctx, statedb, api.config, vm.Config{Debug: true, Tracer: tracer})
+	vmenv := vm.New(vmctx, statedb, api.config, vm.Config{Debug: true, Tracer: tracer})
 
 	ret, resourceUsage, failed, err := core.ApplyMessage(vmenv, message, new(core.ComputationalResourcePool).AddResource(message.ComputeLimit()))
 	if err != nil {
@@ -641,7 +641,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 			return msg, context, statedb, nil
 		}
 		// Not yet the searched for transaction, execute on top of the current state
-		vmenv := vm.NewVM(context, statedb, api.config, vm.Config{})
+		vmenv := vm.New(context, statedb, api.config, vm.Config{})
 		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.ComputationalResourcePool).AddResource(tx.ComputeLimit())); err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
 		}

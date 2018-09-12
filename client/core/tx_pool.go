@@ -542,11 +542,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	// compute limit must cover the transaction's intrinsic computational effort.
-	intrCompEffort, err := IntrinsicCompEffort(tx.Data(), tx.To() == nil)
+	intrinsicEffort, err := IntrinsicEffort(tx.Data(), tx.To() == nil)
 	if err != nil {
 		return err
 	}
-	if tx.ComputeLimit() < intrCompEffort {
+	if tx.ComputeLimit() < intrinsicEffort {
 		return ErrIntrinsicResources
 	}
 	return nil

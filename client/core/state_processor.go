@@ -76,7 +76,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	// about the transaction and calling mechanisms.
 	env := vm.New(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
-	_, resourceUsed, failed, err := ApplyMessage(env, msg, gp)
+	_, resourceUsed, failed, err := ApplyMessage(env, msg, crpool)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -88,12 +88,12 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 
 	// Create a new receipt for the transaction, storing the intermediate root and computational resource used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.
-	receipt := types.NewReceipt(root, failed, *resourceUsed)
+	receipt := types.NewReceipt(root, failed, *resourceUsage)
 	receipt.TxHash = tx.Hash()
 	receipt.ResourceUsage = resourceUsed
 	// if the transaction created a contract, store the creation address in the receipt.
 	if msg.To() == nil {
-		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce())
+		receipt.ContractAddress = crypto.CreateAddress(env.Context.Origin, tx.Nonce())
 	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())

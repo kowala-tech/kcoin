@@ -25,7 +25,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/math"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/crypto"
-	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/params/effort"
 )
 
 var (
@@ -671,7 +671,7 @@ func opCall(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *Stack
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
-		resource += params.CallStipend
+		resource += effort.CallStipend
 	}
 	ret, returnResource, err := vm.Call(contract, toAddr, args, resource, value)
 	if err != nil {
@@ -700,7 +700,7 @@ func opCallCode(pc *uint64, vm *VM, contract *Contract, memory *Memory, stack *S
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
-		resource += params.CallStipend
+		resource += effort.CallStipend
 	}
 	ret, returnResource, err := vm.CallCode(contract, toAddr, args, resource, value)
 	if err != nil {
