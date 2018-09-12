@@ -23,7 +23,7 @@ func TestCheckCompatible(t *testing.T) {
 			new:    MainnetChainConfig,
 			wantErr: &ConfigCompatError{
 				What:         "Chain ID",
-				StoredConfig: big.NewInt(1337),
+				StoredConfig: big.NewInt(2),
 				NewConfig:    big.NewInt(1),
 				RewindTo:     0,
 			},
