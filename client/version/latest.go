@@ -13,6 +13,7 @@ const indexFile = "index.txt"
 type Finder interface {
 	All() ([]Asset, error)
 	Latest(os, arch string) (Asset, error)
+	LatestForMajor(os, arch string, major string) (Asset, error)
 }
 
 func NewFinder(repository string) *finder {
@@ -53,24 +54,30 @@ func (f *finder) All() ([]Asset, error) {
 }
 
 func (f *finder) Latest(os, arch string) (Asset, error) {
-	assets, err := f.All()
+	assets, err := f.assetsBy(platform(os, arch))
 	if err != nil {
 		return asset{}, err
 	}
-	var latest Asset
+
+	return f.latest(assets)
+}
+
+func (f *finder) LatestForMajor(os, arch string, major uint64) (Asset, error) {
+	assets, err := f.assetsBy(platformMajor(os, arch, major))
+	if err != nil {
+		return asset{}, err
+	}
+
+	return f.latest(assets)
+}
+
+func (f *finder) latest(assets []Asset) (Asset, error) {
+	if len(assets) == 0 {
+		return asset{}, errors.New("no version found")
+	}
+
+	latest := assets[0]
 	for _, asset := range assets {
-		// is right platform
-		if asset.Arch() != arch || asset.Os() != os {
-			continue
-		}
-
-		// first version that matches this platform
-		if latest == nil {
-			latest = asset
-			continue
-		}
-
-		// is this new greater then the one we have
 		if asset.Semver().GT(latest.Semver()) {
 			latest = asset
 		}
@@ -81,4 +88,32 @@ func (f *finder) Latest(os, arch string) (Asset, error) {
 	}
 
 	return latest, nil
+}
+
+type assetFilterFunc func(asset Asset) bool
+
+func platform(os, arch string) assetFilterFunc {
+	return func(asset Asset) bool {
+		return asset.Arch() == arch && asset.Os() == os
+	}
+}
+
+func platformMajor(os, arch string, major uint64) assetFilterFunc {
+	return func(asset Asset) bool {
+		return asset.Semver().Major == major &&
+			platform(os, arch)(asset)
+	}
+}
+
+func (f *finder) assetsBy(allowFilter assetFilterFunc) ([]Asset, error) {
+	assets, err := f.All()
+	if err != nil {
+		return nil, err
+	}
+	for _, asset := range assets {
+		if allowFilter(asset) {
+			assets = append(assets, asset)
+		}
+	}
+	return assets, nil
 }
