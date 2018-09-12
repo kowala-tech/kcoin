@@ -29,14 +29,13 @@ func TestSaveAndGetTransaction(t *testing.T) {
 	amount := big.NewInt(12345)
 
 	tx := &protocolbuffer.Transaction{
-		Hash:        hash.String(),
-		Amount:      amount.Int64(),
-		From:        address.String(),
-		To:          to.String(),
-		GasUsed:     1000,
-		GasPrice:    2000,
-		BlockHeight: 1050,
-		Timestamp:   time.Now().Unix(),
+		Hash:          hash.String(),
+		Amount:        amount.Int64(),
+		From:          address.String(),
+		To:            to.String(),
+		ResourceUsage: 1000,
+		BlockHeight:   1050,
+		Timestamp:     time.Now().Unix(),
 	}
 
 	t.Run("Get a unexisting transaction", func(t *testing.T) {
@@ -89,14 +88,13 @@ func TestGetTransactionsFromAccount(t *testing.T) {
 	amount := big.NewInt(12345)
 
 	fromAccountTransaction := &protocolbuffer.Transaction{
-		Hash:        hash.String(),
-		Amount:      amount.Int64(),
-		From:        targetAccount.String(),
-		To:          account.String(),
-		GasUsed:     1000,
-		GasPrice:    2000,
-		BlockHeight: 1050,
-		Timestamp:   time.Now().Unix(),
+		Hash:          hash.String(),
+		Amount:        amount.Int64(),
+		From:          targetAccount.String(),
+		To:            account.String(),
+		ResourceUsage: 1000,
+		BlockHeight:   1050,
+		Timestamp:     time.Now().Unix(),
 	}
 
 	t.Run("Get transactions with account with one from transaction", func(t *testing.T) {
@@ -119,14 +117,13 @@ func TestGetTransactionsFromAccount(t *testing.T) {
 	account2 := common.HexToAddress("0xdbdfdbce9a34c3ac5546657f651146d88d1bcaca")
 
 	toAccountTransaction := &protocolbuffer.Transaction{
-		Hash:        toHash.String(),
-		Amount:      amount.Int64(),
-		From:        account2.String(),
-		To:          targetAccount.String(),
-		GasUsed:     1000,
-		GasPrice:    2000,
-		BlockHeight: 1050,
-		Timestamp:   time.Now().Unix(),
+		Hash:          toHash.String(),
+		Amount:        amount.Int64(),
+		From:          account2.String(),
+		To:            targetAccount.String(),
+		ResourceUsage: 1000,
+		BlockHeight:   1050,
+		Timestamp:     time.Now().Unix(),
 	}
 
 	t.Run("Get transactions with 1 from 1 to", func(t *testing.T) {
