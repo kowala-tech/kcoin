@@ -1,6 +1,6 @@
 workspace:
-  base: /go2
-  path: src/github.com/kowala-tech/kcoin
+  base: /go/src
+  path: github.com/kowala-tech/kcoin
 
 clone:
   git:
@@ -13,11 +13,525 @@ pipeline:
     group: setup
     image: kowalatech/go:1.0.12
     commands:
-      - env
-      - ls /go
-      - ls /go/bin
-      - command -v mockery
-      - mockery
       - make install_tools
     when:
       event: [pull_request]
+
+  go_generate:
+    group: generate
+    image: kowalatech/go:1.0.12
+    commands:
+      - make go_generate
+      - make assert_no_changes
+    when:
+      event: [pull_request]
+
+  test_kcoin:
+    group: testing
+    image: kowalatech/go:1.0.12
+    commands:
+      - make test_genesis
+      - make test
+      - make lint
+    secrets: [ slack_app_webhook ]
+    when:
+      event: [pull_request]
+
+  test_notifications:
+    group: testing
+    image: kowalatech/go:1.0.12
+    environment:
+      - NSQ_ADDR=nsqd:4150
+      - REDIS_ADDR=redis:6379
+    commands:
+      - make test_notifications
+    when:
+      event: [pull_request]
+
+  test_truffle:
+    group: testing
+    image: node:9
+    commands:
+      - make test_truffle
+    when:
+      event: [pull_request]
+
+  e2e:
+    group: e2e
+    image: kowalatech/go:1.0.12
+    environment:
+      - DOCKER_HOST=tcp://docker:2375
+      - DOCKER_PUBLIC_IP=docker
+    commands:
+      - make -j 4 dev_docker_images
+      - make e2e
+    when:
+      event: [pull_request]
+
+  docker_kusd:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+    repo: kowalatech/kusd
+    dockerfile: client/release/kcoin.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_bootnode:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+    repo: kowalatech/bootnode
+    dockerfile: client/release/bootnode.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_faucet:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+    repo: kowalatech/faucet
+    dockerfile: client/release/faucet.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_notifications_api:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+    repo: kowalatech/backend_api
+    dockerfile: notifications/api.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_notifications_emailer:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+    repo: kowalatech/emailer
+    dockerfile: notifications/emailer.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_notifications_db_sync:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+    repo: kowalatech/transactions_persistance
+    dockerfile: notifications/transactions_db_synchronize.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_netstats_dev:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+      - URL=https://stats.zygote.kowala.tech
+      - EXPLORER_URL=https://explorer.zygote.kowala.tech
+      - FAUCET_URL=https://faucet.zygote.kowala.tech
+      - CDN_URL=https://cdn.kowala.io
+      - WS_SECRET=DuHLdsKV6cagynn9
+    repo: kowalatech/netstats
+    dockerfile: netstats/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev]
+      event: [push, tag]
+
+  docker_netstats_prod:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/netstats
+    dockerfile: netstats/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+      - URL=https://stats.kusd.kowala.tech
+      - EXPLORER_URL=https://explorer.kusd.kowala.tech
+      - FAUCET_URL=https://faucet.kusd.kowala.tech
+      - CDN_URL=https://cdn.kowala.tech
+      - WS_SECRET=DuHLdsKV6cagynn9
+    when:
+      branch: [master]
+      event: [push, tag]
+
+  docker_explorer_web:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+    repo: kowalatech/kexplorer
+    dockerfile: explorer/web.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_explorer_sync:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+    repo: kowalatech/kexplorersync
+    dockerfile: explorer/sync.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_notifications_tx_publisher:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    build_args:
+      - CI
+      - DRONE
+      - DRONE_REPO
+      - DRONE_COMMIT_SHA
+      - DRONE_COMMIT_BRANCH
+      - DRONE_TAG
+      - DRONE_BUILD_NUMBER
+      - DRONE_BUILD_EVENT
+    repo: kowalatech/transactions_publisher
+    dockerfile: notifications/transactions_publisher.Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [dev, master]
+      event: [push, tag]
+
+  docker_wallet_tools_dev:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/wallet-tools
+    dockerfile: wallet-tools/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    build_args:
+      - APP_URL=https://wallet-tools.zygote.kowala.io
+      - CDN_URL=https://cdn.kowala.io
+    when:
+      branch: [dev]
+      event: [push]
+
+  docker_wallet_tools_prod:
+    group: docker_deployment
+    image: kowalatech/drone-docker
+    repo: kowalatech/wallet-tools
+    dockerfile: wallet-tools/Dockerfile
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    privileged: true
+    auto_tag: true
+    when:
+      branch: [master]
+      event: [push, tag]
+
+  assemble_e2e_logs:
+    group: build_artifacts
+    image: kowalatech/go:1.0.12
+    commands:
+      - cd e2e/logs; zip -r e2e-build-${DRONE_BUILD_NUMBER}.zip *
+    when:
+      status: failure
+      event: [pull_request]
+
+  build_artifacts:
+    group: build_artifacts
+    image: kowalatech/go:1.0.12
+    environment:
+      - DOCKER_HOST=tcp://docker:2375
+    commands:
+      - make kcoin_cross
+    when:
+      event: [push, tag]
+      branch: [dev, master]
+
+  compile_gource_video:
+    group: build_artifacts
+    image: adk486/docker-gource
+    repo: kowalatech/kcoin
+    when:
+      branch: [dev]
+      event: [push]
+
+  build_docs:
+    group: build_artifacts
+    image: kowalatech/mkdocs
+    commands:
+      - make build_docs
+    when:
+      event: [push,tag]
+      branch: [master,dev]
+
+  build_cdn:
+    group: build_artifacts
+    image: kowalatech/hugo-dev:1.0.4
+    commands:
+      - cd cdn
+      - make build
+    when:
+      branch: [dev, master]
+      event: [push,tag]
+
+  upload_cdn_to_s3_dev:
+    group: build_artifacts
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "cdn.kowala.io"
+    source: cdn/assets/**/*
+    strip_prefix: cdn/assets/
+    target: /
+    encryption: AES256
+    when:
+      branch: [dev]
+      event: [push,tag]
+
+  upload_cdn_to_s3_production:
+    group: build_artifacts
+    image: plugins/s3
+    acl: public-read
+    region: "us-east-1"
+    bucket: "cdn.kowala.tech"
+    source: cdn/assets/**/*
+    strip_prefix: cdn/assets/
+    target: /
+    encryption: AES256
+    when:
+      branch: [master]
+      event: [push,tag]
+
+  upload_gource_mp4_to_s3:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: releases.kowala.tech
+    source: gource-audio.mp4
+    target: /kowala-kcoin-development-history.mp4
+    when:
+      branch: [dev]
+      event: [push,tag]
+
+  upload_binary_assets_to_s3:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: releases.kowala.tech
+    source: client/build/bin/kcoin-*.zip
+    strip_prefix: client/build/bin/
+    target: /
+    when:
+      event: [push, tag]
+      branch: [dev, master]
+
+  upload_repository_index:
+    image: kowalatech/go:1.0.12
+    commands:
+      - make go_repository_index_update
+    when:
+      event: [push, tag]
+      branch: [master, dev]
+
+  upload_dev_docs_to_s3:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: "docs.kowala.io"
+    source: docs/site/**/*
+    strip_prefix: docs/site
+    target: /
+    when:
+      event: [push]
+      branch: [dev]
+
+  upload_prod_docs_to_s3:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: "docs.kowala.tech"
+    source: docs/site/**/*
+    strip_prefix: docs/site
+    target: /
+    when:
+      event: [push,tag]
+      branch: [master]
+
+  upload_e2e_logs:
+    group: asset_deployment
+    image: plugins/s3
+    region: us-east-1
+    acl: public-read
+    encryption: AES256
+    bucket: "kcoin-e2e"
+    source: e2e/logs/*
+    strip_prefix: e2e/logs
+    target: /logs/${DRONE_BUILD_NUMBER}
+    when:
+      status: failure
+      event: [pull_request]
+
+  notify_dev:
+    group: notify
+    image: plugins/slack
+    secrets: [ slack_webhook ]
+    channel: ci-notifications
+    username: drone
+    template: >
+        *CI build #{{build.number}}* ({{build.event}} to `{{build.branch}}`{{#if build.pull}}[PR #{{build.pull}}]{{/if}} by @{{build.author}}) *{{#success build.status}}successful{{else}}failed{{/success}}* after {{since build.started}}
+
+        _${DRONE_COMMIT_MESSAGE}_
+
+        {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}> | <https://s3.amazonaws.com/kcoin-e2e/logs/${DRONE_BUILD_NUMBER}/e2e-build-${DRONE_BUILD_NUMBER}.zip|e2e logs>
+    when:
+      status: failure
+      event: [tag, pull_request]
+
+services:
+  docker:
+    image: docker:dind
+    command: [ '-l', 'fatal' ]
+    privileged: true
+
+  nsqlookupd:
+    image: nsqio/nsq
+    commands:
+      - /nsqlookupd
+
+  nsqd:
+    image: nsqio/nsq
+    commands:
+      - /nsqd --lookupd-tcp-address=nsqlookupd:4160
+
+  redis:
+    image: redis:alpine
