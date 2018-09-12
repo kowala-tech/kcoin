@@ -14,7 +14,8 @@ pipeline:
     image: kowalatech/go:1.0.12
     commands:
       - env
-      - tree /go
+      - ls /go
+      - ls /go/bin
       - command -v mockery
       - mockery
       - make install_tools
