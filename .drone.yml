@@ -58,7 +58,7 @@ pipeline:
 
   e2e:
     group: e2e
-    image: kowalatech/go:1.0.12
+    image: kowalatech/go:1.0.11
     environment:
       - DOCKER_HOST=tcp://docker:2375
       - DOCKER_PUBLIC_IP=docker
