@@ -308,10 +308,10 @@ func (suite *StabilityContractSuite) TestUnsubscribe_Subscriber_PriceGreaterOrEq
 	req.NoError(err)
 	req.NotNil(unsubscribeReceipt)
 
-	priceProviderCost := new(big.Int).Mul(params.ComputeUnitPrice, new(big.Int).SetUint64(priceProviderReceipt.GasUsed))
-	stabilityCost := new(big.Int).Mul(params.ComputeUnitPrice, new(big.Int).SetUint64(stabilityReceipt.GasUsed))
-	subscribeCost := new(big.Int).Mul(params.ComputeUnitPrice, new(big.Int).SetUint64(subscribeReceipt.GasUsed))
-	unsubscribeCost := new(big.Int).Mul(params.ComputeUnitPrice, new(big.Int).SetUint64(unsubscribeReceipt.GasUsed))
+	priceProviderCost := new(big.Int).Mul(params.ComputeUnitPrice, new(big.Int).SetUint64(priceProviderReceipt.ResourceUsage))
+	stabilityCost := new(big.Int).Mul(params.ComputeUnitPrice, new(big.Int).SetUint64(stabilityReceipt.ResourceUsage))
+	subscribeCost := new(big.Int).Mul(params.ComputeUnitPrice, new(big.Int).SetUint64(subscribeReceipt.ResourceUsage))
+	unsubscribeCost := new(big.Int).Mul(params.ComputeUnitPrice, new(big.Int).SetUint64(unsubscribeReceipt.ResourceUsage))
 
 	finalBalance := new(big.Int).Sub(initialBalance, priceProviderCost)
 	finalBalance.Sub(finalBalance, stabilityCost)
