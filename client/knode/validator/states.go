@@ -41,22 +41,30 @@ func (val *validator) notLoggedInState() stateFn {
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
 
-		txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
+		isValidator, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
-			log.Error("Error joining validators network", "err", err)
-			return nil
+			log.Crit("Failed to verify if account is already a validator")
 		}
 
-		log.Info("Waiting confirmation to participate in the consensus")
+		if !isValidator {
+			txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
+			if err != nil {
+				log.Error("Error joining validators network", "err", err)
+				return nil
+			}
+			log.Info("Waiting confirmation to participate in the consensus")
 
-		receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
-		if err != nil {
-			log.Crit("Failed to verify the voter registration", "err", err)
+			receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+			if err != nil {
+				log.Crit("Failed to verify the voter registration", "err", err)
+			}
+			if receipt.Status == types.ReceiptStatusFailed {
+				log.Crit("Failed to register the validator - receipt status failed")
+			}
 		}
-		if receipt.Status == types.ReceiptStatusFailed {
-			log.Crit("Failed to register the validator - receipt status failed")
-		}
+
 	} else {
+		log.Error("This is not a genesis validator! So let's see what happens.")
 		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
 			log.Crit("Failed to verify the voter information", "err", err)
