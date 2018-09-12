@@ -115,6 +115,8 @@ func (val *validator) newRoundState() stateFn {
 		val.proposal = nil
 		val.block = nil
 		val.blockFragments = nil
+
+		//fixme: should be checked how to revert stateDB state
 		val.state.RevertToSnapshot(val.state.Snapshot())
 	}
 
@@ -182,7 +184,7 @@ func (val *validator) preCommitWaitState() stateFn {
 	case event := <-val.majority.Chan():
 		log.Info("There's a majority in the pre-commit sub-election!", "event", spew.Sdump(event))
 		if val.block == nil || bytes.Equal(val.block.Hash().Bytes(), common.Hash{}.Bytes()) {
-			log.Info("No one block wins!!!")
+			log.Debug("No one block wins!")
 			return val.newRoundState
 		}
 		return val.commitState

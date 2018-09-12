@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -115,7 +114,7 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 
 	logStream := os.Stdout
 	if !runner.logsToStdout {
-		logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%v-%d.log", runner.logPrefix, node.ID, rand.Intn(100)))
+		logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%v.log", runner.logPrefix, node.ID))
 		logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0777)
 		if err != nil {
 			log.Error(fmt.Sprintf("error creating container logs file %q: %s", logFilename, err))

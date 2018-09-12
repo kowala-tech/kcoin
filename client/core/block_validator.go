@@ -89,7 +89,6 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 	receiptSha := types.DeriveSha(receipts)
 	if receiptSha != header.ReceiptHash {
 		return fmt.Errorf("invalid receipt root hash (remote: %x local: %x)", header.ReceiptHash, receiptSha)
-
 	}
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.

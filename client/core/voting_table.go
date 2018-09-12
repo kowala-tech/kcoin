@@ -53,7 +53,7 @@ func (table *votingTable) Add(voteAddressed types.AddressVote) error {
 	table.votes.Add(vote)
 
 	if table.hasQuorum() {
-		log.Error("!!! majority", "votes", table.votes.Len(), "voters", table.voters.Len())
+		log.Debug("voting. Quorum has been achieved. majority", "votes", table.votes.Len(), "voters", table.voters.Len())
 		table.majority(vote.BlockHash())
 	}
 
@@ -73,7 +73,7 @@ func (table *votingTable) isVoter(address common.Address) bool {
 }
 
 func (table *votingTable) hasQuorum() bool {
-	log.Error("!!! current", "voters", table.voters.Len(), "votes", table.votes.Len())
+	log.Debug("voting. hasQuorum", "voters", table.voters.Len(), "votes", table.votes.Len())
 	return table.quorum(table.votes.Len(), table.voters.Len())
 }
 

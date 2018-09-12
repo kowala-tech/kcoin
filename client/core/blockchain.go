@@ -1070,7 +1070,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			stats.queued++
 			continue
 		case err != nil:
-			log.Error("insert chain error while bc.engine.VerifyHeaders of a block")
+			log.Error("insert chain error while bc.engine.VerifyHeaders of a block", "err", err.Error())
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
@@ -1089,14 +1089,28 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
 		if err != nil {
-			log.Error("insert chain error while bc.processor.Process of a block")
+			log.Error("insert chain error while bc.processor.Process of a block", "err", err.Error())
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
 		if err != nil {
-			fmt.Println("insert chain error while bc.Validator().ValidateState of a block", "data", spew.Sdump(block, parent, state, receipts, usedGas))
+			log.Error("insert chain error while bc.Validator().ValidateState of a block", "data", spew.Sdump(
+				block.ReceivedFrom,
+				block.ReceivedAt,
+				block.Header().Number,
+				block.Header().ValidatorsHash,
+				block.Header().TxHash,
+				block.Header().ParentHash,
+				block.Header().Root,
+				parent.Header().Number,
+				parent.Header().ValidatorsHash,
+				parent.Header().TxHash,
+				parent.Header().ParentHash,
+				parent.Header().Root,
+				usedGas))
+
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}

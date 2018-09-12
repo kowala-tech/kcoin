@@ -35,21 +35,3 @@ func (ctx *Context) IStartANewNodeWithADifferentChainID() error {
 func (ctx *Context) IStartValidatorWithDepositAndCoinbaseA(deposit int) error {
 	return godog.ErrPending
 }
-
-func (ctx *Context) CrashMyNode() error {
-	err := ctx.nodeRunner.Stop(ctx.genesisValidatorNodeID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (ctx *Context) IRestartTheValidator() error {
-	err := ctx.runGenesisValidator()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
