@@ -108,7 +108,7 @@ go_generate: client/contracts/truffle/node_modules
 
 .PHONY: docker_go_generate
 docker_go_generate:
-	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.11 make go_generate
+	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.12 make go_generate
 
 .PHONY: assert_no_changes
 assert_no_changes:
