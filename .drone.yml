@@ -1,5 +1,5 @@
 workspace:
-  base: /go
+  base: /go2
   path: src/github.com/kowala-tech/kcoin
 
 clone:
