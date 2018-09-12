@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/accounts/usbwallet"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/rpc"
 	"github.com/robertkrimen/otto"
@@ -69,7 +68,7 @@ func (b *bridge) NewAccount(call otto.FunctionCall) (response otto.Value) {
 }
 
 // OpenWallet is a wrapper around personal.openWallet which can interpret and
-// react to certain error messages, such as the Trezor PIN matrix request.
+// react to certain error messages.
 func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
 	// Make sure we have a wallet specified to open
 	if !call.Argument(0).IsString() {
@@ -88,17 +87,23 @@ func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
 	if err == nil {
 		return val
 	}
-	// Wallet open failed, report error unless it's a PIN entry
-	if !strings.HasSuffix(err.Error(), usbwallet.ErrTrezorPINNeeded.Error()) {
-		throwJSException(err.Error())
-	}
-	// Trezor PIN matrix input requested, display the matrix to the user and fetch the data
-	fmt.Fprintf(b.printer, "Look at the device for number positions\n\n")
-	fmt.Fprintf(b.printer, "7 | 8 | 9\n")
-	fmt.Fprintf(b.printer, "--+---+--\n")
-	fmt.Fprintf(b.printer, "4 | 5 | 6\n")
-	fmt.Fprintf(b.printer, "--+---+--\n")
-	fmt.Fprintf(b.printer, "1 | 2 | 3\n\n")
+
+	/*
+
+		// Wallet open failed, report error unless it's a PIN entry
+		if !strings.HasSuffix(err.Error(), usbwallet.ErrTrezorPINNeeded.Error()) {
+			throwJSException(err.Error())
+		}
+
+			// Trezor PIN matrix input requested, display the matrix to the user and fetch the data
+			fmt.Fprintf(b.printer, "Look at the device for number positions\n\n")
+			fmt.Fprintf(b.printer, "7 | 8 | 9\n")
+			fmt.Fprintf(b.printer, "--+---+--\n")
+			fmt.Fprintf(b.printer, "4 | 5 | 6\n")
+			fmt.Fprintf(b.printer, "--+---+--\n")
+			fmt.Fprintf(b.printer, "1 | 2 | 3\n\n")
+
+	*/
 
 	if input, err := b.prompter.PromptPassword("Please enter current PIN: "); err != nil {
 		throwJSException(err.Error())

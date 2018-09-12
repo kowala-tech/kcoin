@@ -1,19 +1,3 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package core
 
 import (
@@ -121,15 +105,13 @@ func (journal *txJournal) insert(tx *types.Transaction) error {
 	if journal.writer == nil {
 		return errNoActiveJournal
 	}
-	if err := rlp.Encode(journal.writer, tx); err != nil {
-		return err
-	}
-	return nil
+
+	return rlp.Encode(journal.writer, tx)
 }
 
 // rotate regenerates the transaction journal based on the current contents of
 // the transaction pool.
-func (journal *txJournal) rotate(all map[common.Address]types.Transactions) error {
+func (journal *txJournal) rotate(all map[common.Address]ValidTransactions) error {
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
 		if err := journal.writer.Close(); err != nil {
@@ -145,7 +127,7 @@ func (journal *txJournal) rotate(all map[common.Address]types.Transactions) erro
 	journaled := 0
 	for _, txs := range all {
 		for _, tx := range txs {
-			if err = rlp.Encode(replacement, tx); err != nil {
+			if err = rlp.Encode(replacement, tx.Transaction); err != nil {
 				replacement.Close()
 				return err
 			}

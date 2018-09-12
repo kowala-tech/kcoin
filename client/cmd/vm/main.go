@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
-// evm executes EVM code snippets.
+// vm executes VM code snippets.
 package main
 
 import (
@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	app = utils.NewApp(gitCommit, "the evm command line interface")
+	app = utils.NewApp(gitCommit, "the vm command line interface")
 
 	DebugFlag = cli.BoolFlag{
 		Name:  "debug",
@@ -47,25 +47,25 @@ var (
 	}
 	CodeFlag = cli.StringFlag{
 		Name:  "code",
-		Usage: "EVM code",
+		Usage: "VM code",
 	}
 	CodeFileFlag = cli.StringFlag{
 		Name:  "codefile",
-		Usage: "File containing EVM code. If '-' is specified, code is read from stdin ",
+		Usage: "File containing VM code. If '-' is specified, code is read from stdin ",
 	}
-	GasFlag = cli.Uint64Flag{
-		Name:  "gas",
-		Usage: "gas limit for the evm",
+	ComputeLimitFlag = cli.Uint64Flag{
+		Name:  "limit",
+		Usage: "compute limit for the vm",
 		Value: 10000000000,
 	}
 	PriceFlag = utils.BigFlag{
 		Name:  "price",
-		Usage: "price set for the evm",
+		Usage: "price set for the vm",
 		Value: new(big.Int),
 	}
 	ValueFlag = utils.BigFlag{
 		Name:  "value",
-		Usage: "value set for the evm",
+		Usage: "value set for the vm",
 		Value: new(big.Int),
 	}
 	DumpFlag = cli.BoolFlag{
@@ -74,7 +74,7 @@ var (
 	}
 	InputFlag = cli.StringFlag{
 		Name:  "input",
-		Usage: "input for the EVM",
+		Usage: "input for the VM",
 	}
 	VerbosityFlag = cli.IntFlag{
 		Name:  "verbosity",
@@ -117,7 +117,7 @@ func init() {
 		VerbosityFlag,
 		CodeFlag,
 		CodeFileFlag,
-		GasFlag,
+		ComputeLimitFlag,
 		PriceFlag,
 		ValueFlag,
 		DumpFlag,

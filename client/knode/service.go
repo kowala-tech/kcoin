@@ -31,7 +31,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/knode/filters"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/log"
@@ -78,14 +77,13 @@ type Kowala struct {
 	bindingFuncs []BindingConstructor // binding constructors (in dependency order)
 	contracts    map[reflect.Type]bindings.Binding
 
-	gasPrice *big.Int
 	coinbase common.Address
 	deposit  *big.Int
 
 	networkID     uint64
 	netRPCService *kcoinapi.PublicNetAPI
 
-	lock       sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
+	lock       sync.RWMutex // Protects the variadic fields (e.g. coinbase)
 	serverPool *serverPool
 }
 
@@ -116,7 +114,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		accountManager: ctx.AccountManager,
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
-		gasPrice:       config.GasPrice,
 		coinbase:       config.Coinbase,
 		deposit:        config.Deposit,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
@@ -132,7 +129,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 
 	log.Info("Initialising Kowala protocol", "versions", protocol.Constants.Versions, "network", config.NetworkId)
 
-	kcoin.apiBackend = &KowalaAPIBackend{kcoin, nil}
+	kcoin.apiBackend = &KowalaAPIBackend{kcoin}
 
 	// consensus engine
 	kcoin.engine = CreateConsensusEngine(ctx, kcoin.config, kcoin.chainConfig, kcoin.chainDb)
@@ -191,12 +188,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
 	kcoin.txPool = core.NewTxPool(config.TxPool, kcoin.chainConfig, kcoin.blockchain)
-
-	gpoParams := config.GPO
-	if gpoParams.Default == nil {
-		gpoParams.Default = config.GasPrice
-	}
-	kcoin.apiBackend.gpo = gasprice.NewOracle(kcoin.apiBackend, gpoParams)
 
 	kcoin.validator = validator.New(kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
 	kcoin.validator.SetExtra(makeExtraData(config.ExtraData))
@@ -466,12 +457,6 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers
-	if s.config.LightServ > 0 {
-		maxPeers -= s.config.LightPeers
-		if maxPeers < srvr.MaxPeers/2 {
-			maxPeers = srvr.MaxPeers / 2
-		}
-	}
 
 	//fixme: should be removed after develop light client
 	if srvr.DiscoveryV5 {

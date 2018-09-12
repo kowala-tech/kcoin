@@ -1,7 +1,7 @@
-package params
+package effort
 
-// GasTable organizes gas prices for different kowala phases.
-type GasTable struct {
+// Table organizes computational requirements for different kowala phases.
+type Table struct {
 	ExtcodeSize uint64
 	ExtcodeCopy uint64
 	Balance     uint64
@@ -20,9 +20,9 @@ type GasTable struct {
 }
 
 var (
-	// GasTableAndromeda contain the gas prices for
+	// TableAndromeda contains the computational requirements for
 	// the andromeda phase.
-	GasTableAndromeda = GasTable{
+	TableAndromeda = Table{
 		ExtcodeSize: 700,
 		ExtcodeCopy: 700,
 		Balance:     400,

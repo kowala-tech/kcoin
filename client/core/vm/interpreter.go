@@ -19,9 +19,9 @@ package vm
 import (
 	"fmt"
 	"sync/atomic"
-	
+
 	"github.com/kowala-tech/kcoin/client/common/math"
-	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/params/effort"
 )
 
 // Config are the configuration options for the Interpreter
@@ -35,28 +35,28 @@ type Config struct {
 	NoRecursion bool
 	// Enable recording of SHA3/keccak preimages
 	EnablePreimageRecording bool
-	// JumpTable contains the EVM instruction table. This
+	// JumpTable contains the VM instruction table. This
 	// may be left uninitialised and will be set to the default
 	// table.
 	JumpTable [256]operation
 }
 
-// Interpreter is used to run Ethereum based contracts and will utilise the
+// Interpreter is used to run contracts and will utilise the
 // passed environment to query external sources for state information.
 // The Interpreter will run the byte code VM based on the passed
 // configuration.
 type Interpreter struct {
-	evm      *EVM
-	cfg      Config
-	gasTable params.GasTable
-	intPool  *intPool
+	vm           *VM
+	cfg          Config
+	requirements effort.Table
+	intPool      *intPool
 
 	readOnly   bool   // Whether to throw on stateful modifications
 	returnData []byte // Last CALL's return data for subsequent reuse
 }
 
 // NewInterpreter returns a new instance of the Interpreter.
-func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
+func NewInterpreter(vm *VM, cfg Config) *Interpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
@@ -68,9 +68,9 @@ func NewInterpreter(evm *EVM, cfg Config) *Interpreter {
 	}
 
 	return &Interpreter{
-		evm:      evm,
-		cfg:      cfg,
-		gasTable: evm.ChainConfig().GasTable(evm.BlockNumber),
+		vm:           vm,
+		cfg:          cfg,
+		requirements: vm.ChainConfig().ComputationalRequirements(vm.BlockNumber),
 	}
 }
 
@@ -92,8 +92,8 @@ func (in *Interpreter) enforceRestrictions(op OpCode, operation operation, stack
 // the return byte-slice and an error if one occurred.
 //
 // It's important to note that any errors returned by the interpreter should be
-// considered a revert-and-consume-all-gas operation except for
-// errExecutionReverted which means revert-and-keep-gas-left.
+// considered a revert-and-consume-all-computational-resource operation except for
+// errExecutionReverted which means revert-and-keep-computational-resource-left.
 func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	if in.intPool == nil {
 		in.intPool = poolOfIntPools.get()
@@ -104,8 +104,8 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 	}
 
 	// Increment the call depth which is restricted to 1024
-	in.evm.depth++
-	defer func() { in.evm.depth-- }()
+	in.vm.depth++
+	defer func() { in.vm.depth-- }()
 
 	// Reset the previous call's return data. It's unimportant to preserve the old buffer
 	// as every returning call will return new data anyway.
@@ -126,9 +126,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		pc   = uint64(0) // program counter
 		cost uint64
 		// copies used by tracer
-		pcCopy  uint64 // needed for the deferred Tracer
-		gasCopy uint64 // for Tracer to log gas remaining before execution
-		logged  bool   // deferred Tracer should ignore already logged steps
+		pcCopy       uint64 // needed for the deferred Tracer
+		resourceCopy uint64 // for Tracer to log resource remaining before execution
+		logged       bool   // deferred Tracer should ignore already logged steps
 	)
 	contract.Input = input
 
@@ -139,9 +139,9 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		defer func() {
 			if err != nil {
 				if !logged {
-					in.cfg.Tracer.CaptureState(in.evm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+					in.cfg.Tracer.CaptureState(in.vm, pcCopy, op, resourceCopy, cost, mem, stack, contract, in.vm.depth, err)
 				} else {
-					in.cfg.Tracer.CaptureFault(in.evm, pcCopy, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+					in.cfg.Tracer.CaptureFault(in.vm, pcCopy, op, resourceCopy, cost, mem, stack, contract, in.vm.depth, err)
 				}
 			}
 		}()
@@ -150,10 +150,10 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
 	// the execution of one of the operations or until the done flag is set by the
 	// parent context.
-	for atomic.LoadInt32(&in.evm.abort) == 0 {
+	for atomic.LoadInt32(&in.vm.abort) == 0 {
 		if in.cfg.Debug {
 			// Capture pre-execution values for tracing.
-			logged, pcCopy, gasCopy = false, pc, contract.Gas
+			logged, pcCopy, resourceCopy = false, pc, contract.ComputationalResource
 		}
 
 		// Get the operation from the jump table and validate the stack to ensure there are
@@ -177,31 +177,31 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		if operation.memorySize != nil {
 			memSize, overflow := bigUint64(operation.memorySize(stack))
 			if overflow {
-				return nil, errGasUintOverflow
+				return nil, errEffortUintOverflow
 			}
-			// memory is expanded in words of 32 bytes. Gas
+			// memory is expanded in words of 32 bytes. Computational effort
 			// is also calculated in words.
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
-				return nil, errGasUintOverflow
+				return nil, errEffortUintOverflow
 			}
 		}
-		// consume the gas and return an error if not enough gas is available.
+		// consume the computational resource and return an error if not enough resource is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
-		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
-		if err != nil || !contract.UseGas(cost) {
-			return nil, ErrOutOfGas
+		cost, err = operation.computationalEffort(in.requirements, in.vm, contract, stack, mem, memorySize)
+		if err != nil || !contract.UseResource(cost) {
+			return nil, ErrOutOfComputationalResource
 		}
 		if memorySize > 0 {
 			mem.Resize(memorySize)
 		}
 
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+			in.cfg.Tracer.CaptureState(in.vm, pc, op, resourceCopy, cost, mem, stack, contract, in.vm.depth, err)
 			logged = true
 		}
 
 		// execute the operation
-		res, err := operation.execute(&pc, in.evm, contract, mem, stack)
+		res, err := operation.execute(&pc, in.vm, contract, mem, stack)
 		// verifyPool is a build flag. Pool verification makes sure the integrity
 		// of the integer pool by comparing values to a default value.
 		if verifyPool {

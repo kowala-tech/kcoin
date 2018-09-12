@@ -311,11 +311,6 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	return nil
 }
 
-// GasLimit returns the gas limit of the current HEAD block.
-func (bc *BlockChain) GasLimit() uint64 {
-	return bc.CurrentBlock().GasLimit()
-}
-
 // CurrentBlock retrieves the current head block of the canonical chain. The
 // block is retrieved from the blockchain's internal cache.
 func (bc *BlockChain) CurrentBlock() *types.Block {
@@ -717,11 +712,11 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 			from, _ := types.TxSender(signer, transactions[j])
 			receipts[j].ContractAddress = crypto.CreateAddress(from, transactions[j].Nonce())
 		}
-		// The used gas can be calculated based on previous receipts
+		// The computational resource usage can be calculated based on previous receipts
 		if j == 0 {
-			receipts[j].GasUsed = receipts[j].CumulativeGasUsed
+			receipts[j].ResourceUsage = receipts[j].CumulativeResourceUsage
 		} else {
-			receipts[j].GasUsed = receipts[j].CumulativeGasUsed - receipts[j-1].CumulativeGasUsed
+			receipts[j].ResourceUsage = receipts[j].CumulativeResourceUsage - receipts[j-1].CumulativeResourceUsage
 		}
 		// The derived log fields can simply be set from the block and transaction
 		for k := 0; k < len(receipts[j].Logs); k++ {
@@ -1085,13 +1080,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
+		receipts, logs, resourceUsage, err := bc.processor.Process(block, state, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
 		// Validate the state using the default validator
-		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
+		err = bc.Validator().ValidateState(block, parent, state, receipts, resourceUsage)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
@@ -1106,7 +1101,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		switch status {
 		case CanonStatTy:
 			log.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(),
-				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
+				"txs", len(block.Transactions()), "computational resource usage", block.ResourceUsage(), "elapsed", common.PrettyDuration(time.Since(bstart)))
 
 			coalescedLogs = append(coalescedLogs, logs...)
 			blockInsertTimer.UpdateSince(bstart)
@@ -1118,13 +1113,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		case SideStatTy:
 			log.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "receipt", block.ReceiptHash(), "elapsed",
-				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed())
+				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "computational resource usage", block.ResourceUsage())
 
 			blockInsertTimer.UpdateSince(bstart)
 			events = append(events, ChainSideEvent{block})
 		}
 		stats.processed++
-		stats.usedGas += usedGas
+		stats.resourceUsage += resourceUsage
 
 		cache, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
@@ -1139,7 +1134,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 // insertStats tracks and reports on block insertion.
 type insertStats struct {
 	queued, processed, ignored int
-	usedGas                    uint64
+	resourceUsage              uint64
 	lastIndex                  int
 	startTime                  mclock.AbsTime
 }
@@ -1163,8 +1158,8 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 			txs = countTransactions(chain[st.lastIndex : index+1])
 		)
 		context := []interface{}{
-			"blocks", st.processed, "txs", txs, "mgas", float64(st.usedGas) / 1000000,
-			"elapsed", common.PrettyDuration(elapsed), "mgasps", float64(st.usedGas) * 1000 / float64(elapsed),
+			"blocks", st.processed, "txs", txs, "m computaional resource", float64(st.resourceUsage) / 1000000,
+			"elapsed", common.PrettyDuration(elapsed), "m computational resource ps", float64(st.resourceUsage) * 1000 / float64(elapsed),
 			"number", end.Number(), "hash", end.Hash(), "cache", cache,
 		}
 		if st.queued > 0 {

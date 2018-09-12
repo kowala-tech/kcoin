@@ -90,7 +90,7 @@ type txTraceTask struct {
 	index   int            // Transaction offset in the block
 }
 
-// TraceChain returns the structured logs created during the execution of EVM
+// TraceChain returns the structured logs created during the execution of VM
 // between two blocks (excluding start) and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (*rpc.Subscription, error) {
 	// Fetch the block interval that we want to trace
@@ -194,7 +194,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 				// Trace all the transactions contained within
 				for i, tx := range task.block.Transactions() {
 					msg, _ := tx.AsMessage(signer)
-					vmctx := core.NewEVMContext(msg, task.block.Header(), api.kcoin.blockchain, nil)
+					vmctx := core.NewVMContext(msg, task.block.Header(), api.kcoin.blockchain, nil)
 
 					res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
 					if err != nil {
@@ -336,7 +336,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 }
 
 // TraceBlockByNumber returns the structured logs created during the execution of
-// EVM and returns them as a JSON object.
+// VM and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceBlockByNumber(ctx context.Context, number rpc.BlockNumber, config *TraceConfig) ([]*txTraceResult, error) {
 	// Fetch the block that we want to trace
 	var block *types.Block
@@ -357,7 +357,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(ctx context.Context, number rpc.B
 }
 
 // TraceBlockByHash returns the structured logs created during the execution of
-// EVM and returns them as a JSON object.
+// VM and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceBlockByHash(ctx context.Context, hash common.Hash, config *TraceConfig) ([]*txTraceResult, error) {
 	block := api.kcoin.blockchain.GetBlockByHash(hash)
 	if block == nil {
@@ -366,7 +366,7 @@ func (api *PrivateDebugAPI) TraceBlockByHash(ctx context.Context, hash common.Ha
 	return api.traceBlock(ctx, block, config)
 }
 
-// TraceBlock returns the structured logs created during the execution of EVM
+// TraceBlock returns the structured logs created during the execution of VM
 // and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceBlock(ctx context.Context, blob []byte, config *TraceConfig) ([]*txTraceResult, error) {
 	block := new(types.Block)
@@ -377,7 +377,7 @@ func (api *PrivateDebugAPI) TraceBlock(ctx context.Context, blob []byte, config 
 }
 
 // TraceBlockFromFile returns the structured logs created during the execution of
-// EVM and returns them as a JSON object.
+// VM and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceBlockFromFile(ctx context.Context, file string, config *TraceConfig) ([]*txTraceResult, error) {
 	blob, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -428,7 +428,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 			// Fetch and execute the next transaction trace tasks
 			for task := range jobs {
 				msg, _ := txs[task.index].AsMessage(signer)
-				vmctx := core.NewEVMContext(msg, block.Header(), api.kcoin.blockchain, nil)
+				vmctx := core.NewVMContext(msg, block.Header(), api.kcoin.blockchain, nil)
 
 				res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
 				if err != nil {
@@ -447,10 +447,10 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 
 		// Generate the next state snapshot fast without tracing
 		msg, _ := tx.AsMessage(signer)
-		vmctx := core.NewEVMContext(msg, block.Header(), api.kcoin.blockchain, nil)
+		vmctx := core.NewVMContext(msg, block.Header(), api.kcoin.blockchain, nil)
 
-		vmenv := vm.NewEVM(vmctx, statedb, api.config, vm.Config{})
-		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(msg.Gas())); err != nil {
+		vmenv := vm.NewVM(vmctx, statedb, api.config, vm.Config{})
+		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.ComputationalResourcePool).AddResource(msg.ComputeLimit())); err != nil {
 			failed = err
 			break
 		}
@@ -534,10 +534,10 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 	return statedb, nil
 }
 
-// TraceTransaction returns the structured logs created during the execution of EVM
+// TraceTransaction returns the structured logs created during the execution of VM
 // and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, hash common.Hash, config *TraceConfig) (interface{}, error) {
-	// Retrieve the transaction and assemble its EVM context
+	// Retrieve the transaction and assemble its VM context
 	tx, blockHash, _, index := rawdb.ReadTransaction(api.kcoin.ChainDb(), hash)
 	if tx == nil {
 		return nil, fmt.Errorf("transaction %x not found", hash)
@@ -591,9 +591,9 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message core.Message, v
 		tracer = vm.NewStructLogger(config.LogConfig)
 	}
 	// Run the transaction with tracing enabled.
-	vmenv := vm.NewEVM(vmctx, statedb, api.config, vm.Config{Debug: true, Tracer: tracer})
+	vmenv := vm.NewVM(vmctx, statedb, api.config, vm.Config{Debug: true, Tracer: tracer})
 
-	ret, gas, failed, err := core.ApplyMessage(vmenv, message, new(core.GasPool).AddGas(message.Gas()))
+	ret, resourceUsage, failed, err := core.ApplyMessage(vmenv, message, new(core.ComputationalResourcePool).AddResource(message.ComputeLimit()))
 	if err != nil {
 		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
@@ -601,10 +601,10 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message core.Message, v
 	switch tracer := tracer.(type) {
 	case *vm.StructLogger:
 		return &kcoinapi.ExecutionResult{
-			Gas:         gas,
-			Failed:      failed,
-			ReturnValue: fmt.Sprintf("%x", ret),
-			StructLogs:  kcoinapi.FormatLogs(tracer.StructLogs()),
+			ResourceUsage: resourceUsage,
+			Failed:        failed,
+			ReturnValue:   fmt.Sprintf("%x", ret),
+			StructLogs:    kcoinapi.FormatLogs(tracer.StructLogs()),
 		}, nil
 
 	case *tracers.Tracer:
@@ -636,13 +636,13 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 	for idx, tx := range block.Transactions() {
 		// Assemble the transaction call message and return if the requested offset
 		msg, _ := tx.AsMessage(signer)
-		context := core.NewEVMContext(msg, block.Header(), api.kcoin.blockchain, nil)
+		context := core.NewVMContext(msg, block.Header(), api.kcoin.blockchain, nil)
 		if idx == txIndex {
 			return msg, context, statedb, nil
 		}
 		// Not yet the searched for transaction, execute on top of the current state
-		vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{})
-		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas())); err != nil {
+		vmenv := vm.NewVM(context, statedb, api.config, vm.Config{})
+		if _, _, _, err := core.ApplyMessage(vmenv, msg, new(core.ComputationalResourcePool).AddResource(tx.ComputeLimit())); err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
 		}
 		// Ensure any modifications are committed to the state

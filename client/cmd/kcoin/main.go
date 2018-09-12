@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/elastic/gosigar"
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
@@ -23,10 +24,9 @@ import (
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/metrics"
 	"github.com/kowala-tech/kcoin/client/node"
-	"gopkg.in/urfave/cli.v1"
-	"github.com/kowala-tech/kcoin/client/version"
-	"github.com/blang/semver"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/version"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -50,19 +50,14 @@ var (
 		utils.TxPoolNoLocalsFlag,
 		utils.TxPoolJournalFlag,
 		utils.TxPoolRejournalFlag,
-		utils.TxPoolPriceLimitFlag,
-		utils.TxPoolPriceBumpFlag,
 		utils.TxPoolAccountSlotsFlag,
 		utils.TxPoolGlobalSlotsFlag,
 		utils.TxPoolAccountQueueFlag,
 		utils.TxPoolGlobalQueueFlag,
 		utils.TxPoolLifetimeFlag,
 		utils.FastSyncFlag,
-		utils.LightModeFlag,
 		utils.SyncModeFlag,
 		utils.GCModeFlag,
-		utils.LightServFlag,
-		utils.LightPeersFlag,
 		utils.LightKDFFlag,
 		utils.VersionRepository,
 		utils.SelfUpdateEnabledFlag,
@@ -74,10 +69,8 @@ var (
 		utils.MaxPeersFlag,
 		utils.MaxPendingPeersFlag,
 		utils.CoinbaseFlag,
-		utils.GasPriceFlag,
 		utils.ValidatorDepositFlag,
 		utils.ValidationEnabledFlag,
-		utils.TargetGasLimitFlag,
 		utils.NATFlag,
 		utils.NoDiscoverFlag,
 		utils.NetrestrictFlag,
@@ -96,8 +89,6 @@ var (
 		utils.MetricsPrometheusAddressFlag,
 		utils.MetricsPrometheusSubsystemFlag,
 		utils.NoCompactionFlag,
-		utils.GpoBlocksFlag,
-		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		configFileFlag,
 	}
@@ -195,7 +186,6 @@ func init() {
 
 		go version.Checker(ctx.GlobalString(utils.VersionRepository.Name))
 
-		utils.SetupNetwork(ctx)
 		return nil
 	}
 
@@ -324,8 +314,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			utils.Fatalf("kowala service not running: %v", err)
 		}
 
-		// Set the gas price to the limits from the CLI and start mining
-		kowala.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
+		// start mining
 		if err := kowala.StartValidating(); err != nil {
 			utils.Fatalf("Failed to start validation: %v", err)
 		}

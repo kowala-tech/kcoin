@@ -84,7 +84,6 @@ func (gen *generator) Generate(opts Options) (*core.Genesis, error) {
 	genesis := &core.Genesis{
 		Number:    validOptions.blockNumber,
 		Timestamp: uint64(genesisTimestamp),
-		GasLimit:  4700000,
 		Alloc:     gen.alloc,
 		Config: &params.ChainConfig{
 			ChainID:   getNetwork(validOptions.network),
