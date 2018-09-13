@@ -256,7 +256,6 @@ var (
 	ValidatorDepositFlag = cli.Uint64Flag{
 		Name:  "deposit",
 		Usage: "Deposit at stake",
-		// @TODO (rgeraldes) - default could be set to the minimum required
 	}
 
 	TargetGasLimitFlag = cli.Uint64Flag{
@@ -270,7 +269,6 @@ var (
 		Value: "0",
 	}
 
-	// @TODO(rgeraldes) - review
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
