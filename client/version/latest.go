@@ -52,19 +52,23 @@ func (f *finder) All() ([]Asset, error) {
 }
 
 func (f *finder) Latest(os, arch string) (Asset, error) {
-	assets, err := f.assetsBy(platform(os, arch))
+	allAssets, err := f.All()
 	if err != nil {
 		return asset{}, err
 	}
+
+	assets := NewAssetFilterer(allAssets).by(platform(os, arch))
 
 	return f.latest(assets)
 }
 
 func (f *finder) LatestForMajor(os, arch string, major uint64) (Asset, error) {
-	assets, err := f.assetsBy(platformMajor(os, arch, major))
+	allAssets, err := f.All()
 	if err != nil {
 		return asset{}, err
 	}
+
+	assets := NewAssetFilterer(allAssets).by(platformMajor(os, arch, major))
 
 	return f.latest(assets)
 }
@@ -86,32 +90,4 @@ func (f *finder) latest(assets []Asset) (Asset, error) {
 	}
 
 	return latest, nil
-}
-
-type assetFilterFunc func(asset Asset) bool
-
-func platform(os, arch string) assetFilterFunc {
-	return func(asset Asset) bool {
-		return asset.Arch() == arch && asset.Os() == os
-	}
-}
-
-func platformMajor(os, arch string, major uint64) assetFilterFunc {
-	return func(asset Asset) bool {
-		return asset.Semver().Major == major &&
-			platform(os, arch)(asset)
-	}
-}
-
-func (f *finder) assetsBy(allowFilter assetFilterFunc) ([]Asset, error) {
-	assets, err := f.All()
-	if err != nil {
-		return nil, err
-	}
-	for _, asset := range assets {
-		if allowFilter(asset) {
-			assets = append(assets, asset)
-		}
-	}
-	return assets, nil
 }

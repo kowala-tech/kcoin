@@ -70,6 +70,10 @@ func (u *updater) Update() error {
 		return err
 	}
 
+	if err := u.deleteLocal(latestAsset); err != nil {
+		return err
+	}
+
 	if err := u.backupCurrentBinary(); err != nil {
 		return err
 	}
@@ -141,6 +145,10 @@ func (u *updater) unzip(asset Asset) error {
 	}
 
 	return nil
+}
+
+func (u *updater) deleteLocal(asset Asset) error {
+	return os.Remove(asset.Path())
 }
 
 func (u *updater) backupCurrentBinary() error {

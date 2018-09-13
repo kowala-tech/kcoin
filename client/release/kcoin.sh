@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 DO_INIT=true;
 TESTNET="";
@@ -9,8 +8,7 @@ GENESIS_PATH="";
 
 command="";
 
-while [[ $# -gt 0 ]] ;
-do
+while [ $# -gt 0 ]; do
     opt="$1";
     shift;        
 
@@ -64,5 +62,8 @@ if [ $status -ne 0 ]; then
   exit $status
 fi
 
-
-./kcoin $command
+EXIT_STATUS=131
+while [ $EXIT_STATUS -eq 131 ]; do
+    ./kcoin $command
+    EXIT_STATUS=$?
+done

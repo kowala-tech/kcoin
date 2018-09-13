@@ -330,10 +330,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := kowala.StartValidating(); err != nil {
 			utils.Fatalf("Failed to start validation: %v", err)
 		}
-	}
-
-	// Start self update service if enabled
-	if ctx.GlobalBool(utils.SelfUpdateEnabledFlag.Name) {
+	} else if ctx.GlobalBool(utils.SelfUpdateEnabledFlag.Name) {
+		// Start self update service if enabled and not in validation mode
 		repository := ctx.GlobalString(utils.VersionRepository.Name)
 		selfUpdater := version.NewSelfUpdater(repository, stack, getConsoleLogger())
 		go selfUpdater.Run()
