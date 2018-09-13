@@ -3,6 +3,7 @@ package rlp
 import (
 	"io"
 	"reflect"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 // RawValue represents an encoded RLP value and can be used to delay
@@ -103,6 +104,11 @@ func readKind(buf []byte) (k Kind, tagsize, contentsize uint64, err error) {
 	}
 	// Reject values larger than the input slice.
 	if contentsize > uint64(len(buf))-tagsize {
+		log.Debug("rlp readKind error ErrValueTooLarge: `contentsize > uint64(len(buf))-tagsize`",
+			"contentsize", contentsize,
+			"buf", len(buf),
+			"tagsize", tagsize)
+
 		return 0, 0, 0, ErrValueTooLarge
 	}
 	return k, tagsize, contentsize, err
