@@ -116,8 +116,7 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 
 	logStream := os.Stdout
 	if !runner.logsToStdout {
-		atomic.AddUint32(&runner.logCounter, 1)
-		logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%v-%d.log", runner.logPrefix, node.ID, atomic.LoadUint32(&runner.logCounter)))
+		logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%v-%d.log", runner.logPrefix, node.ID, atomic.AddUint32(&runner.logCounter, 1)))
 		logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0777)
 		if err != nil {
 			log.Error(fmt.Sprintf("error creating container logs file %q: %s", logFilename, err))
