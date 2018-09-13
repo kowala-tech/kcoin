@@ -68,7 +68,6 @@ func (val *validator) notLoggedInState() stateFn {
 		}
 
 	} else {
-		log.Error("This is not a genesis validator! So let's see what happens.")
 		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
 			log.Crit("Failed to verify the voter information", "err", err)
