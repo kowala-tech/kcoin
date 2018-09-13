@@ -192,7 +192,7 @@ func (ctx *ValidationContext) MyNodeShouldBeAValidator() error {
 	}
 	if strings.TrimSpace(res.StdOut) != "true" {
 		log.Debug(res.StdOut)
-		return errors.New("validator is not running")
+		return fmt.Errorf("validator is not running: %s", res.StdOut)
 	}
 	return nil
 }
