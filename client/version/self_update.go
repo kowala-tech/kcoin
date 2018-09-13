@@ -25,7 +25,7 @@ func NewSelfUpdater(repository string, stack *node.Node, logger log.Logger) *Sel
 func (su *SelfUpdater) Run() {
 	updater, err := NewUpdater(su.repository, su.logger)
 	if err != nil {
-		su.logger.Warn("error starting update for selfupdate, selfupdate disabled")
+		su.logger.Warn("Error starting update for selfupdate, selfupdate disabled")
 		return
 	}
 
@@ -33,7 +33,7 @@ func (su *SelfUpdater) Run() {
 
 	for range time.Tick(time.Minute) {
 		su.logger.Debug("Checking if newer version is available")
-		isLatest, err := updater.IsCurrentLatest()
+		isLatest, err := updater.isCurrentLatestForMajor()
 		if err != nil {
 			continue
 		}

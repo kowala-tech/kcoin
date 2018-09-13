@@ -17,6 +17,10 @@ func TestTwoThirdsPlusOneVoteQuorum(t *testing.T) {
 		votes     int
 		hasQuorum bool
 	}{
+		{1, 0, false},
+		{1, 1, true},
+		{2, 1, false},
+		{2, 2, true},
 		{3, 2, false},
 		{3, 2, false},
 		{3, 3, true},
@@ -52,7 +56,7 @@ func TestVotingTable_Add_CheckIsVoterAndVoteNotSeen_CallsQuorum(t *testing.T) {
 	votingTable, err := NewVotingTable(
 		types.PreVote,
 		voters,
-		func() {
+		func(winner common.Hash) {
 			quorum = true
 		},
 	)
@@ -80,7 +84,7 @@ func TestVotingTable_Add_DoubleVoteFromAddressReturnsError(t *testing.T) {
 	votingTable, err := NewVotingTable(
 		types.PreVote,
 		voters,
-		func() {},
+		func(winner common.Hash) {},
 	)
 	assert.NoError(t, err)
 
@@ -109,7 +113,7 @@ func TestVotingTable_Add_VoteFromNonVoterReturnsError(t *testing.T) {
 	votingTable, err := NewVotingTable(
 		types.PreVote,
 		voters,
-		func() {
+		func(winner common.Hash) {
 			assert.Fail(t, "unexpected Quorum reached call")
 		},
 	)
