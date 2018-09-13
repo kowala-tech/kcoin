@@ -39,14 +39,13 @@ func (h *GetTransactionsHandler) Handle(ctx context.Context, cmd GetTransactions
 		txs = append(
 			txs,
 			&blockchain.Transaction{
-				Hash:        tx.Hash,
-				From:        tx.From,
-				To:          tx.To,
-				Amount:      big.NewInt(tx.Amount),
-				Timestamp:   big.NewInt(tx.Timestamp),
-				BlockHeight: big.NewInt(tx.BlockHeight),
-				GasUsed:     big.NewInt(tx.GasUsed),
-				GasPrice:    big.NewInt(tx.GasPrice),
+				Hash:          tx.Hash,
+				From:          tx.From,
+				To:            tx.To,
+				Amount:        big.NewInt(tx.Amount),
+				Timestamp:     big.NewInt(tx.Timestamp),
+				BlockHeight:   big.NewInt(tx.BlockHeight),
+				ResourceUsage: big.NewInt(tx.ResourceUsage),
 			},
 		)
 	}
