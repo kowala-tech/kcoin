@@ -23,7 +23,7 @@ type BlockGen struct {
 	header      *types.Header
 	statedb     *state.StateDB
 
-	gasPool    *GasPool
+	crpool     *ComputationalResourcePool
 	txs        []*types.Transaction
 	receipts   []*types.Receipt
 	lastCommit *types.Commit
@@ -35,14 +35,14 @@ type BlockGen struct {
 // SetCoinbase sets the coinbase of the generated block.
 // It can be called at most once.
 func (b *BlockGen) SetCoinbase(addr common.Address) {
-	if b.gasPool != nil {
+	if b.crpool != nil {
 		if len(b.txs) > 0 {
 			panic("coinbase must be set before adding transactions")
 		}
 		panic("coinbase can only be set once")
 	}
 	b.header.Coinbase = addr
-	b.gasPool = new(GasPool).AddGas(b.header.GasLimit)
+	b.crpool = new(ComputationalResourcePool).AddResource(params.ComputeCapacity)
 }
 
 // SetExtra sets the extra data field of the generated block.
@@ -54,7 +54,7 @@ func (b *BlockGen) SetExtra(data []byte) {
 // been set, the block's coinbase is set to the zero address.
 //
 // AddTx panics if the transaction cannot be executed. In addition to
-// the protocol-imposed limitations (gas limit, etc.), there are some
+// the protocol-imposed limitations (compute limit, etc.), there are some
 // further limitations on the content of transactions that can be
 // added. Notably, contract code relying on the BLOCKHASH instruction
 // will panic during execution.
@@ -66,16 +66,16 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 // been set, the block's coinbase is set to the zero address.
 //
 // AddTxWithChain panics if the transaction cannot be executed. In addition to
-// the protocol-imposed limitations (gas limit, etc.), there are some
+// the protocol-imposed limitations (compute limit, etc.), there are some
 // further limitations on the content of transactions that can be
 // added. If contract code relies on the BLOCKHASH instruction,
 // the block in chain will be returned.
 func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
-	if b.gasPool == nil {
+	if b.crpool == nil {
 		b.SetCoinbase(common.Address{})
 	}
 	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
-	receipt, _, err := ApplyTransaction(b.config, bc, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, &b.header.GasUsed, vm.Config{})
+	receipt, _, err := ApplyTransaction(b.config, bc, &b.header.Coinbase, b.crpool, b.statedb, b.header, tx, &b.header.ResourceUsage, vm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -201,7 +201,6 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 		Root:       state.IntermediateRoot(true),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
-		GasLimit:   CalcGasLimit(parent),
 		Number:     new(big.Int).Add(parent.Number(), common.Big1),
 		Time:       time,
 	}

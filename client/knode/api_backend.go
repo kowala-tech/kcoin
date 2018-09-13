@@ -2,7 +2,6 @@ package knode
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
@@ -16,7 +15,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
@@ -24,7 +22,6 @@ import (
 // KowalaAPIBackend implements kcoinapi.Backend for full nodes
 type KowalaAPIBackend struct {
 	kcoin *Kowala
-	gpo   *gasprice.Oracle
 }
 
 // ChainConfig returns the active chain configuration.
@@ -111,12 +108,12 @@ func (b *KowalaAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*
 	return logs, nil
 }
 
-func (b *KowalaAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
+func (b *KowalaAPIBackend) GetVM(ctx context.Context, msg core.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.VM, func() error, error) {
 	state.SetBalance(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
 
-	context := core.NewEVMContext(msg, header, b.kcoin.BlockChain(), nil)
-	return vm.NewEVM(context, state, b.kcoin.chainConfig, vmCfg), vmError, nil
+	context := core.NewVMContext(msg, header, b.kcoin.BlockChain(), nil)
+	return vm.New(context, state, b.kcoin.chainConfig, vmCfg), vmError, nil
 }
 
 func (b *KowalaAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
@@ -143,16 +140,13 @@ func (b *KowalaAPIBackend) SendTx(ctx context.Context, signedTx *types.Transacti
 	return b.kcoin.txPool.AddLocal(signedTx)
 }
 
-func (b *KowalaAPIBackend) GetPoolTransactions() (types.Transactions, error) {
-	pending, err := b.kcoin.txPool.Pending()
-	if err != nil {
-		return nil, err
-	}
+func (b *KowalaAPIBackend) GetPoolTransactions() types.Transactions {
+	pending := b.kcoin.txPool.Pending()
 	var txs types.Transactions
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
-	return txs, nil
+	return txs
 }
 
 func (b *KowalaAPIBackend) GetPoolTransaction(hash common.Hash) *types.Transaction {
@@ -181,10 +175,6 @@ func (b *KowalaAPIBackend) Downloader() *downloader.Downloader {
 
 func (b *KowalaAPIBackend) ProtocolVersion() int {
 	return b.kcoin.EthVersion()
-}
-
-func (b *KowalaAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
-	return b.gpo.SuggestPrice(ctx)
 }
 
 func (b *KowalaAPIBackend) ChainDb() kcoindb.Database {

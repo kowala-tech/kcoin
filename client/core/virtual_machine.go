@@ -7,6 +7,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/vm"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -19,8 +20,8 @@ type ChainContext interface {
 	GetHeader(common.Hash, uint64) *types.Header
 }
 
-// NewEVMContext creates a new context for use in the EVM.
-func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address) vm.Context {
+// NewVMContext creates a new context for use in the VM.
+func NewVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address) vm.Context {
 	// If we don't have an explicit author (i.e. not mining), extract from the header
 	var beneficiary common.Address
 	if author == nil {
@@ -29,15 +30,15 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		beneficiary = *author
 	}
 	return vm.Context{
-		CanTransfer: CanTransfer,
-		Transfer:    Transfer,
-		GetHash:     GetHashFn(header, chain),
-		Origin:      msg.From(),
-		Coinbase:    beneficiary,
-		BlockNumber: new(big.Int).Set(header.Number),
-		Time:        new(big.Int).Set(header.Time),
-		GasLimit:    header.GasLimit,
-		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		CanTransfer:      CanTransfer,
+		Transfer:         Transfer,
+		GetHash:          GetHashFn(header, chain),
+		Origin:           msg.From(),
+		Coinbase:         beneficiary,
+		BlockNumber:      new(big.Int).Set(header.Number),
+		Time:             new(big.Int).Set(header.Time),
+		ComputeCapacity:  params.ComputeCapacity,
+		ComputeUnitPrice: new(big.Int).Set(params.ComputeUnitPrice),
 	}
 }
 
@@ -68,7 +69,7 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 }
 
 // CanTransfer checks wether there are enough funds in the address' account to make a transfer.
-// This does not take the necessary gas in to account to make the transfer valid.
+// This does not take the necessary computational resource in to account to make the transfer valid.
 func CanTransfer(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 	return db.GetBalance(addr).Cmp(amount) >= 0
 }

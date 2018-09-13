@@ -10,7 +10,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 )
 
 var _ = (*configMarshaling)(nil)
@@ -22,8 +21,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
 		NoPruning               bool
-		LightServ               int  `toml:",omitempty"`
-		LightPeers              int  `toml:",omitempty"`
 		SkipBcVersionCheck      bool `toml:"-"`
 		DatabaseHandles         int  `toml:"-"`
 		DatabaseCache           int
@@ -32,9 +29,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		Coinbase                common.Address `toml:",omitempty"`
 		Deposit                 *big.Int       `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
-		GasPrice                *big.Int
 		TxPool                  core.TxPoolConfig
-		GPO                     gasprice.Config
 		EnablePreimageRecording bool
 		DocRoot                 string `toml:"-"`
 		Currency                string
@@ -44,8 +39,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.NetworkId = c.NetworkId
 	enc.SyncMode = c.SyncMode
 	enc.NoPruning = c.NoPruning
-	enc.LightServ = c.LightServ
-	enc.LightPeers = c.LightPeers
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
 	enc.DatabaseHandles = c.DatabaseHandles
 	enc.DatabaseCache = c.DatabaseCache
@@ -54,9 +47,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.Coinbase = c.Coinbase
 	enc.Deposit = c.Deposit
 	enc.ExtraData = c.ExtraData
-	enc.GasPrice = c.GasPrice
 	enc.TxPool = c.TxPool
-	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.DocRoot = c.DocRoot
 	enc.Currency = c.Currency
@@ -70,8 +61,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		NetworkId               *uint64
 		SyncMode                *downloader.SyncMode
 		NoPruning               *bool
-		LightServ               *int  `toml:",omitempty"`
-		LightPeers              *int  `toml:",omitempty"`
 		SkipBcVersionCheck      *bool `toml:"-"`
 		DatabaseHandles         *int  `toml:"-"`
 		DatabaseCache           *int
@@ -80,9 +69,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		Coinbase                *common.Address `toml:",omitempty"`
 		Deposit                 *big.Int        `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
-		GasPrice                *big.Int
 		TxPool                  *core.TxPoolConfig
-		GPO                     *gasprice.Config
 		EnablePreimageRecording *bool
 		DocRoot                 *string `toml:"-"`
 		Currency                *string
@@ -102,12 +89,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.NoPruning != nil {
 		c.NoPruning = *dec.NoPruning
-	}
-	if dec.LightServ != nil {
-		c.LightServ = *dec.LightServ
-	}
-	if dec.LightPeers != nil {
-		c.LightPeers = *dec.LightPeers
 	}
 	if dec.SkipBcVersionCheck != nil {
 		c.SkipBcVersionCheck = *dec.SkipBcVersionCheck
@@ -133,14 +114,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.ExtraData != nil {
 		c.ExtraData = *dec.ExtraData
 	}
-	if dec.GasPrice != nil {
-		c.GasPrice = dec.GasPrice
-	}
 	if dec.TxPool != nil {
 		c.TxPool = *dec.TxPool
-	}
-	if dec.GPO != nil {
-		c.GPO = *dec.GPO
 	}
 	if dec.EnablePreimageRecording != nil {
 		c.EnablePreimageRecording = *dec.EnablePreimageRecording

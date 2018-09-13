@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/params/effort"
 )
 
 var (
@@ -73,11 +74,11 @@ func (c *ChainConfig) String() string {
 	)
 }
 
-// GasTable returns the gas table corresponding to the current phase (andromeda).
+// ComputationalRequirements returns the computational requirements table corresponding to the current phase (andromeda).
 //
-// The returned GasTable's fields shouldn't, under any circumstances, be changed.
-func (c *ChainConfig) GasTable(num *big.Int) GasTable {
-	return GasTableAndromeda
+// The returned Table's fields shouldn't, under any circumstances, be changed.
+func (c *ChainConfig) ComputationalRequirements(num *big.Int) effort.Table {
+	return effort.TableAndromeda
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported

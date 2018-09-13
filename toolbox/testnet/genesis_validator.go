@@ -36,7 +36,6 @@ func NewGenesisValidator(dockerEngine DockerEngine, networkID string, bootNode s
 		WithBootnode(bootNode).
 		WithGenesis(genesis).
 		WithSyncMode("full").
-		WithGasPrice("1").
 		WithAccount(coinbase, rawCoinbase).
 		WithDeposit(big.NewInt(1)).
 		WithVerbosity("4").

@@ -144,14 +144,13 @@ func (k *kcoin) wrapBlock(block *types.Block) *Block {
 		}
 
 		transactions[i] = &protocolbuffer.Transaction{
-			To:          to,
-			From:        from.String(),
-			Amount:      tx.Value().Int64(),
-			Hash:        tx.Hash().String(),
-			Timestamp:   block.Time().Int64(),
-			GasUsed:     int64(block.GasUsed()),
-			GasPrice:    tx.GasPrice().Int64(),
-			BlockHeight: block.Number().Int64(),
+			To:            to,
+			From:          from.String(),
+			Amount:        tx.Value().Int64(),
+			Hash:          tx.Hash().String(),
+			Timestamp:     block.Time().Int64(),
+			ResourceUsage: int64(block.ResourceUsage()),
+			BlockHeight:   block.Number().Int64(),
 		}
 	}
 	return &Block{

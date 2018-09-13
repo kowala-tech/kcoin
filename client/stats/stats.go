@@ -2,7 +2,6 @@
 package stats
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -471,8 +470,7 @@ type blockStats struct {
 	ParentHash     common.Hash    `json:"parentHash"`
 	Timestamp      *big.Int       `json:"timestamp"`
 	Validator      common.Address `json:"validator"`
-	GasUsed        uint64         `json:"gasUsed"`
-	GasLimit       uint64         `json:"gasLimit"`
+	ResourceUsage  uint64         `json:"resourceUsage"`
 	Txs            []txStats      `json:"transactions"`
 	TxHash         common.Hash    `json:"transactionsRoot"`
 	Root           common.Hash    `json:"stateRoot"`
@@ -574,8 +572,7 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 		ParentHash:     header.ParentHash,
 		Timestamp:      header.Time,
 		Validator:      author,
-		GasUsed:        header.GasUsed,
-		GasLimit:       header.GasLimit,
+		ResourceUsage:  header.ResourceUsage,
 		Txs:            txs,
 		TxHash:         header.TxHash,
 		Root:           header.Root,
@@ -676,7 +673,6 @@ type nodeStats struct {
 	Syncing    bool `json:"syncing"`
 	Validating bool `json:"validating"`
 	Peers      int  `json:"peers"`
-	GasPrice   int  `json:"gasPrice"`
 	Uptime     int  `json:"uptime"`
 }
 
@@ -687,16 +683,12 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	var (
 		validating bool
 		syncing    bool
-		gasprice   int
 	)
 
 	validating = s.kcoin.Validator().Validating()
 
 	sync := s.kcoin.Downloader().Progress()
 	syncing = s.kcoin.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
-
-	price, _ := s.kcoin.APIBackend().SuggestPrice(context.Background())
-	gasprice = int(price.Uint64())
 
 	// Assemble the node stats and send it to the server
 	log.Trace("Sending node details to kcoinstats")
@@ -707,7 +699,6 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 			Active:     true,
 			Validating: validating,
 			Peers:      s.server.PeerCount(),
-			GasPrice:   gasprice,
 			Syncing:    syncing,
 			Uptime:     100,
 		},

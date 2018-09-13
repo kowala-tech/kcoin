@@ -11,7 +11,7 @@ import (
 // precompiledTest defines the input/output pairs for precompiled contract tests.
 type precompiledTest struct {
 	input, expected string
-	gas             uint64
+	resource        uint64
 	name            string
 	noBenchmark     bool // Benchmark primarily the worst-cases
 }
@@ -285,11 +285,11 @@ var bn256PairingTests = []precompiledTest{
 		input:    "1c76476f4def4bb94541d57ebba1193381ffa7aa76ada664dd31c16024c43f593034dd2920f673e204fee2811c678745fc819b55d3e9d294e45c9b03a76aef41209dd15ebff5d46c4bd888e51a93cf99a7329636c63514396b4a452003a35bf704bf11ca01483bfa8b34b43561848d28905960114c8ac04049af4b6315a416782bb8324af6cfc93537a2ad1a445cfd0ca2a71acd7ac41fadbf933c2a51be344d120a2a4cf30c1bf9845f20c6fe39e07ea2cce61f0c9bb048165fe5e4de877550111e129f1cf1097710d41c4ac70fcdfa5ba2023c6ff1cbeac322de49d1b6df7c103188585e2364128fe25c70558f1560f4f9350baf3959e603cc91486e110936198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa",
 		expected: "0000000000000000000000000000000000000000000000000000000000000000",
 		name:     "jeff6",
-	}, { // ecpairing_empty_data_insufficient_gas
+	}, { // ecpairing_empty_data_insufficient_computational_resource
 		input:    "",
 		expected: "0000000000000000000000000000000000000000000000000000000000000001",
 		name:     "empty_data",
-	}, { // ecpairing_one_point_insufficient_gas
+	}, { // ecpairing_one_point_insufficient_computational_resource
 		input:    "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c21800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa",
 		expected: "0000000000000000000000000000000000000000000000000000000000000000",
 		name:     "one_point",
@@ -324,8 +324,8 @@ func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
 	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.input)
 	contract := NewContract(AccountRef(common.HexToAddress("1337")),
-		nil, new(big.Int), p.RequiredGas(in))
-	t.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(t *testing.T) {
+		nil, new(big.Int), p.RequiredComputationalEffort(in))
+	t.Run(fmt.Sprintf("%s-Computational Resource=%d", test.name, contract.ComputationalResource), func(t *testing.T) {
 		if res, err := RunPrecompiledContract(p, in, contract); err != nil {
 			t.Error(err)
 		} else if common.Bytes2Hex(res) != test.expected {
@@ -340,9 +340,9 @@ func benchmarkPrecompiled(addr string, test precompiledTest, bench *testing.B) {
 	}
 	p := PrecompiledContractsByzantium[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.input)
-	reqGas := p.RequiredGas(in)
+	reqEffort := p.RequiredComputationalEffort(in)
 	contract := NewContract(AccountRef(common.HexToAddress("1337")),
-		nil, new(big.Int), reqGas)
+		nil, new(big.Int), reqEffort)
 
 	var (
 		res  []byte
@@ -350,10 +350,10 @@ func benchmarkPrecompiled(addr string, test precompiledTest, bench *testing.B) {
 		data = make([]byte, len(in))
 	)
 
-	bench.Run(fmt.Sprintf("%s-Gas=%d", test.name, contract.Gas), func(bench *testing.B) {
+	bench.Run(fmt.Sprintf("%s-Computational Resource=%d", test.name, contract.ComputationalResource), func(bench *testing.B) {
 		bench.ResetTimer()
 		for i := 0; i < bench.N; i++ {
-			contract.Gas = reqGas
+			contract.ComputationalResource = reqEffort
 			copy(data, in)
 			res, err = RunPrecompiledContract(p, data, contract)
 		}

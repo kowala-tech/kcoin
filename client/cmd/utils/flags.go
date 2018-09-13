@@ -25,7 +25,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/metrics"
 	"github.com/kowala-tech/kcoin/client/metrics/influxdb"
@@ -147,30 +146,16 @@ var (
 		Name:  "fast",
 		Usage: "Enable fast syncing through state downloads (replaced by --syncmode)",
 	}
-	LightModeFlag = cli.BoolFlag{
-		Name:  "light",
-		Usage: "Enable light client mode (replaced by --syncmode)",
-	}
 	defaultSyncMode = knode.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
-		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
+		Usage: `Blockchain sync mode ("fast" or "full")`,
 		Value: &defaultSyncMode,
 	}
 	GCModeFlag = cli.StringFlag{
 		Name:  "gcmode",
 		Usage: `Blockchain garbage collection mode ("full", "archive")`,
 		Value: "full",
-	}
-	LightServFlag = cli.IntFlag{
-		Name:  "lightserv",
-		Usage: "Maximum percentage of time allowed for serving LES requests (0-90)",
-		Value: 0,
-	}
-	LightPeersFlag = cli.IntFlag{
-		Name:  "lightpeers",
-		Usage: "Maximum number of LES client peers",
-		Value: 20,
 	}
 	LightKDFFlag = cli.BoolFlag{
 		Name:  "lightkdf",
@@ -179,7 +164,7 @@ var (
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.nolocals",
-		Usage: "Disables price exemptions for locally submitted transactions",
+		Usage: "Disables distinction between local and remote transactions",
 	}
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
@@ -190,16 +175,6 @@ var (
 		Name:  "txpool.rejournal",
 		Usage: "Time interval to regenerate the local transaction journal",
 		Value: core.DefaultTxPoolConfig.Rejournal,
-	}
-	TxPoolPriceLimitFlag = cli.Uint64Flag{
-		Name:  "txpool.pricelimit",
-		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: knode.DefaultConfig.TxPool.PriceLimit,
-	}
-	TxPoolPriceBumpFlag = cli.Uint64Flag{
-		Name:  "txpool.pricebump",
-		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: knode.DefaultConfig.TxPool.PriceBump,
 	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
@@ -256,26 +231,14 @@ var (
 	ValidatorDepositFlag = cli.Uint64Flag{
 		Name:  "deposit",
 		Usage: "Deposit at stake",
-		// @TODO (rgeraldes) - default could be set to the minimum required
 	}
 
-	TargetGasLimitFlag = cli.Uint64Flag{
-		Name:  "targetgaslimit",
-		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
-		Value: params.GenesisGasLimit,
-	}
 	CoinbaseFlag = cli.StringFlag{
 		Name:  "coinbase",
 		Usage: "Public address for block validation rewards (default = first account created)",
 		Value: "0",
 	}
 
-	// @TODO(rgeraldes) - review
-	GasPriceFlag = BigFlag{
-		Name:  "gasprice",
-		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: knode.DefaultConfig.GasPrice,
-	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
 		Usage: "Block extra data set by the consensus validator (default = client version)",
@@ -443,18 +406,6 @@ var (
 		Name:  "jspath",
 		Usage: "JavaScript root path for `loadScript`",
 		Value: ".",
-	}
-
-	// Gas price oracle settings
-	GpoBlocksFlag = cli.IntFlag{
-		Name:  "gpoblocks",
-		Usage: "Number of recent blocks to check for gas prices",
-		Value: knode.DefaultConfig.GPO.Blocks,
-	}
-	GpoPercentileFlag = cli.IntFlag{
-		Name:  "gpopercentile",
-		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: knode.DefaultConfig.GPO.Percentile,
 	}
 
 	MetricsEnabledFlag = cli.BoolFlag{
@@ -816,7 +767,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.GlobalInt(MaxPendingPeersFlag.Name)
 	}
-	if ctx.GlobalIsSet(NoDiscoverFlag.Name) || ctx.GlobalBool(LightModeFlag.Name) {
+	if ctx.GlobalIsSet(NoDiscoverFlag.Name) {
 		cfg.NoDiscovery = true
 	}
 
@@ -860,15 +811,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config, kowalaCfg *knode.Config) 
 	cfg.DataDir = filepath.Join(cfg.DataDir, kowalaCfg.Currency)
 }
 
-func setGPO(ctx *cli.Context, cfg *gasprice.Config) {
-	if ctx.GlobalIsSet(GpoBlocksFlag.Name) {
-		cfg.Blocks = ctx.GlobalInt(GpoBlocksFlag.Name)
-	}
-	if ctx.GlobalIsSet(GpoPercentileFlag.Name) {
-		cfg.Percentile = ctx.GlobalInt(GpoPercentileFlag.Name)
-	}
-}
-
 func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolNoLocalsFlag.Name) {
 		cfg.NoLocals = ctx.GlobalBool(TxPoolNoLocalsFlag.Name)
@@ -878,12 +820,6 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 	if ctx.GlobalIsSet(TxPoolRejournalFlag.Name) {
 		cfg.Rejournal = ctx.GlobalDuration(TxPoolRejournalFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolPriceLimitFlag.Name) {
-		cfg.PriceLimit = ctx.GlobalUint64(TxPoolPriceLimitFlag.Name)
-	}
-	if ctx.GlobalIsSet(TxPoolPriceBumpFlag.Name) {
-		cfg.PriceBump = ctx.GlobalUint64(TxPoolPriceBumpFlag.Name)
 	}
 	if ctx.GlobalIsSet(TxPoolAccountSlotsFlag.Name) {
 		cfg.AccountSlots = ctx.GlobalUint64(TxPoolAccountSlotsFlag.Name)
@@ -944,12 +880,11 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, DevModeFlag, TestnetFlag)
-	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
+	checkExclusive(ctx, FastSyncFlag, SyncModeFlag)
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setCoinbase(ctx, ks, cfg)
 	setDeposit(ctx, cfg)
-	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 
 	switch {
@@ -957,15 +892,8 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
 	case ctx.GlobalBool(FastSyncFlag.Name):
 		cfg.SyncMode = downloader.FastSync
-	case ctx.GlobalBool(LightModeFlag.Name):
-		cfg.SyncMode = downloader.LightSync
 	}
-	if ctx.GlobalIsSet(LightServFlag.Name) {
-		cfg.LightServ = ctx.GlobalInt(LightServFlag.Name)
-	}
-	if ctx.GlobalIsSet(LightPeersFlag.Name) {
-		cfg.LightPeers = ctx.GlobalInt(LightPeersFlag.Name)
-	}
+
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
 	}
@@ -988,9 +916,6 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	}
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
-	}
-	if ctx.GlobalIsSet(GasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
 	}
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
@@ -1039,12 +964,6 @@ func RegisterKowalaStatsService(stack *node.Node, url string) {
 	}
 }
 
-// SetupNetwork configures the system for either the main net or some test network.
-func SetupNetwork(ctx *cli.Context) {
-	// TODO(fjl): move target gas limit into config
-	params.TargetGasLimit = ctx.GlobalUint64(TargetGasLimitFlag.Name)
-}
-
 func SetupMetrics(ctx *cli.Context) {
 	if metrics.Enabled {
 		log.Info("Enabling metrics collection")
@@ -1073,9 +992,6 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) kcoindb.Database {
 		handles = makeDatabaseHandles()
 	)
 	name := "chaindata"
-	if ctx.GlobalBool(LightModeFlag.Name) {
-		name = "lightchaindata"
-	}
 	chainDb, err := stack.OpenDatabase(name, cache, handles)
 	if err != nil {
 		Fatalf("Could not open database: %v", err)

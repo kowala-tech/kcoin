@@ -28,7 +28,7 @@ type dummyContractRef struct {
 	calledForEach bool
 }
 
-func (dummyContractRef) ReturnGas(*big.Int)          {}
+func (dummyContractRef) ReturnResource(*big.Int)     {}
 func (dummyContractRef) Address() common.Address     { return common.Address{} }
 func (dummyContractRef) Value() *big.Int             { return new(big.Int) }
 func (dummyContractRef) SetCode(common.Hash, []byte) {}
@@ -48,7 +48,7 @@ type dummyStateDB struct {
 
 func TestStoreCapture(t *testing.T) {
 	var (
-		env      = NewEVM(Context{}, nil, params.TestChainConfig, Config{})
+		env      = NewVM(Context{}, nil, params.TestChainConfig, Config{})
 		logger   = NewStructLogger(nil)
 		mem      = NewMemory()
 		stack    = newstack()

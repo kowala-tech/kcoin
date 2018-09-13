@@ -454,7 +454,7 @@ func (ec *Client) CallContract(ctx context.Context, msg kowala.CallMsg, blockNum
 	return hex, nil
 }
 
-// PendingCallContract executes a message call transaction using the EVM.
+// PendingCallContract executes a message call transaction using the VM.
 // The state seen by the contract call is the pending state.
 func (ec *Client) PendingCallContract(ctx context.Context, msg kowala.CallMsg) ([]byte, error) {
 	var hex hexutil.Bytes
@@ -465,23 +465,13 @@ func (ec *Client) PendingCallContract(ctx context.Context, msg kowala.CallMsg) (
 	return hex, nil
 }
 
-// SuggestGasPrice retrieves the currently suggested gas price to allow a timely
-// execution of a transaction.
-func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	var hex big.Int
-	if err := ec.c.CallContext(ctx, &hex, "eth_gasPrice"); err != nil {
-		return nil, err
-	}
-	return &hex, nil
-}
-
-// EstimateGas tries to estimate the gas needed to execute a specific transaction based on
+// EstimateComputationalEffort tries to estimate the required computational effort to execute a specific transaction based on
 // the current pending state of the backend blockchain. There is no guarantee that this is
-// the true gas limit requirement as other transactions may be added or removed by miners,
+// the true compute limit requirement as other transactions may be added or removed by miners,
 // but it should provide a basis for setting a reasonable default.
-func (ec *Client) EstimateGas(ctx context.Context, msg kowala.CallMsg) (uint64, error) {
+func (ec *Client) EstimateComputationalEffort(ctx context.Context, msg kowala.CallMsg) (uint64, error) {
 	var hex hexutil.Uint64
-	err := ec.c.CallContext(ctx, &hex, "eth_estimateGas", toCallArg(msg))
+	err := ec.c.CallContext(ctx, &hex, "eth_estimateComputationalEffort", toCallArg(msg))
 	if err != nil {
 		return 0, err
 	}
@@ -519,11 +509,8 @@ func toCallArg(msg kowala.CallMsg) interface{} {
 	if msg.Value != nil {
 		arg["value"] = (*hexutil.Big)(msg.Value)
 	}
-	if msg.Gas != 0 {
-		arg["gas"] = hexutil.Uint64(msg.Gas)
-	}
-	if msg.GasPrice != nil {
-		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
+	if msg.ComputeLimit != 0 {
+		arg["computeLimit"] = hexutil.Uint64(msg.ComputeLimit)
 	}
 	return arg
 }

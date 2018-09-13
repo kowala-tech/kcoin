@@ -42,6 +42,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/p2p/discv5"
 	"github.com/kowala-tech/kcoin/client/p2p/nat"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/params/effort"
 	"golang.org/x/net/websocket"
 )
 
@@ -227,7 +228,6 @@ type faucet struct {
 	keystore *keystore.KeyStore // Keystore containing the single signer
 	account  accounts.Account   // Account funding user faucet requests
 	nonce    uint64             // Current pending nonce of the faucet
-	price    *big.Int           // Current gas price to issue funds with
 
 	conns    []*websocket.Conn    // Currently live websocket connections
 	timeouts map[string]time.Time // History of users and their funding timeouts
@@ -495,7 +495,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 			amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
 			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
 
-			tx := types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, 21000, f.price, nil)
+			tx := types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, effort.Tx, nil)
 			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainID)
 			if err != nil {
 				f.lock.Unlock()
@@ -564,16 +564,12 @@ func (f *faucet) loop() {
 			var (
 				balance *big.Int
 				nonce   uint64
-				price   *big.Int
 				err     error
 			)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			balance, err = f.client.BalanceAt(ctx, f.account.Address, head.Number)
 			if err == nil {
 				nonce, err = f.client.NonceAt(ctx, f.account.Address, nil)
-				if err == nil {
-					price, err = f.client.SuggestGasPrice(ctx)
-				}
 			}
 			cancel()
 
@@ -582,13 +578,13 @@ func (f *faucet) loop() {
 				log.Warn("Failed to update faucet state", "block", head.Number, "hash", head.Hash(), "err", err)
 				continue
 			} else {
-				log.Info("Updated faucet state", "block", head.Number, "hash", head.Hash(), "balance", balance, "nonce", nonce, "price", price)
+				log.Info("Updated faucet state", "block", head.Number, "hash", head.Hash(), "balance", balance, "nonce", nonce)
 			}
 			// Faucet state retrieved, update locally and send to clients
 			balance = new(big.Int).Div(balance, kcoin)
 
 			f.lock.Lock()
-			f.price, f.nonce = price, nonce
+			f.nonce = nonce
 			for len(f.reqs) > 0 && f.reqs[0].Tx.Nonce() < f.nonce {
 				f.reqs = f.reqs[1:]
 			}

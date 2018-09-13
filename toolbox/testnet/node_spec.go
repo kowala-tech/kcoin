@@ -97,12 +97,6 @@ func (n *NodeSpecBuilder) WithBootnode(bootnodeAddr string) *NodeSpecBuilder {
 	return n
 }
 
-//WithGasPrice sets the price of the given node.
-func (n *NodeSpecBuilder) WithGasPrice(gasPrice string) *NodeSpecBuilder {
-	n.addCmdArgs([]string{"--gasprice", gasPrice})
-	return n
-}
-
 //WithVerbosity sets the level of verbosity that the node will have.
 func (n *NodeSpecBuilder) WithVerbosity(level string) *NodeSpecBuilder {
 	n.addCmdArgs([]string{"--verbosity", level})

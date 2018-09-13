@@ -41,12 +41,12 @@ func (b *ContractBackend) CodeAt(ctx context.Context, contract common.Address, b
 	return b.bcapi.GetCode(ctx, contract, toBlockNumber(blockNum))
 }
 
-// CodeAt retrieves any code associated with the contract from the local API.
+// PendingCodeAt retrieves any code associated with the contract from the local API.
 func (b *ContractBackend) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
 	return b.bcapi.GetCode(ctx, contract, rpc.PendingBlockNumber)
 }
 
-// ContractCall implements bind.ContractCaller executing an Kowala contract
+// CallContract implements bind.ContractCaller executing an Kowala contract
 // call with the specified data as the input. The pending flag requests execution
 // against the pending block, not the stable head of the chain.
 func (b *ContractBackend) CallContract(ctx context.Context, msg kowala.CallMsg, blockNum *big.Int) ([]byte, error) {
@@ -54,7 +54,7 @@ func (b *ContractBackend) CallContract(ctx context.Context, msg kowala.CallMsg, 
 	return out, err
 }
 
-// ContractCall implements bind.ContractCaller executing an Kowala contract
+// PendingCallContract implements bind.ContractCaller executing an Kowala contract
 // call with the specified data as the input. The pending flag requests execution
 // against the pending block, not the stable head of the chain.
 func (b *ContractBackend) PendingCallContract(ctx context.Context, msg kowala.CallMsg) ([]byte, error) {
@@ -64,13 +64,10 @@ func (b *ContractBackend) PendingCallContract(ctx context.Context, msg kowala.Ca
 
 func toCallArgs(msg kowala.CallMsg) kcoinapi.CallArgs {
 	args := kcoinapi.CallArgs{
-		To:   msg.To,
-		From: msg.From,
-		Data: msg.Data,
-		Gas:  hexutil.Uint64(msg.Gas),
-	}
-	if msg.GasPrice != nil {
-		args.GasPrice = hexutil.Big(*msg.GasPrice)
+		To:           msg.To,
+		From:         msg.From,
+		Data:         msg.Data,
+		ComputeLimit: hexutil.Uint64(msg.ComputeLimit),
 	}
 	if msg.Value != nil {
 		args.Value = hexutil.Big(*msg.Value)
@@ -85,7 +82,7 @@ func toBlockNumber(num *big.Int) rpc.BlockNumber {
 	return rpc.BlockNumber(num.Int64())
 }
 
-// PendingAccountNonce implements bind.ContractTransactor retrieving the current
+// PendingNonceAt implements bind.ContractTransactor retrieving the current
 // pending nonce associated with an account.
 func (b *ContractBackend) PendingNonceAt(ctx context.Context, account common.Address) (nonce uint64, err error) {
 	out, err := b.txapi.GetTransactionCount(ctx, account, rpc.PendingBlockNumber)
@@ -95,19 +92,13 @@ func (b *ContractBackend) PendingNonceAt(ctx context.Context, account common.Add
 	return nonce, err
 }
 
-// SuggestGasPrice implements bind.ContractTransactor retrieving the currently
-// suggested gas price to allow a timely execution of a transaction.
-func (b *ContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	return b.eapi.GasPrice(ctx)
-}
-
-// EstimateGasLimit implements bind.ContractTransactor triing to estimate the gas
-// needed to execute a specific transaction based on the current pending state of
-// the backend blockchain. There is no guarantee that this is the true gas limit
-// requirement as other transactions may be added or removed by validators, but it
-// should provide a basis for setting a reasonable default.
-func (b *ContractBackend) EstimateGas(ctx context.Context, msg kowala.CallMsg) (uint64, error) {
-	out, err := b.bcapi.EstimateGas(ctx, toCallArgs(msg))
+// EstimateComputationalEffort implements bind.ContractTransactor trying to estimate the required
+// computational effort to execute a specific transaction based on the current pending state of
+// the backend blockchain. There is no guarantee that this is the true computational effort
+// requirement as other transactions may be added or removed by validators, but it should provide
+// a basis for setting a reasonable default.
+func (b *ContractBackend) EstimateComputationalEffort(ctx context.Context, msg kowala.CallMsg) (uint64, error) {
+	out, err := b.bcapi.EstimateComputationalEffort(ctx, toCallArgs(msg))
 	if err != nil {
 		return 0, err
 	}

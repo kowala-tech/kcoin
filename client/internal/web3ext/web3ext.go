@@ -523,12 +523,6 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'setGasPrice',
-			call: 'validator_setGasPrice',
-			params: 1,
-			inputFormatter: [web3._extend.utils.fromDecimal]
-		}),
-		new web3._extend.Method({
 			name: 'getMinimumDeposit',
 			call: 'validator_getMinimumDeposit',
 			params: 0,

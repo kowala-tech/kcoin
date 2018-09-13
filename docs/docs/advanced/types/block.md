@@ -18,7 +18,7 @@ transactions that compose the block.
 | Field          | Description                                                                                                        |
 | -------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Number         | Number of ancestor blocks. The genesis block has a number of zero                                                  |
-| Parent Hash    | Hash of the previous block's header ("parent block")                                                               |
+| ParentHash     | Hash of the previous block's header ("parent block")                                                               |
 | Coinbase       | Account registered by the validator(proposer) who's responsible for the block creation                             |
 | Root           | Hash of the root node of the state trie, after all transactions are executed and finalisations applied             |
 | TxHash         | Hash of the root node of the trie structure populated with the transactions of the block                           |
@@ -27,8 +27,7 @@ transactions that compose the block.
 | ValidatorsHash | Hash of the current set of validators for the current block                                                        |
 | Time           | Time at the block inception                                                                                        |
 | Bloom          | The bloom filter(space-efficient probabilistic data structure) for the logs of the block                           |
-| Gas Limit      | current limit of gas expenditure per block                                                                         |
-| Gas Used       | Total gas used in transactions in this block                                                                       |
+| ResourceUsage  | Total of computational resource (in compute units) used in transactions in this block                              |
 
 #### Context
 
@@ -66,12 +65,7 @@ transactions that compose the block.
     Instead, because the ERC20 specification shoot of a log for every transfer, you
     can just search the blockchain for these logs!
 
-- GasLimit - defines the maximum amount of gas (computational effort) that all
-  the trasactions included in the block can consume. Its purpose is to keep block
-  propagation and processing time low. Note that this value in bitcoin is constant
-  but it's variable in Ethereum.
-
-- GasUsed - The fact that the block can handle a certain limit does not mean
+- ResourceUsage - The fact that the block can handle a certain limit does not mean
   that we will have enough transactions to fill the block.
 
 ### Block Body
