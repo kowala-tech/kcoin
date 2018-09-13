@@ -43,9 +43,9 @@ Feature: Joining network as a validator
 
   Scenario:
     Given: I wait for my node to be synced
-    And I start validator with 5 mTokens deposit
+    When I start validator with 5 mTokens deposit
     And I wait for my node to be synced
     And crash my node validator
     And I restart the validator
     And I wait for my node to be synced
-    And My node should be a validator
+    Then My node should be a validator
