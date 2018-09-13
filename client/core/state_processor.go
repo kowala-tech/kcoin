@@ -1,12 +1,14 @@
 package core
 
 import (
+	"github.com/davecgh/go-spew/spew"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/crypto"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -50,6 +52,15 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, crpool, statedb, header, tx, resourceUsage, cfg)
 		if err != nil {
+			log.Debug("failed StateProcessor.Process", "data", spew.Sdump(
+				header.Number,
+				header.Root,
+				header.ParentHash,
+				header.TxHash,
+				header.ValidatorsHash,
+				header.LastCommitHash,
+				tx, usedGas, allLogs))
+
 			return nil, nil, 0, err
 		}
 		receipts = append(receipts, receipt)

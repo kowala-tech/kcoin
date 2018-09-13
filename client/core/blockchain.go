@@ -28,6 +28,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/trie"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var (
@@ -845,9 +846,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 	currentBlock := bc.CurrentBlock()
 
-	// Write other block data using a batch.
-	batch := bc.db.NewBatch()
-	rawdb.WriteBlock(batch, block)
+	rawdb.WriteBlock(bc.db, block)
 
 	root, err := state.Commit(true)
 	if err != nil {
@@ -902,6 +901,8 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		}
 	}
 
+	// Write other block data using a batch.
+	batch := bc.db.NewBatch()
 	rawdb.WriteReceipts(batch, block.Hash(), block.NumberU64(), receipts)
 
 	if bc.isReorgState(block, currentBlock) {
@@ -982,7 +983,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(chain); i++ {
 		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 || chain[i].ParentHash() != chain[i-1].Hash() {
-			// Chain broke ancestry, log a messge (programming error) and skip insertion
+			// Chain broke ancestry, log a message (programming error) and skip insertion
 			log.Error("Non contiguous block insert", "number", chain[i].Number(), "hash", chain[i].Hash(),
 				"parent", chain[i].ParentHash(), "prevnumber", chain[i-1].Number(), "prevhash", chain[i-1].Hash())
 
@@ -1064,6 +1065,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			stats.queued++
 			continue
 		case err != nil:
+			log.Error("insert chain error while bc.engine.VerifyHeaders of a block", "err", err.Error())
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
@@ -1082,12 +1084,28 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Process block using the parent state as reference point.
 		receipts, logs, resourceUsage, err := bc.processor.Process(block, state, bc.vmConfig)
 		if err != nil {
+			log.Debug("insert chain error while bc.processor.Process of a block", "err", err.Error())
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, resourceUsage)
 		if err != nil {
+			log.Debug("insert chain error while bc.Validator().ValidateState of a block", "data", spew.Sdump(
+				block.ReceivedFrom,
+				block.ReceivedAt,
+				block.Header().Number,
+				block.Header().ValidatorsHash,
+				block.Header().TxHash,
+				block.Header().ParentHash,
+				block.Header().Root,
+				parent.Header().Number,
+				parent.Header().ValidatorsHash,
+				parent.Header().TxHash,
+				parent.Header().ParentHash,
+				parent.Header().Root,
+				usedGas))
+
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
@@ -1139,8 +1157,8 @@ type insertStats struct {
 	startTime                  mclock.AbsTime
 }
 
-// statsReportLimit is the time limit during import after which we always print
-// out progress. This avoids the user wondering what's going on.
+// statsReportLimit is the time limit during import and export after which we
+// always print out progress. This avoids the user wondering what's going on.
 const statsReportLimit = 8 * time.Second
 
 // report prints statistics if some number of blocks have been processed

@@ -537,35 +537,43 @@ func (val *validator) preVote() {
 
 func (val *validator) preCommit() {
 	var vote common.Hash
-	// access prevotes
-	winner := common.Hash{}
+
+	// current leader by simple majority
+	votingTable, err := val.votingSystem.getVoteSet(val.round, types.PreVote)
+	if err != nil {
+		log.Crit("Error while preCommit stage", "err", err)
+	}
+
+	currentLeader := votingTable.Leader()
+
 	switch {
 	// no majority
 	// majority pre-voted nil
-	case winner == common.Hash{}:
+	case currentLeader == common.Hash{}:
 		log.Debug("Majority of validators pre-voted nil")
 		// unlock locked block
 		if val.lockedBlock != nil {
 			val.lockedRound = 0
 			val.lockedBlock = nil
 		}
-	case winner == val.lockedBlock.Hash():
-		log.Debug("Majority of validators pre-voted the locked block")
+	case val.lockedBlock != nil && currentLeader == val.lockedBlock.Hash():
+		log.Debug("Majority of validators pre-voted the locked block", "block", val.lockedBlock.Hash())
 		// update locked block round
 		val.lockedRound = val.round
 		// vote on the pre-vote election winner
-		vote = winner
-	case winner == val.block.Hash():
-		log.Debug("Majority of validators pre-voted the proposed block")
+		vote = currentLeader
+	case val.block != nil && currentLeader == val.block.Hash():
+		log.Debug("Majority of validators pre-voted the proposed block", "block", val.block.Hash())
 		// lock block
 		val.lockedRound = val.round
 		val.lockedBlock = val.block
 		// vote on the pre-vote election winner
-		vote = winner
+		vote = currentLeader
 		// we don't have the current block (fetch)
 	default:
 		// fetch block, unlock, precommit
 		// unlock locked block
+		log.Debug("preCommit default case")
 		val.lockedRound = 0
 		val.lockedBlock = nil
 		val.block = nil
@@ -685,6 +693,12 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 	validators, err := val.consensus.Validators()
 	if err != nil {
 		return err
+	}
+
+	if val.voters != nil {
+		log.Debug("voting. updating a list of validators", "was", val.voters.Len(), "now", validators.Len())
+	} else {
+		log.Debug("voting. updating a list of validators", "was", "nil", "now", validators.Len())
 	}
 
 	val.voters = validators
