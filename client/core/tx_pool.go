@@ -1194,14 +1194,14 @@ func (t *TransactionsByTimestampAndNonce) Peek() *types.Transaction {
 	return t.heads[0].Transaction
 }
 
-// Shift replaces the current best head with the next one from the same account.
+// Shift removes the current best head and adds the next one to the queue from the same account.
 func (t *TransactionsByTimestampAndNonce) Shift() {
 	acc, _ := types.TxSender(t.signer, t.heads[0].Transaction)
+	heap.Pop(&t.heads)
 	if txs, ok := t.txs[acc]; ok && len(txs) > 0 {
-		t.heads[0], t.txs[acc] = txs[0], txs[1:]
-		heap.Fix(&t.heads, 0)
-	} else {
-		heap.Pop(&t.heads)
+		var nextValidTx *ValidTransaction
+		nextValidTx, t.txs[acc] = txs[0], txs[1:]
+		t.heads.Push(nextValidTx)
 	}
 }
 
