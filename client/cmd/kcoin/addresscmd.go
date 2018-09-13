@@ -12,7 +12,7 @@ var (
 		Action:      showAddresses,
 		Name:        "addresses",
 		Usage:       "Show important addresses from the network",
-		Description: "It shows important addresses from the network as the MultiSig and KNS related ones.",
+		Description: "Write important network addresses, like the MultiSig and KNS related ones, to stdout",
 	}
 )
 
