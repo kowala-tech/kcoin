@@ -91,18 +91,6 @@ func TestNodeSpecBuilder(t *testing.T) {
 		assert.Len(t, nodeSpec.Cmd, 2)
 	})
 
-	t.Run("We can specify the gas price.", func(t *testing.T) {
-		builder := getBuilderWithDefaults()
-		builder.WithGasPrice("1")
-
-		nodeSpec := buildNodeSpecWithoutError(t, builder)
-
-		assert.Contains(t, nodeSpec.Cmd, "--gasprice")
-		assert.Contains(t, nodeSpec.Cmd, "1")
-
-		assert.Len(t, nodeSpec.Cmd, 2)
-	})
-
 	t.Run("We can set verbosity", func(t *testing.T) {
 		builder := getBuilderWithDefaults()
 		builder.WithVerbosity("3")
