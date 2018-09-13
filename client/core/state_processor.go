@@ -59,7 +59,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 				header.TxHash,
 				header.ValidatorsHash,
 				header.LastCommitHash,
-				tx, usedGas, allLogs))
+				tx, resourceUsage, allLogs))
 
 			return nil, nil, 0, err
 		}

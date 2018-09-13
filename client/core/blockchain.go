@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
@@ -28,7 +29,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/trie"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"github.com/davecgh/go-spew/spew"
 )
 
 var (
@@ -1104,7 +1104,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				parent.Header().TxHash,
 				parent.Header().ParentHash,
 				parent.Header().Root,
-				usedGas))
+				resourceUsage))
 
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
