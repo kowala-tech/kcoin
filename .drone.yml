@@ -1,6 +1,6 @@
 workspace:
-  base: /go
-  path: src/github.com/kowala-tech/kcoin
+  base: /go/src
+  path: github.com/kowala-tech/kcoin
 
 clone:
   git:
@@ -11,7 +11,7 @@ clone:
 pipeline:
   install_tools:
     group: setup
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     commands:
       - make install_tools
     when:
@@ -19,7 +19,7 @@ pipeline:
 
   go_generate:
     group: generate
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     commands:
       - make go_generate
       - make assert_no_changes
@@ -28,7 +28,7 @@ pipeline:
 
   test_kcoin:
     group: testing
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     commands:
       - make test_genesis
       - make test
@@ -39,7 +39,7 @@ pipeline:
 
   test_notifications:
     group: testing
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     environment:
       - NSQ_ADDR=nsqd:4150
       - REDIS_ADDR=redis:6379
@@ -58,6 +58,7 @@ pipeline:
 
   e2e:
     group: e2e
+    # 1.0.12 doesn't seem to work for some reason. See #739
     image: kowalatech/go:1.0.11
     environment:
       - DOCKER_HOST=tcp://docker:2375
@@ -351,7 +352,7 @@ pipeline:
 
   assemble_e2e_logs:
     group: build_artifacts
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     commands:
       - cd e2e/logs; zip -r e2e-build-${DRONE_BUILD_NUMBER}.zip *
     when:
@@ -360,7 +361,7 @@ pipeline:
 
   build_artifacts:
     group: build_artifacts
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     environment:
       - DOCKER_HOST=tcp://docker:2375
     commands:
@@ -452,7 +453,7 @@ pipeline:
       branch: [dev, master]
 
   upload_repository_index:
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     commands:
       - make go_repository_index_update
     when:
