@@ -78,6 +78,9 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^there should be (\d+) mTokens? available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
 	opts.suite.Step(`^My node should be not be a validator$`, validationCtx.MyNodeShouldBeNotBeAValidator)
 	opts.suite.Step(`^I wait for my node to be synced$`, validationCtx.IWaitForMyNodeToBeSynced)
+	opts.suite.Step(`^crash my node validator$`, validationCtx.CrashMyNode)
+	opts.suite.Step(`^I restart the validator$`, validationCtx.IRestartTheValidator)
+	opts.suite.Step(`^My node should be a validator$`, validationCtx.MyNodeShouldBeAValidator)
 
 	// mTokens
 	opts.suite.Step(`^the token balance of (\w+) should be (\d+) mTokens?$`, context.IsMTokensBalanceExact)

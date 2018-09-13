@@ -95,6 +95,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 		WithCoinbase(ctx.globalCtx.accounts[account]).
 		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.accounts[account]).
 		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.mtokensSeederAccount).
+		WithValidation().
 		NodeSpec()
 
 	if err := ctx.globalCtx.nodeRunner.Run(spec); err != nil {
@@ -184,8 +185,36 @@ func (ctx *ValidationContext) MyNodeShouldBeNotBeAValidator() error {
 	return nil
 }
 
+func (ctx *ValidationContext) MyNodeShouldBeAValidator() error {
+	res := &cluster.ExecResponse{}
+	if err := ctx.globalCtx.execCommand(ctx.nodeID(), isValidatingCommand(), res); err != nil {
+		return err
+	}
+	if strings.TrimSpace(res.StdOut) != "true" {
+		log.Debug(res.StdOut)
+		return fmt.Errorf("validator is not running: %s", res.StdOut)
+	}
+	return nil
+}
+
 func (ctx *ValidationContext) Reset() {
 	ctx.nodeRunning = false
+}
+
+func (ctx *ValidationContext) CrashMyNode() error {
+	ctx.Reset()
+	return ctx.globalCtx.nodeRunner.Stop(ctx.nodeID())
+}
+
+func (ctx *ValidationContext) IRestartTheValidator() error {
+	if err := ctx.IHaveMyNodeRunning("A"); err != nil {
+		return err
+	}
+	if err := ctx.MyNodeIsAlreadySynchronised(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
