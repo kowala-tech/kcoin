@@ -52,7 +52,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, usedGas, cfg)
 		if err != nil {
-			log.Error("failed StateProcessor.Process", "data", spew.Sdump(
+			log.Debug("failed StateProcessor.Process", "data", spew.Sdump(
 				header.Number,
 				header.Root,
 				header.ParentHash,

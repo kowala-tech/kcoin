@@ -4,18 +4,19 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/kowala-tech/kcoin/client/common"
 	"math/big"
 	"sync/atomic"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/tx"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // work is the proposer current environment and holds all of the current state information

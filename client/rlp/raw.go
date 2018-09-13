@@ -104,7 +104,7 @@ func readKind(buf []byte) (k Kind, tagsize, contentsize uint64, err error) {
 	}
 	// Reject values larger than the input slice.
 	if contentsize > uint64(len(buf))-tagsize {
-		log.Error("rlp readKind error ErrValueTooLarge: `contentsize > uint64(len(buf))-tagsize`",
+		log.Debug("rlp readKind error ErrValueTooLarge: `contentsize > uint64(len(buf))-tagsize`",
 			"contentsize", contentsize,
 			"buf", len(buf),
 			"tagsize", tagsize)

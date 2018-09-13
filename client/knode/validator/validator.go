@@ -579,7 +579,7 @@ func (val *validator) preCommit() {
 	default:
 		// fetch block, unlock, precommit
 		// unlock locked block
-		log.Warn("preCommit default case")
+		log.Debug("preCommit default case")
 		val.lockedRound = 0
 		val.lockedBlock = nil
 		val.block = nil
