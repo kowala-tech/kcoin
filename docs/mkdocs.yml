@@ -48,7 +48,9 @@ pages:
       - 'Transaction': 'advanced/types/tx.md'
       - 'Account': 'advanced/types/account.md'
     - Automatic client updates: 'advanced/automatic-client-updates.md'
+    - Official networks: 'advanced/official-networks.md'
     - Running local testnet: 'advanced/running-local-testnet.md'
+    - Minting mining tokens: 'advanced/minting-tokens.md'
   - Contributing:
     - 'Projects': 'contributing/projects.md'
   - About:

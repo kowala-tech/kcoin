@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -46,6 +47,7 @@ type dockerNodeRunner struct {
 	logsToStdout bool
 	logsDir      string
 	logPrefix    string
+	logCounter   uint32
 }
 
 type NewNodeRunnerOpts struct {
@@ -114,7 +116,7 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 
 	logStream := os.Stdout
 	if !runner.logsToStdout {
-		logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%v.log", runner.logPrefix, node.ID))
+		logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%v-%d.log", runner.logPrefix, node.ID, atomic.AddUint32(&runner.logCounter, 1)))
 		logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0777)
 		if err != nil {
 			log.Error(fmt.Sprintf("error creating container logs file %q: %s", logFilename, err))
