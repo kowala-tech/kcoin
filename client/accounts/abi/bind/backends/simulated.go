@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
-	"time"
 
 	"github.com/kowala-tech/kcoin/client"
 	"github.com/kowala-tech/kcoin/client/common"
@@ -22,9 +21,9 @@ import (
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode/filters"
 
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
-	"github.com/kowala-tech/kcoin/client/log"
 )
 
 var errBlockNumberUnsupported = errors.New("SimulatedBackend cannot access blocks other than the latest block")
@@ -367,24 +366,6 @@ func (b *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query kowala
 	}), nil
 }
 
-// AdjustTime adds a time shift to the simulated clock.
-func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	blocks, _ := core.GenerateChain(b.config, b.BlockChain.CurrentBlock(), konsensus.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
-		for _, tx := range b.pendingBlock.Transactions() {
-			block.AddTx(tx)
-		}
-		block.OffsetTime(int64(adjustment.Seconds()))
-	})
-	statedb, _ := b.State()
-
-	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
-
-	return nil
-}
-
 // callmsg implements core.Message to allow passing it as a transaction simulator.
 type callmsg struct {
 	kowala.CallMsg
@@ -406,8 +387,8 @@ type filterBackend struct {
 	bc *core.BlockChain
 }
 
-func (fb *filterBackend) ChainDb() kcoindb.Database  { return fb.db }
-func (fb *filterBackend) EventMux() *event.TypeMux { panic("not supported") }
+func (fb *filterBackend) ChainDb() kcoindb.Database { return fb.db }
+func (fb *filterBackend) EventMux() *event.TypeMux  { panic("not supported") }
 
 func (fb *filterBackend) HeaderByNumber(ctx context.Context, block rpc.BlockNumber) (*types.Header, error) {
 	if block == rpc.LatestBlockNumber {

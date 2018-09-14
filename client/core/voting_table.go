@@ -13,6 +13,7 @@ var ErrDuplicateVote = errors.New("duplicate vote")
 
 type VotingTable interface {
 	Add(vote types.AddressVote) error
+	Leader() common.Hash
 }
 
 type votingTable struct {
@@ -52,10 +53,15 @@ func (table *votingTable) Add(voteAddressed types.AddressVote) error {
 	table.votes.Add(vote)
 
 	if table.hasQuorum() {
-		table.majority()
+		log.Debug("voting. Quorum has been achieved. majority", "votes", table.votes.Len(), "voters", table.voters.Len())
+		table.majority(vote.BlockHash())
 	}
 
 	return nil
+}
+
+func (table *votingTable) Leader() common.Hash {
+	return table.votes.Leader()
 }
 
 func (table *votingTable) isDuplicate(vote *types.Vote) bool {
@@ -67,10 +73,11 @@ func (table *votingTable) isVoter(address common.Address) bool {
 }
 
 func (table *votingTable) hasQuorum() bool {
+	log.Debug("voting. hasQuorum", "voters", table.voters.Len(), "votes", table.votes.Len())
 	return table.quorum(table.votes.Len(), table.voters.Len())
 }
 
-type QuorumReachedFunc func()
+type QuorumReachedFunc func(winner common.Hash)
 
 type QuorumFunc func(votes, voters int) bool
 

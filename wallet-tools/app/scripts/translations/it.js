@@ -449,6 +449,7 @@ MSG_info3                   : 'Includi una ragione specifica per il messaggio, c
 MYWAL_Nick                  : 'Nome portafoglio ',
 MYWAL_Address               : 'Indirizzo portafoglio ',
 MYWAL_Bal                   : 'Saldo ',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Modifica ',
 MYWAL_View                  : 'Mostra ',
 MYWAL_Remove                : 'Rimuovi ',

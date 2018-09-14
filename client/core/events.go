@@ -25,7 +25,7 @@ type NewBlockFragmentEvent struct {
 
 // NewMajorityEvent is posted when there's a majority during a sub election
 type NewMajorityEvent struct {
-	winner common.Hash
+	Winner common.Hash
 }
 
 // PendingLogsEvent is posted pre mining and notifies of pending logs.

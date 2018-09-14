@@ -475,6 +475,7 @@ OFFLINE_Step3_Label_1       : 'Paste the signed transaction from Step 2 here and
 MYWAL_Nick                  : 'Plånboks Namn ',
 MYWAL_Address               : 'Plånboks Adress ',
 MYWAL_Bal                   : 'Saldo ',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Ändra ',
 MYWAL_View                  : 'Visa ',
 MYWAL_Remove                : 'Ta Bort ',
