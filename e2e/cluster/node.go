@@ -36,7 +36,6 @@ func BootnodeSpec(nodeSuffix string) (*NodeSpec, error) {
 		Env:   []string{},
 		Cmd: []string{
 			"--nodekeyhex", randStringBytes(64),
-			"--v5",
 			"--verbosity", "6",
 		},
 		Files: map[string][]byte{},
