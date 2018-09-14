@@ -232,7 +232,7 @@ func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
 }
 
 func (ctx *ValidationContext) IncreaseDeposit(mTokens int64) {
-	ctx.globalCtx.makeExecFunc(ctx.nodeID(), validatorStartCommand(kcoin))
+	ctx.globalCtx.makeExecFunc(ctx.nodeID(), validatorStartCommand(mTokens))
 }
 
 func (ctx *ValidationContext) TheDepositIsExactly(expectedMTokens int64) error {
