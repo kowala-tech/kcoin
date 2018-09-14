@@ -231,6 +231,20 @@ func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
 	})
 }
 
+func (ctx *ValidationContext) IncreaseDeposit(mTokens int64) {
+	ctx.globalCtx.makeExecFunc(ctx.nodeID(), validatorStartCommand(kcoin))
+}
+
+func (ctx *ValidationContext) TheDepositIsExactly(expectedMTokens int64) error {
+	expectedWei := toWei(expectedMTokens)
+	deposit, err := ctx.getMTokensDeposit()
+	if err != nil {
+		return err
+	}
+
+	return ctx.isMTokensDepositExact(deposit, expectedWei)
+}
+
 func isError(s string) error {
 	if strings.HasPrefix(s, "Error: EOF") {
 		return nil
@@ -263,6 +277,10 @@ func isValidatingCommand() []string {
 
 func getDepositsCommand() []string {
 	return cluster.KcoinExecCommand("validator.getDeposits()")
+}
+
+func increaseDepositCommand(mtokens int64) []string {
+	return cluster.KcoinExecCommand(fmt.Sprintf("validator.increaseDeposit(%d)", toWei(mtokens)))
 }
 
 func getTokenBalance(at common.Address) []string {

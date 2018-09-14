@@ -53,6 +53,7 @@ type Validator interface {
 	PendingBlock() *types.Block
 	Deposits(address *common.Address) ([]*types.Deposit, error)
 	RedeemDeposits() error
+	IncreaseDeposit(deposit *big.Int) error
 }
 
 type Service interface {
@@ -415,14 +416,32 @@ func (val *validator) leave() {
 	txHash, err := val.consensus.Leave(val.walletAccount)
 	if err != nil {
 		log.Error("failed to leave the election", "err", err)
+		return
 	}
 	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
 	if err != nil {
 		log.Error("Failed to verify the voter deregistration", "err", err)
+		return
 	}
 	if receipt.Status == types.ReceiptStatusFailed {
 		log.Error("Failed to deregister validator - receipt status failed")
 	}
+}
+
+func (val *validator) IncreaseDeposit(deposit *big.Int) error {
+	txHash, err := val.consensus.IncreaseDeposit(val.walletAccount, deposit)
+	if err != nil {
+		return err
+	}
+	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+	if err != nil {
+		return err
+	}
+	if receipt.Status == types.ReceiptStatusFailed {
+		return errors.New("Failed to increase deposit - receipt status failed")
+	}
+
+	return nil
 }
 
 func (val *validator) createProposalBlock() *types.Block {

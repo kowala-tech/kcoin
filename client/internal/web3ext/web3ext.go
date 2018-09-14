@@ -552,6 +552,12 @@ web3._extend({
 			name: 'redeemDeposits',
 			call: 'validator_redeemDeposits'
 		}),
+		new web3._extend.Method({
+			name: 'increaseDeposit',
+			call: 'validator_increaseDeposit',
+			params: 1,
+			inputFormatter: [null]
+		}),
 	],
 	properties: []
 });

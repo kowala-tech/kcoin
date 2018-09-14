@@ -345,7 +345,27 @@ contract ValidatorMgr is Pausable, Initializable{
     function registerValidator(address _from, uint _value) public {
         //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
         // SSTORE problem - expensive
-        tkn = TKN(_from, _value/*, _data, bytes4(u)*/);
+        tkn = TKN(_from, _value);
         _registerValidator();
+    }
+
+    /**
+     * @dev Increase Validator's deposit
+     */
+    function _increaseDeposit() private whenNotPaused onlyValidator {
+        Deposit currentDeposit = validatorRegistry[tkn.sender].deposits[validatorRegistry[tkn.sender].deposits.length - 1];
+        currentDeposit.amount = currentDeposit.amount + tkn.value;
+    }
+
+    /**
+     * @dev Increase Validator's deposit
+     * @param _from from address
+     * @param _value value to send
+     */
+    function increaseDeposit(address _from, uint _value) public {
+        //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
+        // SSTORE problem - expensive
+        tkn = TKN(_from, _value);
+        _increaseDeposit();
     }
 }
