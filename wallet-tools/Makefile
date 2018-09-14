@@ -1,6 +1,6 @@
-DOCKERHUB_IMAGE ?= kowalatech/wallet-tools
-APP_URL         ?= "https://wallet-tools.zygote.kowala.io" 
-CDN_URL         ?= "https://cdn.kowala.io"
+DOCKERHUB_IMAGE ?= kowalatech/wallet-tools:latest
+APP_URL         ?= "https://wallet-tools.zygote.kowala.tech" 
+CDN_URL         ?= "https://cdn.kowala.tech"
 
 .PHONY: run run-docker build-docker
 

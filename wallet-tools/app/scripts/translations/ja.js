@@ -396,6 +396,7 @@ MSG_info3                   : '異なった目的で使用されないように�
 MYWAL_Nick                  : 'お財布ニックネーム',
 MYWAL_Address               : 'お財布アドレス',
 MYWAL_Bal                   : '残高',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : '編集',
 MYWAL_View                  : '表示',
 MYWAL_Remove                : '消去',

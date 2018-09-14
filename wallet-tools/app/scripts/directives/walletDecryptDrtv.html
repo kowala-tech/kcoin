@@ -854,12 +854,15 @@
 
           <table class="small table table-striped table-mnemonic">
             <tr>
-              <th translate="x_Address">
-                Address
-              </th>
-              <th translate="MYWAL_Bal">
-                Balance
-              </th>
+                <th translate="x_Address">
+                    Address
+                </th>
+                <th translate="MYWAL_Bal">
+                    Balance
+                </th>
+                <th translate="MYWAL_Dep">
+                    mTokens
+                </th>
             </tr>
             <tr ng-repeat="wallet in HDWallet.wallets track by $index">
               <td>
@@ -880,9 +883,16 @@
                 <a href="{{ajaxReq.blockExplorerAddr.replace('[[address]]', wallet.getAddressString())}}"
                    target="_blank"
                    rel="noopener noreferrer">
-                  {{wallet.getBalance()}} {{ajaxReq.type}}
+                  {{wallet.getBalance()}} kUSD
                 </a>
               </td>
+                <td>
+                    <a href="{{ajaxReq.blockExplorerAddr.replace('[[address]]', wallet.getAddressString())}}"
+                        target="_blank"
+                        rel="noopener noreferrer">
+                        {{wallet.getMUsd()}} mUSD
+                    </a>
+                </td>
             </tr>
 
             <tr class="m-addresses">
