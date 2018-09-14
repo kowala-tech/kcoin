@@ -1,6 +1,6 @@
 {
     "nodeAddr":     "rpc.kusd.kowala.tech",
-    "gethPort":     30503,
+    "gethPort":     80,
     "startBlock":   0,
     "endBlock":     "latest",
     "quiet":        true,
