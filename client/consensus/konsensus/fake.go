@@ -23,7 +23,6 @@ func (fk *FakeKonsensus) VerifyHeader(chain consensus.ChainReader, header *types
 }
 
 func (fk *FakeKonsensus) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	// @TODO (rgeraldes) - temporary work around
 	abort, results := make(chan struct{}), make(chan error, len(headers))
 	for i := 0; i < len(headers); i++ {
 		results <- nil

@@ -119,6 +119,9 @@ func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err
 	if err := <-werr; err != nil {
 		return nil, fmt.Errorf("write error: %v", err)
 	}
+	if their.Version < baseProtocolVersion {
+		return nil, fmt.Errorf("too low Kowala protocol version: %d < %d", their.Version, baseProtocolVersion)
+	}
 	// If the protocol version supports Snappy encoding, upgrade immediately
 	t.rw.snappy = their.Version >= snappyProtocolVersion
 
