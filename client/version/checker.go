@@ -56,7 +56,7 @@ func (c *checker) isNewVersionAvailable() bool {
 }
 
 func (c *checker) getLatest() (semver.Version, error) {
-	finder := NewFinder(c.repository)
+	finder := NewFinder(NewS3AssetRepository(c.repository))
 	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
 	if err != nil {
 		return semver.Version{}, err

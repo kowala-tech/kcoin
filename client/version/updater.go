@@ -32,7 +32,7 @@ func NewUpdater(repository string, logger log.Logger) (*updater, error) {
 	return &updater{
 		repository: repository,
 		current:    current,
-		finder:     NewFinder(repository),
+		finder:     NewFinder(NewS3AssetRepository(repository)),
 		logger:     logger,
 	}, nil
 }
@@ -67,6 +67,10 @@ func (u *updater) Update() error {
 	}
 
 	if err := u.unzip(latestAsset); err != nil {
+		return err
+	}
+
+	if err := u.deleteLocal(latestAsset); err != nil {
 		return err
 	}
 
@@ -141,6 +145,10 @@ func (u *updater) unzip(asset Asset) error {
 	}
 
 	return nil
+}
+
+func (u *updater) deleteLocal(asset Asset) error {
+	return os.Remove(asset.Path())
 }
 
 func (u *updater) backupCurrentBinary() error {
