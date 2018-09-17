@@ -1,10 +1,10 @@
 package version
 
 import (
-	"testing"
+	"github.com/blang/semver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/blang/semver"
+	"testing"
 )
 
 func TestAllEmpty(t *testing.T) {
