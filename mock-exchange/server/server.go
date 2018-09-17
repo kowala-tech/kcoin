@@ -1,17 +1,27 @@
 package server
 
-import "net/http"
+import (
+	"context"
+	"fmt"
+	"net/http"
+)
 
 type server struct {
-	config *Config
+	httpServ *http.Server
+	config   *Config
 }
 
 func (s *server) Start() error {
-	return http.ListenAndServe(":8080", nil)
+	s.httpServ = &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.config.listenPort),
+		Handler: nil,
+	}
+
+	return s.httpServ.ListenAndServe()
 }
 
 func (s *server) Stop() error {
-	panic("implement me")
+	return s.httpServ.Shutdown(context.Background())
 }
 
 type Server interface {

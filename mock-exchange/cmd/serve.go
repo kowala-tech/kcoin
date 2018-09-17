@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	server2 "github.com/kowala-tech/kcoin/mock-exchange/server"
+	"github.com/kowala-tech/kcoin/mock-exchange/server"
 	"github.com/spf13/cobra"
 )
 
@@ -29,15 +29,15 @@ var serveCmd = &cobra.Command{
 	Long: `For now it only fakes data comming from Exrates, in the future
 	it will support other services.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		server, err := server2.New()
+		s, err := server.New(server.DefaultConfig())
 		if err != nil {
-			fmt.Printf("Error creating server: %s", err)
+			fmt.Printf("Error creating s: %s", err)
 			os.Exit(1)
 		}
 
-		err = server.Start()
+		err = s.Start()
 		if err != nil {
-			fmt.Printf("Error starting server: %s", err)
+			fmt.Printf("Error starting s: %s", err)
 			os.Exit(1)
 		}
 	},
