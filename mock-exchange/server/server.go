@@ -4,11 +4,26 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
+
+type Server interface {
+	Start() error
+	Stop() error
+}
+
+func New(c *Config, r *mux.Router) (Server, error) {
+	return &server{
+		config: c,
+		router: r,
+	}, nil
+}
 
 type server struct {
 	httpServ *http.Server
 	config   *Config
+	router   *mux.Router
 }
 
 func (s *server) Start() error {
@@ -22,15 +37,4 @@ func (s *server) Start() error {
 
 func (s *server) Stop() error {
 	return s.httpServ.Shutdown(context.Background())
-}
-
-type Server interface {
-	Start() error
-	Stop() error
-}
-
-func New(c *Config) (Server, error) {
-	return &server{
-		config: c,
-	}, nil
 }
