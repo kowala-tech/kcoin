@@ -66,7 +66,7 @@ func defaultGenesisOptions() *e2eGenesisOptions {
 }
 
 func NewTestContext(chainID *big.Int, logsToStdout bool) *Context {
-	tmpdir, _ := ioutil.TempDir("", "eth-keystore-test")
+	tmpdir, _ := ioutil.TempDir("", "kcoin-keystore-test")
 	accountsStorage := keystore.NewKeyStore(tmpdir, 2, 1)
 
 	ctx := &Context{

@@ -50,9 +50,9 @@ func (ctx *ValidationContext) IWaitForTheUnbondingPeriodToBeOver() error {
 	return godog.ErrPending
 }
 
-func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
+func (ctx *ValidationContext) IStartTheValidator(mTokens int64) error {
 	return ctx.waiter.Do(
-		ctx.globalCtx.makeExecFunc(ctx.nodeID(), validatorStartCommand(kcoin)),
+		ctx.globalCtx.makeExecFunc(ctx.nodeID(), validatorStartCommand(mTokens)),
 		func() error {
 			pending, err := ctx.globalCtx.client.PendingTransactionCount(context.Background())
 			if err != nil {
@@ -256,11 +256,11 @@ func isError(s string) error {
 }
 
 func blockNumberCommand() []string {
-	return cluster.KcoinExecCommand("eth.blockNumber")
+	return cluster.KcoinExecCommand("kcoin.blockNumber")
 }
 
 func isSyncedCommand() []string {
-	return cluster.KcoinExecCommand("eth.blockNumber > 1 && net.peerCount > 0 && eth.syncing == false")
+	return cluster.KcoinExecCommand("kcoin.blockNumber > 1 && net.peerCount > 0 && kcoin.syncing == false")
 }
 
 func validatorStartCommand(mtokens int64) []string {

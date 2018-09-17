@@ -27,8 +27,8 @@ import (
 //go:generate ../../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
 
 const (
-	RegistrationHandler = "registerValidator(address,uint256)"
-	DepositHandler      = "increaseDeposit(address,uint256)"
+	RegistrationHandler = "registerValidator(address,uint256,bytes)"
+	DepositHandler      = "increaseDeposit(address,uint256,bytes)"
 )
 
 var DefaultData = []byte("not_zero")
@@ -337,8 +337,7 @@ func (css *Consensus) Confirm(opts *accounts.TransactOpts, transactionID *big.In
 }
 
 func (css *Consensus) IncreaseDeposit(walletAccount accounts.WalletAccount, deposit *big.Int) (common.Hash, error) {
-	log.Warn(fmt.Sprintf("Increasing the deposit %v with a deposit %v. Account %q",
-		css.chainID.String(), deposit.String(), walletAccount.Account().Address.String()))
+	log.Warn(fmt.Sprintf("Increasing the current deposit, with a new deposit of %v. Account %q", deposit.String(), walletAccount.Account().Address.String()))
 	hash, err := css.mtoken.Transfer(walletAccount, css.managerAddr, deposit, []byte("not_zero"), DepositHandler)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to transact the new deposit: %s", err)
