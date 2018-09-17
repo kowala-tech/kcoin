@@ -36,6 +36,7 @@ type Context struct {
 	rpcPort                int32
 	client                 *kcoinclient.Client
 	chainID                *big.Int
+	networkID              int
 
 	genesisValidatorAccount   accounts.Account
 	mtokensSeederAccount      accounts.Account
@@ -65,7 +66,7 @@ func defaultGenesisOptions() *e2eGenesisOptions {
 	}
 }
 
-func NewTestContext(chainID *big.Int, logsToStdout bool) *Context {
+func NewTestContext(chainID *big.Int, networkID int, logsToStdout bool) *Context {
 	tmpdir, _ := ioutil.TempDir("", "eth-keystore-test")
 	accountsStorage := keystore.NewKeyStore(tmpdir, 2, 1)
 
@@ -73,6 +74,7 @@ func NewTestContext(chainID *big.Int, logsToStdout bool) *Context {
 		logsToStdout:    logsToStdout,
 		AccountsStorage: accountsStorage,
 		chainID:         chainID,
+		networkID:       networkID,
 
 		accounts:       make(map[string]accounts.Account),
 		scenarioNumber: new(int32),

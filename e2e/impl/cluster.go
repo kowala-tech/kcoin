@@ -195,12 +195,13 @@ func (ctx *Context) runBootnode() error {
 }
 
 func (ctx *Context) runGenesisValidator() error {
+
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.bootnode).
 		WithLogLevel(4).
 		WithID("genesis-validator-"+ctx.nodeSuffix).
 		WithSyncMode("full").
-		WithNetworkId(ctx.chainID.String()).
+		WithNetworkId(fmt.Sprintf("%d", ctx.networkID)).
 		WithGenesis(ctx.genesis).
 		WithCoinbase(ctx.genesisValidatorAccount).
 		WithAccount(ctx.AccountsStorage, ctx.genesisValidatorAccount).
@@ -226,7 +227,7 @@ func (ctx *Context) runRpc() error {
 		WithLogLevel(6).
 		WithID("rpc-"+ctx.nodeSuffix).
 		WithSyncMode("full").
-		WithNetworkId(ctx.chainID.String()).
+		WithNetworkId(fmt.Sprintf("%d", ctx.networkID)).
 		WithGenesis(ctx.genesis).
 		WithCoinbase(ctx.kusdSeederAccount).
 		WithAccount(ctx.AccountsStorage, ctx.kusdSeederAccount).

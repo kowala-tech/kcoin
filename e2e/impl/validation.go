@@ -90,7 +90,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 		WithLogLevel(6).
 		WithID(ctx.nodeID().String()).
 		WithSyncMode("full").
-		WithNetworkId(ctx.globalCtx.chainID.String()).
+		WithNetworkId(fmt.Sprintf("%d", ctx.globalCtx.networkID)).
 		WithGenesis(ctx.globalCtx.genesis).
 		WithCoinbase(ctx.globalCtx.accounts[account]).
 		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.accounts[account]).
