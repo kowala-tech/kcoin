@@ -32,7 +32,7 @@ func NewUpdater(repository string, logger log.Logger) (*updater, error) {
 	return &updater{
 		repository: repository,
 		current:    current,
-		finder:     NewFinder(repository),
+		finder:     NewFinder(NewS3AssetRepository(repository)),
 		logger:     logger,
 	}, nil
 }
