@@ -81,8 +81,8 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^crash my node validator$`, validationCtx.CrashMyNode)
 	opts.suite.Step(`^I restart the validator$`, validationCtx.IRestartTheValidator)
 	opts.suite.Step(`^My node should be a validator$`, validationCtx.MyNodeShouldBeAValidator)
-	opts.suite.Step(`^I increase the current deposit with (\d+) mtokens$`, validationCtx.IncreaseDeposit)
-	opts.suite.Step(`^My current deposit should be (\d+) mtokens$`, validationCtx.TheDepositIsExactly)
+	opts.suite.Step(`^I increase the current deposit with (\d+) mTokens$`, validationCtx.IncreaseDeposit)
+	opts.suite.Step(`^My current deposit should be (\d+) mTokens$`, validationCtx.TheDepositIsExactly)
 
 	// mTokens
 	opts.suite.Step(`^the token balance of (\w+) should be (\d+) mTokens?$`, context.IsMTokensBalanceExact)

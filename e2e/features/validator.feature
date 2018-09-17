@@ -51,7 +51,7 @@ Feature: Joining network as a validator
     Then My node should be a validator
 
   Scenario: Increasing deposit
-    Given: I wait for my node to be synced
+    Given I wait for my node to be synced
     And I start validator with 5 mTokens deposit
     When I increase the current deposit with 5 mTokens
     Then My current deposit should be 10 mTokens
