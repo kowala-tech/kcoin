@@ -1,6 +1,6 @@
 workspace:
-  base: /go
-  path: src/github.com/kowala-tech/kcoin
+  base: /go/src
+  path: github.com/kowala-tech/kcoin
 
 clone:
   git:
@@ -9,17 +9,26 @@ clone:
     tags: true
 
 pipeline:
+  install_tools:
+    group: setup
+    image: kowalatech/go:1.0.12
+    commands:
+      - make install_tools
+    when:
+      event: [pull_request]
+
   go_generate:
-    image: kowalatech/go:1.0.11
+    group: generate
+    image: kowalatech/go:1.0.12
     commands:
       - make go_generate
       - make assert_no_changes
     when:
-      event: [push]
+      event: [pull_request]
 
   test_kcoin:
     group: testing
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     commands:
       - make test_genesis
       - make test
@@ -30,7 +39,7 @@ pipeline:
 
   test_notifications:
     group: testing
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     environment:
       - NSQ_ADDR=nsqd:4150
       - REDIS_ADDR=redis:6379
@@ -48,7 +57,8 @@ pipeline:
       event: [pull_request]
 
   e2e:
-    group: testing
+    group: e2e
+    # 1.0.12 doesn't seem to work for some reason. See #739
     image: kowalatech/go:1.0.11
     environment:
       - DOCKER_HOST=tcp://docker:2375
@@ -58,16 +68,6 @@ pipeline:
       - make e2e
     when:
       event: [pull_request]
-
-  docker_build:
-    image: kowalatech/go:1.0.11
-    environment:
-      - DOCKER_HOST=tcp://docker:2375
-      - DOCKER_PUBLIC_IP=docker
-    commands:
-      - make -j 4 dev_docker_images
-    when:
-      event: [push]
 
   docker_kusd:
     group: docker_deployment
@@ -217,7 +217,6 @@ pipeline:
       - EXPLORER_URL=https://explorer.zygote.kowala.tech
       - FAUCET_URL=https://faucet.zygote.kowala.tech
       - CDN_URL=https://cdn.kowala.io
-      - WS_SECRET=DuHLdsKV6cagynn9
     repo: kowalatech/netstats
     dockerfile: netstats/Dockerfile
     pull: true
@@ -248,9 +247,7 @@ pipeline:
       - DRONE_BUILD_EVENT
       - URL=https://stats.kusd.kowala.tech
       - EXPLORER_URL=https://explorer.kusd.kowala.tech
-      - FAUCET_URL=https://faucet.kusd.kowala.tech
       - CDN_URL=https://cdn.kowala.tech
-      - WS_SECRET=DuHLdsKV6cagynn9
     when:
       branch: [master]
       event: [push, tag]
@@ -352,7 +349,7 @@ pipeline:
 
   assemble_e2e_logs:
     group: build_artifacts
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     commands:
       - cd e2e/logs; zip -r e2e-build-${DRONE_BUILD_NUMBER}.zip *
     when:
@@ -361,14 +358,14 @@ pipeline:
 
   build_artifacts:
     group: build_artifacts
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     environment:
       - DOCKER_HOST=tcp://docker:2375
     commands:
       - make kcoin_cross
     when:
       event: [push, tag]
-      branch: [dev]
+      branch: [dev, master]
 
   compile_gource_video:
     group: build_artifacts
@@ -394,8 +391,8 @@ pipeline:
       - cd cdn
       - make build
     when:
-      branch: [develop, master]
-      event: [push,tag,test]
+      branch: [dev, master]
+      event: [push,tag]
 
   upload_cdn_to_s3_dev:
     group: build_artifacts
@@ -450,15 +447,15 @@ pipeline:
     target: /
     when:
       event: [push, tag]
-      branch: [dev]
+      branch: [dev, master]
 
   upload_repository_index:
-    image: kowalatech/go:1.0.11
+    image: kowalatech/go:1.0.12
     commands:
       - make go_repository_index_update
     when:
       event: [push, tag]
-      branch: [master,dev]
+      branch: [master, dev]
 
   upload_dev_docs_to_s3:
     group: asset_deployment
@@ -516,7 +513,7 @@ pipeline:
         {{#if build.tag}}`v{{build.tag}}` | {{/if}}Commit <${DRONE_COMMIT_LINK}|{{build.commit}}> | <{{build.link}}|Build #{{build.number}}> | <https://s3.amazonaws.com/kcoin-e2e/logs/${DRONE_BUILD_NUMBER}/e2e-build-${DRONE_BUILD_NUMBER}.zip|e2e logs>
     when:
       status: failure
-      event: [push, tag, pull_request]
+      event: [tag, pull_request]
 
 services:
   docker:

@@ -145,7 +145,7 @@ func (p *peer) Info() *PeerInfo {
 	}
 }
 
-// Head retrieves a copy of the current head hash and total difficulty of the
+// Head retrieves a copy of the current head hash and block number of the
 // peer.
 func (p *peer) Head() (hash common.Hash, blockNumber *big.Int) {
 	p.lock.RLock()
@@ -155,7 +155,7 @@ func (p *peer) Head() (hash common.Hash, blockNumber *big.Int) {
 	return hash, new(big.Int).Set(p.blockNumber)
 }
 
-// SetHead updates the head hash and total difficulty of the peer.
+// SetHead updates the head hash and block number of the peer.
 func (p *peer) SetHead(hash common.Hash, blockNumber *big.Int) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -354,7 +354,7 @@ func (p *peer) RequestReceipts(hashes []common.Hash) error {
 }
 
 // Handshake executes the eth protocol handshake, negotiating version number,
-// network IDs, difficulties, head and genesis blocks.
+// network IDs, head and genesis blocks.
 func (p *peer) Handshake(network uint64, blockNumber *big.Int, head common.Hash, genesis common.Hash) error {
 	// Send out own handshake in a new thread
 	errc := make(chan error, 2)

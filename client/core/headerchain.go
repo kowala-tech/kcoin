@@ -22,7 +22,6 @@ import (
 
 const (
 	headerCacheLimit = 512
-	tdCacheLimit     = 1024
 	numberCacheLimit = 2048
 )
 
@@ -41,7 +40,6 @@ type HeaderChain struct {
 	currentHeaderHash common.Hash  // Hash of the current head of the header chain (prevent recomputing all the time)
 
 	headerCache *lru.Cache // Cache for the most recent block headers
-	tdCache     *lru.Cache // Cache for the most recent block total difficulties
 	numberCache *lru.Cache // Cache for the most recent block numbers
 
 	procInterrupt func() bool
@@ -56,7 +54,6 @@ type HeaderChain struct {
 //  wg points to the parent's shutdown wait group
 func NewHeaderChain(chainDb kcoindb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
 	headerCache, _ := lru.New(headerCacheLimit)
-	tdCache, _ := lru.New(tdCacheLimit)
 	numberCache, _ := lru.New(numberCacheLimit)
 
 	// Seed a fast but crypto originating random generator
@@ -69,7 +66,6 @@ func NewHeaderChain(chainDb kcoindb.Database, config *params.ChainConfig, engine
 		config:        config,
 		chainDb:       chainDb,
 		headerCache:   headerCache,
-		tdCache:       tdCache,
 		numberCache:   numberCache,
 		procInterrupt: procInterrupt,
 		rand:          mrand.New(mrand.NewSource(seed.Int64())),
@@ -107,8 +103,7 @@ func (hc *HeaderChain) GetBlockNumber(hash common.Hash) *uint64 {
 }
 
 // WriteHeader writes a header into the local chain, given that its parent is
-// already known. If the total difficulty of the newly inserted header becomes
-// greater than the current known TD, the canonical chain is re-routed.
+// already known.
 //
 // Note: This method is not concurrent-safe with inserting blocks simultaneously
 // into the chain, as side effects caused by reorganisations cannot be emulated
@@ -124,7 +119,7 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 
 	rawdb.WriteHeader(hc.chainDb, header)
 
-	// If the total difficulty is higher than our known, add it to the canonical chain
+	// If the number is higher than our known, add it to the canonical chain
 	// Second clause in the if statement reduces the vulnerability to selfish mining.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	if header.Number.Cmp(hc.CurrentHeader().Number) > 0 || (header.Number.Cmp(hc.CurrentHeader().Number) == 0 && mrand.Float64() < 0.5) {
@@ -401,7 +396,6 @@ func (hc *HeaderChain) SetHead(head uint64, delFn DeleteCallback) {
 			delFn(batch, hash, num)
 		}
 		rawdb.DeleteHeader(batch, hash, num)
-		rawdb.DeleteTd(batch, hash, num)
 
 		hc.currentHeader.Store(hc.GetHeader(hdr.ParentHash, hdr.Number.Uint64()-1))
 	}
@@ -413,7 +407,6 @@ func (hc *HeaderChain) SetHead(head uint64, delFn DeleteCallback) {
 
 	// Clear out any stale content from the caches
 	hc.headerCache.Purge()
-	hc.tdCache.Purge()
 	hc.numberCache.Purge()
 
 	if hc.CurrentHeader() == nil {

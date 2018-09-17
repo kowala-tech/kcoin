@@ -76,8 +76,8 @@ test_notifications: dep
 	go test ./... -tags=integration
 
 .PHONY: test_truffle
-test_truffle:
-	cd client/contracts/truffle; npm install; npm run test
+test_truffle: client/contracts/truffle/node_modules
+	cd client/contracts/truffle; npm run test
 
 .PHONY: lint
 lint: all
@@ -94,19 +94,21 @@ bindings:
 	$(MAKE) -j 5 stringer go-bindata gencodec abigen bindings_node_modules
 	go generate ./client/contracts/bindings/...
 
-.PHONY: bindings_node_modules
-bindings_node_modules:
-	cd client/contracts/truffle && npm ci
+.PHONY: install_tools
+install_tools: notifications_dep wallet_backend_dep abigen moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
+
+client/contracts/truffle/node_modules:
+	cd client/contracts/truffle; npm ci
 
 .PHONY: go_generate
-go_generate: notifications_dep wallet_backend_dep bindings_node_modules abigen  moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
+go_generate: client/contracts/truffle/node_modules
 	# force namehash first because the other contracts depend on this libraries.
 	go generate ./client/contracts/bindings/utils/namehash.go
 	go generate ./...
 
 .PHONY: docker_go_generate
 docker_go_generate:
-	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.11 make go_generate
+	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.12 make go_generate
 
 .PHONY: assert_no_changes
 assert_no_changes:

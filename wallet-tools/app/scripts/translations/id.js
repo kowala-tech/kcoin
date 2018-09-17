@@ -495,6 +495,7 @@ MSG_info3                   : 'Cantumkan alasan yang spesifik untuk pesan ini se
 MYWAL_Nick                  : 'Dompet Alias ',
 MYWAL_Address               : 'Alamat Dompet ',
 MYWAL_Bal                   : 'Saldo ',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Edit ',
 MYWAL_View                  : 'Tampilkan ',
 MYWAL_Remove                : 'Hapus ',

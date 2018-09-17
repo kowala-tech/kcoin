@@ -75,7 +75,6 @@ var makeTest = function(tx, rewind) {
     genesis: genesis,
     context: {
       number:     block.number.toString(),
-      difficulty: block.difficulty,
       timestamp:  block.timestamp.toString(),
       gasLimit:   block.gasLimit.toString(),
       miner:      block.miner,
@@ -101,11 +100,10 @@ type callTrace struct {
 }
 
 type callContext struct {
-	Number     math.HexOrDecimal64   `json:"number"`
-	Difficulty *math.HexOrDecimal256 `json:"difficulty"`
-	Time       math.HexOrDecimal64   `json:"timestamp"`
-	GasLimit   math.HexOrDecimal64   `json:"gasLimit"`
-	Miner      common.Address        `json:"miner"`
+	Number   math.HexOrDecimal64 `json:"number"`
+	Time     math.HexOrDecimal64 `json:"timestamp"`
+	GasLimit math.HexOrDecimal64 `json:"gasLimit"`
+	Miner    common.Address      `json:"miner"`
 }
 
 // callTracerTest defines a single test to check the call tracer against.
@@ -155,7 +153,6 @@ func TestCallTracer(t *testing.T) {
 				Coinbase:    test.Context.Miner,
 				BlockNumber: new(big.Int).SetUint64(uint64(test.Context.Number)),
 				Time:        new(big.Int).SetUint64(uint64(test.Context.Time)),
-				Difficulty:  (*big.Int)(test.Context.Difficulty),
 				GasLimit:    uint64(test.Context.GasLimit),
 				GasPrice:    tx.GasPrice(),
 			}

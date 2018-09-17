@@ -1,6 +1,7 @@
 package knode
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
@@ -19,6 +21,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/rawdb"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
 	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/params"
@@ -254,6 +257,66 @@ func (api *PublicTokenAPI) TotalSupply() (*big.Int, error) {
 
 func (api *PublicTokenAPI) MintingFinished() (bool, error) {
 	return api.consensus.Token().MintingFinished()
+}
+
+type PendingMintTransaction struct {
+	Id        *big.Int       `json:"id"`
+	To        common.Address `json:"to",omitempty`
+	Amount    *big.Int       `json:"amount",omitempty`
+	Confirmed bool           `json:"confirmed"`
+}
+
+type PendingMintTransactions []PendingMintTransaction
+
+func (api *PublicTokenAPI) MintList() (ret PendingMintTransactions, err error) {
+
+	if err := api.consensus.MintInit(); err != nil {
+		return ret, err
+	}
+
+	multiSig := api.consensus.MultiSigWalletContract()
+
+	if multiSig == nil {
+		return ret, errors.New("can't get multi sig contract")
+	}
+
+	max, err := multiSig.GetTransactionCount(&bind.CallOpts{}, true, true)
+
+	if err != nil {
+		return ret, err
+	}
+
+	ids, err := multiSig.GetTransactionIds(&bind.CallOpts{}, big.NewInt(0), max, true, true)
+
+	if err != nil {
+		return ret, err
+	}
+
+	mintMethodId := crypto.Keccak256([]byte("mint(address,uint256)"))[:4]
+
+	for _, id := range ids {
+		output, err := multiSig.Transactions(&bind.CallOpts{}, id)
+
+		if err != nil {
+			return ret, err
+		}
+
+		if !bytes.Equal(output.Data[:4], mintMethodId) {
+			continue
+		}
+
+		amount := new(big.Int)
+		amount.SetBytes(output.Data[37:])
+
+		ret = append(ret, PendingMintTransaction{
+			Id:        id,
+			To:        common.BytesToAddress(output.Data[4:36]),
+			Amount:    amount,
+			Confirmed: output.Executed,
+		})
+	}
+
+	return ret, nil
 }
 
 func (api *PublicTokenAPI) getWallet(addr common.Address) (*accounts.Account, accounts.WalletAccount, error) {

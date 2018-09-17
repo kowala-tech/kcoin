@@ -452,6 +452,7 @@ OFFLINE_Step3_Label_1       : 'Illeszd be ide az aláírt tranzakciót a másodi
 MYWAL_Nick                  : 'Tárca Nickname ',
 MYWAL_Address               : 'Tárca Cím ',
 MYWAL_Bal                   : 'Egyenleg ',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Szerkesztés ',
 MYWAL_View                  : 'Nézet ',
 MYWAL_Remove                : 'Eltávolítás ',
