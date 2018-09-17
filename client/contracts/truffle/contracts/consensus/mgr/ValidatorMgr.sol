@@ -57,8 +57,8 @@ contract ValidatorMgr is Pausable, Initializable{
         _;
     }
 
-    modifier onlyValidator {
-        require(isValidator(msg.sender));
+    modifier onlyValidator(address sender) {
+        require(isValidator(sender));
         _;
     }
 
@@ -289,7 +289,7 @@ contract ValidatorMgr is Pausable, Initializable{
     /**
      * @dev deregister Validator
      */
-    function deregisterValidator() public whenNotPaused onlyValidator {
+    function deregisterValidator() public whenNotPaused onlyValidator(msg.sender) {
         _deleteValidator(msg.sender);
     }
 
@@ -342,7 +342,7 @@ contract ValidatorMgr is Pausable, Initializable{
      * @param _from from address
      * @param _value value to send
      */
-    function registerValidator(address _from, uint _value, bytes data) public {
+    function registerValidator(address _from, uint _value) public {
         //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
         // SSTORE problem - expensive
         tkn = TKN(_from, _value);
@@ -352,7 +352,7 @@ contract ValidatorMgr is Pausable, Initializable{
     /**
      * @dev Increase Validator's deposit
      */
-    function _increaseDeposit() private whenNotPaused onlyValidator {
+    function _increaseDeposit() private whenNotPaused onlyValidator(tkn.sender) {
         Deposit currentDeposit = validatorRegistry[tkn.sender].deposits[validatorRegistry[tkn.sender].deposits.length - 1];
         currentDeposit.amount = currentDeposit.amount + tkn.value;
     }
@@ -362,7 +362,7 @@ contract ValidatorMgr is Pausable, Initializable{
      * @param _from from address
      * @param _value value to send
      */
-    function increaseDeposit(address _from, uint _value, bytes data) public {
+    function increaseDeposit(address _from, uint _value) public {
         //uint32 u = uint32(_data[3]) + (uint32(_data[2]) << 8) + (uint32(_data[1]) << 16) + (uint32(_data[0]) << 24);
         // SSTORE problem - expensive
         tkn = TKN(_from, _value);

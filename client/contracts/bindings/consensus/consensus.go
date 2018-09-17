@@ -27,8 +27,8 @@ import (
 //go:generate ../../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
 
 const (
-	RegistrationHandler = "registerValidator(address,uint256,bytes)"
-	DepositHandler      = "increaseDeposit(address,uint256,bytes)"
+	RegistrationHandler = "registerValidator(address,uint256)"
+	DepositHandler      = "increaseDeposit(address,uint256)"
 )
 
 var DefaultData = []byte("not_zero")
