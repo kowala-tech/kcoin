@@ -330,10 +330,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := kowala.StartValidating(); err != nil {
 			utils.Fatalf("Failed to start validation: %v", err)
 		}
-	}
-
-	// Start self update service if enabled
-	if ctx.GlobalBool(utils.SelfUpdateEnabledFlag.Name) {
+	} else if ctx.GlobalBool(utils.SelfUpdateEnabledFlag.Name) {
+		// Start self update service if enabled and not in validation mode
 		repository := ctx.GlobalString(utils.VersionRepository.Name)
 		selfUpdater := version.NewSelfUpdater(repository, stack, getConsoleLogger())
 		go selfUpdater.Run()
@@ -342,7 +340,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 func mustBeLatestMajorVersion(ctx *cli.Context) {
 	repository := ctx.GlobalString(utils.VersionRepository.Name)
-	finder := version.NewFinder(repository)
+	finder := version.NewFinder(version.NewS3AssetRepository(repository))
 	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
 	if err != nil {
 		log.Error("Error parsing current version, exiting checker", "err", err)

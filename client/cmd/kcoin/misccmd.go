@@ -71,7 +71,7 @@ func versionPrint(ctx *cli.Context) error {
 
 func printLatestIfAvailable(ctx *cli.Context) {
 	repository := ctx.GlobalString(utils.VersionRepository.Name)
-	finder := version.NewFinder(repository)
+	finder := version.NewFinder(version.NewS3AssetRepository(repository))
 	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
 	if err == nil {
 		fmt.Println("Latest Version Available:", latest.Semver().String())
