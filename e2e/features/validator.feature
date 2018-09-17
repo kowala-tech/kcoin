@@ -42,7 +42,7 @@ Feature: Joining network as a validator
     And the token balance of A should be 10 mTokens
 
   Scenario:
-    Given: I wait for my node to be synced
+    Given I wait for my node to be synced
     When I start validator with 5 mTokens deposit
     And I wait for my node to be synced
     And crash my node validator
