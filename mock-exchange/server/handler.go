@@ -41,7 +41,7 @@ func (h *FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type GetRatesHandler struct {
 	cache       *cache.Cache
-	transformer *exchange.Transformer
+	transformer exchange.Transformer
 }
 
 func (h *GetRatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -63,5 +63,17 @@ func (h *GetRatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("%v", req)
+	tResp, err := h.transformer.Transform(req.(app.Request))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		jsonErrResp, err := json.Marshal(ErrorResponse{Error: "Please, call fetch before."})
+		if err != nil {
+			fmt.Printf("Error: %s", err)
+		}
+
+		w.Write(jsonErrResp)
+		return
+	}
+
+	w.Write([]byte(tResp))
 }
