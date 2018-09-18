@@ -1,16 +1,16 @@
-package extares
+package exrates
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/kowala-tech/kcoin/mock-exchange/app"
 
-	"github.com/kowala-tech/kcoin/mock-exchange/server"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWeCanTransformADataRequestToExrateResponse(t *testing.T) {
-	requestToTransform := server.FetchDataRequest{
-		Sell: []server.Value{
+	requestToTransform := app.Request{
+		Sell: []app.RateValue{
 			{
 				Amount: 0.358,
 				Rate:   6326.83689418,
@@ -20,7 +20,7 @@ func TestWeCanTransformADataRequestToExrateResponse(t *testing.T) {
 				Rate:   6326.83689421,
 			},
 		},
-		Buy: []server.Value{
+		Buy: []app.RateValue{
 			{
 				Amount: 0.0021,
 				Rate:   6214.3034165,

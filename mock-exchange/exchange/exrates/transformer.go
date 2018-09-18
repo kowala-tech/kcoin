@@ -1,15 +1,15 @@
-package extares
+package exrates
 
 import (
 	"encoding/json"
 
-	"github.com/kowala-tech/kcoin/mock-exchange/server"
+	"github.com/kowala-tech/kcoin/mock-exchange/app"
 )
 
 type Transformer struct {
 }
 
-func (*Transformer) Transform(request server.FetchDataRequest) (string, error) {
+func (*Transformer) Transform(request app.Request) (string, error) {
 	response := Response{
 		Sell: make([]Value, 0),
 		Buy:  make([]Value, 0),

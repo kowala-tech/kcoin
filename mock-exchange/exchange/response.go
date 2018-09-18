@@ -1,7 +1,7 @@
 package exchange
 
-import "github.com/kowala-tech/kcoin/mock-exchange/server"
+import "github.com/kowala-tech/kcoin/mock-exchange/app"
 
 type Transformer interface {
-	Transform(request server.FetchDataRequest) string
+	Transform(request app.Request) string
 }

@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/kowala-tech/kcoin/mock-exchange/app"
+
+	"github.com/kowala-tech/kcoin/mock-exchange/exchange"
+
 	"github.com/patrickmn/go-cache"
 )
 
-type FetchDataRequest struct {
-	Sell []Value `json:"sell"`
-	Buy  []Value `json:"buy"`
-}
-
-type Value struct {
-	Amount float64
-	Rate   float64
+type ErrorResponse struct {
+	Error string `json:"error"`
 }
 
 type FetchDataHandler struct {
@@ -29,7 +27,7 @@ func (h *FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	request := FetchDataRequest{}
+	request := app.Request{}
 	err := json.NewDecoder(r.Body).Decode(&request)
 
 	if err != nil {
@@ -38,5 +36,32 @@ func (h *FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.cache.Set("last-request", request, cache.NoExpiration)
+	h.cache.Set(app.CacheRequestKey, request, cache.NoExpiration)
+}
+
+type GetRatesHandler struct {
+	cache       *cache.Cache
+	transformer *exchange.Transformer
+}
+
+func (h *GetRatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	req, ok := h.cache.Get(app.CacheRequestKey)
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+
+		jsonErrResp, err := json.Marshal(ErrorResponse{Error: "Please, call fetch before."})
+		if err != nil {
+			fmt.Printf("Error: %s", err)
+		}
+
+		w.Write(jsonErrResp)
+		return
+	}
+
+	fmt.Printf("%v", req)
 }
