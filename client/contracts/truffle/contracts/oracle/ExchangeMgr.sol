@@ -23,20 +23,35 @@ contract ExchangeMgr is Pausable, Initializable {
 
     mapping (string => Exchange) private exchangeRegistry;
 
-    // whitelist contains the list of whitelisted exchanges
     string[] public whitelist;
 
     struct Exchange {
         uint index;
-        bool isExchanged;
+        bool isExchange;
+        bool isWhitelisted;
     }
     
     /*
      * Modifiers
      */
     
-    modifier onlyNewCandidate(string exchange) {
-        require(!isExchange(exchange));
+    modifier onlyNewCandidate(string name) {
+        require(!isExchange(name), "exchange already exists");
+        _;
+    }
+
+    modifier onlyExchange(string name) {
+        require(isExchange(name), "given name is not an exchange");
+        _;
+    }
+
+    modifier onlyWhitelistedExchange(string name) {
+        require(isWhitelistedExchange(name), "given name is not a whitelisted exchange");
+        _;
+    }
+
+    modifier onlyBlacklistedExchange(string name) {
+        require(isBlacklistedExchange(name), "given name is not a blacklisted exchange");
         _;
     }
     
@@ -44,66 +59,87 @@ contract ExchangeMgr is Pausable, Initializable {
      * Public functions
      */
 
-    function addExchange(string name) public onlyOwner {
+    /**
+     * @dev Adds and whitelists an exchange.
+     * @param name exchange name.
+     */
+    function addExchange(string name) public whenNotPaused onlyOwner onlyNewCandidate(name) {
         Exchange exchange = exchangeRegistry[name];
         exchange.isExchange = true;
         emit Addition(name);
         whitelistExchange(name);
     }
 
-    function removeExchange(string exchange) public onlyOwner {
-        delete oracleRegistry[exchange];
-        emit Removal(exchange);
-    }
-
-    function whitelistExchange(string exchange) public onlyExchange(exchange) {
-        exchange.index = whitelist.push(exchange) - 1;
-        emit Whitelisted(exchange);
+    /**
+     * @dev Removes an exchange.
+     * @param name exchange name.
+     */
+    function removeExchange(string name) public whenNotPaused onlyOwner onlyExchange(name) {
+        delete exchangeRegistry[name];
+        emit Removal(name);
     }
 
     /**
-     * @dev Blacklists given exchange
-     * @param identity Address of an Oracle.
+     * @dev Whitelists an exchange.
+     * @param name exchange name.
      */
-    function blacklistExchange(string name) public onlyExchange(exchange) {
-        Exchange exchange = exchangeRegistry[name];
-        uint rowToDelete = exchange.index;
-        exchange.index = 0;
-
-         // replace the deprecated record with the last element
-        address keyToMove = whitelist[whitelist.length-1];
-        whitelistl[rowToDelete] = keyToMove;
-        exchangeRegistry[keyToMove].index = rowToDelete;
-        whitelist.length--;    
-        emit Blacklisted(exchange);
+    function whitelistExchange(string name) public whenNotPaused onlyOwner onlyBlacklistedExchange(name) {
+        exchangeRegistry[name].index = whitelist.push(name) - 1;
+        exchangeRegistry[name].isWhitelisted = true;
+        emit Whitelisted(name);
     }
 
+    /**
+     * @dev Blacklists an exchange.
+     * @param name exchange name.
+     */
+    function blacklistExchange(string name) public whenNotPaused onlyOwner onlyWhitelistedExchange(name) {
+        Exchange exchange = exchangeRegistry[name];
+        uint rowToDelete = exchange.index;
+        exchange.isWhitelisted = false;
+
+         // replace the deprecated record with the last element
+        string keyToMove = whitelist[whitelist.length-1];
+        whitelist[rowToDelete] = keyToMove;
+        exchangeRegistry[keyToMove].index = rowToDelete;
+        whitelist.length--;    
+        emit Blacklisted(name);
+    }
+
+    /**
+     * @dev checks whether the given name is an whitelisted exchange or not
+     * @param name exchange name.
+     */
     function isExchange(string name) public view returns (bool isIndeed) {
         return exchangeRegistry[name].isExchange;
     }
 
-    function isWhitelistedExchange(string name) public view returns (bool isIndeed) {
-        return oracleRegistry[name].index > 0;
-    }
-
     /**
-     * @dev Checks if given exchange name is whitelisted
-     * @param identity Address of an Oracle.
+     * @dev checks whether the given name is an whitelisted exchange or not
+     * @param name exchange name.
      */
-    function isWhitelistedExchange(string exchange) public view returns (bool isIndeed) {
-        return exchangeRegistry[exchange].isWhitelisted;
+    function isWhitelistedExchange(string name) public view returns (bool isIndeed) {
+        return isExchange(name) && exchangeRegistry[name].isWhitelisted;
     }
 
     /**
-     * @dev Get whitelisted exchange count
+     * @dev checks whether the given name is a blacklisted exchange or not
+     * @param name exchange name.
+     */
+    function isBlacklistedExchange(string name) public view returns (bool isIndeed) {
+        return isExchange(name) && !exchangeRegistry[name].isWhitelisted;
+    }
+
+    /**
+     * @dev get whitelisted exchange count
      */
     function getWhitelistedExchangeCount() public view returns (uint count) {
-        return oraclePool.length;
+        return whitelist.length;
     }
 
     /**
-     * @dev Get whitelisted exchange information
-     * @param index index of an Oracle to check.
+     * @dev get whitelisted exchange information
+     * @param index index of a given exchange in the whitelist
      */
     function getWhitelistedExchangeAtIndex(uint index) public view returns (string name) {
         return whitelist[index];

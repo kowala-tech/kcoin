@@ -10,10 +10,13 @@ import (
 )
 
 //go:generate solc --allow-paths ., --abi --bin --overwrite --libraries NameHash:0x3b058a1a62E59D185618f64BeBBAF3C52bf099E0 -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ zos-lib/=../../truffle/node_modules/zos-lib/ ../../truffle/contracts/oracle/OracleMgr.sol
-//go:generate ../../../build/bin/abigen -abi build/OracleMgr.abi -bin build/OracleMgr.bin -pkg oracle -type OracleMgr -out ./gen_oracle_manager.go
+//go:generate ../../../build/bin/abigen -abi build/OracleMgr.abi -bin build/OracleMgr.bin -pkg oracle -type OracleMgr -out ./gen_oracle.go
+//go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ zos-lib/=../../truffle/node_modules/zos-lib/ ../../truffle/contracts/oracle/ExchangeMgr.sol
+//go:generate ../../../build/bin/abigen -abi build/ExchangeMgr.abi -bin build/ExchangeMgr.bin -pkg oracle -type ExchangeMgr -out ./gen_exchange.go
 
 type Manager struct {
 	*OracleMgrSession
+	*ExchangeMgrSession
 }
 
 // @TODO(rgeraldes) - temporary method
