@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/kowala-tech/kcoin/mock-exchange/app"
-
 	"github.com/kowala-tech/kcoin/mock-exchange/exchange"
-
 	"github.com/patrickmn/go-cache"
 )
 
@@ -23,20 +23,21 @@ type FetchDataHandler struct {
 func (h *FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		logrus.Warn("msg", "invalid method called")
 		return
 	}
 	defer r.Body.Close()
 
 	request := app.Request{}
 	err := json.NewDecoder(r.Body).Decode(&request)
-
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Printf("Error %s", err)
+		logrus.Warn("msg", fmt.Sprintf("error creating request: %s", err))
 		return
 	}
 
 	h.cache.Set(app.CacheRequestKey, request, cache.NoExpiration)
+	logrus.Info("msg", "saved request in cache")
 }
 
 type GetRatesHandler struct {
@@ -56,24 +57,29 @@ func (h *GetRatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		jsonErrResp, err := json.Marshal(ErrorResponse{Error: "Please, call fetch before."})
 		if err != nil {
-			fmt.Printf("Error: %s", err)
+			logrus.Warn("msg", "error creating error response")
+			return
 		}
 
 		w.Write(jsonErrResp)
+		logrus.Info("msg", "get rates api method was called before fetching mocked info")
 		return
 	}
 
 	tResp, err := h.transformer.Transform(req.(app.Request))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		jsonErrResp, err := json.Marshal(ErrorResponse{Error: "Please, call fetch before."})
+		jsonErrResp, err := json.Marshal(ErrorResponse{Error: "There was a problem getting data from request."})
 		if err != nil {
-			fmt.Printf("Error: %s", err)
+			logrus.Warn("msg", "error creating error response")
+			return
 		}
 
 		w.Write(jsonErrResp)
+		logrus.Warn("msg", "there was a problem when trying to decodify data from cache")
 		return
 	}
 
 	w.Write([]byte(tResp))
+	logrus.Info("msg", "request for data rates accomplished")
 }
