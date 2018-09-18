@@ -101,7 +101,7 @@ func latest(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return updater.Update()
+	return updater.UpdateMajor()
 }
 
 func getConsoleLogger() log.Logger {
