@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/kowala-tech/kcoin/mock-exchange/app"
 	"github.com/kowala-tech/kcoin/mock-exchange/exchange"
 	"github.com/patrickmn/go-cache"
+	"github.com/sirupsen/logrus"
 )
 
 type ErrorResponse struct {
@@ -22,8 +21,12 @@ type FetchDataHandler struct {
 
 func (h *FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		logrus.WithFields(logrus.Fields{
+			"call":   "fetch",
+			"method": r.Method,
+		}).Warn("invalid method called")
+
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		logrus.Warn("msg", "invalid method called")
 		return
 	}
 	defer r.Body.Close()
@@ -31,13 +34,20 @@ func (h *FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	request := app.Request{}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"call":    "fetch",
+			"request": request,
+		}).Warn(fmt.Sprintf("error creating request: %s", err))
+
 		w.WriteHeader(http.StatusBadRequest)
-		logrus.Warn("msg", fmt.Sprintf("error creating request: %s", err))
 		return
 	}
 
 	h.cache.Set(app.CacheRequestKey, request, cache.NoExpiration)
-	logrus.Info("msg", "saved request in cache")
+	logrus.WithFields(logrus.Fields{
+		"call":    "fetch",
+		"request": request,
+	}).Info("saved request in cache")
 }
 
 type GetRatesHandler struct {
