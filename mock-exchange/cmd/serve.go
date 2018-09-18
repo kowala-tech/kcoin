@@ -29,7 +29,7 @@ var serveCmd = &cobra.Command{
 	Long: `For now it only fakes data comming from Exrates, in the future
 	it will support other services.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		s, err := server.New(server.DefaultConfig())
+		s, err := server.New(server.DefaultConfig(), server.GetRouter())
 		if err != nil {
 			fmt.Printf("Error creating s: %s", err)
 			os.Exit(1)

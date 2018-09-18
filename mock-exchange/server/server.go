@@ -29,7 +29,7 @@ type server struct {
 func (s *server) Start() error {
 	s.httpServ = &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.config.listenPort),
-		Handler: nil,
+		Handler: s.router,
 	}
 
 	return s.httpServ.ListenAndServe()
