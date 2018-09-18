@@ -161,7 +161,7 @@ ifdef DRONE_TAG
 	mkdir -p client/build/bin/tags/$(DRONE_TAG)
 	cd client/build/bin && for f in kcoin-*; do \
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
-		version=$$(echo $$f | awk '{ gsub("kcoin", "tags/$(DRONE_TAG)/kcoin"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_TAG)"); print }');\
 		cp $$f $$release;\
 		mv $$f $$version;\
 	done;
