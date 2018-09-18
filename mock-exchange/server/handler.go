@@ -4,17 +4,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/patrickmn/go-cache"
 )
 
 type FetchDataRequest struct {
-	From string `json:"from"`
-	To   string `json:"to"`
+	Sell []Value `json:"sell"`
+	Buy  []Value `json:"buy"`
+}
+
+type Value struct {
+	Amount float64
+	Rate   float64
 }
 
 type FetchDataHandler struct {
+	cache *cache.Cache
 }
 
-func (*FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -30,5 +38,5 @@ func (*FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("%v", request)
+	h.cache.Set("last-request", request, cache.NoExpiration)
 }
