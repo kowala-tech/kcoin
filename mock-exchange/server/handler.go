@@ -57,22 +57,33 @@ type GetRatesHandler struct {
 
 func (h *GetRatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
+		logrus.WithFields(logrus.Fields{
+			"call":   "getRate",
+			"method": r.Method,
+		}).Warn("invalid method called")
+
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	req, ok := h.cache.Get(app.CacheRequestKey)
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
 
 		jsonErrResp, err := json.Marshal(ErrorResponse{Error: "Please, call fetch before."})
 		if err != nil {
-			logrus.Warn("msg", "error creating error response")
+			logrus.WithFields(logrus.Fields{
+				"call":  "getRate",
+				"error": err,
+			}).Warn("error creating error response")
 			return
 		}
 
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write(jsonErrResp)
-		logrus.Info("msg", "get rates api method was called before fetching mocked info")
+
+		logrus.WithFields(logrus.Fields{
+			"call": "getRate",
+		}).Info("msg", "get rates api method was called before fetching mocked info")
 		return
 	}
 
@@ -81,15 +92,24 @@ func (h *GetRatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		jsonErrResp, err := json.Marshal(ErrorResponse{Error: "There was a problem getting data from request."})
 		if err != nil {
-			logrus.Warn("msg", "error creating error response")
+			logrus.WithFields(logrus.Fields{
+				"call":  "getRate",
+				"error": err,
+			}).Warn("error creating error response")
 			return
 		}
 
 		w.Write(jsonErrResp)
-		logrus.Warn("msg", "there was a problem when trying to decodify data from cache")
+		logrus.WithFields(logrus.Fields{
+			"call":  "getRate",
+			"error": err,
+		}).Warn("msg", "there was a problem when trying to decodify data from cache")
 		return
 	}
 
 	w.Write([]byte(tResp))
-	logrus.Info("msg", "request for data rates accomplished")
+	logrus.WithFields(logrus.Fields{
+		"call": "getRate",
+		"data": tResp,
+	}).Info("msg", "request for data rates accomplished")
 }
