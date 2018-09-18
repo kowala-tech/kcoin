@@ -11,6 +11,7 @@ client/build/bin
 e2e
 notifications/vendor
 wallet-backend/vendor
+mock-exchange/vendor
 
 *.mp4
 *.ppm
