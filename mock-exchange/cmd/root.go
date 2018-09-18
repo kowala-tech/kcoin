@@ -13,13 +13,9 @@ var cfgFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "mock-exchange",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "A mock server for oracle exchange data.",
+	Long: `Run a mocked server that returns currency rates at your will, use it for
+	controlled oracle tests.`,
 }
 
 func Execute() {
