@@ -16,7 +16,6 @@ import (
 
 type Manager struct {
 	*OracleMgrSession
-	*ExchangeMgrSession
 }
 
 // @TODO(rgeraldes) - temporary method
