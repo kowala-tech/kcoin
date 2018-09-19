@@ -53,10 +53,10 @@ type Receipt struct {
 	Logs              []*Log `json:"logs"              gencodec:"required"`
 
 	// Implementation fields (don't reorder!)
-	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
+	TxHash          common.Hash    `json:"transactionHash"  gencodec:"required"`
 	ContractAddress common.Address `json:"contractAddress"`
-	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
-	StabilityFee    *big.Int       `json:"stabilityFee" gencodec:"required"`
+	GasUsed         uint64         `json:"gasUsed"          gencodec:"required"`
+	StabilityFee    *big.Int       `json:"stabilityFee"     gencodec:"required"`
 }
 
 type receiptMarshaling struct {
