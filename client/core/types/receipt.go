@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"unsafe"
 
 	"github.com/kowala-tech/kcoin/client/common"
@@ -55,6 +56,7 @@ type Receipt struct {
 	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
 	ContractAddress common.Address `json:"contractAddress"`
 	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
+	StabilityFee    *big.Int       `json:"stabilityFee" gencodec:"required"`
 }
 
 type receiptMarshaling struct {
