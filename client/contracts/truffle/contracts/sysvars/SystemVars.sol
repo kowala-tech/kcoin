@@ -21,6 +21,7 @@ contract SystemVars is Initializable{
     uint public currencyPrice;
     uint public currencySupply;
     uint public mintedReward;
+    uint public stabilityLevel;
 
     /**
      * Constructor.
