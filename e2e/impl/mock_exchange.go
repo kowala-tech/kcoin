@@ -88,29 +88,19 @@ func getRateRequestFromTableData(accountsDataTable *gherkin.DataTable) (*app.Req
 		if i != 0 {
 			typeVal := row.Cells[0].Value
 			if typeVal == "buy" {
-				amountVal, err := strconv.ParseFloat(row.Cells[1].Value, 64)
+				amount, rate, err := extractAmountAndRateFromRow(row)
 				if err != nil {
-					return nil, fmt.Errorf("invalid amount data in table for exchange mock server: %s", err)
+					return nil, err
 				}
 
-				rateVal, err := strconv.ParseFloat(row.Cells[2].Value, 64)
-				if err != nil {
-					return nil, fmt.Errorf("invalid rate data in table for exchange mock server: %s", err)
-				}
-
-				request.Buy = append(request.Buy, app.RateValue{Amount: amountVal, Rate: rateVal})
+				request.Buy = append(request.Buy, app.RateValue{Amount: amount, Rate: rate})
 			} else if typeVal == "sell" {
-				amountVal, err := strconv.ParseFloat(row.Cells[1].Value, 64)
+				amount, rate, err := extractAmountAndRateFromRow(row)
 				if err != nil {
-					return nil, fmt.Errorf("invalid amount data in table for exchange mock server: %s", err)
+					return nil, err
 				}
 
-				rateVal, err := strconv.ParseFloat(row.Cells[2].Value, 64)
-				if err != nil {
-					return nil, fmt.Errorf("invalid rate data in table for exchange mock server: %s", err)
-				}
-
-				request.Sell = append(request.Sell, app.RateValue{Amount: amountVal, Rate: rateVal})
+				request.Sell = append(request.Sell, app.RateValue{Amount: amount, Rate: rate})
 			} else {
 				continue
 			}
@@ -118,6 +108,20 @@ func getRateRequestFromTableData(accountsDataTable *gherkin.DataTable) (*app.Req
 	}
 
 	return &request, nil
+}
+
+func extractAmountAndRateFromRow(row *gherkin.TableRow) (amount float64, rate float64, err error) {
+	amount, err = strconv.ParseFloat(row.Cells[1].Value, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid amount data in table for exchange mock server: %s", err)
+	}
+
+	rate, err = strconv.ParseFloat(row.Cells[2].Value, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid rate data in table for exchange mock server: %s", err)
+	}
+
+	return amount, rate, nil
 }
 
 func (ctx *MockExchangeContext) ICanQueryTheExchangeAndGetMockedResponse(exchangeName string, jsonResponse *gherkin.DocString) error {
