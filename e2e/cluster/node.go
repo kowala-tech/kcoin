@@ -160,13 +160,13 @@ func MockExchangeSpec(nodeSuffix string) (*NodeSpec, error) {
 	id := NodeID("mock-exchange-" + nodeSuffix)
 	spec := &NodeSpec{
 		ID:    id,
-		Image: "kowalatech/mock-exchange:dev",
+		Image: "kowalatech/mock_exchange:dev",
 		Cmd: []string{
 			"serve",
 		},
-		Env:         []string{},
+		Env: []string{},
 		PortMapping: map[int32]int32{
-			9080:8080,
+			9080: 8080,
 		},
 	}
 	return spec, nil

@@ -205,7 +205,7 @@ build_docs_with_docker:
 ## Dev docker images
 
 .PHONY: dev_docker_images
-dev_docker_images: dev_explorer_docker_image dev_explorer_sync_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_faucet_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_transactions_publisher_docker_image dev_backend_api_docker_image
+dev_docker_images: dev_explorer_docker_image dev_explorer_sync_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_faucet_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_transactions_publisher_docker_image dev_backend_api_docker_image dev_mock_exchange_docker_image
 
 .PHONY: dev_kusd_docker_image
 dev_kusd_docker_image:
@@ -222,6 +222,10 @@ dev_faucet_docker_image:
 .PHONY: dev_wallet_backend_docker_image
 dev_wallet_backend_docker_image:
 	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/wallet_backend:dev -f wallet-backend/Dockerfile .
+
+.PHONY: dev_mock_exchange_docker_image
+dev_mock_exchange_docker_image:
+	docker build --build-arg CI --build-arg DRONE --build-arg DRONE_REPO --build-arg DRONE_COMMIT_SHA --build-arg DRONE_COMMIT_BRANCH --build-arg DRONE_TAG --build-arg DRONE_BUILD_NUMBER --build-arg DRONE_BUILD_EVENT -t kowalatech/mock_exchange:dev -f mock-exchange/Dockerfile .
 
 .PHONY: dev_transactions_persistance_docker_image
 dev_transactions_persistance_docker_image:
