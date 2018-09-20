@@ -184,10 +184,11 @@ func (ctx *WalletBackendContext) TheWalletBackendNodeIsRunning() error {
 			return err
 		}
 		if block.Cmp(big.NewInt(0)) == 0 {
-			return errors.New("Block height is still 0")
+			return errors.New("block height is still 0")
 		}
 		return nil
 	})
+
 	if err != nil {
 		return err
 	}

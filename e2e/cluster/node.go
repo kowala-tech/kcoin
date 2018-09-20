@@ -156,6 +156,22 @@ func RedisSpec(nodeSuffix string) (*NodeSpec, error) {
 	return spec, nil
 }
 
+func MockExchangeSpec(nodeSuffix string) (*NodeSpec, error) {
+	id := NodeID("mock-exchange-" + nodeSuffix)
+	spec := &NodeSpec{
+		ID:    id,
+		Image: "kowalatech/mock-exchange:dev",
+		Cmd: []string{
+			"serve",
+		},
+		Env:         []string{},
+		PortMapping: map[int32]int32{
+			9080:8080,
+		},
+	}
+	return spec, nil
+}
+
 func TransactionsPublisherSpec(nodeSuffix, nsqdAddr, redisAddr, rpcAddr string) (*NodeSpec, error) {
 	id := NodeID("transactions-publisher-" + nodeSuffix)
 	spec := &NodeSpec{
