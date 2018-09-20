@@ -257,8 +257,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
 	setupLogging(ctx)
 
-	// make use client runs latest major version if not in testnet mode, need to check pre Start node!
-	if !ctx.GlobalBool(utils.TestnetFlag.Name) {
+	// make use client runs latest major version if not in testnet mode or devnet, need to check pre Start node!
+	if !isTestnetOrDevnet(ctx) {
 		mustBeLatestMajorVersion(ctx)
 	}
 
@@ -336,6 +336,18 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		selfUpdater := version.NewSelfUpdater(repository, stack, getConsoleLogger())
 		go selfUpdater.Run()
 	}
+}
+
+func isTestnetOrDevnet(ctx *cli.Context) bool {
+	return isTestnet(ctx) || isDevnet(ctx)
+}
+
+func isTestnet(ctx *cli.Context) bool {
+	return ctx.GlobalBool(utils.TestnetFlag.Name)
+}
+
+func isDevnet(ctx *cli.Context) bool {
+	return ctx.GlobalBool(utils.DevModeFlag.Name)
 }
 
 func mustBeLatestMajorVersion(ctx *cli.Context) {
