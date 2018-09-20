@@ -14,6 +14,7 @@ import (
 
 type Updater interface {
 	Update() error
+	UpdateMajor() error
 }
 
 type updater struct {
@@ -32,7 +33,7 @@ func NewUpdater(repository string, logger log.Logger) (*updater, error) {
 	return &updater{
 		repository: repository,
 		current:    current,
-		finder:     NewFinder(repository),
+		finder:     NewFinder(NewS3AssetRepository(repository)),
 		logger:     logger,
 	}, nil
 }
@@ -50,23 +51,42 @@ func (u *updater) latestAssetForMajor() (Asset, error) {
 	return u.finder.LatestForMajor(runtime.GOOS, runtime.GOARCH, u.current.Major)
 }
 
+func (u *updater) latestAsset() (Asset, error) {
+	return u.finder.Latest(runtime.GOOS, runtime.GOARCH)
+}
+
 func (u *updater) Update() error {
 	latestAsset, err := u.latestAssetForMajor()
 	if err != nil {
 		return err
 	}
+	return u.update(latestAsset)
+}
 
-	if !latestAsset.Semver().GT(u.current) {
+func (u *updater) UpdateMajor() error {
+	latestAsset, err := u.latestAsset()
+	if err != nil {
+		return err
+	}
+	return u.update(latestAsset)
+}
+
+func (u *updater) update(to Asset) error {
+	if !to.Semver().GT(u.current) {
 		// up to date
 		u.logger.Info("Nothing to do binary is at latest version")
 		return nil
 	}
 
-	if err := u.download(latestAsset); err != nil {
+	if err := u.download(to); err != nil {
 		return err
 	}
 
-	if err := u.unzip(latestAsset); err != nil {
+	if err := u.unzip(to); err != nil {
+		return err
+	}
+
+	if err := u.deleteLocal(to); err != nil {
 		return err
 	}
 
@@ -74,7 +94,7 @@ func (u *updater) Update() error {
 		return err
 	}
 
-	if err := u.replaceNewBinary(latestAsset); err != nil {
+	if err := u.replaceNewBinary(to); err != nil {
 		return err
 	}
 
@@ -141,6 +161,10 @@ func (u *updater) unzip(asset Asset) error {
 	}
 
 	return nil
+}
+
+func (u *updater) deleteLocal(asset Asset) error {
+	return os.Remove(asset.Path())
 }
 
 func (u *updater) backupCurrentBinary() error {
