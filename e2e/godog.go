@@ -25,6 +25,7 @@ func FeatureContext(opts *FeatureContextOpts) {
 	validationCtx := impl.NewValidationContext(context)
 	walletBackendCtx := impl.NewWalletBackendContext(context)
 	faucetCtx := impl.NewFaucetContext(context)
+	mockExchangeCtx := impl.NewMockExchangeContext(context)
 
 	opts.suite.BeforeFeature(func(ft *gherkin.Feature) {
 		context.Name = getFeatureName(ft.Name)
@@ -38,6 +39,7 @@ func FeatureContext(opts *FeatureContextOpts) {
 		validationCtx.Reset()
 		walletBackendCtx.Reset()
 		faucetCtx.Reset()
+		mockExchangeCtx.Reset()
 	})
 
 	// Genesis and cluster creation
@@ -111,6 +113,10 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^the faucet node is running using the account (\w+) and password '(\w+)'$`, faucetCtx.TheFaucetNodeIsRunning)
 	opts.suite.Step(`^I fetch (.+) on the faucet$`, faucetCtx.IFetchOnTheFaucet)
 	opts.suite.Step(`^the status code is (\d+)$`, faucetCtx.TheStatusCodeIs)
+
+	// Mock exchange
+	opts.suite.Step(`^the mocked exchange is running$`, mockExchangeCtx.TheMockExchangeIsRunning)
+	opts.suite.Step(`^I fetch the exchange mock with data$`, mockExchangeCtx.IFetchTheExchangeWithMockData)
 }
 
 func getFeatureName(feature string) string {
