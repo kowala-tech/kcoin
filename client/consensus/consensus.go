@@ -2,6 +2,8 @@
 package consensus
 
 import (
+	"math/big"
+
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
@@ -61,7 +63,7 @@ type Engine interface {
 	// and assembles the final block.
 	// Note: The block header and state database might be updated to reflect any
 	// consensus rules that happen at finalization (e.g. block rewards).
-	Finalize(chain ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error)
+	Finalize(chain ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt, stabilityFees *big.Int) (*types.Block, error)
 
 	// Seal generates a new block for the given input block with the local miner's
 	// seal place on top.

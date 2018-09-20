@@ -12,7 +12,13 @@ import (
 )
 
 var (
-	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
+	errInsufficientBalanceForGas          = errors.New("insufficient balance to pay for gas")
+	errInsufficientBalanceForStabilityFee = errors.New("insufficient balance to pay for the stability fee")
+)
+
+var (
+	stabilityIncrease              = new(big.Int).SetUint64(109)
+	stabilityFeeTxAmountPercentage = new(big.Int).SetUint64(params.StabilityFeeTxAmountPercentage)
 )
 
 /*
@@ -22,26 +28,29 @@ A state transition is a change made when a transaction is applied to the current
 The state transitioning model does all all the necessary work to work out a valid new state root.
 
 1) Nonce handling
-2) Pre pay gas
-3) Create a new state object if the recipient is \0*32
-4) Value transfer
+2) Pre pay max stability fee
+3) Pre pay gas
+4) Create a new state object if the recipient is \0*32
+5) Value transfer
 == If contract creation ==
-  4a) Attempt to run transaction data
-  4b) If valid, use result as code for the new state object
+  5a) Attempt to run transaction data
+  5b) If valid, use result as code for the new state object
 == end ==
-5) Run Script section
-6) Derive new state root
+6) Run Script section
+7) Derive new state root
 */
 type StateTransition struct {
-	gp         *GasPool
-	msg        Message
-	gas        uint64
-	gasPrice   *big.Int
-	initialGas uint64
-	value      *big.Int
-	data       []byte
-	state      vm.StateDB
-	evm        *vm.EVM
+	gp                  *GasPool
+	msg                 Message
+	gas                 uint64
+	gasPrice            *big.Int
+	initialGas          uint64
+	initialStabilityFee *big.Int
+	stabilityFee *big.Int
+	value               *big.Int
+	data                []byte
+	state               vm.StateDB
+	evm                 *vm.EVM
 }
 
 // Message represents a message sent to a contract.
@@ -102,6 +111,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		value:    msg.Value(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
+		initialStabilityFee: common.Big0,
 	}
 }
 
@@ -112,7 +122,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
-func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
+func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, *big.Int, bool, error) {
 	return NewStateTransition(evm, msg, gp).TransitionDb()
 }
 
@@ -148,7 +158,7 @@ func (st *StateTransition) buyGas() error {
 	return nil
 }
 
-func (st *StateTransition) preCheck() error {
+func (st *StateTransition) preCheck(intrinsicGas uint64) error {
 	// Make sure this transaction's nonce is correct.
 	if st.msg.CheckNonce() {
 		nonce := st.state.GetNonce(st.msg.From())
@@ -158,27 +168,43 @@ func (st *StateTransition) preCheck() error {
 			return ErrNonceTooLow
 		}
 	}
+
+	// prepay stability fee if it applies
+	if st.evm.StabilityLevel != 0 {
+		computeFee := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+		if stabilityFee := calcStabilityFee(computeFee, st.evm.StabilityLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
+			if st.state.GetBalance(st.msg.From()).Cmp(stabilityFee) < 0 {
+				return errInsufficientBalanceForStabilityFee
+			}
+			st.state.SubBalance(st.msg.From(), stabilityFee)
+			st.initialStabilityFee = stabilityFee
+		}
+	}
+
 	return st.buyGas()
 }
 
 // TransitionDb will transition the state by applying the current message and
 // returning the result including the the used gas. It returns an error if it
 // failed. An error indicates a consensus issue.
-func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bool, err error) {
-	if err = st.preCheck(); err != nil {
-		return
-	}
+func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, stabilityFee *big.Int, failed bool, err error) {
 	msg := st.msg
-	sender := vm.AccountRef(msg.From())
 	contractCreation := msg.To() == nil
 
-	// Pay intrinsic gas
+	// intrinsic gas
 	gas, err := IntrinsicGas(st.data, contractCreation, true)
 	if err != nil {
-		return nil, 0, false, err
+		return nil, 0, common.Big0, false, err
 	}
+
+	if err = st.preCheck(gas); err != nil {
+		return
+	}
+
+	sender := vm.AccountRef(msg.From())
+
 	if err = st.useGas(gas); err != nil {
-		return nil, 0, false, err
+		return nil, 0, common.Big0, false, err
 	}
 
 	var (
@@ -201,13 +227,43 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
 		if vmerr == vm.ErrInsufficientBalance {
-			return nil, 0, false, vmerr
+			return nil, 0, common.Big0, false, vmerr
 		}
 	}
-	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
-	return ret, st.gasUsed(), vmerr != nil, err
+	st.refundGas()
+	
+	computeFees := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+	
+	// by default the miner collects the final compute fees
+	minerReward := computeFees
+	
+	// stabily fee enabled
+	if st.initialStabilityFee.Cmp(common.Big0) > 0 {
+		// calculate the final stability fee and refund the extra.
+		gasLeft := st.gas > 0
+		if gasLeft {
+			st.calcAndrefundStabilityFee(computeFees)
+		}
+
+		// reward the miner if there's value left after
+		// paying the stability fee with the compute fee 
+		minerReward = new(big.Int).Sub(computeFees, st.stabilityFee)	
+	} 
+	
+	if minerReward.Cmp(common.Big0) > 0 {
+		st.state.AddBalance(st.evm.Coinbase, minerReward)
+	}
+	
+	return ret, st.gasUsed(), st.stabilityFee, vmerr != nil, err
+}
+
+func (st *StateTransition) calcAndrefundStabilityFee(finalComputeFee *big.Int) {
+	computeFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+	if stabilityFee := calcStabilityFee(computeFee, st.evm.StabilityLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
+		st.state.AddBalance(st.msg.From(), new(big.Int).Sub(st.initialStabilityFee, stabilityFee))
+		st.stabilityFee = stabilityFee
+	}
 }
 
 func (st *StateTransition) refundGas() {
@@ -230,4 +286,26 @@ func (st *StateTransition) refundGas() {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
+}
+
+// calcStabilityFee returns the stability fee given a compute fee, stability level and tx amount.
+func calcStabilityFee(computeFee *big.Int, stabilityLevel uint64, txAmount *big.Int) *big.Int {
+	if stabilityLevel == 0 {
+		return common.Big0
+	}
+
+	if txAmount.Cmp(common.Big0) == 0 {
+		return computeFee
+	}
+
+	// fee = compute fee  * 1.09^r(b)
+	lvl := new(big.Int).SetUint64(stabilityLevel)
+	mul := new(big.Int).Exp(stabilityIncrease, lvl, nil)
+	div := new(big.Int).Exp(common.Big100, lvl, nil)
+	fee := new(big.Int).Div(new(big.Int).Mul(computeFee, mul), div)
+
+	// percentage of tx amount
+	maxFee := new(big.Int).Div(new(big.Int).Mul(txAmount, stabilityFeeTxAmountPercentage), common.Big100)
+
+	return common.Min(fee, maxFee)
 }

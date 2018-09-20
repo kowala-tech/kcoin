@@ -1,6 +1,8 @@
 package konsensus
 
 import (
+	"math/big"
+
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/core/state"
@@ -38,7 +40,7 @@ func (fk *FakeKonsensus) Prepare(chain consensus.ChainReader, header *types.Head
 	return nil
 }
 
-func (fk *FakeKonsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
+func (fk *FakeKonsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt, stabilityFees *big.Int) (*types.Block, error) {
 	header.Root = state.IntermediateRoot(true)
 
 	// Header seems complete, assemble into a block and return

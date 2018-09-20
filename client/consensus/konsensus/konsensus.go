@@ -47,7 +47,7 @@ func (kss *Konsensus) Prepare(chain consensus.ChainReader, header *types.Header)
 	return nil
 }
 
-func (kss *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt) (*types.Block, error) {
+func (kss *Konsensus) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, commit *types.Commit, receipts []*types.Receipt, stabilityFees *big.Int) (*types.Block, error) {
 	if err := AccumulateRewards(state, header); err != nil {
 		return nil, err
 	}
