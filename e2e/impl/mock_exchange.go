@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -117,4 +118,26 @@ func getRateRequestFromTableData(accountsDataTable *gherkin.DataTable) (*app.Req
 	}
 
 	return &request, nil
+}
+
+func (ctx *MockExchangeContext) ICanQueryTheExchangeAndGetMockedResponse(exchangeName string, jsonResponse *gherkin.DocString) error {
+	expectedResponse := jsonResponse.Content
+
+	response, err := http.Get(
+		fmt.Sprintf("http://%s:9080/api/%s/get", ctx.globalCtx.nodeRunner.HostIP(), exchangeName),
+	)
+	if err != nil {
+		return fmt.Errorf("there was a problem getting mocked data from server: %s", err)
+	}
+
+	responseBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return fmt.Errorf("error reading body from request: %s", err)
+	}
+
+	if expectedResponse != string(responseBytes) {
+		return fmt.Errorf("failed to assert equal response when getting mocked data: \nExpected: %s\nGot: %s", expectedResponse, responseBytes)
+	}
+
+	return nil
 }

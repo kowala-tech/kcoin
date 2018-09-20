@@ -13,3 +13,7 @@ Feature: Using the mocked exchange backend
       | buy  | 1.2    | 2.9  |
       | sell | 1      | 2    |
       | sell | 1.35   | 3.4  |
+    Then I can query the exchange "exrates" and get mocked response
+      """
+{"SELL":[{"amount":1,"rate":2},{"amount":1.35,"rate":3.4}],"BUY":[{"amount":1,"rate":2},{"amount":1.2,"rate":2.9}]}
+      """

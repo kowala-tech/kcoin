@@ -117,6 +117,8 @@ func FeatureContext(opts *FeatureContextOpts) {
 	// Mock exchange
 	opts.suite.Step(`^the mocked exchange is running$`, mockExchangeCtx.TheMockExchangeIsRunning)
 	opts.suite.Step(`^I fetch the exchange mock with data:$`, mockExchangeCtx.IFetchTheExchangeWithMockData)
+	opts.suite.Step(`^I can query the exchange "([^"]*)" and get mocked response$`, mockExchangeCtx.ICanQueryTheExchangeAndGetMockedResponse)
+
 }
 
 func getFeatureName(feature string) string {
