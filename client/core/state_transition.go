@@ -112,6 +112,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		data:     msg.Data(),
 		state:    evm.StateDB,
 		initialStabilityFee: common.Big0,
+		stabilityFee: common.Big0,
 	}
 }
 
