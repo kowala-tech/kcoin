@@ -235,26 +235,16 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, stability
 	st.refundGas()
 	
 	computeFees := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-	
-	// by default the miner collects the final compute fees
-	minerReward := computeFees
-	
+
 	// stabily fee enabled
 	if st.initialStabilityFee.Cmp(common.Big0) > 0 {
 		// calculate the final stability fee and refund the extra.
-		gasLeft := st.gas > 0
-		if gasLeft {
+		if st.gas > 0 {
 			st.calcAndrefundStabilityFee(computeFees)
 		}
-
-		// reward the miner if there's value left after
-		// paying the stability fee with the compute fee 
-		minerReward = new(big.Int).Sub(computeFees, st.stabilityFee)	
 	} 
 	
-	if minerReward.Cmp(common.Big0) > 0 {
-		st.state.AddBalance(st.evm.Coinbase, minerReward)
-	}
+	st.state.AddBalance(st.evm.Coinbase, computeFees)
 	
 	return ret, st.gasUsed(), st.stabilityFee, vmerr != nil, err
 }
