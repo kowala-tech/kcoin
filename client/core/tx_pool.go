@@ -576,8 +576,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNonceTooLow
 	}
 	// Transactor should have enough funds to cover the costs
-	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+	// cost == V + GP * GL + SF
+	if pool.currentState.GetBalance(from).Cmp(tx.Cost(poo.currentState.GetState(params.StabilizationLevelAddr, storageaddr).Big().Uint64())) < 0 {
 		return ErrInsufficientFunds
 	}
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, true)
