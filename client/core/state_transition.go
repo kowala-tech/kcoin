@@ -238,7 +238,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, stability
 
 	// stabily fee enabled
 	if st.initialStabilityFee.Cmp(common.Big0) > 0 {
-		// calculate the final stability fee and refund the extra.
+		// calculate the final stability fee and refund the remaining value.
 		if st.gas > 0 {
 			st.calcAndrefundStabilityFee(computeFees)
 		}
