@@ -5,6 +5,7 @@ package types
 import (
 	"encoding/json"
 	"errors"
+	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
@@ -20,9 +21,10 @@ func (r Receipt) MarshalJSON() ([]byte, error) {
 		CumulativeGasUsed hexutil.Uint64 `json:"cumulativeGasUsed" gencodec:"required"`
 		Bloom             Bloom          `json:"logsBloom"         gencodec:"required"`
 		Logs              []*Log         `json:"logs"              gencodec:"required"`
-		TxHash            common.Hash    `json:"transactionHash" gencodec:"required"`
+		TxHash            common.Hash    `json:"transactionHash"  gencodec:"required"`
 		ContractAddress   common.Address `json:"contractAddress"`
-		GasUsed           hexutil.Uint64 `json:"gasUsed" gencodec:"required"`
+		GasUsed           hexutil.Uint64 `json:"gasUsed"          gencodec:"required"`
+		StabilityFee      *big.Int       `json:"stabilityFee"     gencodec:"required"`
 	}
 	var enc Receipt
 	enc.PostState = r.PostState
@@ -33,6 +35,7 @@ func (r Receipt) MarshalJSON() ([]byte, error) {
 	enc.TxHash = r.TxHash
 	enc.ContractAddress = r.ContractAddress
 	enc.GasUsed = hexutil.Uint64(r.GasUsed)
+	enc.StabilityFee = r.StabilityFee
 	return json.Marshal(&enc)
 }
 
@@ -44,9 +47,10 @@ func (r *Receipt) UnmarshalJSON(input []byte) error {
 		CumulativeGasUsed *hexutil.Uint64 `json:"cumulativeGasUsed" gencodec:"required"`
 		Bloom             *Bloom          `json:"logsBloom"         gencodec:"required"`
 		Logs              []*Log          `json:"logs"              gencodec:"required"`
-		TxHash            *common.Hash    `json:"transactionHash" gencodec:"required"`
+		TxHash            *common.Hash    `json:"transactionHash"  gencodec:"required"`
 		ContractAddress   *common.Address `json:"contractAddress"`
-		GasUsed           *hexutil.Uint64 `json:"gasUsed" gencodec:"required"`
+		GasUsed           *hexutil.Uint64 `json:"gasUsed"          gencodec:"required"`
+		StabilityFee      *big.Int        `json:"stabilityFee"     gencodec:"required"`
 	}
 	var dec Receipt
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -81,5 +85,9 @@ func (r *Receipt) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'gasUsed' for Receipt")
 	}
 	r.GasUsed = uint64(*dec.GasUsed)
+	if dec.StabilityFee == nil {
+		return errors.New("missing required field 'stabilityFee' for Receipt")
+	}
+	r.StabilityFee = dec.StabilityFee
 	return nil
 }
