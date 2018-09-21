@@ -10,6 +10,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
+	"github.com/kowala-tech/kcoin/client/core/stability"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/rlp"
 )
@@ -266,11 +267,12 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	return cpy, nil
 }
 
-// Cost returns amount + gasprice * gaslimit.
+// Cost returns amount + gasprice * gaslimit + stability fee.
 func (tx *Transaction) Cost(stabilizationLevel uint64) *big.Int {
-	total := new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
+	computeFee := new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
+	stabilityFee := stability.CalcFee(computeFee, stabilizationLevel, tx.data.Amount)
+	total := new(big.Int).Add(computeFee, stabilityFee)
 	total.Add(total, tx.data.Amount)
-	total.Add(total, )
 	return total
 }
 

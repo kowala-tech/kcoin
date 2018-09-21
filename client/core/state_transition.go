@@ -7,6 +7,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/vm"
+	"github.com/kowala-tech/kcoin/client/core/stability"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 )
@@ -14,11 +15,6 @@ import (
 var (
 	errInsufficientBalanceForGas          = errors.New("insufficient balance to pay for gas")
 	errInsufficientBalanceForStabilityFee = errors.New("insufficient balance to pay for the stability fee")
-)
-
-var (
-	stabilityIncrease              = new(big.Int).SetUint64(109)
-	stabilityTxPercentage = new(big.Int).SetUint64(params.StabilityFeeTxPercentage)
 )
 
 /*
@@ -173,7 +169,7 @@ func (st *StateTransition) preCheck(intrinsicGas uint64) error {
 	// prepay stability fee if it applies
 	if st.evm.StabilizationLevel != 0 {
 		computeFee := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
-		if stabilityFee := calcStabilityFee(computeFee, st.evm.StabilizationLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
+		if stabilityFee := stability.CalcFee(computeFee, st.evm.StabilizationLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
 			if st.state.GetBalance(st.msg.From()).Cmp(stabilityFee) < 0 {
 				return errInsufficientBalanceForStabilityFee
 			}
@@ -251,7 +247,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, stability
 
 func (st *StateTransition) calcAndrefundStabilityFee(finalComputeFee *big.Int) {
 	computeFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-	if stabilityFee := calcStabilityFee(computeFee, st.evm.StabilizationLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
+	if stabilityFee := stability.CalcFee(computeFee, st.evm.StabilizationLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
 		st.state.AddBalance(st.msg.From(), new(big.Int).Sub(st.initialStabilityFee, stabilityFee))
 		st.stabilityFee = stabilityFee
 	}
@@ -279,24 +275,3 @@ func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
 }
 
-// calcStabilityFee returns the stability fee given a compute fee, stability level and tx amount.
-func calcStabilityFee(computeFee *big.Int, stabilizationLevel uint64, txAmount *big.Int) *big.Int {
-	if stabilizationLevel == 0 {
-		return common.Big0
-	}
-
-	if txAmount.Cmp(common.Big0) == 0 {
-		return computeFee
-	}
-
-	// fee = compute fee  * 1.09^r(b)
-	lvl := new(big.Int).SetUint64(stabilizationLevel)
-	mul := new(big.Int).Exp(stabilityIncrease, lvl, nil)
-	div := new(big.Int).Exp(common.Big100, lvl, nil)
-	fee := new(big.Int).Div(new(big.Int).Mul(computeFee, mul), div)
-
-	// percentage of tx amount
-	maxFee := new(big.Int).Div(new(big.Int).Mul(txAmount, stabilityTxPercentage), common.Big100)
-
-	return common.Min(fee, maxFee)
-}

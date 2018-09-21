@@ -1,4 +1,4 @@
-package core
+package stability
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCalcStabilityFee(t *testing.T) {
+func TestCalcFee(t *testing.T) {
 	testCases := []struct {
 		computeFee           *big.Int
 		stabilityLevel       uint64
@@ -42,14 +42,14 @@ func TestCalcStabilityFee(t *testing.T) {
 		},
 		{
 			computeFee:           common.Big3,
-			stabilityLevel:       2,
+			stabilityLevel:       4,
 			txAmount:             common.Big256,
 			expectedStabilityFee: new(big.Int).SetUint64(4),
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("compute fee %#x stability level %d tx amount %#x expected stability fee %#x", tc.computeFee, tc.stabilityLevel, tc.txAmount, tc.expectedStabilityFee), func(t *testing.T) {
-			assert.Equal(t, tc.expectedStabilityFee, calcStabilityFee(tc.computeFee, tc.stabilityLevel, tc.txAmount))
+			assert.Equal(t, tc.expectedStabilityFee, CalcFee(tc.computeFee, tc.stabilityLevel, tc.txAmount))
 		})
 	}
 }
