@@ -44,7 +44,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	var (
 		receipts types.Receipts
 		usedGas  = new(uint64)
-		cumulativeStabilityFees = new(big.Int)
+		accruedStabilityFees = new(big.Int)
 		header   = block.Header()
 		allLogs  []*types.Log
 		gp       = new(GasPool).AddGas(block.GasLimit())
@@ -53,7 +53,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, stabilityIncrease, gp, statedb, header, tx, usedGas, cumulativeStabilityFees, cfg)
+		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, usedGas, cfg)
 		if err != nil {
 			log.Debug("failed StateProcessor.Process", "data", spew.Sdump(
 				header.Number,
@@ -62,15 +62,18 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 				header.TxHash,
 				header.ValidatorsHash,
 				header.LastCommitHash,
-				tx, usedGas, cumulativeStabilityFees, allLogs))
+				tx, usedGas, accruedStabilityFees, allLogs))
 
 			return nil, nil, 0, err
 		}
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
+
+		// @TODO use this method or have a accruedStabilityFee in the receipt?
+		accruedStabilityFees.Add(accruedStabilityFees, receipt.StabilityFee)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.LastCommit(), receipts, cumulativeStabilityFees)
+	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.LastCommit(), receipts, accruedStabilityFees)
 
 	return receipts, allLogs, *usedGas, nil
 }
@@ -79,13 +82,14 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, stabilityLevel uint64, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cumulativeStabilityFees *big.Int, cfg vm.Config) (*types.Receipt, uint64, error) {
+func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, uint64, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
 	if err != nil {
 		return nil, 0, err
 	}
 	// Create a new context to be used in the EVM environment
-	context := NewEVMContext(msg, header, bc, author, stabilityLevel)
+	var storageaddr common.Hash
+	context := NewEVMContext(msg, header, bc, author, statedb.GetState(params.StabilizationLevelAddr, storageaddr).Big().Uint64())
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
@@ -99,7 +103,6 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	statedb.Finalise(true)
 
 	*usedGas += gas
-	cumulativeStabilityFees.Add(cumulativeStabilityFees, stabilityFee)
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing wether the root touch-delete accounts.

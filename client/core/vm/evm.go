@@ -58,7 +58,7 @@ type Context struct {
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
 
 	// System information
-	StabilityLevel uint64
+	StabilizationLevel uint64
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides

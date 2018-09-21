@@ -65,5 +65,5 @@ const (
 	PreCommitDeltaDuration uint64 = 25
 	BlockTime              uint64 = 1000
 
-	StabilityFeeTxAmountPercentage uint64 = 2
+	StabilityFeeTxPercentage uint64 = 2
 )

@@ -18,7 +18,7 @@ var (
 
 var (
 	stabilityIncrease              = new(big.Int).SetUint64(109)
-	stabilityFeeTxAmountPercentage = new(big.Int).SetUint64(params.StabilityFeeTxAmountPercentage)
+	stabilityTxPercentage = new(big.Int).SetUint64(params.StabilityFeeTxPercentage)
 )
 
 /*
@@ -28,7 +28,7 @@ A state transition is a change made when a transaction is applied to the current
 The state transitioning model does all all the necessary work to work out a valid new state root.
 
 1) Nonce handling
-2) Pre pay max stability fee
+2) Pre pay stability fee
 3) Pre pay gas
 4) Create a new state object if the recipient is \0*32
 5) Value transfer
@@ -170,9 +170,9 @@ func (st *StateTransition) preCheck(intrinsicGas uint64) error {
 	}
 
 	// prepay stability fee if it applies
-	if st.evm.StabilityLevel != 0 {
+	if st.evm.StabilizationLevel != 0 {
 		computeFee := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
-		if stabilityFee := calcStabilityFee(computeFee, st.evm.StabilityLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
+		if stabilityFee := calcStabilityFee(computeFee, st.evm.StabilizationLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
 			if st.state.GetBalance(st.msg.From()).Cmp(stabilityFee) < 0 {
 				return errInsufficientBalanceForStabilityFee
 			}
@@ -260,7 +260,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, stability
 
 func (st *StateTransition) calcAndrefundStabilityFee(finalComputeFee *big.Int) {
 	computeFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-	if stabilityFee := calcStabilityFee(computeFee, st.evm.StabilityLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
+	if stabilityFee := calcStabilityFee(computeFee, st.evm.StabilizationLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
 		st.state.AddBalance(st.msg.From(), new(big.Int).Sub(st.initialStabilityFee, stabilityFee))
 		st.stabilityFee = stabilityFee
 	}
@@ -289,8 +289,8 @@ func (st *StateTransition) gasUsed() uint64 {
 }
 
 // calcStabilityFee returns the stability fee given a compute fee, stability level and tx amount.
-func calcStabilityFee(computeFee *big.Int, stabilityLevel uint64, txAmount *big.Int) *big.Int {
-	if stabilityLevel == 0 {
+func calcStabilityFee(computeFee *big.Int, stabilizationLevel uint64, txAmount *big.Int) *big.Int {
+	if stabilizationLevel == 0 {
 		return common.Big0
 	}
 
@@ -299,13 +299,13 @@ func calcStabilityFee(computeFee *big.Int, stabilityLevel uint64, txAmount *big.
 	}
 
 	// fee = compute fee  * 1.09^r(b)
-	lvl := new(big.Int).SetUint64(stabilityLevel)
+	lvl := new(big.Int).SetUint64(stabilizationLevel)
 	mul := new(big.Int).Exp(stabilityIncrease, lvl, nil)
 	div := new(big.Int).Exp(common.Big100, lvl, nil)
 	fee := new(big.Int).Div(new(big.Int).Mul(computeFee, mul), div)
 
 	// percentage of tx amount
-	maxFee := new(big.Int).Div(new(big.Int).Mul(txAmount, stabilityFeeTxAmountPercentage), common.Big100)
+	maxFee := new(big.Int).Div(new(big.Int).Mul(txAmount, stabilityTxPercentage), common.Big100)
 
 	return common.Min(fee, maxFee)
 }

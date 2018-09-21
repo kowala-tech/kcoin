@@ -20,7 +20,7 @@ type ChainContext interface {
 }
 
 // NewEVMContext creates a new context for use in the EVM.
-func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address, stabilityLevel uint64) vm.Context {
+func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address, stabilizationLevel uint64) vm.Context {
 	// If we don't have an explicit author (i.e. not mining), extract from the header
 	var beneficiary common.Address
 	if author == nil {
@@ -38,7 +38,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		Time:           new(big.Int).Set(header.Time),
 		GasLimit:       header.GasLimit,
 		GasPrice:       new(big.Int).Set(msg.GasPrice()),
-		StabilityLevel: stabilityLevel,
+		StabilizationLevel: stabilizationLevel,
 	}
 }
 

@@ -327,7 +327,7 @@ func (val *validator) AddVote(vote *types.Vote) error {
 }
 
 func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) *big.Int {
-	cumulativeStabilityFees := new(big.Int)
+	accruedStabilityFees := new(big.Int).SetUint64(0)
 	gp := new(core.GasPool).AddGas(val.header.GasLimit)
 
 	var coalescedLogs []*types.Log
@@ -367,7 +367,7 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
-			cumulativeStabilityFee.Add(cumulativeStabilityFee, stabilityFee)
+			accruedStabilityFees.Add(accruedStabilityFees, stabilityFee)
 			val.tcount++
 			txs.Shift()
 
@@ -377,8 +377,6 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
 			txs.Shift()
 		}
-
-		return cumulativeStabilityFee
 	}
 
 	if len(coalescedLogs) > 0 || val.tcount > 0 {
@@ -399,6 +397,8 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 			}
 		}(cpy, val.tcount)
 	}
+
+	return accruedStabilityFees
 }
 
 func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log, *big.Int) {
@@ -407,7 +407,7 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 	receipt, _, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
 	if err != nil {
 		val.state.RevertToSnapshot(snap)
-		return err, nil
+		return err, nil, nil
 	}
 	val.txs = append(val.txs, tx)
 	val.receipts = append(val.receipts, receipt)
