@@ -115,7 +115,8 @@ func (b *KowalaAPIBackend) GetEVM(ctx context.Context, msg core.Message, state *
 	state.SetBalance(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
 
-	context := core.NewEVMContext(msg, header, b.kcoin.BlockChain(), nil)
+	var storageaddr common.Hash
+	context := core.NewEVMContext(msg, header, b.kcoin.BlockChain(), nil, state.GetState(params.StabilizationLevelAddr, storageaddr).Big().Uint64())
 	return vm.NewEVM(context, state, b.kcoin.chainConfig, vmCfg), vmError, nil
 }
 
