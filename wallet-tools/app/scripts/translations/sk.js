@@ -455,6 +455,7 @@ OFFLINE_Step3_Label_1       : 'Paste the signed transaction from Step 2 here and
 MYWAL_Nick                  : 'Wallet Nickname ',
 MYWAL_Address               : 'Wallet Address ',
 MYWAL_Bal                   : 'Balance ',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Edit ',
 MYWAL_View                  : 'View ',
 MYWAL_Remove                : 'Remove ',

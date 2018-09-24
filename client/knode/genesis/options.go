@@ -44,11 +44,22 @@ var (
 
 type Options struct {
 	Network           string
+	BlockNumber       uint64
+	SystemVars        *SystemVarsOpts
 	Governance        *GovernanceOpts
 	Consensus         *ConsensusOpts
+	StabilityContract *StabilityContractOpts
 	DataFeedSystem    *DataFeedSystemOpts
 	PrefundedAccounts []PrefundedAccount
 	ExtraData         string
+}
+
+type StabilityContractOpts struct {
+	MinDeposit uint64
+}
+
+type SystemVarsOpts struct {
+	InitialPrice float64
 }
 
 type TokenHolder struct {
@@ -119,6 +130,18 @@ type validOracleMgrOpts struct {
 	owner            common.Address
 }
 
+type validSystemVarsOpts struct {
+	initialPrice  *big.Int
+	initialSupply *big.Int
+	owner         common.Address
+}
+
+type validStabilityContractOpts struct {
+	minDeposit     *big.Int
+	systemVarsAddr common.Address
+	owner          common.Address
+}
+
 type validTokenHolder struct {
 	address common.Address
 	balance *big.Int
@@ -146,12 +169,15 @@ type validPrefundedAccount struct {
 
 type validGenesisOptions struct {
 	network           string
+	blockNumber       uint64
 	consensusEngine   string
 	prefundedAccounts []*validPrefundedAccount
 	multiSig          *validMultiSigOpts
 	validatorMgr      *validValidatorMgrOpts
 	oracleMgr         *validOracleMgrOpts
 	miningToken       *validMiningTokenOpts
+	sysvars           *validSystemVarsOpts
+	stability         *validStabilityContractOpts
 	ExtraData         string
 }
 
@@ -168,6 +194,10 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			return nil, err
 		}
 	}
+
+	// sysvars
+	initialPrice := new(big.Int)
+	new(big.Float).Mul(new(big.Float).SetFloat64(options.SystemVars.InitialPrice), big.NewFloat(params.Kcoin)).Int(initialPrice)
 
 	// governance
 	multiSigCreator, err := getAddress(options.Governance.Origin)
@@ -204,6 +234,9 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		})
 	}
 
+	// stability contract
+	minDeposit := new(big.Int).Mul(new(big.Int).SetUint64(options.StabilityContract.MinDeposit), big.NewInt(params.Kcoin))
+
 	// data feed system
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
 
@@ -224,14 +257,19 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 	}
 
 	// prefund accounts
-	validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
+	mintedAmount, validPrefundedAccounts, err := mapPrefundedAccounts(options.PrefundedAccounts)
 	if err != nil {
 		return nil, err
 	}
 
 	return &validGenesisOptions{
 		network:         network,
+		blockNumber:     options.BlockNumber,
 		consensusEngine: consensusEngine,
+		sysvars: &validSystemVarsOpts{
+			initialPrice:  initialPrice,
+			initialSupply: mintedAmount,
+		},
 		multiSig: &validMultiSigOpts{
 			multiSigCreator:  multiSigCreator,
 			multiSigOwners:   multiSigOwners,
@@ -253,6 +291,9 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 			cap:      cap,
 			decimals: decimals,
 			holders:  holders,
+		},
+		stability: &validStabilityContractOpts{
+			minDeposit: minDeposit,
 		},
 		prefundedAccounts: validPrefundedAccounts,
 		ExtraData:         options.ExtraData,
@@ -305,16 +346,18 @@ func mapWalletAddress(a string) (*common.Address, error) {
 	return &address, nil
 }
 
-func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount, error) {
+func mapPrefundedAccounts(accounts []PrefundedAccount) (*big.Int, []*validPrefundedAccount, error) {
 	var validAccounts []*validPrefundedAccount
 
+	mintedAmount := new(big.Int)
 	for _, a := range accounts {
 		address, err := mapWalletAddress(a.Address)
 		if err != nil {
-			return nil, ErrInvalidAddressInPrefundedAccounts
+			return nil, nil, ErrInvalidAddressInPrefundedAccounts
 		}
 
 		balance := new(big.Int).Mul(new(big.Int).SetUint64(a.Balance), new(big.Int).SetUint64(params.Kcoin))
+		mintedAmount.Add(mintedAmount, balance)
 
 		validAccount := &validPrefundedAccount{
 			accountAddress: address,
@@ -324,5 +367,5 @@ func mapPrefundedAccounts(accounts []PrefundedAccount) ([]*validPrefundedAccount
 		validAccounts = append(validAccounts, validAccount)
 	}
 
-	return validAccounts, nil
+	return mintedAmount, validAccounts, nil
 }

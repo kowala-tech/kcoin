@@ -40,7 +40,7 @@ func (ctx *FaucetContext) TheFaucetNodeIsRunning(account, password string) error
 		return err
 	}
 
-	if err := ctx.globalCtx.nodeRunner.Run(spec, ctx.globalCtx.GetScenarioNumber()); err != nil {
+	if err := ctx.globalCtx.nodeRunner.Run(spec); err != nil {
 		return err
 	}
 

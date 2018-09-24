@@ -11,8 +11,6 @@ import (
 
 	"gopkg.in/urfave/cli.v1"
 
-	"path/filepath"
-
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
 	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/node"
@@ -101,8 +99,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	}
 
 	// Apply flags.
-	utils.SetNodeConfig(ctx, &cfg.Node)
-	cfg.Node.DataDir = getPathBasedOnCurrency(cfg)
+	utils.SetNodeConfig(ctx, &cfg.Node, &cfg.Kowala)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
@@ -113,10 +110,6 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	}
 
 	return stack, cfg
-}
-
-func getPathBasedOnCurrency(cfg kcoinConfig) string {
-	return filepath.Join(cfg.Node.DataDir, cfg.Kowala.Currency)
 }
 
 func makeFullNode(ctx *cli.Context) *node.Node {

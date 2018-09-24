@@ -26,12 +26,16 @@ const (
 	chainHeadChanSize = 1024
 )
 
+var (
+	errNotWhitelisted = errors.New("user has not been whitelisted by Kowala")
+)
+
 // Service implements a kowala price reporting deamon that posts
 // local transactions containing the latest average price provided
 // by a set of pre-defined exchanges.
 type Service struct {
 	fullNode  *knode.Kowala
-	oracleMgr oracle.Manager
+	oracleMgr *oracle.Manager
 
 	reportingMu   sync.RWMutex
 	reporting     bool
@@ -43,9 +47,14 @@ type Service struct {
 
 // New returns a price reporting service
 func New(fullNode *knode.Kowala) (*Service, error) {
-	oracleMgr, err := oracle.Binding(knode.NewContractBackend(fullNode.APIBackend()), fullNode.ChainConfig().ChainID)
+	binding, err := oracle.Bind(knode.NewContractBackend(fullNode.APIBackend()), fullNode.ChainConfig().ChainID)
 	if err != nil {
 		return nil, errors.New("failed to create oracle manager binding")
+	}
+
+	oracleMgr, ok := binding.(*oracle.Manager)
+	if !ok {
+		return nil, err
 	}
 
 	return &Service{
@@ -99,10 +108,18 @@ func (s *Service) reportPriceLoop() {
 		case <-s.doneCh:
 			return
 		case head := <-chainHeadCh:
-			submitted, err := s.oracleMgr.HasPriceFrom(s.walletAccount.Account().Address)
+			// fixme: initially, Kowala controls the oracle registration
+			isOracle, err := s.oracleMgr.IsOracle(s.walletAccount.Account().Address)
 			if err != nil {
-				log.Error("")
-				continue
+				return
+			}
+			if !isOracle {
+				return
+			}
+
+			submitted, err := s.oracleMgr.HasSubmittedPrice(s.walletAccount.Account().Address)
+			if err != nil {
+				return
 			}
 			if IsUpdatePeriod(head.Block.Number()) && !submitted {
 				rawTx, err := scraper.GetPrice()
@@ -139,27 +156,32 @@ func (s *Service) StartReporting() error {
 	}
 	s.walletAccount = walletAccount
 
-	scraper.Init()
-
 	isOracle, err := s.oracleMgr.IsOracle(walletAccount.Account().Address)
 	if err != nil {
 		return err
 	}
-
-	// register oracle
 	if !isOracle {
-		tx, err := s.oracleMgr.RegisterOracle(walletAccount)
-		if err != nil {
-			return err
-		}
-		receipt, err := waitMined(context.TODO(), s, tx.Hash())
-		if err != nil {
-			return err
-		}
-		if receipt.Status == types.ReceiptStatusFailed {
-			return errors.New("receipt status: failed")
-		}
+		return errNotWhitelisted
 	}
+	// fixme: initially, Kowala controls the oracle registration
+	/*
+		// register oracle
+		if !isOracle {
+			tx, err := s.oracleMgr.RegisterOracle(walletAccount)
+			if err != nil {
+				return err
+			}
+			receipt, err := waitMined(context.TODO(), s, tx.Hash())
+			if err != nil {
+				return err
+			}
+			if receipt.Status == types.ReceiptStatusFailed {
+				return errors.New("receipt status: failed")
+			}
+		}
+	*/
+
+	scraper.Init()
 
 	go s.reportPriceLoop()
 	s.reporting = true
@@ -171,17 +193,28 @@ func (s *Service) StopReporting() error {
 	s.reportingMu.Lock()
 	defer s.reportingMu.Unlock()
 
-	tx, err := s.oracleMgr.DeregisterOracle(s.walletAccount)
+	isOracle, err := s.oracleMgr.IsOracle(s.walletAccount.Account().Address)
 	if err != nil {
 		return err
 	}
-	receipt, err := waitMined(context.TODO(), s, tx.Hash())
-	if err != nil {
-		return err
+	if !isOracle {
+		return nil
 	}
-	if receipt.Status == types.ReceiptStatusFailed {
-		return errors.New("receipt status: failed")
-	}
+
+	// fixme: initially, Kowala controls the oracle deregistration
+	/*
+		tx, err := s.oracleMgr.DeregisterOracle(s.walletAccount)
+		if err != nil {
+			return err
+		}
+		receipt, err := waitMined(context.TODO(), s, tx.Hash())
+		if err != nil {
+			return err
+		}
+		if receipt.Status == types.ReceiptStatusFailed {
+			return errors.New("receipt status: failed")
+		}
+	*/
 
 	s.doneCh <- struct{}{}
 	scraper.Free()

@@ -39,7 +39,7 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 		"--testnet",
 		"--gasprice", "1",
 		"--networkid", builder.networkId,
-		"--bootnodes", builder.bootnode,
+		"--bootnodesv5", builder.bootnode,
 		"--syncmode", builder.syncMode,
 		"--verbosity", strconv.Itoa(int(builder.logLevel)),
 	}
@@ -81,10 +81,16 @@ func (builder *KcoinNodeBuilder) NodeSpec() *NodeSpec {
 		Cmd:         cmd,
 		Env:         []string{},
 		Files:       files,
-		IsReadyFn:   kcoinIsReadyFn(builder.id),
+		IsReadyFn:   builder.isReadyFn(),
 		PortMapping: portMapping,
 	}
 	return spec
+}
+func (builder *KcoinNodeBuilder) isReadyFn() func(NodeRunner) error {
+	if builder.rpcPort != nil {
+		return rpcIsReadyFn(builder.id, *builder.rpcPort)
+	}
+	return kcoinIsReadyFn(builder.id)
 }
 
 func (builder *KcoinNodeBuilder) WithNetworkId(networkID string) *KcoinNodeBuilder {

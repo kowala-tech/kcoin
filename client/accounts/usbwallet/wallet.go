@@ -531,12 +531,10 @@ func (w *wallet) SignTx(account accounts.Account, tx *types.Transaction, chainID
 	return signed, nil
 }
 
-// @TODO (rgeraldes)
 func (w *wallet) SignProposal(account accounts.Account, proposal *types.Proposal, chainID *big.Int) (*types.Proposal, error) {
 	return nil, nil
 }
 
-// @TODO (rgeraldes)
 func (w *wallet) SignVote(account accounts.Account, vote *types.Vote, chainID *big.Int) (*types.Vote, error) {
 	return nil, nil
 }

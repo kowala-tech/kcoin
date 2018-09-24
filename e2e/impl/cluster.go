@@ -25,14 +25,35 @@ func (ctx *Context) DeleteCluster() error {
 	return ctx.nodeRunner.StopAll()
 }
 
-func (ctx *Context) InitCluster(logsToStdout bool) error {
+func (ctx *Context) GenesisSetMultisigRequiredSignatures(req int) error {
+	ctx.genesisOptions.requiredGovernanceConfirmations = uint64(req)
+	return nil
+}
+
+func (ctx *Context) RunCluster() error {
+	if err := ctx.initCluster(); err != nil {
+		return err
+	}
+
+	if err := ctx.nodeRunner.StopAll(); err != nil {
+		return err
+	}
+
+	if err := ctx.runNodes(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ctx *Context) initCluster() error {
 	var err error
 
 	nodeRunnerOpts := &cluster.NewNodeRunnerOpts{
-		Feature:      ctx.Name,
-		LogsToStdout: logsToStdout,
+		Prefix:       fmt.Sprintf("%v-%03d", ctx.Name, ctx.GetScenarioNumber()),
+		LogsToStdout: ctx.logsToStdout,
 	}
-	if !logsToStdout {
+	if !ctx.logsToStdout {
 		logsDir := "./logs"
 
 		if err := ctx.initLogs(logsDir); err != nil {
@@ -52,18 +73,6 @@ func (ctx *Context) InitCluster(logsToStdout bool) error {
 	if err := ctx.buildGenesis(); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (ctx *Context) RunCluster() error {
-	if err := ctx.nodeRunner.StopAll(); err != nil {
-		return err
-	}
-
-	if err := ctx.runNodes(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -115,7 +124,7 @@ func (ctx *Context) generateAccounts() error {
 	}
 	ctx.mtokensSeederAccount = *mtokensSeederAccount
 
-	ctx.mtokensGovernanceAccounts = append(ctx.mtokensGovernanceAccounts, *mtokensSeederAccount)
+	ctx.mtokensGovernanceAccounts = []accounts.Account{*mtokensSeederAccount}
 	for i := 0; i < 2; i++ {
 		mtokensGovernanceAccount, err := ctx.newAccount()
 		if err != nil {
@@ -155,7 +164,7 @@ func (ctx *Context) runBootnode() error {
 		return err
 	}
 
-	if err := ctx.nodeRunner.Run(bootnode, ctx.GetScenarioNumber()); err != nil {
+	if err := ctx.nodeRunner.Run(bootnode); err != nil {
 		return err
 	}
 	err = common.WaitFor("fetching bootnode enode", 1*time.Second, 20*time.Second, func() error {
@@ -188,7 +197,7 @@ func (ctx *Context) runBootnode() error {
 func (ctx *Context) runGenesisValidator() error {
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.bootnode).
-		WithLogLevel(6).
+		WithLogLevel(4).
 		WithID("genesis-validator-"+ctx.nodeSuffix).
 		WithSyncMode("full").
 		WithNetworkId(ctx.chainID.String()).
@@ -198,7 +207,7 @@ func (ctx *Context) runGenesisValidator() error {
 		WithValidation().
 		NodeSpec()
 
-	if err := ctx.nodeRunner.Run(spec, ctx.GetScenarioNumber()); err != nil {
+	if err := ctx.nodeRunner.Run(spec); err != nil {
 		return err
 	}
 
@@ -221,10 +230,11 @@ func (ctx *Context) runRpc() error {
 		WithGenesis(ctx.genesis).
 		WithCoinbase(ctx.kusdSeederAccount).
 		WithAccount(ctx.AccountsStorage, ctx.kusdSeederAccount).
+		WithAccount(ctx.AccountsStorage, ctx.mtokensSeederAccount).
 		WithRpc(ctx.rpcPort).
 		NodeSpec()
 
-	if err := ctx.nodeRunner.Run(spec, ctx.GetScenarioNumber()); err != nil {
+	if err := ctx.nodeRunner.Run(spec); err != nil {
 		return err
 	}
 
@@ -276,9 +286,14 @@ func (ctx *Context) buildGenesis() error {
 	baseDeposit := uint64(1)
 
 	newGenesis, err := genesis.Generate(genesis.Options{
-		Network: "test",
+		Network:     genesis.TestNetwork,
+		BlockNumber: 0,
+		ExtraData:   "Kowala's first block",
+		SystemVars: &genesis.SystemVarsOpts{
+			InitialPrice: 1,
+		},
 		Consensus: &genesis.ConsensusOpts{
-			Engine:           "konsensus",
+			Engine:           genesis.KonsensusConsensus,
 			MaxNumValidators: 10,
 			FreezePeriod:     5,
 			BaseDeposit:      baseDeposit,
@@ -295,9 +310,12 @@ func (ctx *Context) buildGenesis() error {
 			},
 		},
 		Governance: &genesis.GovernanceOpts{
-			Origin:           "0x259be75d96876f2ada3d202722523e9cd4dd917d",
+			Origin:           "0xFF9DFBD395cD1C4a4F23C16aa8a5c44109Bc17DF",
 			Governors:        ctx.getGovernors(),
-			NumConfirmations: 1,
+			NumConfirmations: ctx.genesisOptions.requiredGovernanceConfirmations,
+		},
+		StabilityContract: &genesis.StabilityContractOpts{
+			MinDeposit: 50,
 		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{
 			MaxNumOracles: 10,

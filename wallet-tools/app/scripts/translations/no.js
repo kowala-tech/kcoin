@@ -537,6 +537,7 @@ SWAP_unlock                 : "Lås opp din lommebok for å sende ETH eller Toke
 MYWAL_Nick                  : 'Lommebok-kallenavn ',
 MYWAL_Address               : 'Lommebok-adresse ',
 MYWAL_Bal                   : 'Saldo ',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Rediger ',
 MYWAL_View                  : 'Se på ',
 MYWAL_Remove                : 'Fjern ',

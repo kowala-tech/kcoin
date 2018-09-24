@@ -53,6 +53,7 @@ var FailureType_name = map[int32]string{
 	11: "Failure_NotInitialized",
 	99: "Failure_FirmwareError",
 }
+
 var FailureType_value = map[string]int32{
 	"Failure_UnexpectedMessage": 1,
 	"Failure_ButtonExpected":    2,
@@ -73,9 +74,11 @@ func (x FailureType) Enum() *FailureType {
 	*p = x
 	return p
 }
+
 func (x FailureType) String() string {
 	return proto.EnumName(FailureType_name, int32(x))
 }
+
 func (x *FailureType) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(FailureType_value, data, "FailureType")
 	if err != nil {
@@ -84,8 +87,9 @@ func (x *FailureType) UnmarshalJSON(data []byte) error {
 	*x = FailureType(value)
 	return nil
 }
+
 func (FailureType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{0}
+	return fileDescriptor_d938547f84707355, []int{0}
 }
 
 // *
@@ -110,6 +114,7 @@ var OutputScriptType_name = map[int32]string{
 	4: "PAYTOWITNESS",
 	5: "PAYTOP2SHWITNESS",
 }
+
 var OutputScriptType_value = map[string]int32{
 	"PAYTOADDRESS":     0,
 	"PAYTOSCRIPTHASH":  1,
@@ -124,9 +129,11 @@ func (x OutputScriptType) Enum() *OutputScriptType {
 	*p = x
 	return p
 }
+
 func (x OutputScriptType) String() string {
 	return proto.EnumName(OutputScriptType_name, int32(x))
 }
+
 func (x *OutputScriptType) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(OutputScriptType_value, data, "OutputScriptType")
 	if err != nil {
@@ -135,8 +142,9 @@ func (x *OutputScriptType) UnmarshalJSON(data []byte) error {
 	*x = OutputScriptType(value)
 	return nil
 }
+
 func (OutputScriptType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{1}
+	return fileDescriptor_d938547f84707355, []int{1}
 }
 
 // *
@@ -159,6 +167,7 @@ var InputScriptType_name = map[int32]string{
 	3: "SPENDWITNESS",
 	4: "SPENDP2SHWITNESS",
 }
+
 var InputScriptType_value = map[string]int32{
 	"SPENDADDRESS":     0,
 	"SPENDMULTISIG":    1,
@@ -172,9 +181,11 @@ func (x InputScriptType) Enum() *InputScriptType {
 	*p = x
 	return p
 }
+
 func (x InputScriptType) String() string {
 	return proto.EnumName(InputScriptType_name, int32(x))
 }
+
 func (x *InputScriptType) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(InputScriptType_value, data, "InputScriptType")
 	if err != nil {
@@ -183,8 +194,9 @@ func (x *InputScriptType) UnmarshalJSON(data []byte) error {
 	*x = InputScriptType(value)
 	return nil
 }
+
 func (InputScriptType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{2}
+	return fileDescriptor_d938547f84707355, []int{2}
 }
 
 // *
@@ -207,6 +219,7 @@ var RequestType_name = map[int32]string{
 	3: "TXFINISHED",
 	4: "TXEXTRADATA",
 }
+
 var RequestType_value = map[string]int32{
 	"TXINPUT":     0,
 	"TXOUTPUT":    1,
@@ -220,9 +233,11 @@ func (x RequestType) Enum() *RequestType {
 	*p = x
 	return p
 }
+
 func (x RequestType) String() string {
 	return proto.EnumName(RequestType_name, int32(x))
 }
+
 func (x *RequestType) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(RequestType_value, data, "RequestType")
 	if err != nil {
@@ -231,8 +246,9 @@ func (x *RequestType) UnmarshalJSON(data []byte) error {
 	*x = RequestType(value)
 	return nil
 }
+
 func (RequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{3}
+	return fileDescriptor_d938547f84707355, []int{3}
 }
 
 // *
@@ -267,6 +283,7 @@ var ButtonRequestType_name = map[int32]string{
 	10: "ButtonRequest_Address",
 	11: "ButtonRequest_PublicKey",
 }
+
 var ButtonRequestType_value = map[string]int32{
 	"ButtonRequest_Other":            1,
 	"ButtonRequest_FeeOverThreshold": 2,
@@ -286,9 +303,11 @@ func (x ButtonRequestType) Enum() *ButtonRequestType {
 	*p = x
 	return p
 }
+
 func (x ButtonRequestType) String() string {
 	return proto.EnumName(ButtonRequestType_name, int32(x))
 }
+
 func (x *ButtonRequestType) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(ButtonRequestType_value, data, "ButtonRequestType")
 	if err != nil {
@@ -297,8 +316,9 @@ func (x *ButtonRequestType) UnmarshalJSON(data []byte) error {
 	*x = ButtonRequestType(value)
 	return nil
 }
+
 func (ButtonRequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{4}
+	return fileDescriptor_d938547f84707355, []int{4}
 }
 
 // *
@@ -317,6 +337,7 @@ var PinMatrixRequestType_name = map[int32]string{
 	2: "PinMatrixRequestType_NewFirst",
 	3: "PinMatrixRequestType_NewSecond",
 }
+
 var PinMatrixRequestType_value = map[string]int32{
 	"PinMatrixRequestType_Current":   1,
 	"PinMatrixRequestType_NewFirst":  2,
@@ -328,9 +349,11 @@ func (x PinMatrixRequestType) Enum() *PinMatrixRequestType {
 	*p = x
 	return p
 }
+
 func (x PinMatrixRequestType) String() string {
 	return proto.EnumName(PinMatrixRequestType_name, int32(x))
 }
+
 func (x *PinMatrixRequestType) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(PinMatrixRequestType_value, data, "PinMatrixRequestType")
 	if err != nil {
@@ -339,8 +362,9 @@ func (x *PinMatrixRequestType) UnmarshalJSON(data []byte) error {
 	*x = PinMatrixRequestType(value)
 	return nil
 }
+
 func (PinMatrixRequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{5}
+	return fileDescriptor_d938547f84707355, []int{5}
 }
 
 // *
@@ -364,6 +388,7 @@ var RecoveryDeviceType_name = map[int32]string{
 	0: "RecoveryDeviceType_ScrambledWords",
 	1: "RecoveryDeviceType_Matrix",
 }
+
 var RecoveryDeviceType_value = map[string]int32{
 	"RecoveryDeviceType_ScrambledWords": 0,
 	"RecoveryDeviceType_Matrix":         1,
@@ -374,9 +399,11 @@ func (x RecoveryDeviceType) Enum() *RecoveryDeviceType {
 	*p = x
 	return p
 }
+
 func (x RecoveryDeviceType) String() string {
 	return proto.EnumName(RecoveryDeviceType_name, int32(x))
 }
+
 func (x *RecoveryDeviceType) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(RecoveryDeviceType_value, data, "RecoveryDeviceType")
 	if err != nil {
@@ -385,8 +412,9 @@ func (x *RecoveryDeviceType) UnmarshalJSON(data []byte) error {
 	*x = RecoveryDeviceType(value)
 	return nil
 }
+
 func (RecoveryDeviceType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{6}
+	return fileDescriptor_d938547f84707355, []int{6}
 }
 
 // *
@@ -405,6 +433,7 @@ var WordRequestType_name = map[int32]string{
 	1: "WordRequestType_Matrix9",
 	2: "WordRequestType_Matrix6",
 }
+
 var WordRequestType_value = map[string]int32{
 	"WordRequestType_Plain":   0,
 	"WordRequestType_Matrix9": 1,
@@ -416,9 +445,11 @@ func (x WordRequestType) Enum() *WordRequestType {
 	*p = x
 	return p
 }
+
 func (x WordRequestType) String() string {
 	return proto.EnumName(WordRequestType_name, int32(x))
 }
+
 func (x *WordRequestType) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(WordRequestType_value, data, "WordRequestType")
 	if err != nil {
@@ -427,8 +458,9 @@ func (x *WordRequestType) UnmarshalJSON(data []byte) error {
 	*x = WordRequestType(value)
 	return nil
 }
+
 func (WordRequestType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{7}
+	return fileDescriptor_d938547f84707355, []int{7}
 }
 
 // *
@@ -454,7 +486,7 @@ func (m *HDNodeType) Reset()         { *m = HDNodeType{} }
 func (m *HDNodeType) String() string { return proto.CompactTextString(m) }
 func (*HDNodeType) ProtoMessage()    {}
 func (*HDNodeType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{0}
+	return fileDescriptor_d938547f84707355, []int{0}
 }
 func (m *HDNodeType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HDNodeType.Unmarshal(m, b)
@@ -528,7 +560,7 @@ func (m *HDNodePathType) Reset()         { *m = HDNodePathType{} }
 func (m *HDNodePathType) String() string { return proto.CompactTextString(m) }
 func (*HDNodePathType) ProtoMessage()    {}
 func (*HDNodePathType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{1}
+	return fileDescriptor_d938547f84707355, []int{1}
 }
 func (m *HDNodePathType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HDNodePathType.Unmarshal(m, b)
@@ -585,7 +617,7 @@ func (m *CoinType) Reset()         { *m = CoinType{} }
 func (m *CoinType) String() string { return proto.CompactTextString(m) }
 func (*CoinType) ProtoMessage()    {}
 func (*CoinType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{2}
+	return fileDescriptor_d938547f84707355, []int{2}
 }
 func (m *CoinType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CoinType.Unmarshal(m, b)
@@ -696,7 +728,7 @@ func (m *MultisigRedeemScriptType) Reset()         { *m = MultisigRedeemScriptTy
 func (m *MultisigRedeemScriptType) String() string { return proto.CompactTextString(m) }
 func (*MultisigRedeemScriptType) ProtoMessage()    {}
 func (*MultisigRedeemScriptType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{3}
+	return fileDescriptor_d938547f84707355, []int{3}
 }
 func (m *MultisigRedeemScriptType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MultisigRedeemScriptType.Unmarshal(m, b)
@@ -759,7 +791,7 @@ func (m *TxInputType) Reset()         { *m = TxInputType{} }
 func (m *TxInputType) String() string { return proto.CompactTextString(m) }
 func (*TxInputType) ProtoMessage()    {}
 func (*TxInputType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{4}
+	return fileDescriptor_d938547f84707355, []int{4}
 }
 func (m *TxInputType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxInputType.Unmarshal(m, b)
@@ -858,7 +890,7 @@ func (m *TxOutputType) Reset()         { *m = TxOutputType{} }
 func (m *TxOutputType) String() string { return proto.CompactTextString(m) }
 func (*TxOutputType) ProtoMessage()    {}
 func (*TxOutputType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{5}
+	return fileDescriptor_d938547f84707355, []int{5}
 }
 func (m *TxOutputType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxOutputType.Unmarshal(m, b)
@@ -935,7 +967,7 @@ func (m *TxOutputBinType) Reset()         { *m = TxOutputBinType{} }
 func (m *TxOutputBinType) String() string { return proto.CompactTextString(m) }
 func (*TxOutputBinType) ProtoMessage()    {}
 func (*TxOutputBinType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{6}
+	return fileDescriptor_d938547f84707355, []int{6}
 }
 func (m *TxOutputBinType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxOutputBinType.Unmarshal(m, b)
@@ -991,7 +1023,7 @@ func (m *TransactionType) Reset()         { *m = TransactionType{} }
 func (m *TransactionType) String() string { return proto.CompactTextString(m) }
 func (*TransactionType) ProtoMessage()    {}
 func (*TransactionType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{7}
+	return fileDescriptor_d938547f84707355, []int{7}
 }
 func (m *TransactionType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TransactionType.Unmarshal(m, b)
@@ -1091,7 +1123,7 @@ func (m *TxRequestDetailsType) Reset()         { *m = TxRequestDetailsType{} }
 func (m *TxRequestDetailsType) String() string { return proto.CompactTextString(m) }
 func (*TxRequestDetailsType) ProtoMessage()    {}
 func (*TxRequestDetailsType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{8}
+	return fileDescriptor_d938547f84707355, []int{8}
 }
 func (m *TxRequestDetailsType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxRequestDetailsType.Unmarshal(m, b)
@@ -1155,7 +1187,7 @@ func (m *TxRequestSerializedType) Reset()         { *m = TxRequestSerializedType
 func (m *TxRequestSerializedType) String() string { return proto.CompactTextString(m) }
 func (*TxRequestSerializedType) ProtoMessage()    {}
 func (*TxRequestSerializedType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{9}
+	return fileDescriptor_d938547f84707355, []int{9}
 }
 func (m *TxRequestSerializedType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxRequestSerializedType.Unmarshal(m, b)
@@ -1215,7 +1247,7 @@ func (m *IdentityType) Reset()         { *m = IdentityType{} }
 func (m *IdentityType) String() string { return proto.CompactTextString(m) }
 func (*IdentityType) ProtoMessage()    {}
 func (*IdentityType) Descriptor() ([]byte, []int) {
-	return fileDescriptor_types_bb03e09a1977888d, []int{10}
+	return fileDescriptor_d938547f84707355, []int{10}
 }
 func (m *IdentityType) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_IdentityType.Unmarshal(m, b)
@@ -1361,9 +1393,9 @@ func init() {
 	proto.RegisterExtension(E_WireBootloader)
 }
 
-func init() { proto.RegisterFile("types.proto", fileDescriptor_types_bb03e09a1977888d) }
+func init() { proto.RegisterFile("types.proto", fileDescriptor_d938547f84707355) }
 
-var fileDescriptor_types_bb03e09a1977888d = []byte{
+var fileDescriptor_d938547f84707355 = []byte{
 	// 1899 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x57, 0xdb, 0x72, 0x1a, 0xc9,
 	0x19, 0xf6, 0x00, 0x92, 0xe0, 0x07, 0xc4, 0xa8, 0x7d, 0xd0, 0x78, 0x6d, 0xaf, 0x31, 0x76, 0x62,

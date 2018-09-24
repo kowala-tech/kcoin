@@ -124,8 +124,7 @@ type (
 )
 
 var (
-	//fixme: @jekamas use a shorter prefix. Breaking change!
-	versionPrefix     = []byte("temporary discovery v5")
+	versionPrefix     = []byte("kowalaV5")
 	versionPrefixSize = len(versionPrefix)
 	sigSize           = 520 / 8
 	headSize          = versionPrefixSize + sigSize // space of packet frame data

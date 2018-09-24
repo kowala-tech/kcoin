@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/elastic/gosigar"
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
@@ -23,6 +24,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/metrics"
 	"github.com/kowala-tech/kcoin/client/node"
+	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/version"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -63,6 +65,7 @@ var (
 		utils.LightPeersFlag,
 		utils.LightKDFFlag,
 		utils.VersionRepository,
+		utils.SelfUpdateEnabledFlag,
 		utils.CacheFlag,
 		utils.CacheDatabaseFlag,
 		utils.CacheGCFlag,
@@ -155,6 +158,7 @@ func init() {
 		licenseCommand,
 		// See config.go
 		dumpConfigCommand,
+		showAddressesCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
@@ -254,6 +258,11 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
 	setupLogging(ctx)
 
+	// make use client runs latest major version if not in testnet mode or devnet, need to check pre Start node!
+	if !isTestnetOrDevnet(ctx) {
+		mustBeLatestMajorVersion(ctx)
+	}
+
 	// Start up the node itself
 	utils.StartNode(stack)
 
@@ -308,6 +317,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			}
 		}
 	}()
+
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.ValidationEnabledFlag.Name) {
 		// Validation only makes sense if a full Kowala node is running
@@ -321,5 +331,45 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := kowala.StartValidating(); err != nil {
 			utils.Fatalf("Failed to start validation: %v", err)
 		}
+	} else if ctx.GlobalBool(utils.SelfUpdateEnabledFlag.Name) {
+		// Start self update service if enabled and not in validation mode
+		repository := ctx.GlobalString(utils.VersionRepository.Name)
+		selfUpdater := version.NewSelfUpdater(repository, stack, getConsoleLogger())
+		go selfUpdater.Run()
+	}
+}
+
+func isTestnetOrDevnet(ctx *cli.Context) bool {
+	return isTestnet(ctx) || isDevnet(ctx)
+}
+
+func isTestnet(ctx *cli.Context) bool {
+	return ctx.GlobalBool(utils.TestnetFlag.Name)
+}
+
+func isDevnet(ctx *cli.Context) bool {
+	return ctx.GlobalBool(utils.DevModeFlag.Name)
+}
+
+func mustBeLatestMajorVersion(ctx *cli.Context) {
+	repository := ctx.GlobalString(utils.VersionRepository.Name)
+	finder := version.NewFinder(version.NewS3AssetRepository(repository))
+	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
+	if err != nil {
+		log.Error("Error parsing current version, exiting checker", "err", err)
+		return
+	}
+
+	current, err := semver.Make(params.Version)
+	if err != nil {
+		log.Error("Error parsing current version, exiting checker", "err", err)
+		return
+	}
+
+	assetVersion := latest.Semver()
+	if assetVersion.Major > current.Major {
+		log.Warn("Exiting client version is outdated", "current", current.String(), "latest", latest.Semver().String())
+		debug.Exit()
+		os.Exit(1)
 	}
 }

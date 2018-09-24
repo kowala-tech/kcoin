@@ -2,14 +2,19 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./Consensus.sol";
+import "../kns/DomainResolver.sol";
+import {NameHash} from "../utils/NameHash.sol";
+import "zos-lib/contracts/migrations/Initializable.sol";
 
 /**
-* @title Oracle Manager contract
+@title Oracle Manager contract
 */
-contract OracleMgr is Pausable {
+contract OracleMgr is Pausable, Initializable {
      
     uint public maxNumOracles;
-    Consensus consensus;
+    uint public price;
+    DomainResolver public knsResolver;
+    bytes32 nodeNamehash;
 
     struct OraclePrice {
         uint price;
@@ -41,7 +46,7 @@ contract OracleMgr is Pausable {
     }
 
     modifier onlySuperNode {
-        require(consensus.isSuperNode(msg.sender));
+        require(Consensus(knsResolver.addr(nodeNamehash)).isSuperNode(msg.sender));
         _;
     }
 
@@ -53,16 +58,34 @@ contract OracleMgr is Pausable {
     /**
      * Constructor.
      * @param _maxNumOracles Maximum numbers of Oracles.
+     * @param _resolverAddr Address of KNS Resolver.
      */
-    function OracleMgr(
-        uint _maxNumOracles,
-        address _consensusAddr) 
+    function OracleMgr(uint _maxNumOracles, address _resolverAddr) 
     public {
         require(_maxNumOracles > 0);
         
         maxNumOracles = _maxNumOracles;
-        consensus = Consensus(_consensusAddr);
+        knsResolver = DomainResolver(_resolverAddr);
+        nodeNamehash = NameHash.namehash("validatormgr.kowala");
     }
+
+     /**
+     * Initialize function for Proxy Pattern.
+     * @param _maxNumOracles Maximum numbers of Oracles.
+     * @param _resolverAddr Address of KNS Resolver.
+     */
+    function initialize(
+        uint _maxNumOracles,
+        address _resolverAddr) 
+    isInitializer
+    public {
+        require(_maxNumOracles > 0);
+        
+        maxNumOracles = _maxNumOracles;
+        knsResolver = DomainResolver(_resolverAddr);
+        nodeNamehash = NameHash.namehash("validatormgr.kowala");
+    }
+
 
     /**
      * @dev Checks if given address is Oracle

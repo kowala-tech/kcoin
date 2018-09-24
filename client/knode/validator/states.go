@@ -1,16 +1,22 @@
 package validator
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"math/big"
 	"sync/atomic"
 	"time"
 
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/tx"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // work is the proposer current environment and holds all of the current state information
@@ -39,30 +45,28 @@ func (val *validator) notLoggedInState() stateFn {
 		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
 		defer chainHeadSub.Unsubscribe()
 
-		if err := val.consensus.Join(val.walletAccount, val.deposit); err != nil {
-			log.Error("Error joining validators network", "err", err)
-			return nil
+		isValidator, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
+		if err != nil {
+			log.Crit("Failed to verify if account is already a validator")
 		}
 
-		log.Info("Waiting confirmation to participate in the consensus")
-	L:
-		for {
-			select {
-			case _, ok := <-chainHeadCh:
-				if !ok {
-					return nil
-				}
+		if !isValidator {
+			txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
+			if err != nil {
+				log.Error("Error joining validators network", "err", err)
+				return nil
+			}
+			log.Info("Waiting confirmation to participate in the consensus")
 
-				confirmed, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
-				if err != nil {
-					log.Crit("Failed to verify the voter registration", "err", err)
-				}
-
-				if confirmed {
-					break L
-				}
+			receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+			if err != nil {
+				log.Crit("Failed to verify the voter registration", "err", err)
+			}
+			if receipt.Status == types.ReceiptStatusFailed {
+				log.Crit("Failed to register the validator - receipt status failed")
 			}
 		}
+
 	} else {
 		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
@@ -119,6 +123,9 @@ func (val *validator) newRoundState() stateFn {
 		val.proposal = nil
 		val.block = nil
 		val.blockFragments = nil
+
+		//fixme: should be checked how to revert stateDB state
+		val.state.RevertToSnapshot(val.state.Snapshot())
 	}
 
 	return val.newProposalState
@@ -161,6 +168,7 @@ func (val *validator) preVoteWaitState() stateFn {
 	select {
 	case <-val.majority.Chan():
 		log.Info("There's a majority in the pre-vote sub-election!")
+		// fixme shall we do something here with current stateDB?
 	case <-time.After(timeout):
 		log.Info("Timeout expired", "duration", timeout)
 	}
@@ -181,9 +189,10 @@ func (val *validator) preCommitWaitState() stateFn {
 	defer val.majority.Unsubscribe()
 
 	select {
-	case <-val.majority.Chan():
-		log.Info("There's a majority in the pre-commit sub-election!")
-		if val.block == nil {
+	case event := <-val.majority.Chan():
+		log.Info("There's a majority in the pre-commit sub-election!", "event", spew.Sdump(event))
+		if val.block == nil || bytes.Equal(val.block.Hash().Bytes(), common.Hash{}.Bytes()) {
+			log.Debug("No one block wins!")
 			return val.newRoundState
 		}
 		return val.commitState
@@ -196,40 +205,33 @@ func (val *validator) preCommitWaitState() stateFn {
 func (val *validator) commitState() stateFn {
 	log.Info("Commit state")
 
-	block := val.block
-	work := val.work
-
-	_, err := work.state.Commit(true)
-	if err != nil {
-		log.Error("Failed writing block to chain", "err", err)
-		return nil
-	}
+	blockHash := val.block.Hash()
 
 	// update block hash since it is now available and not when
 	// the receipt/log of individual transactions were created
 	for _, r := range val.work.receipts {
 		for _, l := range r.Logs {
-			l.BlockHash = block.Hash()
+			l.BlockHash = blockHash
 		}
 	}
 	for _, log := range val.work.state.Logs() {
-		log.BlockHash = block.Hash()
+		log.BlockHash = blockHash
 	}
 
-	_, err = val.chain.WriteBlockWithState(block, val.work.receipts, val.work.state)
+	_, err := val.chain.WriteBlockWithState(val.block, val.work.receipts, val.work.state)
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return nil
 	}
 
 	// Broadcast the block and announce chain insertion event
-	go val.eventMux.Post(core.NewMinedBlockEvent{Block: block})
+	go val.eventMux.Post(core.NewMinedBlockEvent{Block: val.block})
 	var (
 		events []interface{}
-		logs   = work.state.Logs()
+		logs   = val.work.state.Logs()
 	)
-	events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-	events = append(events, core.ChainHeadEvent{Block: block})
+	events = append(events, core.ChainEvent{Block: val.block, Hash: val.block.Hash(), Logs: logs})
+	events = append(events, core.ChainHeadEvent{Block: val.block})
 	val.chain.PostChainEvents(events, logs)
 
 	// election state updates

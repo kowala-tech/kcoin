@@ -2,8 +2,8 @@ package version
 
 import (
 	"archive/zip"
-	"fmt"
 	"github.com/blang/semver"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 	"io"
 	"net/http"
@@ -14,45 +14,79 @@ import (
 
 type Updater interface {
 	Update() error
+	UpdateMajor() error
 }
 
 type updater struct {
-	repository  string
-	current     semver.Version
-	latestAsset Asset
+	repository string
+	current    semver.Version
+	finder     *finder
+	logger     log.Logger
 }
 
-func NewUpdater(repository string) (*updater, error) {
+func NewUpdater(repository string, logger log.Logger) (*updater, error) {
 	current, err := semver.Make(params.Version)
 	if err != nil {
 		return nil, err
 	}
 
-	finder := NewFinder(repository)
-	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
-	if err != nil {
-		return nil, err
-	}
-
 	return &updater{
-		repository:  repository,
-		current:     current,
-		latestAsset: latest,
+		repository: repository,
+		current:    current,
+		finder:     NewFinder(NewS3AssetRepository(repository)),
+		logger:     logger,
 	}, nil
 }
 
+func (u *updater) isCurrentLatestForMajor() (bool, error) {
+	latestAsset, err := u.latestAssetForMajor()
+	if err != nil {
+		return true, err
+	}
+
+	return u.current.GTE(latestAsset.Semver()), nil
+}
+
+func (u *updater) latestAssetForMajor() (Asset, error) {
+	return u.finder.LatestForMajor(runtime.GOOS, runtime.GOARCH, u.current.Major)
+}
+
+func (u *updater) latestAsset() (Asset, error) {
+	return u.finder.Latest(runtime.GOOS, runtime.GOARCH)
+}
+
 func (u *updater) Update() error {
-	if !u.latestAsset.Semver().GT(u.current) {
+	latestAsset, err := u.latestAssetForMajor()
+	if err != nil {
+		return err
+	}
+	return u.update(latestAsset)
+}
+
+func (u *updater) UpdateMajor() error {
+	latestAsset, err := u.latestAsset()
+	if err != nil {
+		return err
+	}
+	return u.update(latestAsset)
+}
+
+func (u *updater) update(to Asset) error {
+	if !to.Semver().GT(u.current) {
 		// up to date
-		fmt.Println("Nothing to do binary is at latest version")
+		u.logger.Info("Nothing to do binary is at latest version")
 		return nil
 	}
 
-	if err := u.download(); err != nil {
+	if err := u.download(to); err != nil {
 		return err
 	}
 
-	if err := u.unzip(); err != nil {
+	if err := u.unzip(to); err != nil {
+		return err
+	}
+
+	if err := u.deleteLocal(to); err != nil {
 		return err
 	}
 
@@ -60,20 +94,20 @@ func (u *updater) Update() error {
 		return err
 	}
 
-	if err := u.replaceNewBinary(); err != nil {
+	if err := u.replaceNewBinary(to); err != nil {
 		return err
 	}
 
-	fmt.Println("Client is up to date please start with your normal options")
+	u.logger.Info("Client is up to date please start with your normal options")
 
 	return nil
 }
 
-func (u *updater) download() error {
-	assetUrl := u.repository + "/" + u.latestAsset.Path()
-	fmt.Println("downloading latest version")
+func (u *updater) download(asset Asset) error {
+	assetUrl := u.repository + "/" + asset.Path()
+	u.logger.Info("Downloading latest version")
 
-	out, err := os.Create(u.latestAsset.Path())
+	out, err := os.Create(asset.Path())
 	if err != nil {
 		return err
 	}
@@ -92,14 +126,14 @@ func (u *updater) download() error {
 	return nil
 }
 
-func (u *updater) unzip() error {
-	r, err := zip.OpenReader(u.latestAsset.Path())
+func (u *updater) unzip(asset Asset) error {
+	r, err := zip.OpenReader(asset.Path())
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 
-	fmt.Println("unziping file")
+	u.logger.Info("Unzipping file")
 
 	for _, f := range r.File {
 		rc, err := f.Open()
@@ -129,6 +163,10 @@ func (u *updater) unzip() error {
 	return nil
 }
 
+func (u *updater) deleteLocal(asset Asset) error {
+	return os.Remove(asset.Path())
+}
+
 func (u *updater) backupCurrentBinary() error {
 	file := os.Args[0]
 
@@ -141,7 +179,7 @@ func (u *updater) backupCurrentBinary() error {
 
 	backupFile := absdir + "/backup_" + filename
 
-	fmt.Println("backing up binary")
+	u.logger.Info("Backing up binary")
 
 	if err = os.Rename(file, backupFile); err != nil {
 		return err
@@ -150,7 +188,7 @@ func (u *updater) backupCurrentBinary() error {
 	return nil
 }
 
-func (u *updater) replaceNewBinary() error {
+func (u *updater) replaceNewBinary(asset Asset) error {
 	file := os.Args[0]
 
 	dir, oldFilename := filepath.Split(file)
@@ -160,7 +198,7 @@ func (u *updater) replaceNewBinary() error {
 		return err
 	}
 
-	filename := "kcoin-" + u.latestAsset.Os() + "-" + u.latestAsset.Arch()
+	filename := "kcoin-" + asset.Os() + "-" + asset.Arch()
 	binary := absdir + "/" + oldFilename
 
 	if err = os.Rename(filename, binary); err != nil {

@@ -1,6 +1,7 @@
 package knode
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
@@ -19,6 +21,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/rawdb"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
 	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/params"
@@ -55,7 +58,7 @@ func NewPrivateValidatorAPI(kcoin *Kowala) *PrivateValidatorAPI {
 }
 
 // Start the validator.
-func (api *PrivateValidatorAPI) Start(deposit *big.Int) error {
+func (api *PrivateValidatorAPI) Start(deposit *hexutil.Big) error {
 	// Start the validator and return
 	if !api.kcoin.IsValidating() {
 		// Propagate the initial price point to the transaction pool
@@ -63,8 +66,9 @@ func (api *PrivateValidatorAPI) Start(deposit *big.Int) error {
 		price := api.kcoin.gasPrice
 		api.kcoin.lock.RUnlock()
 
-		if deposit != nil {
-			err := api.kcoin.SetDeposit(deposit)
+		bigint := deposit.ToInt()
+		if bigint.Cmp(big.NewInt(0)) != 0 {
+			err := api.kcoin.SetDeposit(bigint)
 			if err != nil && err != validator.ErrIsNotRunning {
 				return err
 			}
@@ -179,13 +183,15 @@ type TransferArgs struct {
 // PublicTokenAPI exposes a collection of methods related to tokens
 type PublicTokenAPI struct {
 	accountMgr *accounts.Manager
-	consensus  consensus.Consensus
+	consensus  *consensus.Consensus
+	chainID    *big.Int
 }
 
-func NewPublicTokenAPI(accountMgr *accounts.Manager, c consensus.Consensus) *PublicTokenAPI {
+func NewPublicTokenAPI(accountMgr *accounts.Manager, c *consensus.Consensus, chainID *big.Int) *PublicTokenAPI {
 	return &PublicTokenAPI{
 		accountMgr: accountMgr,
 		consensus:  c,
+		chainID:    chainID,
 	}
 }
 
@@ -194,7 +200,7 @@ func (api *PublicTokenAPI) GetBalance(target common.Address) (*big.Int, error) {
 }
 
 func (api *PublicTokenAPI) Transfer(args TransferArgs) (common.Hash, error) {
-	walletAccount, err := api.getWallet(args.From)
+	_, walletAccount, err := api.getWallet(args.From)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -206,54 +212,128 @@ func (api *PublicTokenAPI) Transfer(args TransferArgs) (common.Hash, error) {
 	return api.consensus.Token().Transfer(walletAccount, *args.To, (*big.Int)(args.Value), args.Data, args.CustomFallback)
 }
 
-func (api *PublicTokenAPI) Mint(args TransferArgs, pass string) (common.Hash, error) {
-	if args.Value == nil {
+func (api *PublicTokenAPI) Mint(from, to common.Address, value *hexutil.Big) (common.Hash, error) {
+	if value == nil {
 		return common.Hash{}, errors.New("a number of tokens should be specified")
 	}
 
-	if args.To == nil {
-		return common.Hash{}, errors.New("a destination address should be specified")
-	}
-
-	walletAccount, err := api.getWallet(args.From)
+	account, walletAccount, err := api.getWallet(from)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	account := accounts.Account{Address: args.From}
-	wallet, err := api.accountMgr.Find(account)
-	if err != nil {
-		return common.Hash{}, err
+	tOpts := &accounts.TransactOpts{
+		From: from,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			return walletAccount.SignTx(*account, tx, api.chainID)
+		},
 	}
 
-	transactOpts, err := wallet.NewKeyedTransactor(walletAccount.Account(), pass)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	return api.consensus.Mint(toTransact(transactOpts, args), *args.To)
+	return api.consensus.Mint(tOpts, to, value.ToInt())
 }
 
-func toTransact(txOpts *accounts.TransactOpts, args TransferArgs) *accounts.TransactOpts {
-	txOpts.Value = args.Value.ToInt()
-	return txOpts
+func (api *PublicTokenAPI) Confirm(from common.Address, transactionID *hexutil.Big) (common.Hash, error) {
+	account, walletAccount, err := api.getWallet(from)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	tOpts := &accounts.TransactOpts{
+		From: from,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			return walletAccount.SignTx(*account, tx, api.chainID)
+		},
+	}
+
+	return api.consensus.Confirm(tOpts, transactionID.ToInt())
 }
 
-func (api *PublicTokenAPI) getWallet(addr common.Address) (accounts.WalletAccount, error) {
+func (api *PublicTokenAPI) Cap() (*big.Int, error) {
+	return api.consensus.Token().Cap()
+}
+
+func (api *PublicTokenAPI) TotalSupply() (*big.Int, error) {
+	return api.consensus.Token().TotalSupply()
+}
+
+func (api *PublicTokenAPI) MintingFinished() (bool, error) {
+	return api.consensus.Token().MintingFinished()
+}
+
+type PendingMintTransaction struct {
+	Id        *big.Int       `json:"id"`
+	To        common.Address `json:"to",omitempty`
+	Amount    *big.Int       `json:"amount",omitempty`
+	Confirmed bool           `json:"confirmed"`
+}
+
+type PendingMintTransactions []PendingMintTransaction
+
+func (api *PublicTokenAPI) MintList() (ret PendingMintTransactions, err error) {
+
+	if err := api.consensus.MintInit(); err != nil {
+		return ret, err
+	}
+
+	multiSig := api.consensus.MultiSigWalletContract()
+
+	if multiSig == nil {
+		return ret, errors.New("can't get multi sig contract")
+	}
+
+	max, err := multiSig.GetTransactionCount(&bind.CallOpts{}, true, true)
+
+	if err != nil {
+		return ret, err
+	}
+
+	ids, err := multiSig.GetTransactionIds(&bind.CallOpts{}, big.NewInt(0), max, true, true)
+
+	if err != nil {
+		return ret, err
+	}
+
+	mintMethodId := crypto.Keccak256([]byte("mint(address,uint256)"))[:4]
+
+	for _, id := range ids {
+		output, err := multiSig.Transactions(&bind.CallOpts{}, id)
+
+		if err != nil {
+			return ret, err
+		}
+
+		if !bytes.Equal(output.Data[:4], mintMethodId) {
+			continue
+		}
+
+		amount := new(big.Int)
+		amount.SetBytes(output.Data[37:])
+
+		ret = append(ret, PendingMintTransaction{
+			Id:        id,
+			To:        common.BytesToAddress(output.Data[4:36]),
+			Amount:    amount,
+			Confirmed: output.Executed,
+		})
+	}
+
+	return ret, nil
+}
+
+func (api *PublicTokenAPI) getWallet(addr common.Address) (*accounts.Account, accounts.WalletAccount, error) {
 	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: addr}
-
-	wallet, err := api.accountMgr.Find(account)
-	if err != nil {
-		return nil, err
+	for _, wallet := range api.accountMgr.Wallets() {
+		for _, account := range wallet.Accounts() {
+			if account.Address == addr {
+				walletAccount, err := accounts.NewWalletAccount(wallet, account)
+				if err != nil {
+					return nil, nil, err
+				}
+				return &account, walletAccount, nil
+			}
+		}
 	}
-
-	walletAccount, err := accounts.NewWalletAccount(wallet, account)
-	if err != nil {
-		return nil, err
-	}
-
-	return walletAccount, nil
+	return nil, nil, errors.New("account not found in any wallet")
 }
 
 // PrivateAdminAPI is the collection of Kowala full node-related APIs

@@ -114,11 +114,11 @@ var (
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
-		Usage: "Ropsten network: pre-configured proof-of-work test network",
+		Usage: "Zygote network: pre-configured proof-of-stake test network",
 	}
 	DevModeFlag = cli.BoolFlag{
 		Name:  "dev",
-		Usage: "Developer mode: pre-configured private network with several debugging flags",
+		Usage: "Developer mode: pre-configured private test network",
 	}
 	IdentityFlag = cli.StringFlag{
 		Name:  "identity",
@@ -137,7 +137,11 @@ var (
 	VersionRepository = cli.StringFlag{
 		Name:  "repository",
 		Usage: "Version repository url",
-		Value: "https://s3.amazonaws.com/releases.kowala.io",
+		Value: "https://s3.amazonaws.com/releases.kowala.tech",
+	}
+	SelfUpdateEnabledFlag = cli.BoolFlag{
+		Name:  "selfupdate",
+		Usage: "Auto-updated binary to latest version",
 	}
 	FastSyncFlag = cli.BoolFlag{
 		Name:  "fast",
@@ -249,10 +253,10 @@ var (
 		Usage: "Enable consensus validation",
 	}
 
-	ValidatorDepositFlag = cli.Uint64Flag{
+	ValidatorDepositFlag = BigFlag{
 		Name:  "deposit",
 		Usage: "Deposit at stake",
-		// @TODO (rgeraldes) - default could be set to the minimum required
+		Value: big.NewInt(0),
 	}
 
 	TargetGasLimitFlag = cli.Uint64Flag{
@@ -266,7 +270,6 @@ var (
 		Value: "0",
 	}
 
-	// @TODO(rgeraldes) - review
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
@@ -566,6 +569,8 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		}
 	case ctx.GlobalBool(TestnetFlag.Name):
 		urls = params.TestnetBootnodes
+	case ctx.GlobalBool(DevModeFlag.Name):
+		urls = params.DevnetBootnodes
 	}
 
 	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
@@ -583,8 +588,12 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 // flags, reverting to pre-configured ones if none have been specified.
 func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 	urls := params.MainnetDiscoveryV5Bootnodes
-	if ctx.GlobalBool(TestnetFlag.Name) {
+
+	switch {
+	case ctx.GlobalBool(TestnetFlag.Name):
 		urls = params.TestnetDiscoveryV5Bootnodes
+	case ctx.GlobalBool(DevModeFlag.Name):
+		urls = params.DevnetDiscoveryV5Bootnodes
 	}
 
 	switch {
@@ -775,9 +784,7 @@ func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *knode.Config) {
 }
 
 func setDeposit(ctx *cli.Context, cfg *knode.Config) {
-	if ctx.GlobalIsSet(ValidatorDepositFlag.Name) {
-		cfg.Deposit = new(big.Int).SetUint64(ctx.GlobalUint64(ValidatorDepositFlag.Name))
-	}
+	cfg.Deposit = GlobalBig(ctx, ValidatorDepositFlag.Name)
 }
 
 // MakePasswordList reads password lines from the file specified by the global --password flag.
@@ -828,19 +835,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		}
 		cfg.NetRestrict = list
 	}
-
-	if ctx.GlobalBool(DevModeFlag.Name) {
-		// --dev mode can't use p2p networking.
-		cfg.MaxPeers = 0
-		cfg.ListenAddr = ":0"
-		cfg.DiscoveryV5Addr = ":0"
-		cfg.NoDiscovery = true
-		cfg.DiscoveryV5 = false
-	}
 }
 
 // SetNodeConfig applies node-related command line flags to the config.
-func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
+func SetNodeConfig(ctx *cli.Context, cfg *node.Config, kowalaCfg *knode.Config) {
 	SetP2PConfig(ctx, &cfg.P2P)
 	setIPC(ctx, cfg)
 	setHTTP(ctx, cfg)
@@ -850,8 +848,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	switch {
 	case ctx.GlobalIsSet(DataDirFlag.Name):
 		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
-	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.DataDir = filepath.Join(os.TempDir(), "kowala_dev_mode")
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -863,6 +859,8 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(NoUSBFlag.Name) {
 		cfg.NoUSB = ctx.GlobalBool(NoUSBFlag.Name)
 	}
+
+	cfg.DataDir = filepath.Join(cfg.DataDir, kowalaCfg.Currency)
 }
 
 func setGPO(ctx *cli.Context, cfg *gasprice.Config) {
@@ -1007,10 +1005,8 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	case ctx.GlobalBool(TestnetFlag.Name):
 		cfg.NetworkId = params.TestnetChainConfig.ChainID.Uint64()
 	case ctx.GlobalBool(DevModeFlag.Name):
-		cfg.Genesis = core.DevGenesisBlock()
-		if !ctx.GlobalIsSet(GasPriceFlag.Name) {
-			cfg.GasPrice = new(big.Int)
-		}
+		// Use the main net network ID. This allows us to test the p2p under realistic conditions
+		cfg.NetworkId = params.MainnetChainConfig.ChainID.Uint64()
 	}
 	// TODO(fjl): move trie cache generations into config
 	if gen := ctx.GlobalInt(TrieCacheGenFlag.Name); gen > 0 {
@@ -1104,10 +1100,8 @@ func MakeChainDatabase(ctx *cli.Context, stack *node.Node) kcoindb.Database {
 func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	var genesis *core.Genesis
 	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
+	case ctx.GlobalBool(TestnetFlag.Name), ctx.GlobalBool(DevModeFlag.Name):
 		genesis = core.DefaultTestnetGenesisBlock()
-	case ctx.GlobalBool(DevModeFlag.Name):
-		genesis = core.DevGenesisBlock()
 	}
 	return genesis
 }

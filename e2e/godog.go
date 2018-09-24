@@ -21,37 +21,28 @@ type FeatureContextOpts struct {
 }
 
 func FeatureContext(opts *FeatureContextOpts) {
-	context := impl.NewTestContext(chainID)
+	context := impl.NewTestContext(chainID, opts.logsToStdout)
 	validationCtx := impl.NewValidationContext(context)
 	walletBackendCtx := impl.NewWalletBackendContext(context)
 	faucetCtx := impl.NewFaucetContext(context)
 
 	opts.suite.BeforeFeature(func(ft *gherkin.Feature) {
 		context.Name = getFeatureName(ft.Name)
-
-		if err := context.InitCluster(opts.logsToStdout); err != nil {
-			log.Fatal(err)
-		}
-	})
-
-	opts.suite.BeforeScenario(func(scenario interface{}) {
-		if err := context.RunCluster(); err != nil {
-			log.Fatal(err)
-		}
-	})
-
-	opts.suite.AfterFeature(func(ft *gherkin.Feature) {
-		if err := context.DeleteCluster(); err != nil {
-			log.Fatal(err)
-		}
 	})
 
 	opts.suite.AfterScenario(func(scenario interface{}, err error) {
+		if err := context.DeleteCluster(); err != nil {
+			log.Fatal(err)
+		}
 		context.Reset()
 		validationCtx.Reset()
 		walletBackendCtx.Reset()
 		faucetCtx.Reset()
 	})
+
+	// Genesis and cluster creation
+	opts.suite.Step(`^I generate a genesis with (\d+) required signatures in the multisig contract$`, context.GenesisSetMultisigRequiredSignatures)
+	opts.suite.Step(`^the network is running$`, context.RunCluster)
 
 	// Creating accounts
 	opts.suite.Step(`^I have the following accounts:$`, validationCtx.IHaveTheFollowingAccounts)
@@ -87,11 +78,14 @@ func FeatureContext(opts *FeatureContextOpts) {
 	opts.suite.Step(`^there should be (\d+) mTokens? available to me after (\d+) days$`, validationCtx.ThereShouldBeTokensAvailableToMeAfterDays)
 	opts.suite.Step(`^My node should be not be a validator$`, validationCtx.MyNodeShouldBeNotBeAValidator)
 	opts.suite.Step(`^I wait for my node to be synced$`, validationCtx.IWaitForMyNodeToBeSynced)
+	opts.suite.Step(`^crash my node validator$`, validationCtx.CrashMyNode)
+	opts.suite.Step(`^I restart the validator$`, validationCtx.IRestartTheValidator)
+	opts.suite.Step(`^My node should be a validator$`, validationCtx.MyNodeShouldBeAValidator)
 
 	// mTokens
-	opts.suite.Step(`^the token balance of (\w+) should be (\d+) mTokens?$`, validationCtx.IsMTokensBalanceExact)
-	opts.suite.Step(`^I transfer (\d+) mTokens? from (\w+) to (\w+)$`, validationCtx.ITransferMTokens)
-	opts.suite.Step(`^(\d+) of (\d+) governance accounts? mints? (\d+) mTokens? to (\w+)$`, validationCtx.MintMTokens)
+	opts.suite.Step(`^the token balance of (\w+) should be (\d+) mTokens?$`, context.IsMTokensBalanceExact)
+	opts.suite.Step(`^I transfer (\d+) mTokens? from (\w+) to (\w+)$`, context.ITransferMTokens)
+	opts.suite.Step(`^(\d+) of (\d+) governance accounts? mints? (\d+) mTokens? to (\w+)$`, context.MintMTokens)
 
 	// Nodes
 	opts.suite.Step(`^I start a new node$`, context.IStartANewNode)

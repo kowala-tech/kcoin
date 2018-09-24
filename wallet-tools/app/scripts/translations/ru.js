@@ -457,6 +457,7 @@ DEP_interface               : 'Сформированный интерфейс '
 MYWAL_Nick                  : 'Название кошелька ',
 MYWAL_Address               : 'Адрес кошелька ',
 MYWAL_Bal                   : 'Баланс ',
+MYWAL_Dep                   : 'mTokens',
 MYWAL_Edit                  : 'Редактировать ',
 MYWAL_View                  : 'Просмотреть ',
 MYWAL_Remove                : 'Удалить ',

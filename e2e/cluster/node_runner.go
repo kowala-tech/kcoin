@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -24,7 +25,7 @@ import (
 )
 
 type NodeRunner interface {
-	Run(node *NodeSpec, scenarioNumber int32) error
+	Run(node *NodeSpec) error
 	Stop(nodeID NodeID) error
 	StopAll() error
 	Log(nodeID NodeID) (string, error)
@@ -45,11 +46,12 @@ type dockerNodeRunner struct {
 	client       *client.Client
 	logsToStdout bool
 	logsDir      string
-	feature      string
+	logPrefix    string
+	logCounter   uint32
 }
 
 type NewNodeRunnerOpts struct {
-	Feature      string
+	Prefix       string
 	LogsToStdout bool
 	LogsDir      string
 }
@@ -64,11 +66,11 @@ func NewDockerNodeRunner(opts *NewNodeRunnerOpts) (*dockerNodeRunner, error) {
 		runningNodes: make(map[NodeID]bool, 0),
 		logsDir:      opts.LogsDir,
 		logsToStdout: opts.LogsToStdout,
-		feature:      opts.Feature,
+		logPrefix:    opts.Prefix,
 	}, nil
 }
 
-func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int32) error {
+func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 	if err := runner.pullIfNecessary(node.Image); err != nil {
 		return err
 	}
@@ -114,7 +116,7 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int32) error 
 
 	logStream := os.Stdout
 	if !runner.logsToStdout {
-		logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%03d-%v.log", runner.feature, scenarioNumber, node.ID))
+		logFilename := filepath.Join(runner.logsDir, fmt.Sprintf("%s-%v-%d.log", runner.logPrefix, node.ID, atomic.AddUint32(&runner.logCounter, 1)))
 		logFile, err := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0777)
 		if err != nil {
 			log.Error(fmt.Sprintf("error creating container logs file %q: %s", logFilename, err))
@@ -132,7 +134,7 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec, scenarioNumber int32) error 
 	}()
 
 	if node.IsReadyFn != nil {
-		return common.WaitFor("Node starts", 1*time.Second, 20*time.Second, func() error {
+		return common.WaitFor("Node starts", 1*time.Second, 40*time.Second, func() error {
 			return node.IsReadyFn(runner)
 		})
 	}

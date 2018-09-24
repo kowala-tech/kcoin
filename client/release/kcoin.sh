@@ -1,22 +1,24 @@
 #!/bin/sh
-set -e
 
 DO_INIT=true;
-TESTNET=false;
+TESTNET="";
 NEW_ACC=false;
 NEW_ACC_PASS="";
 GENESIS_PATH="";
 
 command="";
 
-while [[ $# -gt 0 ]] ;
-do
+while [ $# -gt 0 ]; do
     opt="$1";
     shift;        
 
     case "$opt" in
 	  "--testnet")
-		TESTNET=true
+		TESTNET="--testnet"
+		command="$command$opt " # make sure this passed to the binary
+		;;
+	  "--dev")
+		TESTNET="--dev"
 		command="$command$opt " # make sure this passed to the binary
 		;;
 	  "version")
@@ -41,11 +43,8 @@ done
 cd /kcoin
 
 case $DO_INIT in
-	(true)
-		case $TESTNET in
-			(true)  ./kcoin init --testnet "$GENESIS_PATH";;
-			(false) ./kcoin init "$GENESIS_PATH";;
-		esac
+	(true) ./kcoin init $TESTNET "$GENESIS_PATH"
+		;;
 esac
 
 case $NEW_ACC in
@@ -63,5 +62,8 @@ if [ $status -ne 0 ]; then
   exit $status
 fi
 
-
-./kcoin $command
+EXIT_STATUS=131
+while [ $EXIT_STATUS -eq 131 ]; do
+    ./kcoin $command
+    EXIT_STATUS=$?
+done

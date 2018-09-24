@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/trie"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var (
@@ -668,6 +670,7 @@ type WriteStatus byte
 const (
 	NonStatTy WriteStatus = iota
 	CanonStatTy
+	SideStatTy
 )
 
 // Rollback is designed to remove a chain of links from the database that aren't
@@ -820,18 +823,6 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 
 var lastWrite uint64
 
-// WriteBlockWithoutState writes only the block and its metadata to the database,
-// but does not write any state. This is used to construct competing side forks
-// up to the point where they exceed the canonical total difficulty.
-func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (err error) {
-	bc.wg.Add(1)
-	defer bc.wg.Done()
-
-	rawdb.WriteBlock(bc.db, block)
-
-	return nil
-}
-
 // WriteBlockWithState writes the block and all associated state to the database.
 func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
 	bc.wg.Add(1)
@@ -841,11 +832,14 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
+	if bc.HasBlock(block.Hash(), block.NumberU64()) {
+		log.Trace("Block existed", "hash", block.Hash())
+		return NonStatTy, nil
+	}
+
 	currentBlock := bc.CurrentBlock()
 
-	// Write other block data using a batch.
-	batch := bc.db.NewBatch()
-	rawdb.WriteBlock(batch, block)
+	rawdb.WriteBlock(bc.db, block)
 
 	root, err := state.Commit(true)
 	if err != nil {
@@ -900,25 +894,63 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		}
 	}
 
+	// Write other block data using a batch.
+	batch := bc.db.NewBatch()
 	rawdb.WriteReceipts(batch, block.Hash(), block.NumberU64(), receipts)
 
+	if bc.isReorgState(block, currentBlock) {
+		status, err = bc.doReorg(block, currentBlock, batch, state)
+		if err != nil {
+			return NonStatTy, err
+		}
+	} else {
+		// side chain case
+		status = SideStatTy
+	}
+
+	if err := batch.Write(); err != nil {
+		return NonStatTy, err
+	}
+
+	// set new head
+	if status == CanonStatTy {
+		bc.insert(block)
+	}
+	bc.futureBlocks.Remove(block.Hash())
+	return status, nil
+}
+
+func (bc *BlockChain) doReorg(block *types.Block, currentBlock *types.Block, batch kcoindb.Batch, state *state.StateDB) (WriteStatus, error) {
 	// Reorganise the chain if the parent is not the head block
-	if block.ParentHash() != currentBlock.Hash() {
+	if IsHead(block, currentBlock) {
+		log.Warn(fmt.Sprintf("a blockchain reorganization needed: block parent hash %v, current block hash %v",
+			block.ParentHash().String(), currentBlock.Hash().String()))
+
 		if err := bc.reorg(currentBlock, block); err != nil {
 			return NonStatTy, err
 		}
 	}
+	writePositionalMetadata(batch, block, state)
+	return CanonStatTy, nil
+}
 
-	// Write the positional metadata for transaction/receipt lookups and preimages
+// writePositionalMetadata Write the positional metadata for transaction/receipt lookups and preimages
+func writePositionalMetadata(batch kcoindb.Batch, block *types.Block, state *state.StateDB) {
 	rawdb.WriteTxLookupEntries(batch, block)
 	rawdb.WritePreimages(batch, block.NumberU64(), state.Preimages())
-	status = CanonStatTy
-	if err := batch.Write(); err != nil {
-		return NonStatTy, err
+}
+
+func IsHead(block *types.Block, currentBlock *types.Block) bool {
+	return block.ParentHash() != currentBlock.Hash()
+}
+
+func (bc *BlockChain) isReorgState(block *types.Block, currentBlock *types.Block) bool {
+	reorg := block.Number().Cmp(currentBlock.Number()) > 0
+	if !reorg && block.Number().Cmp(currentBlock.Number()) == 0 {
+		// Split same-difficulty blocks by number, then at random
+		reorg = block.NumberU64() < currentBlock.NumberU64() || (block.NumberU64() == currentBlock.NumberU64() && mrand.Float64() < 0.5)
 	}
-	bc.insert(block)
-	bc.futureBlocks.Remove(block.Hash())
-	return status, nil
+	return reorg
 }
 
 // InsertChain attempts to insert the given batch of blocks in to the canonical
@@ -944,7 +976,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(chain); i++ {
 		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 || chain[i].ParentHash() != chain[i-1].Hash() {
-			// Chain broke ancestry, log a messge (programming error) and skip insertion
+			// Chain broke ancestry, log a message (programming error) and skip insertion
 			log.Error("Non contiguous block insert", "number", chain[i].Number(), "hash", chain[i].Hash(),
 				"parent", chain[i].ParentHash(), "prevnumber", chain[i-1].Number(), "prevhash", chain[i-1].Hash())
 
@@ -1026,6 +1058,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			stats.queued++
 			continue
 		case err != nil:
+			log.Error("insert chain error while bc.engine.VerifyHeaders of a block", "err", err.Error())
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
@@ -1044,12 +1077,28 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
 		if err != nil {
+			log.Debug("insert chain error while bc.processor.Process of a block", "err", err.Error())
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
 		if err != nil {
+			log.Debug("insert chain error while bc.Validator().ValidateState of a block", "data", spew.Sdump(
+				block.ReceivedFrom,
+				block.ReceivedAt,
+				block.Header().Number,
+				block.Header().ValidatorsHash,
+				block.Header().TxHash,
+				block.Header().ParentHash,
+				block.Header().Root,
+				parent.Header().Number,
+				parent.Header().ValidatorsHash,
+				parent.Header().TxHash,
+				parent.Header().ParentHash,
+				parent.Header().Root,
+				usedGas))
+
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
@@ -1072,6 +1121,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 			// Only count canonical blocks for GC processing time
 			bc.gcproc += proctime
+
+		case SideStatTy:
+			log.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(), "receipt", block.ReceiptHash(), "elapsed",
+				common.PrettyDuration(time.Since(bstart)), "txs", len(block.Transactions()), "gas", block.GasUsed())
+
+			blockInsertTimer.UpdateSince(bstart)
+			events = append(events, ChainSideEvent{block})
 		}
 		stats.processed++
 		stats.usedGas += usedGas
@@ -1094,8 +1150,8 @@ type insertStats struct {
 	startTime                  mclock.AbsTime
 }
 
-// statsReportLimit is the time limit during import after which we always print
-// out progress. This avoids the user wondering what's going on.
+// statsReportLimit is the time limit during import and export after which we
+// always print out progress. This avoids the user wondering what's going on.
 const statsReportLimit = 8 * time.Second
 
 // report prints statistics if some number of blocks have been processed
@@ -1182,10 +1238,10 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		}
 	}
 	if oldBlock == nil {
-		return fmt.Errorf("Invalid old chain")
+		return errors.New("invalid old chain")
 	}
 	if newBlock == nil {
-		return fmt.Errorf("Invalid new chain")
+		return errors.New("invalid new chain")
 	}
 
 	for {
@@ -1201,10 +1257,10 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 		oldBlock, newBlock = bc.GetBlock(oldBlock.ParentHash(), oldBlock.NumberU64()-1), bc.GetBlock(newBlock.ParentHash(), newBlock.NumberU64()-1)
 		if oldBlock == nil {
-			return fmt.Errorf("Invalid old chain")
+			return errors.New("invalid old chain, old block is nil")
 		}
 		if newBlock == nil {
-			return fmt.Errorf("Invalid new chain")
+			return errors.New("invalid new chain, new block is nil")
 		}
 	}
 	// Ensure the user sees large reorgs
@@ -1216,7 +1272,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
-		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "newnum", newBlock.Number(), "newhash", newBlock.Hash())
+		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "len(oldChain)", len(oldChain), "newnum", newBlock.Number(), "newhash", newBlock.Hash(), "len(newChain)", len(newChain))
 	}
 	// Insert the new chain, taking care of the proper incremental order
 	var addedTxs types.Transactions
@@ -1309,8 +1365,12 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 
 	var receiptString string
 	for _, receipt := range receipts {
-		receiptString += fmt.Sprintf("\t%v\n", receipt)
+		receiptString += fmt.Sprintf("\n%v\n", receipt.String())
 	}
+	if len(receiptString) == 0 {
+		receiptString = "[EMPTY RECEIPTS]"
+	}
+
 	log.Error(fmt.Sprintf(`
 ########## BAD BLOCK #########
 Chain config: %v
@@ -1357,8 +1417,7 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 }
 
 // writeHeader writes a header into the local chain, given that its parent is
-// already known. If the total difficulty of the newly inserted header becomes
-// greater than the current known TD, the canonical chain is re-routed.
+// already known.
 //
 // Note: This method is not concurrent-safe with inserting blocks simultaneously
 // into the chain, as side effects caused by reorganisations cannot be emulated
@@ -1367,12 +1426,13 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 // separated header/block phases (non-archive clients).
 func (bc *BlockChain) writeHeader(header *types.Header) error {
 	bc.wg.Add(1)
-	defer bc.wg.Done()
-
 	bc.mu.Lock()
-	defer bc.mu.Unlock()
 
 	_, err := bc.hc.WriteHeader(header)
+
+	bc.mu.Unlock()
+	bc.wg.Done()
+
 	return err
 }
 

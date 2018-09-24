@@ -7,7 +7,7 @@
         <div class="portlet light">
             <div class="portlet-title">
                 <div class="caption caption-md">
-                    <i class="fa fa-cubes font-red"></i>
+                    <i class="fa fa-cubes"></i>
                     <span class="caption-subject uppercase dashboard-stat-light-text">Blocks</span>
                 </div>
                 <div class="actions">
@@ -42,7 +42,7 @@
         <div class="portlet light">
             <div class="portlet-title">
                 <div class="caption caption-md">
-                    <i class="icon-bar-chart font-red"></i>
+                    <i class="icon-bar-chart"></i>
                     <span class="caption-subject dashboard-stat-light-text uppercase">Transactions</span>
                 </div>
                 <div class="actions">
@@ -50,7 +50,7 @@
                         <a class="btn btn-med" ng-click="reloadTransactions()"><i class="fa fa-refresh" ng-class="{'fa-spin': txLoading}"></i>
                         </a>
                     </div>
-                </div>                    
+                </div>
             </div>
             <div class="portlet-body">
                 <div class="general-item-list">
@@ -61,8 +61,8 @@
                         </div>
                         <div class="item-date" style="float:right">{{t.timestamp | timeDuration }} ago</div>
                     </div>
-                    <div class="todo-tasklist-controls"> 
-                      <span class="todo-tasklist-item-text">From <a href="/addr/{{t.from}}">{{t.from.substr(0,24)}}...</a></span> 
+                    <div class="todo-tasklist-controls">
+                      <span class="todo-tasklist-item-text">From <a href="/addr/{{t.from}}">{{t.from.substr(0,24)}}...</a></span>
                       <span class="todo-tasklist-item-text">To <a href="/addr/{{t.to}}">{{t.to.substr(0,24)}}...</a></span><br>
                       <div class="todo-tasklist-item-text" style="margin-top:4px;">{{t.value}} {{settings.symbol}}</div>
                     </div>
@@ -73,4 +73,3 @@
         <!-- END PORTLET-->
     </div>
 </div>
-

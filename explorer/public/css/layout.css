@@ -122,7 +122,7 @@
 }
 
 .page-header .page-header-top .top-menu .navbar-nav>li.dropdown>.dropdown-toggle>.badge {
-    font-family: "Open Sans",sans-serif;
+    font-family: "Poppins",sans-serif;
     position: absolute;
     top: 9px;
     right: 24px;
@@ -138,7 +138,7 @@
     z-index: 9996;
     margin-top: 5px;
     margin-right: 7px;
-    font-family: "Open Sans",sans-serif;
+    font-family: "Poppins",sans-serif;
     -webkit-border-radius: 4px;
     -moz-border-radius: 4px;
     -ms-border-radius: 4px;
@@ -303,7 +303,7 @@
     -ms-border-radius: 50% !important;
     -o-border-radius: 50% !important;
     border-radius: 50% !important;
-    font-family: "Open Sans",sans-serif;
+    font-family: "Poppins",sans-serif;
     font-weight: 300;
 }
 
@@ -379,7 +379,6 @@
     font-weight: 600;
     display: inline-block;
 }
-
 .page-header .page-header-top .top-menu .navbar-nav>li.dropdown-tasks .dropdown-menu .dropdown-menu-list>li .progress {
     display: block;
     height: 8px;
@@ -527,7 +526,7 @@
 }
 
 .page-header .page-header-menu .hor-menu .navbar-nav>li.mega-menu-dropdown>.dropdown-menu .mega-menu-content {
-    font-family: "Open Sans",sans-serif;
+    font-family: "Poppins",sans-serif;
     padding: 15px;
     margin: 0;
 }
@@ -561,7 +560,7 @@
 .page-header .page-header-menu .hor-menu .navbar-nav>li.mega-menu-dropdown>.dropdown-menu .mega-menu-content .mega-menu-submenu li>a {
     display: block;
     white-space: normal;
-    font-family: "Open Sans",sans-serif;
+    font-family: "Poppins",sans-serif;
     padding: 7px;
     margin: 0;
     font-size: 14px;
@@ -626,7 +625,7 @@
 }
 
 .page-header .page-header-menu .hor-menu .navbar-nav>li .dropdown-menu li>a {
-    font-family: "Open Sans",sans-serif;
+    font-family: "Poppins",sans-serif;
     font-size: 14px;
     font-weight: 300;
     padding: 10px 12px;
@@ -1071,10 +1070,7 @@
 body,html {
     margin: 0;
     padding: 0;
-    background: -moz-linear-gradient(top, #531c85 0%, #571b84 14%, #641980 30%, #7a157a 46%, #981071 62%, #be0a65 79%, #ed0258 96%, #f90054 100%) !important;
-    background: -webkit-linear-gradient(top, #531c85 0%, #571b84 14%, #641980 30%, #7a157a 46%, #981071 62%, #be0a65 79%, #ed0258 96%, #f90054 100%) !important;
-    background: linear-gradient(to bottom, #531c85 0%, #571b84 14%, #641980 30%, #7a157a 46%, #981071 62%, #be0a65 79%, #ed0258 96%, #f90054 100%) !important;
-    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#531c85', endColorstr='#f90054',GradientType=0 );
+    background: #29a5ff;
     color: #fff;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -1118,14 +1114,14 @@ body,html {
 }
 
 .page-head .page-title>h1 {
-    color: #697882;
+    color: #fff;
     font-size: 22px;
     font-weight: 400;
     margin: 0;
 }
 
 .page-head .page-title>h1>small {
-    color: #9eacb4;
+    color: #fff;
     font-size: 13px;
     font-weight: 400;
 }
@@ -1139,7 +1135,7 @@ body,html {
     background: 0 0;
     padding: 0 0 15px;
     margin: 0;
-    color: #a7b2c0;
+    color: #fff;
 }
 
 .breadcrumb>li+li:before {
@@ -1153,7 +1149,7 @@ body,html {
 }
 
 .breadcrumb>.active {
-    color: #9eacb4;
+    color: #fff;
 }
 
 .page-content {
@@ -1175,7 +1171,7 @@ body,html {
     }
 
     .page-head {
-        background: #EFF3F8;
+        background: #29a5ff;
     }
 
     .page-content {
@@ -1326,7 +1322,7 @@ body,html {
     z-index: 1000;
     min-width: 675px;
     padding: 20px 10px;
-    font-family: "Open Sans",sans-serif;
+    font-family: "Poppins",sans-serif;
 }
 
 .theme-panel h3 {

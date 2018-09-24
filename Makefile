@@ -76,8 +76,8 @@ test_notifications: dep
 	go test ./... -tags=integration
 
 .PHONY: test_truffle
-test_truffle:
-	cd client/contracts/truffle; npm install; npm run test
+test_truffle: client/contracts/truffle/node_modules
+	cd client/contracts/truffle; npm run test
 
 .PHONY: lint
 lint: all
@@ -94,17 +94,21 @@ bindings:
 	$(MAKE) -j 5 stringer go-bindata gencodec abigen bindings_node_modules
 	go generate ./client/contracts/bindings/...
 
-.PHONY: bindings_node_modules
-bindings_node_modules:
-	cd client/contracts/truffle && npm ci
+.PHONY: install_tools
+install_tools: notifications_dep wallet_backend_dep abigen moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
+
+client/contracts/truffle/node_modules:
+	cd client/contracts/truffle; npm ci
 
 .PHONY: go_generate
-go_generate: notifications_dep wallet_backend_dep bindings_node_modules abigen  moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
+go_generate: client/contracts/truffle/node_modules
+	# force namehash first because the other contracts depend on this libraries.
+	go generate ./client/contracts/bindings/utils/namehash.go
 	go generate ./...
 
 .PHONY: docker_go_generate
 docker_go_generate:
-	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.11 make go_generate
+	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.12 make install_tools go_generate
 
 .PHONY: assert_no_changes
 assert_no_changes:
@@ -123,9 +127,19 @@ wallet_backend_dep: dep
 
 # Cross Compilation Targets (xgo)
 
+.PHONY: go_repository_index_update
+go_repository_index_update:
+	@cd client; go run cmd/repository/main.go
+
 .PHONY: repository_index
 repository_index:
+	@echo "generating index files"
 	@aws s3 ls releases.kowala.io | cut -b32- - > index.txt
+
+.PHONY: repository_index_update
+repository_index_update: repository_index
+	@echo "uploading index files"
+	@aws s3 cp index.txt s3://releases.kowala.io --acl public-read
 
 .PHONY: kcoin_cross
 kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename
@@ -134,8 +148,8 @@ kcoin_cross: kcoin_cross_build kcoin_cross_compress kcoin_cross_rename
 .PHONY: kcoin_cross_build
 kcoin_cross_build:
 	cd client; build/env.sh go run build/ci.go xgo -- --go=latest --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/kcoin
-	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-dawin-amd64
-	mv client/build/bin/kcoin-windows-4-amd64 client/build/bin/kcoin-windows-amd64
+	mv client/build/bin/kcoin-darwin-10.6-amd64 client/build/bin/kcoin-darwin-amd64
+	mv client/build/bin/kcoin-windows-4.0-amd64.exe client/build/bin/kcoin-windows-amd64.exe
 
 .PHONY: kcoin_cross_compress
 kcoin_cross_compress:
@@ -144,16 +158,16 @@ kcoin_cross_compress:
 .PHONY: kcoin_cross_rename
 kcoin_cross_rename:
 ifdef DRONE_TAG
+	mkdir -p client/build/bin/tags/$(DRONE_TAG)
 	cd client/build/bin && for f in kcoin-*; do \
-		mkdir -p "client/build/bin/tags/$(DRONE_TAG)";\
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
-		version=$$(echo $$f | awk '{ gsub("kcoin", "tags/$(DRONE_TAG)/kcoin"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_TAG)"); print }');\
 		cp $$f $$release;\
 		mv $$f $$version;\
 	done;
 else
+	mkdir -p client/build/bin/commits/$(DRONE_COMMIT_SHA)
 	cd client/build/bin && for f in kcoin-*; do \
-		mkdir -p "client/build/bin/commits/$(DRONE_COMMIT_SHA)";\
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-unstable"); print }');\
 		version=$$(echo $$f | awk '{ gsub("kcoin", "commits/$(DRONE_COMMIT_SHA)/kcoin"); print }');\
 		cp $$f $$release;\

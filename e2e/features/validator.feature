@@ -3,7 +3,8 @@ Feature: Joining network as a validator
   I want to be able to join validators set
 
   Background:
-    Given I have the following accounts:
+    Given the network is running
+    And I have the following accounts:
       | account | password | tokens | funds | validator |
       | A       | test     | 20     | 10    | true      |
       | B       | test     | 10     | 10    | false     |
@@ -39,3 +40,12 @@ Feature: Joining network as a validator
     And I wait for my node to be synced
     And I start validator with 5 mTokens deposit
     And the token balance of A should be 10 mTokens
+
+  Scenario:
+    Given: I wait for my node to be synced
+    When I start validator with 5 mTokens deposit
+    And I wait for my node to be synced
+    And crash my node validator
+    And I restart the validator
+    And I wait for my node to be synced
+    Then My node should be a validator

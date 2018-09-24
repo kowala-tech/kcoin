@@ -1,7 +1,9 @@
 package validator
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -9,6 +11,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/tx"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/core"
@@ -36,6 +39,7 @@ type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
 	ChainDb() kcoindb.Database
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 }
 
 type Validator interface {
@@ -79,7 +83,7 @@ type validator struct {
 
 	walletAccount accounts.WalletAccount
 
-	consensus consensus.Consensus // consensus binding
+	consensus *consensus.Consensus // consensus binding
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
@@ -94,7 +98,7 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, consensus consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
 		config:    config,
 		backend:   backend,
@@ -168,6 +172,10 @@ func (val *validator) run() {
 }
 
 func (val *validator) Stop() error {
+	if !val.Running() {
+		return nil
+	}
+
 	if !val.Validating() {
 		return ErrCantStopNonStartedValidator
 	}
@@ -404,9 +412,16 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 }
 
 func (val *validator) leave() {
-	err := val.consensus.Leave(val.walletAccount)
+	txHash, err := val.consensus.Leave(val.walletAccount)
 	if err != nil {
 		log.Error("failed to leave the election", "err", err)
+	}
+	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+	if err != nil {
+		log.Error("Failed to verify the voter deregistration", "err", err)
+	}
+	if receipt.Status == types.ReceiptStatusFailed {
+		log.Error("Failed to deregister validator - receipt status failed")
 	}
 }
 
@@ -528,35 +543,43 @@ func (val *validator) preVote() {
 
 func (val *validator) preCommit() {
 	var vote common.Hash
-	// access prevotes
-	winner := common.Hash{}
+
+	// current leader by simple majority
+	votingTable, err := val.votingSystem.getVoteSet(val.round, types.PreVote)
+	if err != nil {
+		log.Crit("Error while preCommit stage", "err", err)
+	}
+
+	currentLeader := votingTable.Leader()
+
 	switch {
 	// no majority
 	// majority pre-voted nil
-	case winner == common.Hash{}:
+	case currentLeader == common.Hash{}:
 		log.Debug("Majority of validators pre-voted nil")
 		// unlock locked block
 		if val.lockedBlock != nil {
 			val.lockedRound = 0
 			val.lockedBlock = nil
 		}
-	case winner == val.lockedBlock.Hash():
-		log.Debug("Majority of validators pre-voted the locked block")
+	case val.lockedBlock != nil && currentLeader == val.lockedBlock.Hash():
+		log.Debug("Majority of validators pre-voted the locked block", "block", val.lockedBlock.Hash())
 		// update locked block round
 		val.lockedRound = val.round
 		// vote on the pre-vote election winner
-		vote = winner
-	case winner == val.block.Hash():
-		log.Debug("Majority of validators pre-voted the proposed block")
+		vote = currentLeader
+	case val.block != nil && currentLeader == val.block.Hash():
+		log.Debug("Majority of validators pre-voted the proposed block", "block", val.block.Hash())
 		// lock block
 		val.lockedRound = val.round
 		val.lockedBlock = val.block
 		// vote on the pre-vote election winner
-		vote = winner
+		vote = currentLeader
 		// we don't have the current block (fetch)
 	default:
 		// fetch block, unlock, precommit
 		// unlock locked block
+		log.Debug("preCommit default case")
 		val.lockedRound = 0
 		val.lockedBlock = nil
 		val.block = nil
@@ -678,6 +701,12 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 		return err
 	}
 
+	if val.voters != nil {
+		log.Debug("voting. updating a list of validators", "was", val.voters.Len(), "now", validators.Len())
+	} else {
+		log.Debug("voting. updating a list of validators", "was", "nil", "now", validators.Len())
+	}
+
 	val.voters = validators
 	val.votersChecksum = checksum
 
@@ -700,5 +729,18 @@ func (val *validator) RedeemDeposits() error {
 	if !val.Validating() {
 		return ErrIsNotRunning
 	}
-	return val.consensus.RedeemDeposits(val.walletAccount)
+
+	txHash, err := val.consensus.RedeemDeposits(val.walletAccount)
+	if err != nil {
+		return err
+	}
+	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+	if err != nil {
+		return err
+	}
+	if receipt.Status == types.ReceiptStatusFailed {
+		return fmt.Errorf("Failed to redeem deposits - receipt status failed")
+	}
+
+	return nil
 }

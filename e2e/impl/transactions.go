@@ -14,16 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/e2e/cluster"
 )
 
-func (ctx *Context) CurrentBlock() (uint64, error) {
-	block, err := ctx.client.BlockNumber(context.Background())
-	if err != nil {
-		return 0, err
-	}
-
-	return block.Uint64(), nil
-}
-
-func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
+func (ctx *Context) ITransferKUSD(kcoins int64, from, to string) error {
 	return ctx.waiter.Do(
 		func() error {
 			var err error
@@ -31,7 +22,7 @@ func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
 			if err != nil {
 				return err
 			}
-			ctx.lastTx, err = ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
+			ctx.lastTx, err = ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], toWei(kcoins))
 
 			return err
 		},
@@ -47,8 +38,8 @@ func (ctx *Context) ITransferKUSD(kcoin int64, from, to string) error {
 		})
 }
 
-func (ctx *Context) ITryTransferKUSD(kcoin int64, from, to string) error {
-	tx, err := ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], kcoin)
+func (ctx *Context) ITryTransferKUSD(kcoins int64, from, to string) error {
+	tx, err := ctx.sendFunds(ctx.accounts[from], ctx.accounts[to], toWei(kcoins))
 	ctx.lastTx = tx
 	ctx.lastTxErr = err
 	return nil
@@ -181,34 +172,42 @@ func (ctx *Context) transactionBlock(tx *types.Transaction) (*types.Block, error
 	return nil, errors.New("the transaction is not in the chain")
 }
 
-func (ctx *Context) buildTx(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
-	nonce, err := ctx.client.NonceAt(context.Background(), from.Address, nil)
+func (ctx *Context) buildTx(from, to accounts.Account, kcoins *big.Int) (*types.Transaction, error) {
+	nonce, gp, gas, err := ctx.getTxParams(from, to, kcoins)
 	if err != nil {
 		return nil, err
 	}
 
-	gp, err := ctx.client.SuggestGasPrice(context.Background())
+	tx := types.NewTransaction(nonce, to.Address, kcoins, gas, gp, nil)
+
+	return ctx.AccountsStorage.SignTx(from, tx, ctx.chainID)
+}
+
+func (ctx *Context) getTxParams(from, to accounts.Account, kcoins *big.Int) (uint64, *big.Int, uint64, error) {
+	nonce, err := ctx.client.NonceAt(context.Background(), from.Address, nil)
 	if err != nil {
-		return nil, err
+		return 0, nil, 0, err
+	}
+
+	gasPrice, err := ctx.client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return 0, nil, 0, err
 	}
 
 	gas, err := ctx.client.EstimateGas(context.Background(), kowala.CallMsg{
 		From:     from.Address,
 		To:       &to.Address,
-		Value:    toWei(kcoin),
-		GasPrice: gp,
+		Value:    kcoins,
+		GasPrice: gasPrice,
 	})
 	if err != nil {
-		return nil, err
+		return 0, nil, 0, err
 	}
-
-	tx := types.NewTransaction(nonce, to.Address, toWei(kcoin), gas, gp, nil)
-
-	return ctx.AccountsStorage.SignTx(from, tx, ctx.chainID)
+	return nonce, gasPrice, gas, nil
 }
 
-func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Transaction, error) {
-	tx, err := ctx.buildTx(from, to, kcoin)
+func (ctx *Context) sendFunds(from, to accounts.Account, kcoins *big.Int) (*types.Transaction, error) {
+	tx, err := ctx.buildTx(from, to, kcoins)
 
 	if err != nil {
 		return nil, err
@@ -217,7 +216,7 @@ func (ctx *Context) sendFunds(from, to accounts.Account, kcoin int64) (*types.Tr
 	return tx, ctx.client.SendTransaction(context.Background(), tx)
 }
 
-func (ctx *Context) sendFundsAndWait(from, to accounts.Account, kcoins int64) (*types.Transaction, error) {
+func (ctx *Context) sendFundsAndWait(from, to accounts.Account, kcoins *big.Int) (*types.Transaction, error) {
 	var tx *types.Transaction
 	return tx, ctx.waiter.Do(
 		func() error {
@@ -230,8 +229,8 @@ func (ctx *Context) sendFundsAndWait(from, to accounts.Account, kcoins int64) (*
 			if err != nil {
 				return err
 			}
-			if balance.Cmp(toWei(kcoins)) != 0 {
-				return fmt.Errorf("want %d, got %d coins", toWei(kcoins).Uint64(), balance.Uint64())
+			if balance.Cmp(kcoins) != 0 {
+				return fmt.Errorf("want %d, got %d coins", kcoins.Uint64(), balance.Uint64())
 			}
 			return nil
 		})

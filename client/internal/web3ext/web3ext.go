@@ -456,6 +456,20 @@ web3._extend({
 			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
 		}),
 		new web3._extend.Method({
+			name: 'cap',
+			call: 'mtoken_cap',
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'totalSupply',
+			call: 'mtoken_totalSupply',
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Method({
+			name: 'mintingFinished',
+			call: 'mtoken_mintingFinished'
+		}),
+		new web3._extend.Method({
 			name: 'transfer',
 			call: 'mtoken_transfer',
 			params: 1,
@@ -464,9 +478,20 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'mint',
 			call: 'mtoken_mint',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputAddressFormatter, web3._extend.utils.fromDecimal]
+		}),
+		new web3._extend.Method({
+			name: 'confirm',
+			call: 'mtoken_confirm',
 			params: 2,
-			inputFormatter: [web3._extend.formatters.inputTransactionFormatter, null]
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.utils.fromDecimal]
+		}),
+		new web3._extend.Method({
+			name: 'mintList',
+			call: 'mtoken_mintList'
 		})
+
 	],
 	properties: []
 });
@@ -481,7 +506,7 @@ web3._extend({
 			name: 'start',
 			call: 'validator_start',
 			params: 1,
-			inputFormatter: [null]
+			inputFormatter: [web3._extend.utils.fromDecimal]
 		}),
 		new web3._extend.Method({
 			name: 'stop',

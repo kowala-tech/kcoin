@@ -2,7 +2,7 @@
 
 This section will help you get started with the latest [test network](http://zygote.kowala.io/).
 
-The [Kowala Testnet](http://testnet.kowala.io/) is the perfect place for testing the Kowala Protocol, kCoins and mTokens without the fear of making a mistake and losing real money. You can spin up your own node and connect to the network, see how the network is performing using the [networks stats dashboard](http://testnet.kowala.io/stats/), and get free kUSD to play with using the [Kowala's faucet](http://faucet.testnet.kowala.io/).
+The [Kowala Testnet](http://zygote.kowala.tech/) is the perfect place for testing the Kowala Protocol, kCoins and mTokens without the fear of making a mistake and losing real money. You can spin up your own node and connect to the network, see how the network is performing using the [networks stats dashboard](http://zygote.kowala.tech/stats/), and get free kUSD to play with using the [Kowala's faucet](http://faucet.zygote.kowala.tech).
 
 ## Requirements
 
@@ -55,7 +55,7 @@ The console will output your public address. For example:
 "0xe2ac86cbae1bbbb47d157516d334e70859a1be45"
 ```
 
-You can use that address in the [Coin Faucet](<(http://faucet.testnet.kowala.io/)>) to acquire some free money. The Coin Faucet will send you money (the operation should take ~ 1 second), and you can check your balance with:
+You can use that address in the [Coin Faucet](<(http://zygote.testnet.kowala.tech/)>) to acquire some free money. The Coin Faucet will send you money (the operation should take ~ 1 second), and you can check your balance with:
 
 ```
 > kcoin.getBalance(kcoin.coinbase)

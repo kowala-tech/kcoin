@@ -50,10 +50,10 @@ contract('Proxy Functionality', ([_, admin, owner, anotherAccount]) => {
     const resolverProxyAddress = logs5.find(l => l.event === 'ProxyCreated').args.proxy;
     const resolverProxy = await AdminUpgradeabilityProxy.at(resolverProxyAddress);
     const resolverContract = await PublicResolver.at(resolverProxyAddress);
-    
+
     await resolverContract.initialize(knsProxyAddress);
     await knsContract.setSubnodeOwner(0, web3.sha3('kowala'), registrarProxyAddress, { from: owner });
-    const validator = await ValidatorMgr.new(1, 2, 3, '0x1234', 1);
+    const validator = await ValidatorMgr.new(1, 2, 3, 1, resolverProxyAddress);
     await registrarContract.register(web3.sha3('validator'), owner);
     await knsContract.setResolver(namehash('validator.kowala'), resolverProxyAddress, { from: owner });
     await resolverContract.setAddr(namehash('validator.kowala'), validator.address, { from: owner });

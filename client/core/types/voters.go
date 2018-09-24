@@ -2,9 +2,8 @@ package types
 
 import (
 	"errors"
-	"math/big"
-
 	"io"
+	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/rlp"
@@ -122,6 +121,9 @@ func (voters voters) Contains(addr common.Address) bool {
 	voter := voters.Get(addr)
 	return voter != nil
 }
+
+// VotersChecksum lets a voter know if there are changes in the voters set
+type VotersChecksum [32]byte
 
 func NewDeposit(amount *big.Int, timeUnix int64) *Deposit {
 	return &Deposit{

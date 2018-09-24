@@ -23,6 +23,19 @@ nodes.customNodeObj = {
 	'lib': null
 };
 nodes.nodeList = {
+	'kusd': {
+		'name': 'kUSD',
+		'blockExplorerTX': 'https://explorer.kusd.kowala.tech/tx/[[txHash]]',
+		'blockExplorerAddr': 'https://explorer.kusd.kowala.tech/addr/[[address]]',
+		'type': nodes.nodeTypes.kUSD,
+		'eip155': false,
+		'chainId': 1,
+		'tokenList': [],
+		'abiList': [],
+		'estimateGas': false,
+		'service': 'Main net',
+		'lib': new nodes.customNode('https://rpc.kusd.kowala.tech'),
+	},
 	'kusd_testnet': {
 		'name': 'kUSD',
 		'blockExplorerTX': 'https://explorer.zygote.kowala.tech/tx/[[txHash]]',
