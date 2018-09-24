@@ -31,19 +31,17 @@ contract OracleMgr is Pausable, Initializable {
     
     mapping (address => Oracle) private oracleRegistry;
     
-    // oraclePool contains the oracle identity ordered by the biggest deposit to
-    // the smallest deposit.
     address[] private oraclePool;
 
     OraclePrice[] private prices;
 
-    modifier onlyOracle {
-        require(isOracle(msg.sender));
+    modifier onlyOracle(address oracle) {
+        require(isOracle(oracle));
         _;
     }
 
-    modifier onlyNewCandidate {
-        require(!isOracle(msg.sender));
+    modifier onlyNewCandidate(address identity) {
+        require(!isOracle(identity));
         _;
     }
 
@@ -147,9 +145,8 @@ contract OracleMgr is Pausable, Initializable {
     /**
      * @dev Inserts oracle
      * @param identity Address of an Oracle.
-     * @param deposit Deposit ammount
      */
-    function _insertOracle(address identity, uint deposit) private {
+    function _insertOracle(address identity) private {
         Oracle oracle = oracleRegistry[identity];
         oracle.index = oraclePool.push(identity) - 1;
         oracle.isOracle = true;
@@ -188,26 +185,34 @@ contract OracleMgr is Pausable, Initializable {
         oracle = oraclePrice.oracle;
     }
 
+    
     /**
      * @dev Registers a new candidate as oracle
      */
-    function registerOracle() public payable whenNotPaused onlyNewCandidate onlySuperNode {
+    function registerOracle(address identity) public whenNotPaused onlyOwner onlyNewCandidate(identity) {
         require(_hasAvailability());
-        _insertOracle(msg.sender, msg.value);
+        _insertOracle(identity);
     }
+    //function registerOracle() public payable whenNotPaused onlyNewCandidate(identity) onlySuperNode {
+    //    require(_hasAvailability());
+    //    _insertOracle(msg.sender);
+    //} 
 
     /**
      * @dev Deregisters the msg sender from the oracle set
      */
-    function deregisterOracle() public whenNotPaused onlyOracle {
-        _deleteOracle(msg.sender);
+    function deregisterOracle(address identity) public whenNotPaused onlyOwner onlyOracle(identity) {
+        _deleteOracle(identity);
     }
+    //function deregisterOracle() public whenNotPaused onlyOracle(msg.sender) {
+    //    _deleteOracle(msg.sender);
+    //}
 
     /**
      * @dev Adds price
      * @param _price price
      */
-    function submitPrice(uint _price) public whenNotPaused onlyOracle onlyOnce {
+    function submitPrice(uint _price) public whenNotPaused onlyOracle(msg.sender) onlyOnce {
         oracleRegistry[msg.sender].hasSubmittedPrice = true;
         prices.push(OraclePrice({price: _price, oracle: msg.sender}));
     }
