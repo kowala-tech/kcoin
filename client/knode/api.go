@@ -58,7 +58,7 @@ func NewPrivateValidatorAPI(kcoin *Kowala) *PrivateValidatorAPI {
 }
 
 // Start the validator.
-func (api *PrivateValidatorAPI) Start(deposit *big.Int) error {
+func (api *PrivateValidatorAPI) Start(deposit *hexutil.Big) error {
 	// Start the validator and return
 	if !api.kcoin.IsValidating() {
 		// Propagate the initial price point to the transaction pool
@@ -66,8 +66,9 @@ func (api *PrivateValidatorAPI) Start(deposit *big.Int) error {
 		price := api.kcoin.gasPrice
 		api.kcoin.lock.RUnlock()
 
-		if deposit != nil {
-			err := api.kcoin.SetDeposit(deposit)
+		bigint := deposit.ToInt()
+		if bigint.Cmp(big.NewInt(0)) != 0 {
+			err := api.kcoin.SetDeposit(bigint)
 			if err != nil && err != validator.ErrIsNotRunning {
 				return err
 			}
