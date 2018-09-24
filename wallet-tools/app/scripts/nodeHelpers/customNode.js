@@ -71,7 +71,7 @@ customNode.prototype.getMUsd = function(addr, callback) {
                     } else {
                         var balance = 0;
                         if (data.data !== "0x") {
-                            balance = window.web3.utils.fromWei(
+                            balance = window.web3.fromWei(
                                     ethUtil.solidityCoder.decodeParam("uint", data.data.replace('0x', '')).toString(),
                                     "ether"
                                 );

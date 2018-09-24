@@ -232,7 +232,7 @@ var decryptWalletCtrl = function($scope, $sce, walletService) {
             }
             $scope.HDWallet.wallets[$scope.HDWallet.wallets.length - 1].type = "addressOnly";
             $scope.HDWallet.wallets[$scope.HDWallet.wallets.length - 1].setBalance(function (data) {
-                if (data.error) {
+                if (data && data.error) {
                     $scope.notifier.danger(globalFuncs.errorMsgs[32])
                 }
             });
