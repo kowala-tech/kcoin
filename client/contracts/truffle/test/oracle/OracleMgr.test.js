@@ -41,7 +41,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
       await this.kns.setResolver(namehash('validator.kowala'), this.resolver.address, { from: owner });
       this.consensus = await ConsensusMock.new(true);
       await this.resolver.setAddr(namehash('validator.kowala'), this.consensus.address, { from: owner });
-      this.oracle = await OracleMgr.new(1, 1, 1, this.resolver.address, { from: owner });
+      this.oracle = await OracleMgr.new(1, this.resolver.address, { from: owner });
     });
 
     it('should set Consensus address using KNS', async () => {
@@ -61,7 +61,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
     beforeEach(async () => {
       this.consensus = await ConsensusMock.new(true);
       this.resolver = await DomainResolverMock.new(this.consensus.address);
-      this.oracle = await OracleMgr.new(3, 1, 1, this.resolver.address, { from: owner });
+      this.oracle = await OracleMgr.new(3, this.resolver.address, { from: owner });
     });
     describe('registration', async () => {
       it('should register oracle', async () => {
@@ -100,7 +100,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
       it('should not register oracle when not super node', async () => {
         const consensus = await ConsensusMock.new(false);
         const resolver = await DomainResolverMock.new(consensus.address);
-        const oracleWithoutSuperNode = await OracleMgr.new(3, 1, 1, resolver.address, { from: owner });
+        const oracleWithoutSuperNode = await OracleMgr.new(3, resolver.address, { from: owner });
         // when
         const expectedRegistrationFailure = oracleWithoutSuperNode.registerOracle({ from: newOwner });
 
