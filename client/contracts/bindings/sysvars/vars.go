@@ -1,6 +1,7 @@
 package sysvars
 
 import (
+	"github.com/kowala-tech/kcoin/client/log"
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common/kns"
@@ -29,6 +30,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		contractBackend,
 	)
 	if err != nil {
+		log.Error("can't find SystemVar for given Network", "chainID", chainID.String())
 		return nil, bindings.ErrNoAddress
 	}
 
