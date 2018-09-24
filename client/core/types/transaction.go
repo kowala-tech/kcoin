@@ -269,15 +269,20 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 
 // Cost returns amount + gasprice * gaslimit + stability fee.
 func (tx *Transaction) Cost(stabilizationLevel uint64) *big.Int {
-	computeFee := new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
-	stabilityFee := stability.CalcFee(computeFee, stabilizationLevel, tx.data.Amount)
-	total := new(big.Int).Add(computeFee, stabilityFee)
-	total.Add(total, tx.data.Amount)
-	return total
+	total := new(big.Int).Add(tx.ComputeFee(), tx.StabilityFee(stabilizationLevel))
+	return total.Add(total, tx.Value())
 }
 
 func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
 	return tx.data.V, tx.data.R, tx.data.S
+}
+
+func (tx *Transaction) ComputeFee() *big.Int {
+	return new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
+}
+
+func (tx *Transaction) StabilityFee(stabilizationLevel uint64) *big.Int {
+	return stability.CalcFee(tx.ComputeFee(), stabilizationLevel, tx.Value())
 }
 
 func (tx *Transaction) String() string {
