@@ -6,8 +6,8 @@ import (
 	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/core/stability"
+	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 )
@@ -42,7 +42,7 @@ type StateTransition struct {
 	gasPrice            *big.Int
 	initialGas          uint64
 	initialStabilityFee *big.Int
-	stabilityFee *big.Int
+	stabilityFee        *big.Int
 	value               *big.Int
 	data                []byte
 	state               vm.StateDB
@@ -100,15 +100,15 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
 	return &StateTransition{
-		gp:       gp,
-		evm:      evm,
-		msg:      msg,
-		gasPrice: msg.GasPrice(),
-		value:    msg.Value(),
-		data:     msg.Data(),
-		state:    evm.StateDB,
+		gp:                  gp,
+		evm:                 evm,
+		msg:                 msg,
+		gasPrice:            msg.GasPrice(),
+		value:               msg.Value(),
+		data:                msg.Data(),
+		state:               evm.StateDB,
 		initialStabilityFee: common.Big0,
-		stabilityFee: common.Big0,
+		stabilityFee:        common.Big0,
 	}
 }
 
@@ -229,23 +229,20 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, stability
 	}
 
 	st.refundGas()
-	
+
 	computeFees := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
 
-	// stabily fee enabled
-	if st.initialStabilityFee.Cmp(common.Big0) > 0 {
-		// calculate the final stability fee and refund the remaining value.
-		if st.gas > 0 {
-			st.calcAndrefundStabilityFee(computeFees)
-		}
-	} 
-	
+	// calculate the final stability fee and refund the remaining value.
+	if st.initialStabilityFee.Cmp(common.Big0) > 0 && st.gas > 0 {
+		st.calcAndRefundStabilityFee(computeFees)
+	}
+
 	st.state.AddBalance(st.evm.Coinbase, computeFees)
-	
+
 	return ret, st.gasUsed(), st.stabilityFee, vmerr != nil, err
 }
 
-func (st *StateTransition) calcAndrefundStabilityFee(finalComputeFee *big.Int) {
+func (st *StateTransition) calcAndRefundStabilityFee(finalComputeFee *big.Int) {
 	computeFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
 	if stabilityFee := stability.CalcFee(computeFee, st.evm.StabilizationLevel, st.msg.Value()); stabilityFee.Cmp(common.Big0) > 0 {
 		st.state.AddBalance(st.msg.From(), new(big.Int).Sub(st.initialStabilityFee, stabilityFee))
@@ -274,4 +271,3 @@ func (st *StateTransition) refundGas() {
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
 }
-

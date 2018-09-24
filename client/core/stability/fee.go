@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	stabilityIncrease     = new(big.Int).SetUint64(109)
+	stabilityIncrease     = new(big.Int).Add(common.Big100, new(big.Int).SetUint64(params.StabilityIncreasePercentage))
 	stabilityTxPercentage = new(big.Int).SetUint64(params.StabilityFeeTxPercentage)
 )
 
