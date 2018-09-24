@@ -253,9 +253,10 @@ var (
 		Usage: "Enable consensus validation",
 	}
 
-	ValidatorDepositFlag = cli.Uint64Flag{
+	ValidatorDepositFlag = BigFlag{
 		Name:  "deposit",
 		Usage: "Deposit at stake",
+		Value: big.NewInt(0),
 	}
 
 	TargetGasLimitFlag = cli.Uint64Flag{
@@ -777,9 +778,7 @@ func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *knode.Config) {
 }
 
 func setDeposit(ctx *cli.Context, cfg *knode.Config) {
-	if ctx.GlobalIsSet(ValidatorDepositFlag.Name) {
-		cfg.Deposit = new(big.Int).SetUint64(ctx.GlobalUint64(ValidatorDepositFlag.Name))
-	}
+	cfg.Deposit = GlobalBig(ctx, ValidatorDepositFlag.Name)
 }
 
 // MakePasswordList reads password lines from the file specified by the global --password flag.

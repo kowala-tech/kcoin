@@ -154,19 +154,19 @@ func (suite *OracleMgrSuite) TestDeploy_SyncFreqGreaterZero_UpdatePeriodGreaterS
 	req.Error(err, "update period must be less or equal than sync freq")
 }
 
-func (suite *OracleMgrSuite) TestRegisterOracle_WhenPaused() {
+func (suite *OracleMgrSuite) TestRegisterOracle_Paused() {
 	req := suite.Require()
 
 	transactOpts := bind.NewKeyedTransactor(owner)
 
 	// pause service
-	suite.oracleMgr.Pause(transactOpts)
-
+	_, err := suite.oracleMgr.Pause(transactOpts)
+	req.NoError(err)
 	suite.Backend.Commit()
 
 	// register oracle must fail
 	registerOpts := bind.NewKeyedTransactor(user)
-	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
+	_, err = suite.oracleMgr.RegisterOracle(registerOpts)
 	req.Error(err, "service is paused")
 }
 
@@ -217,7 +217,7 @@ func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_NewCandidate_SuperNode
 	req.NoError(err)
 }
 
-func (suite *OracleMgrSuite) TestDeregisterOracle_WhenPaused() {
+func (suite *OracleMgrSuite) TestDeregisterOracle_Paused() {
 	req := suite.Require()
 
 	// register oracle
@@ -229,8 +229,8 @@ func (suite *OracleMgrSuite) TestDeregisterOracle_WhenPaused() {
 
 	// pause service
 	pauseOpts := bind.NewKeyedTransactor(owner)
-	suite.oracleMgr.Pause(pauseOpts)
-
+	_, err = suite.oracleMgr.Pause(pauseOpts)
+	req.NoError(err)
 	suite.Backend.Commit()
 
 	// deregister oracle
@@ -271,7 +271,7 @@ func (suite *OracleMgrSuite) TestDeregisterOracle_NotPaused_Oracle() {
 	req.Zero(count.Uint64())
 }
 
-func (suite *OracleMgrSuite) TestSubmitPrice_WhenPaused() {
+func (suite *OracleMgrSuite) TestSubmitPrice_Paused() {
 	req := suite.Require()
 
 	// register oracle
@@ -283,8 +283,8 @@ func (suite *OracleMgrSuite) TestSubmitPrice_WhenPaused() {
 
 	// pause service
 	pauseOpts := bind.NewKeyedTransactor(owner)
-	suite.oracleMgr.Pause(pauseOpts)
-
+	_, err = suite.oracleMgr.Pause(pauseOpts)
+	req.NoError(err)
 	suite.Backend.Commit()
 
 	priceOpts := bind.NewKeyedTransactor(user)

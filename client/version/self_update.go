@@ -5,6 +5,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -48,12 +49,12 @@ func (su *SelfUpdater) Run() {
 }
 
 func (su *SelfUpdater) exit() {
-	go su.stack.Stop()
-
-	// wait 10 seconds for graceful shutdown
-	time.Sleep(time.Second * 10)
-
+	err := su.stack.Stop()
+	if err != nil {
+		su.logger.Error("Error stopping node", "err", err)
+	}
 	debug.Exit()
+	os.Exit(131)
 }
 
 func randomTo60SecDelay() {
