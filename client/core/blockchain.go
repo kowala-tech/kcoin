@@ -2,7 +2,6 @@
 package core
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
@@ -29,7 +29,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/trie"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"github.com/davecgh/go-spew/spew"
 )
 
 var (
@@ -923,7 +922,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 func (bc *BlockChain) doReorg(block *types.Block, currentBlock *types.Block, batch kcoindb.Batch, state *state.StateDB) (WriteStatus, error) {
 	// Reorganise the chain if the parent is not the head block
-	if !IsHead(block, currentBlock) {
+	if !IsParent(currentBlock, block) {
 		if err := bc.reorg(currentBlock, block); err != nil {
 			return NonStatTy, err
 		}
@@ -938,7 +937,7 @@ func writePositionalMetadata(batch kcoindb.Batch, block *types.Block, state *sta
 	rawdb.WritePreimages(batch, block.NumberU64(), state.Preimages())
 }
 
-func IsHead(block *types.Block, currentBlock *types.Block) bool {
+func IsParent(currentBlock *types.Block, block *types.Block) bool {
 	return block.ParentHash() == currentBlock.Hash()
 }
 
@@ -1194,7 +1193,8 @@ func countTransactions(chain []*types.Block) (c int) {
 // to be part of the new canonical chain and accumulates potential missing transactions and post an
 // event about them
 func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
-	if oldBlock.Number().Cmp(newBlock.Number()) == 0 && bytes.Equal(oldBlock.Hash().Bytes(), newBlock.Hash().Bytes()) {
+	if oldBlock.IsEqual(newBlock) {
+		// don't need a reorg if got the same block as old and new ones
 		return nil
 	}
 	log.Warn(fmt.Sprintf("a blockchain reorganization needed: block parent hash %v(%d), current block hash %v(%d)",

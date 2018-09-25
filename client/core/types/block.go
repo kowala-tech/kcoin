@@ -2,6 +2,7 @@
 package types
 
 import (
+	"bytes"
 	"io"
 	"math/big"
 	"sort"
@@ -350,6 +351,11 @@ func (b *Block) AsFragments(size int) (*BlockFragments, error) {
 		return &BlockFragments{}, err
 	}
 	return NewDataSetFromData(rawBlock, size), nil
+}
+
+// IsEqual returns true if blocks have same hashes and block numbers
+func (b *Block) IsEqual(to *Block) bool {
+	return b.Number().Cmp(to.Number()) == 0 && bytes.Equal(b.Hash().Bytes(), to.Hash().Bytes())
 }
 
 type Blocks []*Block
