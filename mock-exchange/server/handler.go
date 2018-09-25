@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/kowala-tech/kcoin/mock-exchange/app"
 	"github.com/kowala-tech/kcoin/mock-exchange/exchange"
@@ -79,12 +80,17 @@ func (h *GetRatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func WriteJSONResponse(w http.ResponseWriter, resp interface{}, code int, logger *logrus.Entry) {
-	jsonErrResp, err := json.Marshal(resp)
-	if err != nil {
-		logger.WithError(err).Warn("error creating error response")
-		return
-	}
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	w.Write(jsonErrResp)
+
+	if resp != nil {
+		jsonErrResp, err := json.Marshal(resp)
+		if err != nil {
+			logger.WithError(err).Warn("error creating error response")
+			return
+		}
+
+		w.Header().Set("Content-Length", strconv.Itoa(len(jsonErrResp)))
+		w.Write(jsonErrResp)
+	}
 }
