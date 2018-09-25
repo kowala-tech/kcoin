@@ -193,10 +193,10 @@ type TxPool struct {
 	signer       types.Signer
 	mu           sync.RWMutex
 
-	currentState  *state.StateDB      // Current state in the blockchain head
-	pendingState  *state.ManagedState // Pending state tracking virtual nonces
-	currentMaxGas uint64              // Current gas limit for transaction caps
-	currentStabilizationLevel uint64 // Current stabilization level
+	currentState              *state.StateDB      // Current state in the blockchain head
+	pendingState              *state.ManagedState // Pending state tracking virtual nonces
+	currentMaxGas             uint64              // Current gas limit for transaction caps
+	currentStabilizationLevel uint64              // Current stabilization level
 
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
@@ -404,7 +404,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentState = statedb
 	pool.pendingState = state.ManageState(statedb)
 	pool.currentMaxGas = newHead.GasLimit
-	
+
 	var storageaddr common.Hash
 	pool.currentStabilizationLevel = pool.currentState.GetState(params.StabilizationLevelAddr, storageaddr).Big().Uint64()
 
@@ -584,7 +584,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost(pool.currentStabilizationLevel)) < 0 {
 		return ErrInsufficientFunds
 	}
-	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, true)
+	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil)
 	if err != nil {
 		return err
 	}

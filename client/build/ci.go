@@ -131,6 +131,7 @@ var (
 		"./knode/genesis",
 		"./kcoinclient",
 		"./accounts",
+		"./core",
 		"./core/types",
 		"./core/stability",
 		"./params",

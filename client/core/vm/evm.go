@@ -58,7 +58,15 @@ type Context struct {
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
 
 	// System information
-	StabilizationLevel uint64
+	StabilizationLvl uint64
+}
+
+func (ctx Context) Author() common.Address {
+	return ctx.Coinbase
+}
+
+func (ctx Context) StabilizationLevel() uint64 {
+	return ctx.StabilizationLvl
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -382,3 +390,6 @@ func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
 
 // Interpreter returns the EVM interpreter
 func (evm *EVM) Interpreter() *Interpreter { return evm.interpreter }
+
+// State returns the EVM state db
+func (evm *EVM) State() StateDB { return evm.StateDB }
