@@ -25,9 +25,8 @@ func (h *FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if r.Method != http.MethodPost {
+		WriteJSONResponse(w, ErrorResponse{Error: "invalid method called"}, http.StatusMethodNotAllowed, logger)
 		logger.Warn("invalid method called")
-
-		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 	defer r.Body.Close()
@@ -35,9 +34,8 @@ func (h *FetchDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	request := app.Request{}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		WriteJSONResponse(w, ErrorResponse{Error: "invalid request"}, http.StatusBadRequest, logger)
 		logger.WithError(err).WithField("request", request).Warn("error creating request")
-
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -57,41 +55,36 @@ func (h *GetRatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if r.Method != http.MethodGet {
+		WriteJSONResponse(w, ErrorResponse{Error: "invalid method called"}, http.StatusMethodNotAllowed, logger)
 		logger.Warn("invalid method called")
-
-		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	req, ok := h.cache.Get(app.CacheRequestKey)
 	if !ok {
-		jsonErrResp, err := json.Marshal(ErrorResponse{Error: "Please, call fetch before."})
-		if err != nil {
-			logger.WithError(err).Warn("error creating error response")
-			return
-		}
-
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(jsonErrResp)
-
-		logger.Info("msg", "get rates api method was called before fetching mocked info")
+		WriteJSONResponse(w, ErrorResponse{Error: "Please, call fetch before."}, http.StatusBadRequest, logger)
+		logger.Info("get rates api method was called before fetching mocked info")
 		return
 	}
 
 	tResp, err := h.transformer.Transform(req.(app.Request))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		jsonErrResp, errJson := json.Marshal(ErrorResponse{Error: "There was a problem getting data from request."})
-		if errJson != nil {
-			logger.WithError(err).Warn("error creating error response")
-			return
-		}
-
-		w.Write(jsonErrResp)
-		logger.WithError(err).Warn("msg", "there was a problem when trying to decodify data from cache")
+		WriteJSONResponse(w, ErrorResponse{Error: "There was a problem getting data from request."}, http.StatusBadRequest, logger)
+		logger.WithError(err).Warn("there was a problem when trying to decodify data from cache")
 		return
 	}
 
 	w.Write([]byte(tResp))
 	logger.WithField("response", tResp).Info("msg", "request for data rates accomplished")
+}
+
+func WriteJSONResponse(w http.ResponseWriter, resp interface{}, code int, logger *logrus.Entry) {
+	jsonErrResp, err := json.Marshal(resp)
+	if err != nil {
+		logger.WithError(err).Warn("error creating error response")
+		return
+	}
+
+	w.WriteHeader(code)
+	w.Write(jsonErrResp)
 }
