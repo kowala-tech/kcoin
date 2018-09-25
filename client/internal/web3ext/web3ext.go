@@ -505,7 +505,7 @@ web3._extend({
 			name: 'start',
 			call: 'validator_start',
 			params: 1,
-			inputFormatter: [null]
+			inputFormatter: [web3._extend.utils.fromDecimal]
 		}),
 		new web3._extend.Method({
 			name: 'stop',
