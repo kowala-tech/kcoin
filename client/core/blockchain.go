@@ -922,7 +922,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 func (bc *BlockChain) doReorg(block *types.Block, currentBlock *types.Block, batch kcoindb.Batch, state *state.StateDB) (WriteStatus, error) {
 	// Reorganise the chain if the parent is not the head block
-	if !IsParent(currentBlock, block) {
+	if !currentBlock.IsParent(block) {
 		if err := bc.reorg(currentBlock, block); err != nil {
 			return NonStatTy, err
 		}
@@ -935,10 +935,6 @@ func (bc *BlockChain) doReorg(block *types.Block, currentBlock *types.Block, bat
 func writePositionalMetadata(batch kcoindb.Batch, block *types.Block, state *state.StateDB) {
 	rawdb.WriteTxLookupEntries(batch, block)
 	rawdb.WritePreimages(batch, block.NumberU64(), state.Preimages())
-}
-
-func IsParent(currentBlock *types.Block, block *types.Block) bool {
-	return block.ParentHash() == currentBlock.Hash()
 }
 
 func (bc *BlockChain) isReorgState(block *types.Block, currentBlock *types.Block) bool {
@@ -1193,7 +1189,7 @@ func countTransactions(chain []*types.Block) (c int) {
 // to be part of the new canonical chain and accumulates potential missing transactions and post an
 // event about them
 func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
-	if oldBlock.IsEqual(newBlock) {
+	if oldBlock.IsSame(newBlock) {
 		// don't need a reorg if got the same block as old and new ones
 		return nil
 	}

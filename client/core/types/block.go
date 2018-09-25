@@ -353,9 +353,14 @@ func (b *Block) AsFragments(size int) (*BlockFragments, error) {
 	return NewDataSetFromData(rawBlock, size), nil
 }
 
-// IsEqual returns true if blocks have same hashes and block numbers
-func (b *Block) IsEqual(to *Block) bool {
+// IsSame returns true if blocks have same hashes and block numbers
+func (b *Block) IsSame(to *Block) bool {
 	return b.Number().Cmp(to.Number()) == 0 && bytes.Equal(b.Hash().Bytes(), to.Hash().Bytes())
+}
+
+// IsParent returns true if child block have parent hashes in ParentHash and block number greater by 1
+func (b *Block) IsParent(childBlock *Block) bool {
+	return b.Number().Int64()+1 == childBlock.Number().Int64() && bytes.Equal(b.Hash().Bytes(), childBlock.ParentHash().Bytes())
 }
 
 type Blocks []*Block
