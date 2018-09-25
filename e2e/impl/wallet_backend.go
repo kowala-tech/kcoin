@@ -245,7 +245,7 @@ func (ctx *WalletBackendContext) TheNewBlockHeightInTheWalletBackendAPIHasIncrea
 	return nil
 }
 
-func (ctx *WalletBackendContext) ITransferKcoin(kcoin int64, from, to string) error {
+func (ctx *WalletBackendContext) ITransferKcoin(kcoins int64, from, to string) error {
 	fromAccount, ok := ctx.globalCtx.accounts[from]
 	if !ok {
 		return fmt.Errorf("can't get account for %q", from)
@@ -256,7 +256,7 @@ func (ctx *WalletBackendContext) ITransferKcoin(kcoin int64, from, to string) er
 		return fmt.Errorf("can't get account for %q", to)
 	}
 
-	tx, err := ctx.globalCtx.buildTx(fromAccount, toAccount, kcoin)
+	tx, err := ctx.globalCtx.buildTx(fromAccount, toAccount, toWei(kcoins))
 	if err != nil {
 		return err
 	}
