@@ -2,6 +2,7 @@
 package core
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -922,10 +923,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 func (bc *BlockChain) doReorg(block *types.Block, currentBlock *types.Block, batch kcoindb.Batch, state *state.StateDB) (WriteStatus, error) {
 	// Reorganise the chain if the parent is not the head block
-	if IsHead(block, currentBlock) {
-		log.Warn(fmt.Sprintf("a blockchain reorganization needed: block parent hash %v, current block hash %v",
-			block.ParentHash().String(), currentBlock.Hash().String()))
-
+	if !IsHead(block, currentBlock) {
 		if err := bc.reorg(currentBlock, block); err != nil {
 			return NonStatTy, err
 		}
@@ -941,7 +939,7 @@ func writePositionalMetadata(batch kcoindb.Batch, block *types.Block, state *sta
 }
 
 func IsHead(block *types.Block, currentBlock *types.Block) bool {
-	return block.ParentHash() != currentBlock.Hash()
+	return block.ParentHash() == currentBlock.Hash()
 }
 
 func (bc *BlockChain) isReorgState(block *types.Block, currentBlock *types.Block) bool {
@@ -1196,6 +1194,13 @@ func countTransactions(chain []*types.Block) (c int) {
 // to be part of the new canonical chain and accumulates potential missing transactions and post an
 // event about them
 func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
+	if oldBlock.Number().Cmp(newBlock.Number()) == 0 && bytes.Equal(oldBlock.Hash().Bytes(), newBlock.Hash().Bytes()) {
+		return nil
+	}
+	log.Warn(fmt.Sprintf("a blockchain reorganization needed: block parent hash %v(%d), current block hash %v(%d)",
+		newBlock.ParentHash().String(), newBlock.Number().Int64()-1,
+		oldBlock.Hash().String(), oldBlock.Number().Int64()))
+
 	var (
 		newChain    types.Blocks
 		oldChain    types.Blocks
@@ -1272,7 +1277,12 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
-		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "len(oldChain)", len(oldChain), "newnum", newBlock.Number(), "newhash", newBlock.Hash(), "len(newChain)", len(newChain))
+		log.Error("Impossible reorg, please file an issue",
+			"oldnum", oldBlock.Number(),
+			"oldhash", oldBlock.Hash(),
+			"len(oldChain)", len(oldChain),
+			"newnum", newBlock.Number(),
+			"newhash", newBlock.Hash(), "len(newChain)", len(newChain))
 	}
 	// Insert the new chain, taking care of the proper incremental order
 	var addedTxs types.Transactions
