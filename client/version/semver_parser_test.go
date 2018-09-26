@@ -1,8 +1,8 @@
 package version
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestMakeSemver(t *testing.T) {
