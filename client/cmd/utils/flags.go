@@ -11,13 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
-	"github.com/kowala-tech/kcoin/client/stats"
-
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/fdlimit"
+	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/vm"
@@ -30,12 +28,14 @@ import (
 	"github.com/kowala-tech/kcoin/client/metrics"
 	"github.com/kowala-tech/kcoin/client/metrics/influxdb"
 	"github.com/kowala-tech/kcoin/client/node"
+	"github.com/kowala-tech/kcoin/client/oracle"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/p2p/discover"
 	"github.com/kowala-tech/kcoin/client/p2p/discv5"
 	"github.com/kowala-tech/kcoin/client/p2p/nat"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/stats"
 
 	"gopkg.in/urfave/cli.v1"
 )
@@ -503,6 +503,12 @@ var (
 		Name:  metrics.MetricsPrometheusSubsystemFlag,
 		Usage: "Set the subsystem name for Prometheus reporting",
 		Value: "node",
+	}
+
+	// Oracle settings
+	KowalaOracleFlag = cli.BoolFlag{
+		Name:  "oracle",
+		Usage: "Enables the oracle service",
 	}
 )
 
@@ -1026,13 +1032,24 @@ func RegisterKowalaService(stack *node.Node, cfg *knode.Config) {
 // the given node.
 func RegisterKowalaStatsService(stack *node.Node, url string) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		// Retrieve both eth and les services
 		var kowalaServ *knode.Kowala
 		ctx.Service(&kowalaServ)
 
 		return stats.New(url, kowalaServ)
 	}); err != nil {
 		Fatalf("Failed to register the Kowala Stats service: %v", err)
+	}
+}
+
+// RegisterKowalaOracleService adds the oracle service to the give node
+func RegisterKowalaOracleService(stack *node.Node) {
+	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		var kowalaServ *knode.Kowala
+		ctx.Service(&kowalaServ)
+
+		return oracle.New(kowalaServ)
+	}); err != nil {
+		Fatalf("Failed to register the Kowala Oracle service. %v", err)
 	}
 }
 

@@ -319,10 +319,6 @@ func (ctx *Context) buildGenesis() error {
 		},
 		DataFeedSystem: &genesis.DataFeedSystemOpts{
 			MaxNumOracles: 10,
-			Price: genesis.PriceOpts{
-				SyncFrequency: 600,
-				UpdatePeriod:  30,
-			},
 		},
 		PrefundedAccounts: ctx.getPrefundedAccounts(baseDeposit, []genesis.PrefundedAccount{
 			{

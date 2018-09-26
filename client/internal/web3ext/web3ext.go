@@ -10,6 +10,7 @@ var Modules = map[string]string{
 	"mtoken":     MToken_JS,
 	"validator":  Validator_JS,
 	"net":        Net_JS,
+	"oracle":     Oracle_JS,
 	"personal":   Personal_JS,
 	"rpc":        RPC_JS,
 	"shh":        Shh_JS,
@@ -551,6 +552,28 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'redeemDeposits',
 			call: 'validator_redeemDeposits'
+		}),
+	],
+	properties: []
+});
+`
+
+const Oracle_JS = `
+web3._extend({
+	property: 'oracle',
+	methods:
+	[
+		new web3._extend.Method({
+			name: 'start',
+			call: 'oracle_start',
+		}),
+		new web3._extend.Method({
+			name: 'stop',
+			call: 'oracle_stop'
+		}),
+		new web3._extend.Method({
+			name: 'isReporting',
+			call: 'oracle_isReporting'
 		}),
 	],
 	properties: []

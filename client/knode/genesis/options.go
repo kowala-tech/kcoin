@@ -92,13 +92,11 @@ type GovernanceOpts struct {
 }
 
 type PriceOpts struct {
-	SyncFrequency uint64
-	UpdatePeriod  uint64
+	InitialPrice float64
 }
 
 type DataFeedSystemOpts struct {
 	MaxNumOracles uint64
-	Price         PriceOpts
 }
 
 type PrefundedAccount struct {
@@ -126,14 +124,8 @@ type validValidatorMgrOpts struct {
 	owner            common.Address
 }
 
-type validPriceOpts struct {
-	syncFrequency *big.Int
-	updatePeriod  *big.Int
-}
-
 type validOracleMgrOpts struct {
 	maxNumOracles    *big.Int
-	price            validPriceOpts
 	validatorMgrAddr common.Address
 	owner            common.Address
 }
@@ -247,8 +239,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 
 	// data feed system
 	maxNumOracles := new(big.Int).SetUint64(options.DataFeedSystem.MaxNumOracles)
-	syncFrequency := new(big.Int).SetUint64(options.DataFeedSystem.Price.SyncFrequency)
-	updatePeriod := new(big.Int).SetUint64(options.DataFeedSystem.Price.UpdatePeriod)
 
 	// mining tokens
 	decimals := new(big.Int).Exp(common.Big1, new(big.Int).SetUint64(options.Consensus.MiningToken.Decimals), nil)
@@ -294,10 +284,6 @@ func validateOptions(options Options) (*validGenesisOptions, error) {
 		},
 		oracleMgr: &validOracleMgrOpts{
 			maxNumOracles: maxNumOracles,
-			price: validPriceOpts{
-				syncFrequency: syncFrequency,
-				updatePeriod:  updatePeriod,
-			},
 		},
 		miningToken: &validMiningTokenOpts{
 			name:     options.Consensus.MiningToken.Name,

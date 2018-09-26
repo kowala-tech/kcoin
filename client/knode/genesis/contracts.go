@@ -661,8 +661,6 @@ var OracleMgrContract = &contract{
 		managerParams, err := managerABI.Pack(
 			"",
 			args.maxNumOracles,
-			args.price.syncFrequency,
-			args.price.updatePeriod,
 			args.validatorMgrAddr,
 		)
 		if err != nil {
@@ -709,8 +707,6 @@ var ProxiedOracleMgr = &contract{
 		initKnsParams, err := abi.Pack(
 			"initialize",
 			args.maxNumOracles,
-			args.price.syncFrequency,
-			args.price.updatePeriod,
 			args.validatorMgrAddr,
 		)
 		if err != nil {

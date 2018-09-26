@@ -1,7 +1,13 @@
 package params
 
+import "math/big"
+
 var (
 	TargetGasLimit = GenesisGasLimit // The artificial target
+
+	// oracle
+	OracleEpochDuration = new(big.Int).SetUint64(900)
+	OracleUpdatePeriod  = new(big.Int).SetUint64(15)
 )
 
 const (

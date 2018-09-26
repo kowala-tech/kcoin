@@ -123,6 +123,10 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 		utils.RegisterKowalaStatsService(stack, statsURL)
 	}
 
+	if ctx.GlobalIsSet(utils.KowalaOracleFlag.Name) {
+		utils.RegisterKowalaOracleService(stack)
+	}
+
 	return stack
 }
 

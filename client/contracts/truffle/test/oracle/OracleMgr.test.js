@@ -20,14 +20,19 @@ const PublicResolver = artifacts.require('PublicResolver.sol');
 const KNS = artifacts.require('KNSRegistry.sol');
 const FIFSRegistrar = artifacts.require('FIFSRegistrar.sol');
 const UpgradeabilityProxy = Contracts.getFromNodeModules('zos-lib', 'UpgradeabilityProxyFactory');
-const AdminUpgradeabilityProxy = Contracts.getFromNodeModules('zos-lib', 'AdminUpgradeabilityProxy');
+const AdminUpgradeabilityProxy = Contracts.getFromNodeModules(
+  'zos-lib',
+  'AdminUpgradeabilityProxy',
+);
 
 contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwner4, notOwner]) => {
   describe('KNS functionality', async () => {
     beforeEach(async () => {
       this.proxyFactory = await UpgradeabilityProxy.new();
       this.knsContract = await KNS.new({ from: owner });
-      this.logs = await this.proxyFactory.createProxy(admin, this.knsContract.address, { from: admin });
+      this.logs = await this.proxyFactory.createProxy(admin, this.knsContract.address, {
+        from: admin,
+      });
       this.logs1 = this.logs.logs;
       this.knsProxyAddress = this.logs1.find(l => l.event === 'ProxyCreated').args.proxy;
       this.knsProxy = await AdminUpgradeabilityProxy.at(this.knsProxyAddress);
@@ -36,12 +41,18 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
       this.registrar = await FIFSRegistrar.new(this.knsProxyAddress, namehash('kowala'));
       this.resolver = await PublicResolver.new(this.knsProxyAddress);
 
-      await this.kns.setSubnodeOwner(0, web3.sha3('kowala'), this.registrar.address, { from: owner });
+      await this.kns.setSubnodeOwner(0, web3.sha3('kowala'), this.registrar.address, {
+        from: owner,
+      });
       await this.registrar.register(web3.sha3('validator'), owner, { from: owner });
-      await this.kns.setResolver(namehash('validator.kowala'), this.resolver.address, { from: owner });
+      await this.kns.setResolver(namehash('validator.kowala'), this.resolver.address, {
+        from: owner,
+      });
       this.consensus = await ConsensusMock.new(true);
-      await this.resolver.setAddr(namehash('validator.kowala'), this.consensus.address, { from: owner });
-      this.oracle = await OracleMgr.new(1, 1, 1, this.resolver.address, { from: owner });
+      await this.resolver.setAddr(namehash('validator.kowala'), this.consensus.address, {
+        from: owner,
+      });
+      this.oracle = await OracleMgr.new(1, this.resolver.address, { from: owner });
     });
 
     it('should set Consensus address using KNS', async () => {
@@ -61,7 +72,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
     beforeEach(async () => {
       this.consensus = await ConsensusMock.new(true);
       this.resolver = await DomainResolverMock.new(this.consensus.address);
-      this.oracle = await OracleMgr.new(3, 1, 1, this.resolver.address, { from: owner });
+      this.oracle = await OracleMgr.new(3, this.resolver.address, { from: owner });
     });
     describe('registration', async () => {
       it('should register oracle', async () => {
@@ -100,9 +111,11 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
       it('should not register oracle when not super node', async () => {
         const consensus = await ConsensusMock.new(false);
         const resolver = await DomainResolverMock.new(consensus.address);
-        const oracleWithoutSuperNode = await OracleMgr.new(3, 1, 1, resolver.address, { from: owner });
+        const oracleWithoutSuperNode = await OracleMgr.new(3, resolver.address, { from: owner });
         // when
-        const expectedRegistrationFailure = oracleWithoutSuperNode.registerOracle({ from: newOwner });
+        const expectedRegistrationFailure = oracleWithoutSuperNode.registerOracle({
+          from: newOwner,
+        });
 
         // then
         await expectedRegistrationFailure.should.eventually.be.rejectedWith(EVMError('revert'));
@@ -147,14 +160,10 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
       it('should have proper values at creation', async () => {
         // when
         const maxNumOracles = await this.oracle.maxNumOracles();
-        const syncFrequency = await this.oracle.syncFrequency();
-        const updatePeriod = await this.oracle.updatePeriod();
         const knsResolver = await this.oracle.knsResolver();
 
         // then
         await maxNumOracles.should.be.bignumber.equal(3);
-        await syncFrequency.should.be.bignumber.equal(1);
-        await updatePeriod.should.be.bignumber.equal(1);
         await knsResolver.should.be.equal(this.resolver.address);
       });
 

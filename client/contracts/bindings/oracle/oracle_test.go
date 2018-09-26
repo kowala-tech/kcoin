@@ -69,9 +69,7 @@ func (suite *OracleMgrSuite) BeforeTest(suiteName, testName string) {
 	resolverMockAddress := suite.DeployResolverMock(transactOpts, consensusAddr)
 
 	// deploy oracle mgr contract
-	syncFreq := big.NewInt(900)
-	updatePeriod := big.NewInt(50)
-	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, big.NewInt(int64(maxNumOracles)), syncFreq, updatePeriod, resolverMockAddress)
+	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, big.NewInt(int64(maxNumOracles)), resolverMockAddress)
 	req.NoError(err)
 	req.NotNil(oracleMgrContract)
 	suite.oracleMgr = oracleMgrContract
@@ -91,9 +89,7 @@ func (suite *OracleMgrSuite) TestDeploy() {
 
 	//deploy oracle mgr contract
 	maxNumOracles := big.NewInt(50)
-	syncFreq := big.NewInt(900)
-	updatePeriod := big.NewInt(50)
-	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, syncFreq, updatePeriod, suite.ResolverMockAddr)
+	_, _, oracleMgrContract, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, suite.ResolverMockAddr)
 	req.NoError(err)
 	req.NotNil(oracleMgrContract)
 
@@ -103,16 +99,6 @@ func (suite *OracleMgrSuite) TestDeploy() {
 	req.NoError(err)
 	req.NotNil(storedMaxNumOracles)
 	req.Equal(maxNumOracles, storedMaxNumOracles)
-
-	storedSyncFreq, err := oracleMgrContract.SyncFrequency(&bind.CallOpts{})
-	req.NoError(err)
-	req.NotNil(storedSyncFreq)
-	req.Equal(syncFreq, storedSyncFreq)
-
-	storedUpdatePeriod, err := oracleMgrContract.UpdatePeriod(&bind.CallOpts{})
-	req.NoError(err)
-	req.NotNil(storedUpdatePeriod)
-	req.Equal(updatePeriod, storedUpdatePeriod)
 }
 
 func (suite *OracleMgrSuite) TestDeploy_MaxNumOraclesEqualZero() {
@@ -122,36 +108,8 @@ func (suite *OracleMgrSuite) TestDeploy_MaxNumOraclesEqualZero() {
 
 	// deploy oracle mgr contract
 	maxNumOracles := common.Big0
-	syncFreq := big.NewInt(900)
-	updatePeriod := big.NewInt(50)
-	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, syncFreq, updatePeriod, suite.ResolverMockAddr)
+	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, suite.ResolverMockAddr)
 	req.Error(err, "max number of oracles must be greater than 0")
-}
-
-func (suite *OracleMgrSuite) TestDeploy_SyncFreqGreaterZero_UpdatePeriodZero() {
-	req := suite.Require()
-
-	transactOpts := bind.NewKeyedTransactor(owner)
-
-	// deploy oracle mgr contract
-	maxNumOracles := big.NewInt(50)
-	syncFreq := big.NewInt(900)
-	updatePeriod := big.NewInt(0)
-	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, syncFreq, updatePeriod, suite.ResolverMockAddr)
-	req.Error(err, "update period must be greater than 0 when sync is enabled")
-}
-
-func (suite *OracleMgrSuite) TestDeploy_SyncFreqGreaterZero_UpdatePeriodGreaterSyncFreq() {
-	req := suite.Require()
-
-	transactOpts := bind.NewKeyedTransactor(owner)
-
-	// deploy oracle mgr contract
-	maxNumOracles := big.NewInt(50)
-	syncFreq := big.NewInt(900)
-	updatePeriod := big.NewInt(1000)
-	_, _, _, err := testfiles.DeployOracleMgr(transactOpts, suite.Backend, maxNumOracles, syncFreq, updatePeriod, suite.ResolverMockAddr)
-	req.Error(err, "update period must be less or equal than sync freq")
 }
 
 func (suite *OracleMgrSuite) TestRegisterOracle_Paused() {

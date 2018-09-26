@@ -60,6 +60,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.SyncModeFlag,
 			utils.GCModeFlag,
 			utils.KowalaStatsURLFlag,
+			utils.KowalaOracleFlag,
 			utils.IdentityFlag,
 			utils.LightServFlag,
 			utils.LightPeersFlag,
