@@ -9,34 +9,34 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
-const checkInterval = time.Minute
-
 func Checker(repository string) {
-	current, err := semver.Make(params.Version)
+	current, err := MakeSemver(params.Version)
 	if err != nil {
 		log.Error("error parsing current version, exiting checker", "err", err)
 		return
 	}
 
 	checker := &checker{
-		repository: repository,
-		current:    current,
+		repository:    repository,
+		current:       current,
+		checkInterval: time.Minute,
 	}
 	go checker.check()
 }
 
 type checker struct {
-	repository string
-	current    semver.Version
-	latest     semver.Version
+	repository    string
+	current       semver.Version
+	latest        semver.Version
+	checkInterval time.Duration
 }
 
 func (c *checker) check() {
-	for range time.Tick(checkInterval) {
+	for {
+		time.Sleep(c.checkInterval)
 		if c.isNewVersionAvailable() {
 			c.printNewVersionAvailable()
-			// we exit this go routine, we only tell the user once
-			break
+			c.checkInterval = c.checkInterval * 2
 		}
 	}
 }
