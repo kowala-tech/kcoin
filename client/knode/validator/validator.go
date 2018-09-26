@@ -404,7 +404,7 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log, *big.Int) {
 	snap := val.state.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
+	receipt, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
 	if err != nil {
 		val.state.RevertToSnapshot(snap)
 		return err, nil, nil
