@@ -259,7 +259,7 @@ func (v *VotesSet) Add(vote *Vote) {
 
 var (
 	errNonNilDuplicate = errors.New("duplicate NON-NIL vote")
-	errNilDuplicate = errors.New("duplicate NIL vote")
+	errNilDuplicate    = errors.New("duplicate NIL vote")
 )
 
 func (v *VotesSet) Contains(h common.Hash) error {
