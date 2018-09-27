@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -256,16 +257,28 @@ func (v *VotesSet) Add(vote *Vote) {
 	}
 }
 
-func (v *VotesSet) Contains(h common.Hash) bool {
+var (
+	errNonNilDuplicate = errors.New("duplicate NON-NIL vote")
+	errNilDuplicate = errors.New("duplicate NIL vote")
+)
+
+func (v *VotesSet) Contains(h common.Hash) error {
 	v.l.RLock()
+	defer v.l.RUnlock()
+
 	_, res := v.m[h]
+	if res {
+		return errNonNilDuplicate
+	}
 
 	if !res {
 		_, res = v.nilVotes[h]
+		if res {
+			return errNilDuplicate
+		}
 	}
 
-	v.l.RUnlock()
-	return res
+	return nil
 }
 
 func (v *VotesSet) Len() int {
