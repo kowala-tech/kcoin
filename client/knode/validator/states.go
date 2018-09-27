@@ -2,7 +2,6 @@ package validator
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"math/big"
 	"sync/atomic"
@@ -58,7 +57,7 @@ func (val *validator) notLoggedInState() stateFn {
 			}
 			log.Info("Waiting confirmation to participate in the consensus")
 
-			receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+			receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
 			if err != nil {
 				log.Crit("Failed to verify the voter registration", "err", err)
 			}

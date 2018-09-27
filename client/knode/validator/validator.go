@@ -34,6 +34,10 @@ var (
 	ErrIsRunning                         = errors.New("validator is running, cannot change its parameters")
 )
 
+var (
+	txConfirmationTimeout = 10 * time.Second
+)
+
 // Backend wraps all methods required for mining.
 type Backend interface {
 	BlockChain() *core.BlockChain
@@ -416,7 +420,7 @@ func (val *validator) leave() {
 	if err != nil {
 		log.Error("failed to leave the election", "err", err)
 	}
-	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+	receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
 	if err != nil {
 		log.Error("Failed to verify the voter deregistration", "err", err)
 	}
@@ -734,7 +738,7 @@ func (val *validator) RedeemDeposits() error {
 	if err != nil {
 		return err
 	}
-	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+	receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
 	if err != nil {
 		return err
 	}
