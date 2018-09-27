@@ -22,8 +22,11 @@ var (
 )
 
 const (
-	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
+	maxKnownTxs            = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxKnownBlocks         = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
+	maxKnownVotes          = 2048  // Maximum vote hashes to keep in the known list (prevent DOS)
+	maxKnownProposals      = 2048  // Maximum proposal hashes to keep in the known list (prevent DOS)
+	maxKnownBlockFragments = 2048  // Maximum fragment hashes to keep in the known list (prevent DOS)
 
 	// maxQueuedTxs is the maximum number of transaction lists to queue up before
 	// dropping broadcasts. This is a sensitive number as a transaction list might
@@ -39,9 +42,6 @@ const (
 	// dropping broadcasts. Similarly to block propagations, there's no point to queue
 	// above some healthy uncle limit, so use that.
 	maxQueuedAnns = 4
-
-	maxKnownVotes     = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
-	maxKnownFragments = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
 
 	handshakeTimeout = 5 * time.Second
 )
@@ -71,10 +71,11 @@ type peer struct {
 	head        common.Hash
 	lock        sync.RWMutex
 
-	knownTxs       *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks    *set.Set // Set of block hashes known to be known by this peer
-	knownVotes     *set.Set // set of vote hashes known to be known by this peer
-	knownFragments *set.Set // set of fragment hashes known to be known by this peer
+	knownTxs            *set.Set // Set of transaction hashes known to be known by this peer
+	knownBlocks         *set.Set // Set of block hashes known to be known by this peer
+	knownProposals      *set.Set // Set of proposal hashes known to be known by this peer
+	knownVotes          *set.Set // Set of vote hashes known to be known by this peer
+	knownBlockFragments *set.Set // Set of fragment hashes known to be known by this peer
 
 	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
 	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
@@ -84,18 +85,19 @@ type peer struct {
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	return &peer{
-		Peer:           p,
-		rw:             rw,
-		version:        version,
-		id:             fmt.Sprintf("%x", p.ID().Bytes()[:8]),
-		knownTxs:       set.New(),
-		knownBlocks:    set.New(),
-		knownVotes:     set.New(),
-		knownFragments: set.New(),
-		queuedTxs:      make(chan []*types.Transaction, maxQueuedTxs),
-		queuedProps:    make(chan *propEvent, maxQueuedProps),
-		queuedAnns:     make(chan *types.Block, maxQueuedAnns),
-		term:           make(chan struct{}),
+		Peer:                p,
+		rw:                  rw,
+		version:             version,
+		id:                  fmt.Sprintf("%x", p.ID().Bytes()[:8]),
+		knownTxs:            set.New(),
+		knownBlocks:         set.New(),
+		knownProposals:      set.New(),
+		knownVotes:          set.New(),
+		knownBlockFragments: set.New(),
+		queuedTxs:           make(chan []*types.Transaction, maxQueuedTxs),
+		queuedProps:         make(chan *propEvent, maxQueuedProps),
+		queuedAnns:          make(chan *types.Block, maxQueuedAnns),
+		term:                make(chan struct{}),
 	}
 }
 
@@ -188,10 +190,10 @@ func (p *peer) MarkVote(hash common.Hash) {
 // fragment will never be propagated to this particular peer.
 func (p *peer) MarkFragment(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known fragment hash
-	for p.knownFragments.Size() >= maxKnownFragments {
-		p.knownFragments.Pop()
+	for p.knownBlockFragments.Size() >= maxKnownBlockFragments {
+		p.knownBlockFragments.Pop()
 	}
-	p.knownFragments.Add(hash)
+	p.knownBlockFragments.Add(hash)
 }
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
@@ -271,16 +273,19 @@ func (p *peer) AsyncSendNewBlock(block *types.Block) {
 
 // SendNewBlock propagates a proposal to a remote peer.
 func (p *peer) SendNewProposal(proposal *types.Proposal) error {
+	p.knownProposals.Add(proposal.Hash())
 	return p2p.Send(p.rw, ProposalMsg, proposal)
 }
 
 // SendNewBlock propagates a vote to a remote peer.
 func (p *peer) SendVote(vote *types.Vote) error {
+	p.knownVotes.Add(vote.Hash())
 	return p2p.Send(p.rw, VoteMsg, vote)
 }
 
 // SendBlockFragment propagates a block fragment to a remote peer.
 func (p *peer) SendBlockFragment(blockNumber *big.Int, round uint64, data *types.BlockFragment) error {
+	p.knownBlockFragments.Add(data.Proof)
 	return p2p.Send(p.rw, BlockFragmentMsg, blockFragmentData{blockNumber, round, data})
 }
 
@@ -541,7 +546,7 @@ func (ps *peerSet) PeersWithoutFragment(hash common.Hash) []*peer {
 
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if !p.knownFragments.Has(hash) {
+		if !p.knownBlockFragments.Has(hash) {
 			list = append(list, p)
 		}
 	}
