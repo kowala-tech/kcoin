@@ -1,0 +1,151 @@
+﻿# TokenMock.sol
+
+**TokenMock**
+
+## Contract Members
+**Constants & Variables**
+
+```js
+//public members
+uint256 public totalSupply;
+//private members
+mapping(address => uint256) private balances;
+```
+
+**Events**
+
+```js
+event Transfer(address indexed from, address indexed to, uint256 value, bytes indexed data);
+```
+
+## Functions
+
+- [balanceOf](#balanceof)
+- [name](#name)
+- [symbol](#symbol)
+- [decimals](#decimals)
+- [totalSupply](#totalsupply)
+- [transfer](#transfer)
+- [transfer](#transfer)
+- [transfer](#transfer)
+
+### balanceOf
+
+```js
+function balanceOf(address who) public view
+returns(uint256)
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| who | address |  | 
+
+### name
+
+```js
+function name() public view
+returns(_name string)
+```
+
+### symbol
+
+```js
+function symbol() public view
+returns(_symbol string)
+```
+
+### decimals
+
+```js
+function decimals() public view
+returns(_decimals uint8)
+```
+
+### totalSupply
+
+```js
+function totalSupply() public view
+returns(_supply uint256)
+```
+
+### transfer
+
+```js
+function transfer(address to, uint256 value) public
+returns(ok bool)
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| to | address |  | 
+| value | uint256 |  | 
+
+### transfer
+
+```js
+function transfer(address to, uint256 value, bytes data) public
+returns(ok bool)
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| to | address |  | 
+| value | uint256 |  | 
+| data | bytes |  | 
+
+### transfer
+
+```js
+function transfer(address to, uint256 value, bytes data, string custom_fallback) public
+returns(ok bool)
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| to | address |  | 
+| value | uint256 |  | 
+| data | bytes |  | 
+| custom_fallback | string |  | 
+
+## Contracts
+
+- [KNSRegistryV1](KNSRegistryV1.md)
+- [ValidatorMgr](ValidatorMgr.md)
+- [Math](Math.md)
+- [NameHash](NameHash.md)
+- [SystemVars](SystemVars.md)
+- [Stability](Stability.md)
+- [Token](Token.md)
+- [TokenMock](TokenMock.md)
+- [TokenReceiver](TokenReceiver.md)
+- [SafeMath](SafeMath.md)
+- [CappedToken](CappedToken.md)
+- [FIFSRegistrar](FIFSRegistrar.md)
+- [Initializable](Initializable.md)
+- [KNSRegistry](KNSRegistry.md)
+- [ExchangeMgr](ExchangeMgr.md)
+- [KRC223](KRC223.md)
+- [PublicResolver](PublicResolver.md)
+- [MultiSigWallet](MultiSigWallet.md)
+- [DomainResolver](DomainResolver.md)
+- [PriceProvider](PriceProvider.md)
+- [BalanceContract](BalanceContract.md)
+- [MiningToken](MiningToken.md)
+- [MintableToken](MintableToken.md)
+- [strings](strings.md)
+- [Pausable](Pausable.md)
+- [Migrations](Migrations.md)
+- [Ownable](Ownable.md)
+- [Consensus](Consensus.md)
+- [OracleMgr](OracleMgr.md)
+- [ConsensusMock](ConsensusMock.md)
+- [DomainResolverMock](DomainResolverMock.md)
+- [KNS](KNS.md)

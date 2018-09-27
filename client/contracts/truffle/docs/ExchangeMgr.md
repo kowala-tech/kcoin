@@ -1,0 +1,262 @@
+﻿# Exchange Manager contract (ExchangeMgr.sol)
+
+**contract ExchangeMgr is [Pausable](Pausable.md), [Initializable](Initializable.md)**
+
+**ExchangeMgr**
+
+## Structs
+### Exchange
+
+```js
+struct Exchange {
+  uint256 index,
+  bool isExchange,
+  bool isWhitelisted
+}
+```
+
+## Contract Members
+**Constants & Variables**
+
+```js
+//private members
+mapping(string => struct ExchangeMgr.Exchange) private exchangeRegistry;
+//public members
+string[] public whitelist;
+```
+
+**Events**
+
+```js
+event Whitelisted(string exchange);
+event Blacklisted(string exchange);
+event Addition(string exchange);
+event Removal(string exchange);
+```
+
+## Modifiers
+
+- [onlyNewCandidate](#onlynewcandidate)
+- [onlyExchange](#onlyexchange)
+- [onlyWhitelistedExchange](#onlywhitelistedexchange)
+- [onlyBlacklistedExchange](#onlyblacklistedexchange)
+
+### onlyNewCandidate
+
+```js
+modifier onlyNewCandidate(string name) internal
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string |  | 
+
+### onlyExchange
+
+```js
+modifier onlyExchange(string name) internal
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string |  | 
+
+### onlyWhitelistedExchange
+
+```js
+modifier onlyWhitelistedExchange(string name) internal
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string |  | 
+
+### onlyBlacklistedExchange
+
+```js
+modifier onlyBlacklistedExchange(string name) internal
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string |  | 
+
+## Functions
+
+- [addExchange](#addexchange)
+- [removeExchange](#removeexchange)
+- [whitelistExchange](#whitelistexchange)
+- [blacklistExchange](#blacklistexchange)
+- [isExchange](#isexchange)
+- [isWhitelistedExchange](#iswhitelistedexchange)
+- [isBlacklistedExchange](#isblacklistedexchange)
+- [getWhitelistedExchangeCount](#getwhitelistedexchangecount)
+- [getWhitelistedExchangeAtIndex](#getwhitelistedexchangeatindex)
+
+### addExchange
+
+Adds and whitelists an exchange.
+
+```js
+function addExchange(string name) public whenNotPaused onlyOwner onlyNewCandidate
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string | exchange name. | 
+
+### removeExchange
+
+Removes an exchange.
+
+```js
+function removeExchange(string name) public whenNotPaused onlyOwner onlyExchange
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string | exchange name. | 
+
+### whitelistExchange
+
+Whitelists an exchange.
+
+```js
+function whitelistExchange(string name) public whenNotPaused onlyOwner onlyBlacklistedExchange
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string | exchange name. | 
+
+### blacklistExchange
+
+Blacklists an exchange.
+
+```js
+function blacklistExchange(string name) public whenNotPaused onlyOwner onlyWhitelistedExchange
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string | exchange name. | 
+
+### isExchange
+
+checks whether the given name is an whitelisted exchange or not
+
+```js
+function isExchange(string name) public view
+returns(isIndeed bool)
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string | exchange name. | 
+
+### isWhitelistedExchange
+
+checks whether the given name is an whitelisted exchange or not
+
+```js
+function isWhitelistedExchange(string name) public view
+returns(isIndeed bool)
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string | exchange name. | 
+
+### isBlacklistedExchange
+
+checks whether the given name is a blacklisted exchange or not
+
+```js
+function isBlacklistedExchange(string name) public view
+returns(isIndeed bool)
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| name | string | exchange name. | 
+
+### getWhitelistedExchangeCount
+
+get whitelisted exchange count
+
+```js
+function getWhitelistedExchangeCount() public view
+returns(count uint256)
+```
+
+### getWhitelistedExchangeAtIndex
+
+get whitelisted exchange information
+
+```js
+function getWhitelistedExchangeAtIndex(uint256 index) public view
+returns(name string)
+```
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+| index | uint256 | index of a given exchange in the whitelist | 
+
+## Contracts
+
+- [KNSRegistryV1](KNSRegistryV1.md)
+- [ValidatorMgr](ValidatorMgr.md)
+- [Math](Math.md)
+- [NameHash](NameHash.md)
+- [SystemVars](SystemVars.md)
+- [Stability](Stability.md)
+- [Token](Token.md)
+- [TokenMock](TokenMock.md)
+- [TokenReceiver](TokenReceiver.md)
+- [SafeMath](SafeMath.md)
+- [CappedToken](CappedToken.md)
+- [FIFSRegistrar](FIFSRegistrar.md)
+- [Initializable](Initializable.md)
+- [KNSRegistry](KNSRegistry.md)
+- [ExchangeMgr](ExchangeMgr.md)
+- [KRC223](KRC223.md)
+- [PublicResolver](PublicResolver.md)
+- [MultiSigWallet](MultiSigWallet.md)
+- [DomainResolver](DomainResolver.md)
+- [PriceProvider](PriceProvider.md)
+- [BalanceContract](BalanceContract.md)
+- [MiningToken](MiningToken.md)
+- [MintableToken](MintableToken.md)
+- [strings](strings.md)
+- [Pausable](Pausable.md)
+- [Migrations](Migrations.md)
+- [Ownable](Ownable.md)
+- [Consensus](Consensus.md)
+- [OracleMgr](OracleMgr.md)
+- [ConsensusMock](ConsensusMock.md)
+- [DomainResolverMock](DomainResolverMock.md)
+- [KNS](KNS.md)
