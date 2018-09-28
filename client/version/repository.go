@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"github.com/kowala-tech/kcoin/client/log"
 	"net/http"
+	"time"
 )
 
 type AssetRepository interface {
@@ -36,6 +37,7 @@ func (ar s3assetRepository) All() ([]Asset, error) {
 		if err != nil {
 			// ignore error and continue to next filename
 			log.Debug("could not parse filename", "err", err)
+			time.Sleep(500*time.Millisecond)
 			continue
 		}
 		assets = append(assets, version)
