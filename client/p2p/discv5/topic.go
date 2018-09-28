@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 const (
