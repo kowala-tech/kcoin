@@ -10,7 +10,6 @@ import (
 	"math/big"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
@@ -23,7 +22,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
-	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/rpc"
@@ -44,131 +42,6 @@ func NewPublicKowalaAPI(kcoin *Kowala) *PublicKowalaAPI {
 // Coinbase is the address that consensus rewards will be send to
 func (api *PublicKowalaAPI) Coinbase() (common.Address, error) {
 	return api.kcoin.Coinbase()
-}
-
-// PrivateValidatorAPI provides private RPC methods to control the validator.
-// These methods can be abused by external users and must be considered insecure for use by untrusted users.
-type PrivateValidatorAPI struct {
-	kcoin *Kowala
-}
-
-// NewPrivateValidatorAPI create a new RPC service which controls the validator of this node.
-func NewPrivateValidatorAPI(kcoin *Kowala) *PrivateValidatorAPI {
-	return &PrivateValidatorAPI{kcoin: kcoin}
-}
-
-// Start the validator.
-func (api *PrivateValidatorAPI) Start(deposit *hexutil.Big) error {
-	// Start the validator and return
-	if !api.kcoin.IsValidating() {
-		// Propagate the initial price point to the transaction pool
-		api.kcoin.lock.RLock()
-		price := api.kcoin.gasPrice
-		api.kcoin.lock.RUnlock()
-
-		bigint := deposit.ToInt()
-		if bigint.Cmp(big.NewInt(0)) != 0 {
-			err := api.kcoin.SetDeposit(bigint)
-			if err != nil && err != validator.ErrIsNotRunning {
-				return err
-			}
-		}
-
-		api.kcoin.txPool.SetGasPrice(price)
-		return api.kcoin.StartValidating()
-	}
-	return nil
-}
-
-// Stop the validator
-func (api *PrivateValidatorAPI) Stop() bool {
-	api.kcoin.StopValidating()
-	return true
-}
-
-// SetExtra sets the extra data string that is included when this validator proposes a block.
-func (api *PrivateValidatorAPI) SetExtra(extra string) (bool, error) {
-	if err := api.kcoin.Validator().SetExtra([]byte(extra)); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// SetGasPrice sets the minimum accepted gas price for the validator.
-func (api *PrivateValidatorAPI) SetGasPrice(gasPrice hexutil.Big) bool {
-	api.kcoin.lock.Lock()
-	api.kcoin.gasPrice = (*big.Int)(&gasPrice)
-	api.kcoin.lock.Unlock()
-
-	api.kcoin.txPool.SetGasPrice((*big.Int)(&gasPrice))
-	return true
-}
-
-// SetCoinbase sets the coinbase of the validator
-func (api *PrivateValidatorAPI) SetCoinbase(coinbase common.Address) bool {
-	api.kcoin.SetCoinbase(coinbase)
-	return true
-}
-
-// GetMinimumDeposit gets the minimum deposit required to take a slot as a validator
-func (api *PrivateValidatorAPI) GetMinimumDeposit() (*big.Int, error) {
-	return api.kcoin.GetMinimumDeposit()
-}
-
-// GetDepositsResult is the result of a validator_getDeposits API call.
-type GetDepositsResult struct {
-	Deposits []depositEntry `json:"deposits"`
-}
-
-type depositEntry struct {
-	Amount      *big.Int `json:"value"`
-	AvailableAt string   `json:",omitempty"`
-}
-
-// GetDeposits returns the validator deposits
-func (api *PrivateValidatorAPI) GetDeposits(address *common.Address) (GetDepositsResult, error) {
-	rawDeposits, err := api.kcoin.Validator().Deposits(address)
-	if err != nil {
-		return GetDepositsResult{}, err
-	}
-
-	return depositsToResponse(rawDeposits), nil
-}
-
-func depositsToResponse(rawDeposits []*types.Deposit) GetDepositsResult {
-	deposits := make([]depositEntry, len(rawDeposits))
-
-	for i, deposit := range rawDeposits {
-		// @NOTE (rgeraldes) - zero values are not shown for this field
-		var availableAt string
-
-		if deposit.AvailableAtTimeUnix() != 0 {
-			availableAt = time.Unix(deposit.AvailableAtTimeUnix(), 0).String()
-		}
-
-		deposits[i] = depositEntry{
-			Amount:      deposit.Amount(),
-			AvailableAt: availableAt,
-		}
-	}
-
-	return GetDepositsResult{Deposits: deposits}
-}
-
-// IsValidating returns the validator is currently validating
-func (api *PrivateValidatorAPI) IsValidating() bool {
-	return api.kcoin.IsValidating()
-}
-
-// IsValidating returns the validator is currently running
-func (api *PrivateValidatorAPI) IsRunning() bool {
-	return api.kcoin.IsRunning()
-}
-
-// RedeemDeposits requests a transfer of the unlocked deposits back
-// to the validator account
-func (api *PrivateValidatorAPI) RedeemDeposits() error {
-	return api.kcoin.Validator().RedeemDeposits()
 }
 
 // TransferArgs represents the arguments to transfer tokens.

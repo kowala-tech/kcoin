@@ -4,7 +4,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
@@ -55,11 +54,7 @@ type Config struct {
 	TrieCache          int
 	TrieTimeout        time.Duration
 
-	// consensus validation-related options
-	Coinbase  common.Address `toml:",omitempty"`
-	Deposit   *big.Int       `toml:",omitempty"`
-	ExtraData []byte         `toml:",omitempty"`
-	GasPrice  *big.Int
+	GasPrice *big.Int
 
 	// Transaction pool options
 	TxPool core.TxPoolConfig
