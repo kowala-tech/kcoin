@@ -56,6 +56,7 @@ var tomlSettings = toml.Config{
 type kcoinConfig struct {
 	Kowala knode.Config
 	Node   node.Config
+	Mining consensus.MiningConfig
 	Stats  stats.Config
 }
 
@@ -104,7 +105,14 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
+
+	// Kowala config
 	utils.SetKowalaConfig(ctx, stack, &cfg.Kowala)
+	
+	// Mining config
+	utils.SetMiningConfig(ctx, stack, &cfg.Mining)
+	
+	// Stats config
 	if ctx.GlobalIsSet(utils.KowalaStatsURLFlag.Name) {
 		cfg.Stats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
 	}
@@ -116,6 +124,8 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
 	utils.RegisterKowalaService(stack, &cfg.Kowala)
+	
+	utils.RegisterMiningService(stack, &cfg.Mining)
 
 	// Add the Stats daemon if requested.
 	statsURL := cfg.Stats.GetURL()

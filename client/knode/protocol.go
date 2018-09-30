@@ -26,13 +26,6 @@ const (
 	NodeDataMsg        = 0x09
 	GetReceiptsMsg     = 0x0a
 	ReceiptsMsg        = 0x0b
-
-	// consensus
-	ProposalMsg      = 0x10
-	ProposalPOLMsg   = 0x11
-	VoteMsg          = 0x12
-	ElectionMsg      = 0x13
-	BlockFragmentMsg = 0x14
 )
 
 type errCode int
@@ -65,7 +58,6 @@ var errorToString = map[int]string{
 	ErrExtraStatusMsg:          "Extra status message",
 	ErrSuspendedPeer:           "Suspended peer",
 }
-
 
 type txPool interface {
 	// AddRemotes should add the given transactions to the pool.
@@ -152,26 +144,3 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
-
-// @TODO (rgeraldes) - modify name from POL to Locked
-// proposalPOLData is the network packet for the re-proposed proposal message
-type proposalPOLData struct {
-	BlockNumber *big.Int
-	POLRound    int
-	POL         *common.BitArray
-}
-
-// electionData is the network packet that is sent to indicate that a given candidate (block) has seen +2/3 votes
-type electionData struct {
-	Type        types.VoteType
-	BlockNumber *big.Int
-	BlockHash   common.Hash
-	Round       uint64
-}
-
-// blockFragmentData is the network packet that is sent to let the other validators have a part of the proposed block
-type blockFragmentData struct {
-	BlockNumber *big.Int
-	Round       uint64
-	Data        *types.BlockFragment
-}

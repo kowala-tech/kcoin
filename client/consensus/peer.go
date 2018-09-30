@@ -1,4 +1,4 @@
-package knode
+package consensus
 
 import (
 	"errors"
@@ -11,7 +11,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/p2p"
-	"github.com/kowala-tech/kcoin/client/rlp"
 	"gopkg.in/fatih/set.v0"
 )
 
@@ -22,16 +21,9 @@ var (
 )
 
 const (
-	maxKnownTxs            = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-	maxKnownBlocks         = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-	maxKnownVotes          = 2048  // Maximum vote hashes to keep in the known list (prevent DOS)
-	maxKnownProposals      = 2048  // Maximum proposal hashes to keep in the known list (prevent DOS)
-	maxKnownBlockFragments = 2048  // Maximum fragment hashes to keep in the known list (prevent DOS)
-
-	// maxQueuedTxs is the maximum number of transaction lists to queue up before
-	// dropping broadcasts. This is a sensitive number as a transaction list might
-	// contain a single transaction, or thousands.
-	maxQueuedTxs = 128
+	maxKnownVotes          = 2048 // Maximum vote hashes to keep in the known list (prevent DOS)
+	maxKnownProposals      = 2048 // Maximum proposal hashes to keep in the known list (prevent DOS)
+	maxKnownBlockFragments = 2048 // Maximum fragment hashes to keep in the known list (prevent DOS)
 
 	// maxQueuedProps is the maximum number of block propagations to queue up before
 	// dropping broadcasts. There's not much point in queueing stale blocks, so a few
@@ -71,16 +63,13 @@ type peer struct {
 	head        common.Hash
 	lock        sync.RWMutex
 
-	knownTxs            *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks         *set.Set // Set of block hashes known to be known by this peer
 	knownProposals      *set.Set // Set of proposal hashes known to be known by this peer
 	knownVotes          *set.Set // Set of vote hashes known to be known by this peer
 	knownBlockFragments *set.Set // Set of fragment hashes known to be known by this peer
 
-	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
-	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
-	queuedAnns  chan *types.Block         // Queue of blocks to announce to the peer
-	term        chan struct{}             // Termination channel to stop the broadcaster
+	queuedProps chan *propEvent   // Queue of blocks to broadcast to the peer
+	queuedAnns  chan *types.Block // Queue of blocks to announce to the peer
+	term        chan struct{}     // Termination channel to stop the broadcaster
 }
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -89,12 +78,9 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		rw:                  rw,
 		version:             version,
 		id:                  fmt.Sprintf("%x", p.ID().Bytes()[:8]),
-		knownTxs:            set.New(),
-		knownBlocks:         set.New(),
 		knownProposals:      set.New(),
 		knownVotes:          set.New(),
 		knownBlockFragments: set.New(),
-		queuedTxs:           make(chan []*types.Transaction, maxQueuedTxs),
 		queuedProps:         make(chan *propEvent, maxQueuedProps),
 		queuedAnns:          make(chan *types.Block, maxQueuedAnns),
 		term:                make(chan struct{}),
@@ -166,16 +152,6 @@ func (p *peer) SetHead(hash common.Hash, blockNumber *big.Int) {
 	p.blockNumber.Set(blockNumber)
 }
 
-// MarkBlock marks a block as known for the peer, ensuring that the block will
-// never be propagated to this particular peer.
-func (p *peer) MarkBlock(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known block hash
-	for p.knownBlocks.Size() >= maxKnownBlocks {
-		p.knownBlocks.Pop()
-	}
-	p.knownBlocks.Add(hash)
-}
-
 // MarkVote marks a vote as known for the peer, ensuring that the block will
 // never be propagated to this particular peer.
 func (p *peer) MarkVote(hash common.Hash) {
@@ -186,9 +162,9 @@ func (p *peer) MarkVote(hash common.Hash) {
 	p.knownVotes.Add(hash)
 }
 
-// MarkFragment marks a block fragment as known for the peer, ensuring that the
+// MarkBlockFragment marks a block fragment as known for the peer, ensuring that the
 // fragment will never be propagated to this particular peer.
-func (p *peer) MarkFragment(hash common.Hash) {
+func (p *peer) MarkBlockFragment(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known fragment hash
 	for p.knownBlockFragments.Size() >= maxKnownBlockFragments {
 		p.knownBlockFragments.Pop()
@@ -196,68 +172,10 @@ func (p *peer) MarkFragment(hash common.Hash) {
 	p.knownBlockFragments.Add(hash)
 }
 
-// MarkTransaction marks a transaction as known for the peer, ensuring that it
-// will never be propagated to this particular peer.
-func (p *peer) MarkTransaction(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known transaction hash
-	for p.knownTxs.Size() >= maxKnownTxs {
-		p.knownTxs.Pop()
-	}
-	p.knownTxs.Add(hash)
-}
-
-// SendTransactions sends transactions to the peer and includes the hashes
-// in its transaction hash set for future reference.
-func (p *peer) SendTransactions(txs types.Transactions) error {
-	for _, tx := range txs {
-		p.knownTxs.Add(tx.Hash())
-	}
-	return p2p.Send(p.rw, TxMsg, txs)
-}
-
-// AsyncSendTransactions queues list of transactions propagation to a remote
-// peer. If the peer's broadcast queue is full, the event is silently dropped.
-func (p *peer) AsyncSendTransactions(txs []*types.Transaction) {
-	select {
-	case p.queuedTxs <- txs:
-		for _, tx := range txs {
-			p.knownTxs.Add(tx.Hash())
-		}
-	default:
-		p.Log().Debug("Dropping transaction propagation", "count", len(txs))
-	}
-}
-
-// SendNewBlockHashes announces the availability of a number of blocks through
-// a hash notification.
-func (p *peer) SendNewBlockHashes(hashes []common.Hash, numbers []uint64) error {
-	for _, hash := range hashes {
-		p.knownBlocks.Add(hash)
-	}
-	request := make(newBlockHashesData, len(hashes))
-	for i := 0; i < len(hashes); i++ {
-		request[i].Hash = hashes[i]
-		request[i].Number = numbers[i]
-	}
-	return p2p.Send(p.rw, NewBlockHashesMsg, request)
-}
-
-// AsyncSendNewBlockHash queues the availability of a block for propagation to a
-// remote peer. If the peer's broadcast queue is full, the event is silently
-// dropped.
-func (p *peer) AsyncSendNewBlockHash(block *types.Block) {
-	select {
-	case p.queuedAnns <- block:
-		p.knownBlocks.Add(block.Hash())
-	default:
-		p.Log().Debug("Dropping block announcement", "number", block.NumberU64(), "hash", block.Hash())
-	}
-}
-
-// SendNewBlock propagates an entire block to a remote peer.
-func (p *peer) SendNewBlock(block *types.Block) error {
-	p.knownBlocks.Add(block.Hash())
-	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block})
+// SendNewBlock propagates a proposal to a remote peer.
+func (p *peer) SendNewProposal(proposal *types.Proposal) error {
+	p.knownProposals.Add(proposal.Hash())
+	return p2p.Send(p.rw, ProposalMsg, proposal)
 }
 
 // AsyncSendNewBlock queues an entire block for propagation to a remote peer. If
@@ -271,12 +189,6 @@ func (p *peer) AsyncSendNewBlock(block *types.Block) {
 	}
 }
 
-// SendNewBlock propagates a proposal to a remote peer.
-func (p *peer) SendNewProposal(proposal *types.Proposal) error {
-	p.knownProposals.Add(proposal.Hash())
-	return p2p.Send(p.rw, ProposalMsg, proposal)
-}
-
 // SendNewBlock propagates a vote to a remote peer.
 func (p *peer) SendVote(vote *types.Vote) error {
 	p.knownVotes.Add(vote.Hash())
@@ -287,75 +199,6 @@ func (p *peer) SendVote(vote *types.Vote) error {
 func (p *peer) SendBlockFragment(blockNumber *big.Int, round uint64, data *types.BlockFragment) error {
 	p.knownBlockFragments.Add(data.Proof)
 	return p2p.Send(p.rw, BlockFragmentMsg, blockFragmentData{blockNumber, round, data})
-}
-
-// SendBlockHeaders sends a batch of block headers to the remote peer.
-func (p *peer) SendBlockHeaders(headers []*types.Header) error {
-	return p2p.Send(p.rw, BlockHeadersMsg, headers)
-}
-
-// SendBlockBodies sends a batch of block contents to the remote peer.
-func (p *peer) SendBlockBodies(bodies []*blockBody) error {
-	return p2p.Send(p.rw, BlockBodiesMsg, blockBodiesData(bodies))
-}
-
-// SendBlockBodiesRLP sends a batch of block contents to the remote peer from
-// an already RLP encoded format.
-func (p *peer) SendBlockBodiesRLP(bodies []rlp.RawValue) error {
-	return p2p.Send(p.rw, BlockBodiesMsg, bodies)
-}
-
-// SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
-// hashes requested.
-func (p *peer) SendNodeData(data [][]byte) error {
-	return p2p.Send(p.rw, NodeDataMsg, data)
-}
-
-// SendReceiptsRLP sends a batch of transaction receipts, corresponding to the
-// ones requested from an already RLP encoded format.
-func (p *peer) SendReceiptsRLP(receipts []rlp.RawValue) error {
-	return p2p.Send(p.rw, ReceiptsMsg, receipts)
-}
-
-// RequestOneHeader is a wrapper around the header query functions to fetch a
-// single header. It is used solely by the fetcher.
-func (p *peer) RequestOneHeader(hash common.Hash) error {
-	p.Log().Debug("Fetching single header", "hash", hash)
-	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: hash}, Amount: uint64(1), Skip: uint64(0), Reverse: false})
-}
-
-// RequestHeadersByHash fetches a batch of blocks' headers corresponding to the
-// specified header query, based on the hash of an origin block.
-func (p *peer) RequestHeadersByHash(origin common.Hash, amount int, skip int, reverse bool) error {
-	p.Log().Debug("Fetching batch of headers", "count", amount, "fromhash", origin, "skip", skip, "reverse", reverse)
-	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Hash: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
-}
-
-// RequestHeadersByNumber fetches a batch of blocks' headers corresponding to the
-// specified header query, based on the number of an origin block.
-func (p *peer) RequestHeadersByNumber(origin uint64, amount int, skip int, reverse bool) error {
-	p.Log().Debug("Fetching batch of headers", "count", amount, "fromnum", origin, "skip", skip, "reverse", reverse)
-	return p2p.Send(p.rw, GetBlockHeadersMsg, &getBlockHeadersData{Origin: hashOrNumber{Number: origin}, Amount: uint64(amount), Skip: uint64(skip), Reverse: reverse})
-}
-
-// RequestBodies fetches a batch of blocks' bodies corresponding to the hashes
-// specified.
-func (p *peer) RequestBodies(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of block bodies", "count", len(hashes))
-	return p2p.Send(p.rw, GetBlockBodiesMsg, hashes)
-}
-
-// RequestNodeData fetches a batch of arbitrary data from a node's known state
-// data, corresponding to the specified hashes.
-func (p *peer) RequestNodeData(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of state data", "count", len(hashes))
-	return p2p.Send(p.rw, GetNodeDataMsg, hashes)
-}
-
-// RequestReceipts fetches a batch of transaction receipts from a remote node.
-func (p *peer) RequestReceipts(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of receipts", "count", len(hashes))
-	return p2p.Send(p.rw, GetReceiptsMsg, hashes)
 }
 
 // Handshake executes the eth protocol handshake, negotiating version number,
@@ -491,36 +334,6 @@ func (ps *peerSet) Len() int {
 	defer ps.lock.RUnlock()
 
 	return len(ps.peers)
-}
-
-// PeersWithoutBlock retrieves a list of peers that do not have a given block in
-// their set of known hashes.
-func (ps *peerSet) PeersWithoutBlock(hash common.Hash) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.knownBlocks.Has(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
-// PeersWithoutTx retrieves a list of peers that do not have a given transaction
-// in their set of known hashes.
-func (ps *peerSet) PeersWithoutTx(hash common.Hash) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.knownTxs.Has(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
 }
 
 // PeersWithoutVote retrieves a list of peers that do not have a given vote

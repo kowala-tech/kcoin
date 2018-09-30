@@ -18,7 +18,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/knode/fetcher"
 	"github.com/kowala-tech/kcoin/client/knode/protocol"
-	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/p2p/discover"
@@ -49,23 +48,22 @@ type ProtocolManager struct {
 	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
-	txpool      txPool
+	txpool txPool
+
 	blockchain  *core.BlockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
 
 	downloader *downloader.Downloader
 	fetcher    *fetcher.Fetcher
-	validator  validator.Validator
 	peers      *peerSet
 
 	SubProtocols []p2p.Protocol
 
-	eventMux             *event.TypeMux
-	txsCh                chan core.NewTxsEvent
-	txsSub               event.Subscription
-	minedBlockSub        *event.TypeMuxSubscription
-	proposalSub, voteSub *event.TypeMuxSubscription
+	eventMux      *event.TypeMux
+	txsCh         chan core.NewTxsEvent
+	txsSub        event.Subscription
+	minedBlockSub *event.TypeMuxSubscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan *peer
@@ -80,14 +78,13 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new kowala sub protocol manager. The Kowala sub protocol manages peers capable
 // with the kowala network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kcoindb.Database, validator validator.Validator) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kcoindb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
 		eventMux:    mux,
 		txpool:      txpool,
 		blockchain:  blockchain,
-		validator:   validator,
 		chainconfig: config,
 		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
@@ -191,17 +188,6 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
-	// @TODO (rgeraldes) - verify if this condition makes sense
-	if pm.validator != nil {
-		// broadcast proposals
-		pm.proposalSub = pm.eventMux.Subscribe(core.NewProposalEvent{}, core.NewBlockFragmentEvent{})
-		go pm.proposalBroadcastLoop()
-
-		// broadcast votes
-		pm.voteSub = pm.eventMux.Subscribe(core.NewVoteEvent{})
-		go pm.voteBroadcastLoop()
-	}
-
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
@@ -212,11 +198,6 @@ func (pm *ProtocolManager) Stop() {
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
-
-	if pm.validator != nil {
-		pm.proposalSub.Unsubscribe() // quits proposalBroadcastLoop
-		pm.voteSub.Unsubscribe()     // quits voteBroadcastLoop
-	}
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -618,54 +599,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		pm.txpool.AddRemotes(txs)
 
-	case msg.Code == ProposalMsg:
-		if !pm.validator.Validating() {
-			break
-		}
-		// Retrieve and decode the propagated proposal
-		var proposal types.Proposal
-		if err := msg.Decode(&proposal); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-		if err := pm.validator.AddProposal(&proposal); err != nil {
-			// ignore
-			break
-		}
-
-	case msg.Code == VoteMsg:
-		if !pm.validator.Validating() {
-			break
-		}
-		// Retrieve and decode the propagated vote
-		var vote types.Vote
-		if err := msg.Decode(&vote); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-
-		p.MarkVote(vote.Hash())
-		if err := pm.validator.AddVote(&vote); err != nil {
-			// ignore
-			break
-		}
-
-	case msg.Code == BlockFragmentMsg:
-		if !pm.validator.Validating() {
-			break
-		}
-
-		// Retrieve and decode the propagated block fragment
-		var request blockFragmentData
-		if err := msg.Decode(&request); err != nil {
-			return errResp(ErrDecode, "msg %v: %v", msg, err)
-		}
-
-		p.MarkFragment(request.Data.Proof)
-		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data); err != nil {
-			log.Error("error while adding a new block fragment", "err", err, "round", request.Round, "block", request.BlockNumber, "fragment", request.Data)
-			// ignore
-			break
-		}
-
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
 	}
@@ -728,41 +661,11 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 	}
 }
 
-// Proposal broadcast loop
-func (pm *ProtocolManager) proposalBroadcastLoop() {
-	for obj := range pm.proposalSub.Chan() {
-		switch ev := obj.Data.(type) {
-		case core.NewProposalEvent:
-			for _, peer := range pm.peers.Peers() {
-				peer.SendNewProposal(ev.Proposal)
-			}
-		case core.NewBlockFragmentEvent:
-			for _, peer := range pm.peers.PeersWithoutFragment(ev.Data.Proof) {
-				peer.SendBlockFragment(ev.BlockNumber, ev.Round, ev.Data)
-			}
-		}
-	}
-}
-
-// Vote broadcast loop
-func (pm *ProtocolManager) voteBroadcastLoop() {
-	for obj := range pm.voteSub.Chan() {
-		switch ev := obj.Data.(type) {
-		case core.NewVoteEvent:
-			peers := pm.peers.PeersWithoutVote(ev.Vote.Hash())
-			for _, peer := range peers {
-				peer.SendVote(ev.Vote)
-			}
-		}
-	}
-}
-
 func (pm *ProtocolManager) txBroadcastLoop() {
 	for {
 		select {
 		case event := <-pm.txsCh:
 			pm.BroadcastTxs(event.Txs)
-
 		// Err() channel will be closed when unsubscribing.
 		case <-pm.txsSub.Err():
 			return

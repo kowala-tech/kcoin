@@ -305,6 +305,7 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	val.handleMutex.Lock()
 	val.proposal = proposal
 	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
+	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
 	val.handleMutex.Unlock()
 
 	return nil
@@ -619,6 +620,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		err = errors.New("Failed to add a new block fragment: " + err.Error())
 		return err
 	}
+	val.eventMux.Post(core.NewBlockFragmentEvent{BlockNumber: blockNumber, Round: round, Data: fragment})
 
 	if val.blockFragments.HasAll() {
 		block, err := val.blockFragments.Assemble()
