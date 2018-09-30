@@ -937,15 +937,23 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	}
 }
 
+// SetConsensusConfig applies consensus-related command line flags to the config.
+func SetConsensusConfig(ctx *cli.Context, stack *node.Node, cfg *consensus.Config) {
+	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	setCoinbase(ctx, ks, cfg)
+	setDeposit(ctx, cfg)
+	
+	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
+		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
+	}
+}
+
 // SetKowalaConfig applies kowala-related command line flags to the config.
 func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, DevModeFlag, TestnetFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
-	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	setCoinbase(ctx, ks, cfg)
-	setDeposit(ctx, cfg)
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 
@@ -983,9 +991,6 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
-	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
-		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
-	}
 	if ctx.GlobalIsSet(GasPriceFlag.Name) {
 		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
 	}
@@ -1022,11 +1027,23 @@ func RegisterKowalaService(stack *node.Node, cfg *knode.Config) {
 	}
 }
 
+// RegisterMiningService configures the mining deamon and adds it to the
+// given node.
+func RegisterMiningService(stack *node.Node, cfg *consensus.MiningConfig) {
+	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
+		var kowalaServ *knode.Kowala
+		ctx.Service(&kowalaServ)
+
+		return consensus.NewMiningService()
+	}); err != nil {
+		Fatalf("Failed to register the Kowala mining service: %v", err)
+	}
+}
+
 // RegisterKowalaStatsService configures the Kowala Stats daemon and adds it to
 // the given node.
 func RegisterKowalaStatsService(stack *node.Node, url string) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		// Retrieve both eth and les services
 		var kowalaServ *knode.Kowala
 		ctx.Service(&kowalaServ)
 
