@@ -535,7 +535,7 @@ func (val *validator) preVote() {
 		log.Debug("Locked Block is not nil, voting for the locked block")
 		vote = val.lockedBlock.Hash()
 	case val.block == nil:
-		log.Debug("Proposal's block is nil, voting nil")
+		log.Warn("Proposal's block is nil, voting nil")
 		vote = common.Hash{}
 	default:
 		log.Debug("Voting for the proposal's block")
@@ -560,7 +560,7 @@ func (val *validator) preCommit() {
 	// no majority
 	// majority pre-voted nil
 	case currentLeader == common.Hash{}:
-		log.Debug("Majority of validators pre-voted nil")
+		log.Warn("Majority of validators pre-voted nil")
 		// unlock locked block
 		if val.lockedBlock != nil {
 			val.lockedRound = 0
@@ -583,7 +583,7 @@ func (val *validator) preCommit() {
 	default:
 		// fetch block, unlock, precommit
 		// unlock locked block
-		log.Debug("preCommit default case")
+		log.Warn("preCommit default case")
 		val.lockedRound = 0
 		val.lockedBlock = nil
 		val.block = nil
