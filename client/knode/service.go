@@ -2,6 +2,7 @@
 package knode
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/common"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
 	consensus "github.com/kowala-tech/kcoin/client/consensus/protocol"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
@@ -44,13 +46,13 @@ type Kowala struct {
 	config      *Config
 	chainConfig *params.ChainConfig
 
-	// Channel for shutting down the service
 	shutdownChan chan bool // Channel for shutting down the service
 
 	// Handlers
 	txPool          *core.TxPool
 	blockchain      *core.BlockChain
 	protocolManager *ProtocolManager
+
 	// DB interfaces
 	chainDb kcoindb.Database // Block chain database
 
@@ -279,6 +281,7 @@ func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.
 func (s *Kowala) Consensus() *consensus.Consensus    { return s.consensus }
 func (s *Kowala) APIBackend() *KowalaAPIBackend      { return s.apiBackend }
 func (s *Kowala) ChainConfig() *params.ChainConfig   { return s.chainConfig }
+func (s *Kowala) ChainID() *big.Int                  { return s.chainConfig.ChainID }
 
 func (s *Kowala) Contract(contract interface{}) error {
 	element := reflect.ValueOf(contract).Elem()
@@ -328,6 +331,21 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 	s.protocolManager.Start(maxPeers)
 
 	return nil
+}
+
+func (s *kowala) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	tx, blockHash, _, index := rawdb.ReadTransaction(s.chainDb, txHash)
+	if tx == nil {
+		return nil, nil
+	}
+	receipts, err := s.apiBackend.GetReceipts(ctx, blockHash)
+	if err != nil {
+		return nil, err
+	}
+	if len(receipts) <= int(index) {
+		return nil, nil
+	}
+	return receipts[index], nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the

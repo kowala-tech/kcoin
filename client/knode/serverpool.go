@@ -94,8 +94,8 @@ type serverPool struct {
 	fastDiscover               bool
 }
 
-// newServerPool creates a new serverPool instance
-func newServerPool(db kcoindb.Database, quit chan bool, wg *sync.WaitGroup) *serverPool {
+// NewServerPool creates a new serverPool instance
+func NewServerPool(db kcoindb.Database, quit chan bool, wg *sync.WaitGroup) *serverPool {
 	pool := &serverPool{
 		db:           db,
 		quit:         quit,

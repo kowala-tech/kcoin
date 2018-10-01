@@ -165,7 +165,7 @@ func (val *validator) preVoteWaitState() stateFn {
 	timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
 
 	select {
-	case <-val.majority.Chan():
+	case <-val.preVoteMajorityCh:
 		log.Info("There's a majority in the pre-vote sub-election!")
 		// fixme shall we do something here with current stateDB?
 	case <-time.After(timeout):
@@ -188,7 +188,7 @@ func (val *validator) preCommitWaitState() stateFn {
 	defer val.majority.Unsubscribe()
 
 	select {
-	case event := <-val.majority.Chan():
+	case event := <-val.preCommitMajorityCh:
 		log.Info("There's a majority in the pre-commit sub-election!", "event", spew.Sdump(event))
 		if val.block == nil || bytes.Equal(val.block.Hash().Bytes(), common.Hash{}.Bytes()) {
 			log.Debug("No one block wins!")

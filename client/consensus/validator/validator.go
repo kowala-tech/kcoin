@@ -19,9 +19,13 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/event"
-	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
+)
+
+const (
+	// majorityChanSize is the size of channel listening to NewMajorityEvent.
+	majorityChSize = 256
 )
 
 var (
@@ -42,7 +46,6 @@ var (
 type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
-	ChainDb() kcoindb.Database
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 }
 
@@ -69,6 +72,8 @@ type Service interface {
 
 // validator represents a consensus validator
 type validator struct {
+	handleMutex sync.Mutex
+
 	VotingState        // consensus internal state
 	maxTransitions int // max number of state transitions (tests) 0 - unlimited
 
@@ -79,11 +84,9 @@ type validator struct {
 	signer types.Signer
 
 	// blockchain
-	backend  Backend
-	chain    *core.BlockChain
-	config   *params.ChainConfig
-	engine   engine.Engine
-	vmConfig vm.Config
+	backend Backend
+	chain   *core.BlockChain
+	engine  engine.Engine
 
 	walletAccount accounts.WalletAccount
 
@@ -93,27 +96,19 @@ type validator struct {
 	canStart    int32 // can start indicates whether we can start the validation operation
 	shouldStart int32 // should start indicates whether we should start after sync
 
-	// events
-	eventMux *event.TypeMux
-
 	wg sync.WaitGroup
-
-	handleMutex sync.Mutex
 }
 
 // New returns a new consensus validator
-func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, consensus *consensus.Consensus) *validator {
 	validator := &validator{
-		config:    config,
 		backend:   backend,
 		chain:     backend.BlockChain(),
-		engine:    engine,
 		consensus: consensus,
-		eventMux:  eventMux,
-		signer:    types.NewAndromedaSigner(config.ChainID),
-		vmConfig:  vmConfig,
 		canStart:  0,
 	}
+	validator.engine = validator.chain.Engine()
+	validator.signer = types.NewAndromedaSigner(validator.chain.Config().ChainID)
 
 	go validator.sync()
 
@@ -278,14 +273,18 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.votingSystem, err = NewVotingSystem(val.eventMux, val.blockNumber, val.voters)
+	val.votingSystem, err = NewVotingSystem(val.blockNumber, val.voters)
 	if err != nil {
 		log.Error("Failed to create voting system", "err", err)
 		return nil
 	}
+	// @TODO (rgeraldes) - close channels?
+	val.preVoteMajorityCh = make(chan core.NewMajorityEvent, majorityChSize)
+	val.preVoteMajoritySub = val.votingSystem.SubscribePreVoteMajority(val.preVoteMajorityCh)
+	val.preCommitMajorityCh = make(chan core.NewMajorityEvent, majorityChSize)
+	val.preCommitMajoritySub = val.votingSystem.SubscribePreCommitMajority(val.preCommitMajorityCh)
 
 	val.blockCh = make(chan *types.Block)
-	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 
 	if err = val.makeCurrent(parent); err != nil {
 		log.Error("Failed to create mining context", "err", err)
@@ -655,7 +654,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
 
 		// Process block using the parent state as reference point.
-		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
+		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.chain.VMConfig())
 		if err != nil {
 			log.Error("Failed to process the block", "err", err,
 				"round", round, "block", blockNumber, "fragment", fragment, "block", block)

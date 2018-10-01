@@ -1490,6 +1490,9 @@ func (bc *BlockChain) GetHeaderByNumber(number uint64) *types.Header {
 	return bc.hc.GetHeaderByNumber(number)
 }
 
+// VMConfig retrieves the blockchain's vm configuration.
+func (bc *BlockChain) VMConfig() vm.Config { return bc.vmConfig }
+
 // Config retrieves the blockchain's chain configuration.
 func (bc *BlockChain) Config() *params.ChainConfig { return bc.chainConfig }
 

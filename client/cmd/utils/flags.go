@@ -1034,7 +1034,7 @@ func RegisterMiningService(stack *node.Node, cfg *consensus.MiningConfig) {
 		var kowalaServ *knode.Kowala
 		ctx.Service(&kowalaServ)
 
-		return consensus.NewMiningService()
+		return consensus.NewMiningService(kowalaServ)
 	}); err != nil {
 		Fatalf("Failed to register the Kowala mining service: %v", err)
 	}

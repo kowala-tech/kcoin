@@ -7,6 +7,8 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 )
 
+//go:generate gencodec -type Config -field-override configMarshaling -formats toml -out gen_config.go
+
 type MiningConfig struct {
 	Coinbase common.Address `toml:",omitempty"`
 

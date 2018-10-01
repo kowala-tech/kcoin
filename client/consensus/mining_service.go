@@ -1,64 +1,64 @@
 package consensus
 
 import (
+	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
 	"sync"
 
 	"github.com/kowala-tech/kcoin/client/consensus/validator"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
+	"github.com/kowala-tech/kcoin/client/knode"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
-type txPool interface {
-	// SubscribeNewTxsEvent should return an event subscription of
-	// NewTxsEvent and send events to the given channel.
-	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
+type Core interface {
+	APIBackend() kcoinapi.Backend
+	BlockChain() *core.BlockChain
+	TxPool() *core.TxPool
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 }
 
-type blockChain interface {
-	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
-}
-
-type votingSystem interface {
-	// SubscribeNewVoteEvent should return an event subscription of
-	// NewVoteEvent and send events to the given channel.
-	SubscribeNewVoteEvent(chan<- core.NewVoteEvent) event.Subscription
-
-	// SubscribeNewMajorityEvent should return an event subscription of
-	// NewMajorityEvent and send events to the given channel.
-	SubscribeNewMajorityEvent(chan<- core.NewMajorityEvent) event.Subscription
-}
-
-// MiningService represents mining as a service.
+// MiningService provides mining as a service.
 type MiningService struct {
 	lock       sync.RWMutex
-	
-	validatorMgr *consensus.Consensus
-	validator validator.Validator // consensus validator
-
+	validator validator.Validator
 	coinbase common.Address
 	deposit  *big.Int
-	
-	eventMux       *event.TypeMux
+
+	validatorMgr *consensus.Consensus 
+	protocolMgr *ProtocolManager
+	serverPool *serverPool
 
 	log log.Logger
+
+	shutdownChan chan bool // Channel for shutting down the service
 }
 
 // NewMiningService returns an instance of the mining service.
-func NewMiningService(ctx *node.ServiceContext, kowalaServ *knode.Kowala, config *Config) (*Service, error) {
-	validatorMgr, err := consensus.Bind(NewContractBackend(kcoin.apiBackend),kcoin.chainConfig.ChainID)
-	if err != nil {
-		return err
+func NewMiningService(core Core, config *Config) (*Service, error) {
+	service := &MiningService{
+		log: config.Logger,	
+		coinbase: config.Coinbase,
+		deposit:  config.Deposit,
 	}
 
-	validator := validator.New(kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
-	validator.SetExtra(makeExtraData(config.ExtraData))
+	service.log.Info("Initialising Mining Service")
 
-	return &Service{
-		validator: validator,
-		validatorMgr: validatorMgr,
-		coinbase:       config.Coinbase,
-		deposit:        config.Deposit,
-		eventMux: ctx.EventMux,
-	}, nil
+	validatorMgr, err := consensus.Bind(NewContractBackend(core.APIBackend()), core.BlockChain().Config().ChainID)
+	if err != nil {
+		return nil, err
+	}
+	service.validatorMgr = validatorMgr
+
+	service.validator = validator.New(core, service.validatorMgr)
+	service.validator.SetExtra(makeExtraData(config.ExtraData))
+	
+	if service.protocolManager, err = NewProtocolManager(core.BlockChain().Config(), config.SyncMode, config.NetworkId, kcoin.eventMux, kcoin.txPool, kcoin.engine, kcoin.blockchain, chainDb); err != nil {
+		return nil, err
+	}
+
+	kcoin.serverPool = newServerPool(chainDb, kcoin.shutdownChan, new(sync.WaitGroup))
+
+	service, nil
 }
 
 func (ms *MiningService) Deposit() (*big.Int, error) {
@@ -165,9 +165,11 @@ func (ms *MiningService) Start(srvr *p2p.Server) error {
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Kowala protocol.
+// Mining service protocol.
 func (ms *MiningService) Stop() error {
 	ms.StopValidating()
+	s.protocolManager.Stop()
+	close(s.shutdownChan)
 }
 
 func (ms *MiningService) Coinbase() (eb common.Address, err error) {
@@ -186,20 +188,7 @@ func (ms *MiningService) Coinbase() (eb common.Address, err error) {
 	return common.Address{}, fmt.Errorf("coinbase address must be explicitly specified")
 }
 
-func (ms *MiningService) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	tx, blockHash, _, index := rawdb.ReadTransaction(s.chainDb, txHash)
-	if tx == nil {
-		return nil, nil
-	}
-	receipts, err := s.apiBackend.GetReceipts(ctx, blockHash)
-	if err != nil {
-		return nil, err
-	}
-	if len(receipts) <= int(index) {
-		return nil, nil
-	}
-	return receipts[index], nil
-}
+
 
 // APIs returns the collection of RPC services the mining service offers.
 func (ms *MiningService) APIs() []rpc.API {
@@ -211,4 +200,21 @@ func (ms *MiningService) APIs() []rpc.API {
 			Public:    false,
 		},
 	}
+}
+
+func makeExtraData(extra []byte) []byte {
+	if len(extra) == 0 {
+		// create default extradata
+		extra, _ = rlp.EncodeToBytes([]interface{}{
+			uint(params.VersionMajor<<16 | params.VersionMinor<<8 | params.VersionPatch),
+			"kcoin",
+			runtime.Version(),
+			runtime.GOOS,
+		})
+	}
+	if uint64(len(extra)) > params.MaximumExtraDataSize {
+		log.Warn("Validator extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
+		extra = nil
+	}
+	return extra
 }

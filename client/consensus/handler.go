@@ -1,21 +1,43 @@
 package consensus
 
 import (
+	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/consensus/validator"
 )
 
+const (
+	// voteChSize is the size of channel listening to NewVoteEvent.
+	voteChSize = 4096
+
+	// proposalChSize is the size of channel listening to NewVoteEvent.
+	proposalChSize = 4096
+)
+
 type ProtocolManager struct {
+	SubProtocols []p2p.Protocol
+
 	networkID uint64
+	
 	votingSystem votingSystem
 	validator  validator.Validator
+	
+	maxPeers int
 	peers      *peerSet
-	proposalSub, voteSub *event.TypeMuxSubscription
+	newPeerCh chan *peer
+	
+	voteCh chan core.NewVoteEvent
+	voteSub event.Subscription
+	proposalCh chan core.NewProposalEvent
+	proposalSub event.Subscription
 }
 
-func NewProtocolManager(validator validator.Validator, votingSystem votingSystem) (*ProtocolManager, error) {
+func NewProtocolManager(networkID uint64, validator validator.Validator, votingSystem votingSystem) (*ProtocolManager, error) {
 	manager := &ProtocolManager{
+		networkID: networkID,
 		validator:    validator,
 		votingSystem: votingSystem,
+		peers: newPeerSet(),
+		newPeerCh: make(chan *peer),
 	}
 }
 

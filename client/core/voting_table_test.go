@@ -1,14 +1,15 @@
 package core
 
 import (
-	"testing"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/kowala-tech/kcoin/client/core/types"
-	"github.com/kowala-tech/kcoin/client/common"
 	"math/big"
-	"github.com/stretchr/testify/require"
+	"testing"
+
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/types/mocks"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTwoThirdsPlusOneVoteQuorum(t *testing.T) {
@@ -39,7 +40,7 @@ func TestTwoThirdsPlusOneVoteQuorum(t *testing.T) {
 }
 
 func TestNewVotingTable_ReturnsErrorsOnNilVoters(t *testing.T) {
-	votingTable, err := NewVotingTable(types.PreVote, nil, nil)
+	votingTable, err := NewVotingTable(types.PreVote, nil)
 
 	assert.Error(t, err, "cant create a voting table with nil voters")
 	assert.Nil(t, votingTable)
@@ -84,7 +85,6 @@ func TestVotingTable_Add_DoubleVoteFromAddressReturnsError(t *testing.T) {
 	votingTable, err := NewVotingTable(
 		types.PreVote,
 		voters,
-		func(winner common.Hash) {},
 	)
 	assert.NoError(t, err)
 
@@ -113,9 +113,6 @@ func TestVotingTable_Add_VoteFromNonVoterReturnsError(t *testing.T) {
 	votingTable, err := NewVotingTable(
 		types.PreVote,
 		voters,
-		func(winner common.Hash) {
-			assert.Fail(t, "unexpected Quorum reached call")
-		},
 	)
 	assert.NoError(t, err)
 

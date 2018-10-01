@@ -1,4 +1,3 @@
-// Package consensus implements different Ethereum consensus engines.
 package consensus
 
 import (
@@ -33,7 +32,7 @@ type ChainReader interface {
 
 // Engine is an algorithm agnostic consensus engine.
 type Engine interface {
-	// Author retrieves the Ethereum address of the account that minted the given
+	// Author retrieves the Kowala address of the account that minted the given
 	// block, which may be different from the header's coinbase if a consensus
 	// engine is based on signatures.
 	Author(header *types.Header) (common.Address, error)
