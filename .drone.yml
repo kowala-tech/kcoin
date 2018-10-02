@@ -374,7 +374,17 @@ pipeline:
     when:
       branch: [dev]
       event: [push]
-
+  
+  build_solidity_docs:
+    group: build_artifacts
+    image: kowalatech/solidoc
+    commands:
+      - make dev_docker_images
+      - make build_solidity_docs_with_docker
+    when:
+      event: [push,tag]
+      branch: [master,dev]
+  
   build_docs:
     group: build_artifacts
     image: kowalatech/mkdocs

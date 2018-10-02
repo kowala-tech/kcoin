@@ -202,10 +202,14 @@ build_docs:
 build_docs_with_docker:
 	@docker run --rm -v $(PWD)/docs:/documents kowalatech/mkdocs $(BUILD_DOCS)
 
+.PHONY: build_solidity_docs_with_docker
+build_solidity_docs_with_docker:
+	@docker run --rm -it -v $(PWD)/client/contracts/truffle/:/src -v $(PWD)/docs:/out kowalatech/solidoc
+
 ## Dev docker images
 
 .PHONY: dev_docker_images
-dev_docker_images: dev_explorer_docker_image dev_explorer_sync_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_faucet_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_transactions_publisher_docker_image dev_backend_api_docker_image
+dev_docker_images: dev_explorer_docker_image dev_explorer_sync_docker_image dev_kusd_docker_image dev_bootnode_docker_image dev_faucet_docker_image dev_wallet_backend_docker_image dev_transactions_persistance_docker_image dev_transactions_publisher_docker_image dev_backend_api_docker_image dev_solidocs_docker_image
 
 .PHONY: dev_kusd_docker_image
 dev_kusd_docker_image:
@@ -242,6 +246,10 @@ dev_explorer_docker_image:
 .PHONY: dev_explorer_sync_docker_image
 dev_explorer_sync_docker_image:
 	docker build -t kowalatech/kexplorersync -f explorer/sync.Dockerfile .
+
+.PHONY: dev_solidocs_docker_image
+dev_solidocs_docker_image:
+	docker build -t kowalatech/solidoc -f client/contracts/truffle/solidoc.Dockerfile .
 
 # Tools
 
