@@ -98,7 +98,9 @@ func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.Block
 
 	switch start {
 	case rpc.PendingBlockNumber:
-		from = api.kcoin.validator.PendingBlock()
+		// @TODO (rgeraldes)
+		//from = api.kcoin.validator.PendingBlock()
+		fallthrough
 	case rpc.LatestBlockNumber:
 		from = api.kcoin.blockchain.CurrentBlock()
 	default:
@@ -106,7 +108,8 @@ func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.Block
 	}
 	switch end {
 	case rpc.PendingBlockNumber:
-		to = api.kcoin.validator.PendingBlock()
+		//to = api.kcoin.validator.PendingBlock()
+		fallthrough
 	case rpc.LatestBlockNumber:
 		to = api.kcoin.blockchain.CurrentBlock()
 	default:
@@ -343,7 +346,9 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(ctx context.Context, number rpc.B
 
 	switch number {
 	case rpc.PendingBlockNumber:
-		block = api.kcoin.validator.PendingBlock()
+		// @TODO (rgeraldes)
+		// block = api.kcoin.validator.PendingBlock()
+		fallthrough
 	case rpc.LatestBlockNumber:
 		block = api.kcoin.blockchain.CurrentBlock()
 	default:

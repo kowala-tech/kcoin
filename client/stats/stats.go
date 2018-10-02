@@ -2,7 +2,6 @@
 package stats
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +25,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/mining"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/rpc"
@@ -63,6 +63,8 @@ type Service struct {
 	kcoin  *knode.Kowala // Full Kowala service if monitoring a full node
 	engine engine.Engine // Consensus engine to retrieve variadic block fields
 
+	mining *mining.Service
+
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
 	host string // Remote address of the monitoring service
@@ -76,24 +78,30 @@ type Service struct {
 }
 
 // New returns a monitoring service ready for stats reporting.
-func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
+func New(ctx *node.ServiceContext, cfg *Config) (*Service, error) {
 	// Parse the netstats connection url
 	re := regexp.MustCompile("([^:@]*)(:([^@]*))?@(.+)")
-	parts := re.FindStringSubmatch(url)
+	parts := re.FindStringSubmatch(cfg.GetURL())
 	if len(parts) != 5 {
-		return nil, fmt.Errorf("invalid netstats url: \"%s\", should be nodename:secret@host:port", url)
+		return nil, fmt.Errorf("invalid netstats url: \"%s\", should be nodename:secret@host:port", cfg.GetURL())
 	}
+
+	var kowalaServ *knode.Kowala
+	if err := ctx.Service(&kowalaServ); err != nil {
+		return nil, err
+	}
+
 	// Assemble and return the stats service
 	engine := kowalaServ.Engine()
+
+	var miningServ *mining.Service
+	if err := ctx.Service(&miningServ); err != nil {
+		return nil, err
+	}
 
 	var oracleMgr *oracle.Manager
 	if err := kowalaServ.Contract(&oracleMgr); err != nil {
 		return nil, fmt.Errorf("failed to load the oracle contract %v", err)
-	}
-
-	var validatorMgr *consensus.Consensus
-	if err := kowalaServ.Contract(&validatorMgr); err != nil {
-		return nil, fmt.Errorf("failed to load the consensus contract %v", err)
 	}
 
 	var sysvars *sysvars.Vars
@@ -105,7 +113,8 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 		kcoin:        kowalaServ,
 		engine:       engine,
 		oracleMgr:    oracleMgr,
-		validatorMgr: validatorMgr,
+		mining:       miningServ,
+		validatorMgr: miningServ.ValidatorMgr(),
 		sysvars:      sysvars,
 		node:         parts[1],
 		pass:         parts[3],
@@ -547,7 +556,7 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 	author, _ := s.engine.Author(header)
 
 	// Gather the contracts info from the local blockchain
-	consensus := s.kcoin.Consensus()
+	consensus := s.mining.ValidatorMgr()
 	minDeposit, err := consensus.MinimumDeposit()
 	if err != nil {
 		return nil, err
@@ -690,12 +699,13 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 		gasprice   int
 	)
 
-	validating = s.kcoin.Validator().Validating()
+	validating = s.mining.Validator().Validating()
 
 	sync := s.kcoin.Downloader().Progress()
 	syncing = s.kcoin.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
 
-	price, _ := s.kcoin.APIBackend().SuggestPrice(context.Background())
+	price := common.Big1
+	//price, _ := s.kcoin.APIBackend().SuggestPrice(context.Background())
 	gasprice = int(price.Uint64())
 
 	// Assemble the node stats and send it to the server

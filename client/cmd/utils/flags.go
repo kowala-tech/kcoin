@@ -11,13 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
-	"github.com/kowala-tech/kcoin/client/stats"
-
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/fdlimit"
+	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/vm"
@@ -25,10 +23,10 @@ import (
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/metrics"
 	"github.com/kowala-tech/kcoin/client/metrics/influxdb"
+	"github.com/kowala-tech/kcoin/client/mining"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/p2p/discover"
@@ -36,6 +34,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/p2p/nat"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/stats"
 
 	"gopkg.in/urfave/cli.v1"
 )
@@ -273,7 +272,7 @@ var (
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimal gas price to accept for mining a transactions",
-		Value: knode.DefaultConfig.GasPrice,
+		Value: mining.DefaultConfig.GasPrice,
 	}
 	ExtraDataFlag = cli.StringFlag{
 		Name:  "extradata",
@@ -442,18 +441,6 @@ var (
 		Name:  "jspath",
 		Usage: "JavaScript root path for `loadScript`",
 		Value: ".",
-	}
-
-	// Gas price oracle settings
-	GpoBlocksFlag = cli.IntFlag{
-		Name:  "gpoblocks",
-		Usage: "Number of recent blocks to check for gas prices",
-		Value: knode.DefaultConfig.GPO.Blocks,
-	}
-	GpoPercentileFlag = cli.IntFlag{
-		Name:  "gpopercentile",
-		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: knode.DefaultConfig.GPO.Percentile,
 	}
 
 	MetricsEnabledFlag = cli.BoolFlag{
@@ -758,7 +745,7 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 
 // setCoinbase retrieves the coinbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *knode.Config) {
+func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *mining.Config) {
 	if ctx.GlobalIsSet(CoinbaseFlag.Name) {
 		account, err := MakeAddress(ks, ctx.GlobalString(CoinbaseFlag.Name))
 		if err != nil {
@@ -777,7 +764,7 @@ func setCoinbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *knode.Config) {
 	}
 }
 
-func setDeposit(ctx *cli.Context, cfg *knode.Config) {
+func setDeposit(ctx *cli.Context, cfg *mining.Config) {
 	cfg.Deposit = GlobalBig(ctx, ValidatorDepositFlag.Name)
 }
 
@@ -857,15 +844,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config, kowalaCfg *knode.Config) 
 	cfg.DataDir = filepath.Join(cfg.DataDir, kowalaCfg.Currency)
 }
 
-func setGPO(ctx *cli.Context, cfg *gasprice.Config) {
-	if ctx.GlobalIsSet(GpoBlocksFlag.Name) {
-		cfg.Blocks = ctx.GlobalInt(GpoBlocksFlag.Name)
-	}
-	if ctx.GlobalIsSet(GpoPercentileFlag.Name) {
-		cfg.Percentile = ctx.GlobalInt(GpoPercentileFlag.Name)
-	}
-}
-
 func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolNoLocalsFlag.Name) {
 		cfg.NoLocals = ctx.GlobalBool(TxPoolNoLocalsFlag.Name)
@@ -937,14 +915,18 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	}
 }
 
-// SetConsensusConfig applies consensus-related command line flags to the config.
-func SetConsensusConfig(ctx *cli.Context, stack *node.Node, cfg *consensus.Config) {
+// SetMiningConfig applies mining-related command line flags to the config.
+func SetMiningConfig(ctx *cli.Context, stack *node.Node, cfg *mining.Config) {
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setCoinbase(ctx, ks, cfg)
 	setDeposit(ctx, cfg)
-	
+
 	if ctx.GlobalIsSet(ExtraDataFlag.Name) {
 		cfg.ExtraData = []byte(ctx.GlobalString(ExtraDataFlag.Name))
+	}
+
+	if ctx.GlobalIsSet(GasPriceFlag.Name) {
+		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
 	}
 }
 
@@ -954,7 +936,6 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	checkExclusive(ctx, DevModeFlag, TestnetFlag)
 	checkExclusive(ctx, FastSyncFlag, LightModeFlag, SyncModeFlag)
 
-	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 
 	switch {
@@ -991,9 +972,6 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
-	if ctx.GlobalIsSet(GasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
-	}
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
@@ -1029,12 +1007,9 @@ func RegisterKowalaService(stack *node.Node, cfg *knode.Config) {
 
 // RegisterMiningService configures the mining deamon and adds it to the
 // given node.
-func RegisterMiningService(stack *node.Node, cfg *consensus.MiningConfig) {
+func RegisterMiningService(stack *node.Node, cfg *mining.Config) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		var kowalaServ *knode.Kowala
-		ctx.Service(&kowalaServ)
-
-		return consensus.NewMiningService(kowalaServ)
+		return mining.New(ctx, cfg)
 	}); err != nil {
 		Fatalf("Failed to register the Kowala mining service: %v", err)
 	}
@@ -1042,12 +1017,9 @@ func RegisterMiningService(stack *node.Node, cfg *consensus.MiningConfig) {
 
 // RegisterKowalaStatsService configures the Kowala Stats daemon and adds it to
 // the given node.
-func RegisterKowalaStatsService(stack *node.Node, url string) {
+func RegisterKowalaStatsService(stack *node.Node, cfg *stats.Config) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		var kowalaServ *knode.Kowala
-		ctx.Service(&kowalaServ)
-
-		return stats.New(url, kowalaServ)
+		return stats.New(ctx, cfg)
 	}); err != nil {
 		Fatalf("Failed to register the Kowala Stats service: %v", err)
 	}

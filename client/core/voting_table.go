@@ -15,6 +15,7 @@ var ErrDuplicateVote = errors.New("duplicate vote")
 type VotingTable interface {
 	Add(vote types.AddressVote) error
 	Leader() common.Hash
+	SubscribeNewMajorityEvent(ch chan<- NewMajorityEvent) event.Subscription
 }
 
 type votingTable struct {
@@ -55,7 +56,7 @@ func (table *votingTable) Add(voteAddressed types.AddressVote) error {
 
 	if table.hasQuorum() {
 		log.Debug("voting. Quorum has been achieved. majority", "votes", table.votes.Len(), "voters", table.voters.Len())
-		go table.majorityFeed.Send(core.NewMajorityEvent{Winner: vote.BlockHash()})
+		go table.majorityFeed.Send(NewMajorityEvent{Winner: vote.BlockHash()})
 	}
 
 	return nil
@@ -78,16 +79,12 @@ func (table *votingTable) hasQuorum() bool {
 	return table.quorum(table.votes.Len(), table.voters.Len())
 }
 
-type QuorumReachedFunc func(winner common.Hash)
+func (table *votingTable) SubscribeNewMajorityEvent(ch chan<- NewMajorityEvent) event.Subscription {
+	return table.scope.Track(table.majorityFeed.Subscribe(ch))
+}
 
 type QuorumFunc func(votes, voters int) bool
 
 func TwoThirdsPlusOneVoteQuorum(votes, voters int) bool {
 	return votes >= voters*2/3+1
-}
-
-// SubscribeNewMajorityEvent registers a subscription of NewMajorityEvent and
-// starts sending event to the given channel.
-func (table *votingTable) SubscribeNewMajorityEvent(ch chan<- NewMajorityEvent) event.Subscription {
-	return table.scope.Track(table.majorityFeed.Subscribe(ch))
 }

@@ -22,10 +22,11 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/metrics"
+	"github.com/kowala-tech/kcoin/client/mining"
 	"github.com/kowala-tech/kcoin/client/node"
-	"gopkg.in/urfave/cli.v1"
-	"github.com/kowala-tech/kcoin/client/version"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/version"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -95,8 +96,6 @@ var (
 		utils.MetricsPrometheusAddressFlag,
 		utils.MetricsPrometheusSubsystemFlag,
 		utils.NoCompactionFlag,
-		utils.GpoBlocksFlag,
-		utils.GpoPercentileFlag,
 		utils.ExtraDataFlag,
 		configFileFlag,
 	}
@@ -319,14 +318,20 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.ValidationEnabledFlag.Name) {
 		// Validation only makes sense if a full Kowala node is running
-		var kowala *knode.Kowala
-		if err := stack.Service(&kowala); err != nil {
+		var kowalaServ *knode.Kowala
+		if err := stack.Service(&kowalaServ); err != nil {
+			utils.Fatalf("kowala service not running: %v", err)
+		}
+
+		// Validation only makes sense if a full Kowala node is running
+		var miningServ *mining.Service
+		if err := stack.Service(&miningServ); err != nil {
 			utils.Fatalf("kowala service not running: %v", err)
 		}
 
 		// Set the gas price to the limits from the CLI and start mining
-		kowala.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
-		if err := kowala.StartValidating(); err != nil {
+		kowalaServ.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
+		if err := miningServ.StartValidating(); err != nil {
 			utils.Fatalf("Failed to start validation: %v", err)
 		}
 	} else if ctx.GlobalBool(utils.SelfUpdateEnabledFlag.Name) {

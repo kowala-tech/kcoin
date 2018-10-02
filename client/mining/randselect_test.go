@@ -1,4 +1,4 @@
-package knode
+package mining
 
 import (
 	"math/rand"

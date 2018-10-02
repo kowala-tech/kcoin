@@ -32,7 +32,7 @@ type stateFn func() stateFn
 func (val *validator) notLoggedInState() stateFn {
 	isGenesis, err := val.consensus.IsGenesisValidator(val.walletAccount.Account().Address)
 	if err != nil {
-		log.Warn("Failed to verify the voter information", "err", err)
+		val.log.Warn("Failed to verify the voter information", "err", err)
 		return nil
 	}
 
@@ -46,50 +46,50 @@ func (val *validator) notLoggedInState() stateFn {
 
 		isValidator, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
-			log.Crit("Failed to verify if account is already a validator")
+			val.log.Crit("Failed to verify if account is already a validator")
 		}
 
 		if !isValidator {
 			txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
 			if err != nil {
-				log.Error("Error joining validators network", "err", err)
+				val.log.Error("Error joining validators network", "err", err)
 				return nil
 			}
 			log.Info("Waiting confirmation to participate in the consensus")
 
 			receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
 			if err != nil {
-				log.Crit("Failed to verify the voter registration", "err", err)
+				val.log.Crit("Failed to verify the voter registration", "err", err)
 			}
 			if receipt.Status == types.ReceiptStatusFailed {
-				log.Crit("Failed to register the validator - receipt status failed")
+				val.log.Crit("Failed to register the validator - receipt status failed")
 			}
 		}
 
 	} else {
 		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 		if err != nil {
-			log.Crit("Failed to verify the voter information", "err", err)
+			val.log.Crit("Failed to verify the voter information", "err", err)
 			return nil
 		}
 		if !isVoter {
-			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.walletAccount.Account().Address)
+			val.log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.walletAccount.Account().Address)
 		}
 
-		log.Info("Deposit is not necessary for a genesis validator (first block)")
+		val.log.Info("Deposit is not necessary for a genesis validator (first block)")
 	}
 
-	log.Info("Starting validation operation")
+	val.log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
 
-	log.Info("Voter has been accepted in the election", "enode", val.walletAccount.Account().Address.String())
+	val.log.Info("Voter has been accepted in the election", "enode", val.walletAccount.Account().Address.String())
 	val.restoreLastCommit()
 
 	return val.newElectionState
 }
 
 func (val *validator) newElectionState() stateFn {
-	log.Info("Starting a new election")
+	val.log.Info("Starting a new election")
 	// update state machine based on current state
 	if err := val.init(); err != nil {
 		return nil
@@ -101,7 +101,7 @@ func (val *validator) newElectionState() stateFn {
 	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
 		numTxs, _ := val.backend.TxPool().Stats() //
 		if val.round == 0 && numTxs == 0 {
-			log.Info("Waiting for a TX")
+			val.log.Info("Waiting for a TX")
 			txCh := make(chan core.NewTxsEvent)
 			txSub := val.backend.TxPool().SubscribeNewTxsEvent(txCh)
 			defer txSub.Unsubscribe()
@@ -113,7 +113,7 @@ func (val *validator) newElectionState() stateFn {
 }
 
 func (val *validator) newRoundState() stateFn {
-	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
+	val.log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 
 	val.voters.NextProposer()
 
@@ -133,10 +133,10 @@ func (val *validator) newRoundState() stateFn {
 func (val *validator) newProposalState() stateFn {
 	proposer := val.voters.NextProposer()
 	if proposer.Address() == val.walletAccount.Account().Address {
-		log.Info("Proposing a new block")
+		val.log.Info("Proposing a new block")
 		val.propose()
 	} else {
-		log.Info("Waiting for the proposal", "addr", proposer.Address())
+		val.log.Info("Waiting for the proposal", "addr", proposer.Address())
 		val.waitForProposal()
 	}
 	return val.preVoteState
@@ -147,62 +147,63 @@ func (val *validator) waitForProposal() {
 	select {
 	case block := <-val.blockCh:
 		val.block = block
-		log.Info("Received the block", "hash", val.block.Hash())
+		val.log.Info("Received the block", "hash", val.block.Hash())
 	case <-time.After(timeout):
-		log.Info("Timeout expired", "duration", timeout)
+		val.log.Info("Timeout expired", "duration", timeout)
 	}
 }
 
 func (val *validator) preVoteState() stateFn {
-	log.Info("Pre vote sub-election")
+	val.log.Info("Pre vote sub-election")
 	val.preVote()
 
 	return val.preVoteWaitState
 }
 
 func (val *validator) preVoteWaitState() stateFn {
-	log.Info("Waiting for a majority in the pre-vote sub-election")
+	val.log.Info("Waiting for a majority in the pre-vote sub-election")
 	timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
+	defer val.preVoteMajoritySub.Unsubscribe()
 
 	select {
 	case <-val.preVoteMajorityCh:
-		log.Info("There's a majority in the pre-vote sub-election!")
+		val.log.Info("There's a majority in the pre-vote sub-election!")
 		// fixme shall we do something here with current stateDB?
 	case <-time.After(timeout):
-		log.Info("Timeout expired", "duration", timeout)
+		val.log.Info("Timeout expired", "duration", timeout)
 	}
 
 	return val.preCommitState
 }
 
 func (val *validator) preCommitState() stateFn {
-	log.Info("Pre commit sub-election")
+	val.log.Info("Pre commit sub-election")
 	val.preCommit()
 
 	return val.preCommitWaitState
 }
 
 func (val *validator) preCommitWaitState() stateFn {
-	log.Info("Waiting for a majority in the pre-commit sub-election")
+	val.log.Info("Waiting for a majority in the pre-commit sub-election")
 	timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
-	defer val.majority.Unsubscribe()
+	defer val.preCommitMajoritySub.Unsubscribe()
 
 	select {
 	case event := <-val.preCommitMajorityCh:
-		log.Info("There's a majority in the pre-commit sub-election!", "event", spew.Sdump(event))
+		val.log.Info("There's a majority in the pre-commit sub-election!", "event", spew.Sdump(event))
 		if val.block == nil || bytes.Equal(val.block.Hash().Bytes(), common.Hash{}.Bytes()) {
-			log.Debug("No one block wins!")
+			val.log.Debug("No one block wins!")
 			return val.newRoundState
 		}
 		return val.commitState
 	case <-time.After(timeout):
-		log.Info("Timeout expired", "duration", timeout)
+		val.log.Info("Timeout expired", "duration", timeout)
 		return val.newRoundState
 	}
 }
 
 func (val *validator) commitState() stateFn {
-	log.Info("Commit state")
+	val.log.Info("Commit state")
 
 	blockHash := val.block.Hash()
 
@@ -219,12 +220,12 @@ func (val *validator) commitState() stateFn {
 
 	_, err := val.chain.WriteBlockWithState(val.block, val.work.receipts, val.work.state)
 	if err != nil {
-		log.Error("Failed writing block to chain", "err", err)
+		val.log.Error("Failed writing block to chain", "err", err)
 		return nil
 	}
 
 	// Broadcast the block and announce chain insertion event
-	go val.eventMux.Post(core.NewMinedBlockEvent{Block: val.block})
+	go val.globalEvents.Post(core.NewMinedBlockEvent{Block: val.block})
 	var (
 		events []interface{}
 		logs   = val.work.state.Logs()
@@ -238,10 +239,10 @@ func (val *validator) commitState() stateFn {
 
 	voter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 	if err != nil {
-		log.Crit("Failed to verify if the validator is a voter", "err", err)
+		val.log.Crit("Failed to verify if the validator is a voter", "err", err)
 	}
 	if !voter {
-		log.Info(fmt.Sprintf("Logging out. Account %q is not a validator", val.walletAccount.Account().Address.String()))
+		val.log.Info(fmt.Sprintf("Logging out. Account %q is not a validator", val.walletAccount.Account().Address.String()))
 		return val.loggedOutState
 	}
 
@@ -249,7 +250,7 @@ func (val *validator) commitState() stateFn {
 }
 
 func (val *validator) loggedOutState() stateFn {
-	log.Info("Logged out")
+	val.log.Info("Logged out")
 
 	atomic.StoreInt32(&val.validating, 0)
 

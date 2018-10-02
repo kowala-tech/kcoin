@@ -3,17 +3,11 @@
 package knode
 
 import (
-	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 )
-
-var _ = (*configMarshaling)(nil)
 
 // MarshalTOML marshals as TOML.
 func (c Config) MarshalTOML() (interface{}, error) {
@@ -29,12 +23,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		DatabaseCache           int
 		TrieCache               int
 		TrieTimeout             time.Duration
-		Coinbase                common.Address `toml:",omitempty"`
-		Deposit                 *big.Int       `toml:",omitempty"`
-		ExtraData               hexutil.Bytes  `toml:",omitempty"`
-		GasPrice                *big.Int
 		TxPool                  core.TxPoolConfig
-		GPO                     gasprice.Config
 		EnablePreimageRecording bool
 		DocRoot                 string `toml:"-"`
 		Currency                string
@@ -51,12 +40,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.DatabaseCache = c.DatabaseCache
 	enc.TrieCache = c.TrieCache
 	enc.TrieTimeout = c.TrieTimeout
-	enc.Coinbase = c.Coinbase
-	enc.Deposit = c.Deposit
-	enc.ExtraData = c.ExtraData
-	enc.GasPrice = c.GasPrice
 	enc.TxPool = c.TxPool
-	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.DocRoot = c.DocRoot
 	enc.Currency = c.Currency
@@ -77,12 +61,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		DatabaseCache           *int
 		TrieCache               *int
 		TrieTimeout             *time.Duration
-		Coinbase                *common.Address `toml:",omitempty"`
-		Deposit                 *big.Int        `toml:",omitempty"`
-		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
-		GasPrice                *big.Int
 		TxPool                  *core.TxPoolConfig
-		GPO                     *gasprice.Config
 		EnablePreimageRecording *bool
 		DocRoot                 *string `toml:"-"`
 		Currency                *string
@@ -124,23 +103,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.TrieTimeout != nil {
 		c.TrieTimeout = *dec.TrieTimeout
 	}
-	if dec.Coinbase != nil {
-		c.Coinbase = *dec.Coinbase
-	}
-	if dec.Deposit != nil {
-		c.Deposit = dec.Deposit
-	}
-	if dec.ExtraData != nil {
-		c.ExtraData = *dec.ExtraData
-	}
-	if dec.GasPrice != nil {
-		c.GasPrice = dec.GasPrice
-	}
 	if dec.TxPool != nil {
 		c.TxPool = *dec.TxPool
-	}
-	if dec.GPO != nil {
-		c.GPO = *dec.GPO
 	}
 	if dec.EnablePreimageRecording != nil {
 		c.EnablePreimageRecording = *dec.EnablePreimageRecording

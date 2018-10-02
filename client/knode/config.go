@@ -1,13 +1,10 @@
 package knode
 
 import (
-	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -21,17 +18,12 @@ var DefaultConfig = Config{
 	DatabaseCache: 128,
 	TrieCache:     256,
 	TrieTimeout:   60 * time.Minute,
-	GasPrice:      big.NewInt(1),
 
-	TxPool: core.DefaultTxPoolConfig,
-	GPO: gasprice.Config{
-		Blocks:     20,
-		Percentile: 60,
-	},
+	TxPool:   core.DefaultTxPoolConfig,
 	Currency: KUSD,
 }
 
-//go:generate gencodec -type Config -field-override configMarshaling -formats toml -out gen_config.go
+//go:generate gencodec -type Config -formats toml -out gen_config.go
 
 type Config struct {
 	// The genesis block, which is inserted if the database is empty.
@@ -54,13 +46,8 @@ type Config struct {
 	TrieCache          int
 	TrieTimeout        time.Duration
 
-	GasPrice *big.Int
-
 	// Transaction pool options
 	TxPool core.TxPoolConfig
-
-	// Gas Price Oracle options
-	GPO gasprice.Config
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
@@ -69,8 +56,4 @@ type Config struct {
 	DocRoot string `toml:"-"`
 
 	Currency string
-}
-
-type configMarshaling struct {
-	ExtraData hexutil.Bytes
 }

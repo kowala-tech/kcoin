@@ -40,6 +40,8 @@ type VotingState struct {
 	*work
 }
 
+func (state *VotingState) VotingSystem() *VotingSystem { return state.votingSystem }
+
 // VotingTables represents the voting tables available for each election round
 type VotingTables = [2]core.VotingTable
 
@@ -69,7 +71,7 @@ type VotingSystem struct {
 	round          uint64
 	votesPerRound  map[uint64]VotingTables
 	voteFeed       event.Feed
-	scope        event.SubscriptionScope
+	scope          event.SubscriptionScope
 }
 
 // NewVotingSystem returns a new voting system
@@ -139,18 +141,20 @@ func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) (core.
 
 // SubscribeNewVoteEvent registers a subscription of NewVoteEvent and
 // starts sending event to the given channel.
-func (vs *VotingSystem) SubscribeNewVoteEvent()(ch chan<- core.NewVoteEvent) event.Subscription {
+func (vs *VotingSystem) SubscribeNewVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
 	return vs.scope.Track(vs.voteFeed.Subscribe(ch))
 }
 
 // SubscribePreVoteMajority registers a subscription of NewMajorityEvent
 // in the pre vote table and starts sending event to the given channel.
-func (vs *VotingSystem) SubscribePreVoteMajority(ch chan<- NewMajorityEvent) event.Subscription {
+func (vs *VotingSystem) SubscribePreVoteMajority(ch chan<- core.NewMajorityEvent) event.Subscription {
+	votingTables := vs.votesPerRound[vs.round]
 	return votingTables[int(types.PreVote)].SubscribeNewMajorityEvent(ch)
 }
 
 // SubscribePreCommitMajority registers a subscription of NewMajorityEvent
 // in the pre commit table and starts sending event to the given channel.
-func (vs *VotingSystem) SubscribePreCommitMajority(ch chan<- NewMajorityEvent) event.Subscription {
+func (vs *VotingSystem) SubscribePreCommitMajority(ch chan<- core.NewMajorityEvent) event.Subscription {
+	votingTables := vs.votesPerRound[vs.round]
 	return votingTables[int(types.PreCommit)].SubscribeNewMajorityEvent(ch)
 }

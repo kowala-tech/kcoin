@@ -13,6 +13,7 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
 	"github.com/kowala-tech/kcoin/client/knode"
+	"github.com/kowala-tech/kcoin/client/mining"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/stats"
@@ -56,7 +57,7 @@ var tomlSettings = toml.Config{
 type kcoinConfig struct {
 	Kowala knode.Config
 	Node   node.Config
-	Mining consensus.MiningConfig
+	Mining mining.Config
 	Stats  stats.Config
 }
 
@@ -108,10 +109,10 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 
 	// Kowala config
 	utils.SetKowalaConfig(ctx, stack, &cfg.Kowala)
-	
+
 	// Mining config
 	utils.SetMiningConfig(ctx, stack, &cfg.Mining)
-	
+
 	// Stats config
 	if ctx.GlobalIsSet(utils.KowalaStatsURLFlag.Name) {
 		cfg.Stats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
@@ -124,13 +125,13 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
 	utils.RegisterKowalaService(stack, &cfg.Kowala)
-	
+
 	utils.RegisterMiningService(stack, &cfg.Mining)
 
 	// Add the Stats daemon if requested.
 	statsURL := cfg.Stats.GetURL()
 	if statsURL != "" {
-		utils.RegisterKowalaStatsService(stack, statsURL)
+		utils.RegisterKowalaStatsService(stack, &cfg.Stats)
 	}
 
 	return stack

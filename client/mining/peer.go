@@ -1,4 +1,4 @@
-package consensus
+package mining
 
 import (
 	"errors"
@@ -93,23 +93,25 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 func (p *peer) broadcast() {
 	for {
 		select {
-		case txs := <-p.queuedTxs:
-			if err := p.SendTransactions(txs); err != nil {
-				return
-			}
-			p.Log().Trace("Broadcast transactions", "count", len(txs))
+		/*
+			case txs := <-p.queuedTxs:
+				if err := p.SendTransactions(txs); err != nil {
+					return
+				}
+				p.Log().Trace("Broadcast transactions", "count", len(txs))
 
-		case prop := <-p.queuedProps:
-			if err := p.SendNewBlock(prop.block); err != nil {
-				return
-			}
-			p.Log().Trace("Propagated block", "number", prop.block.Number(), "hash", prop.block.Hash())
+			case prop := <-p.queuedProps:
+				if err := p.SendNewBlock(prop.block); err != nil {
+					return
+				}
+				p.Log().Trace("Propagated block", "number", prop.block.Number(), "hash", prop.block.Hash())
 
-		case block := <-p.queuedAnns:
-			if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
-				return
-			}
-			p.Log().Trace("Announced block", "number", block.Number(), "hash", block.Hash())
+			case block := <-p.queuedAnns:
+				if err := p.SendNewBlockHashes([]common.Hash{block.Hash()}, []uint64{block.NumberU64()}); err != nil {
+					return
+				}
+				p.Log().Trace("Announced block", "number", block.Number(), "hash", block.Hash())
+		*/
 
 		case <-p.term:
 			return
@@ -152,14 +154,14 @@ func (p *peer) SetHead(hash common.Hash, blockNumber *big.Int) {
 	p.blockNumber.Set(blockNumber)
 }
 
-// MarkVote marks a vote as known for the peer, ensuring that the block will
+// MarkProposal marks a proposal as known for the peer, ensuring that the proposal will
 // never be propagated to this particular peer.
-func (p *peer) MarkVote(hash common.Hash) {
+func (p *peer) MarkProposal(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known vote hash
-	for p.knownVotes.Size() >= maxKnownVotes {
-		p.knownVotes.Pop()
+	for p.knownProposals.Size() >= maxKnownProposals {
+		p.knownProposals.Pop()
 	}
-	p.knownVotes.Add(hash)
+	p.knownProposals.Add(hash)
 }
 
 // MarkBlockFragment marks a block fragment as known for the peer, ensuring that the
@@ -172,21 +174,20 @@ func (p *peer) MarkBlockFragment(hash common.Hash) {
 	p.knownBlockFragments.Add(hash)
 }
 
-// SendNewBlock propagates a proposal to a remote peer.
-func (p *peer) SendNewProposal(proposal *types.Proposal) error {
-	p.knownProposals.Add(proposal.Hash())
-	return p2p.Send(p.rw, ProposalMsg, proposal)
+// MarkVote marks a vote as known for the peer, ensuring that the vote will
+// never be propagated to this particular peer.
+func (p *peer) MarkVote(hash common.Hash) {
+	// If we reached the memory allowance, drop a previously known vote hash
+	for p.knownVotes.Size() >= maxKnownVotes {
+		p.knownVotes.Pop()
+	}
+	p.knownVotes.Add(hash)
 }
 
-// AsyncSendNewBlock queues an entire block for propagation to a remote peer. If
-// the peer's broadcast queue is full, the event is silently dropped.
-func (p *peer) AsyncSendNewBlock(block *types.Block) {
-	select {
-	case p.queuedProps <- &propEvent{block: block}:
-		p.knownBlocks.Add(block.Hash())
-	default:
-		p.Log().Debug("Dropping block propagation", "number", block.NumberU64(), "hash", block.Hash())
-	}
+// SendNewBlock propagates a proposal to a remote peer.
+func (p *peer) SendProposal(proposal *types.Proposal) error {
+	p.knownProposals.Add(proposal.Hash())
+	return p2p.Send(p.rw, ProposalMsg, proposal)
 }
 
 // SendNewBlock propagates a vote to a remote peer.
@@ -336,6 +337,36 @@ func (ps *peerSet) Len() int {
 	return len(ps.peers)
 }
 
+// PeersWithoutProposal retrieves a list of peers that do not have a given proposal
+// in their set of known hashes.
+func (ps *peerSet) PeersWithoutProposal(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.knownProposals.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+// PeersWithoutBlockFragment retrieves a list of peers that do not have a given block fragment
+// in their set of known hashes.
+func (ps *peerSet) PeersWithoutBlockFragment(hash common.Hash) []*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]*peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if !p.knownBlockFragments.Has(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
 // PeersWithoutVote retrieves a list of peers that do not have a given vote
 // in their set of known hashes.
 func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
@@ -345,21 +376,6 @@ func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
 		if !p.knownVotes.Has(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
-// PeersWithoutFragment retrieves a list of peers that do not have a given block fragment
-// in their set of known hashes.
-func (ps *peerSet) PeersWithoutFragment(hash common.Hash) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.knownBlockFragments.Has(hash) {
 			list = append(list, p)
 		}
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common"
 	engine "github.com/kowala-tech/kcoin/client/consensus"
-	consensus "github.com/kowala-tech/kcoin/client/consensus/protocol"
+	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
@@ -27,7 +27,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/knode/filters"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
@@ -65,12 +64,8 @@ type Kowala struct {
 
 	apiBackend *KowalaAPIBackend
 
-	consensus *consensus.Consensus
-
 	bindingFuncs []BindingConstructor // binding constructors (in dependency order)
 	contracts    map[reflect.Type]bindings.Binding
-
-	gasPrice *big.Int
 
 	networkID     uint64
 	netRPCService *kcoinapi.PublicNetAPI
@@ -106,7 +101,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		accountManager: ctx.AccountManager,
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
-		gasPrice:       config.GasPrice,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 		bindingFuncs: []BindingConstructor{
@@ -119,7 +113,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 
 	log.Info("Initialising Kowala protocol", "versions", protocol.Constants.Versions, "network", config.NetworkId)
 
-	kcoin.apiBackend = &KowalaAPIBackend{kcoin, nil}
+	kcoin.apiBackend = &KowalaAPIBackend{kcoin}
 
 	// consensus engine
 	kcoin.engine = CreateConsensusEngine(ctx, kcoin.config, kcoin.chainConfig, kcoin.chainDb)
@@ -162,10 +156,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		return nil, err
 	}
 
-	if err := kcoin.Contract(&kcoin.consensus); err != nil {
-		return nil, err
-	}
-
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
@@ -178,12 +168,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
 	kcoin.txPool = core.NewTxPool(config.TxPool, kcoin.chainConfig, kcoin.blockchain)
-
-	gpoParams := config.GPO
-	if gpoParams.Default == nil {
-		gpoParams.Default = config.GasPrice
-	}
-	kcoin.apiBackend.gpo = gasprice.NewOracle(kcoin.apiBackend, gpoParams)
 
 	if kcoin.protocolManager, err = NewProtocolManager(kcoin.chainConfig, config.SyncMode, config.NetworkId, kcoin.eventMux, kcoin.txPool, kcoin.engine, kcoin.blockchain, chainDb); err != nil {
 		return nil, err
@@ -208,7 +192,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (kcoindb.Da
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Kowala service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db kcoindb.Database) engine.Engine {
-	engine := consensus.New(&params.KonsensusConfig{})
+	engine := konsensus.New(&params.KonsensusConfig{})
 	return engine
 }
 
@@ -225,18 +209,8 @@ func (s *Kowala) APIs() []rpc.API {
 		{
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   NewPublicKowalaAPI(s),
-			Public:    true,
-		}, {
-			Namespace: "eth",
-			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
-		}, {
-			Namespace: "mtoken",
-			Version:   "1.0",
-			Service:   NewPublicTokenAPI(s.accountManager, s.consensus, s.chainConfig.ChainID),
-			Public:    false,
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",
@@ -278,7 +252,6 @@ func (s *Kowala) IsListening() bool                  { return true } // Always l
 func (s *Kowala) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Kowala) NetVersion() uint64                 { return s.networkID }
 func (s *Kowala) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
-func (s *Kowala) Consensus() *consensus.Consensus    { return s.consensus }
 func (s *Kowala) APIBackend() *KowalaAPIBackend      { return s.apiBackend }
 func (s *Kowala) ChainConfig() *params.ChainConfig   { return s.chainConfig }
 func (s *Kowala) ChainID() *big.Int                  { return s.chainConfig.ChainID }
@@ -333,7 +306,7 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 	return nil
 }
 
-func (s *kowala) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+func (s *Kowala) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
 	tx, blockHash, _, index := rawdb.ReadTransaction(s.chainDb, txHash)
 	if tx == nil {
 		return nil, nil

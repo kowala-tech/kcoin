@@ -1,4 +1,4 @@
-package consensus
+package knode
 
 import (
 	"context"
@@ -93,12 +93,6 @@ func (b *ContractBackend) PendingNonceAt(ctx context.Context, account common.Add
 		nonce = uint64(*out)
 	}
 	return nonce, err
-}
-
-// SuggestGasPrice implements bind.ContractTransactor retrieving the currently
-// suggested gas price to allow a timely execution of a transaction.
-func (b *ContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	return b.eapi.GasPrice(ctx)
 }
 
 // EstimateGasLimit implements bind.ContractTransactor triing to estimate the gas
