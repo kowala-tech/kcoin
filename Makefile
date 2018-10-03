@@ -204,7 +204,7 @@ build_docs_with_docker:
 
 .PHONY: build_solidity_docs_with_docker
 build_solidity_docs_with_docker:
-	@docker run --rm -it -v $(PWD)/client/contracts/truffle/:/src -v $(PWD)/docs:/out kowalatech/solidoc
+	@docker run --rm -it -v $(PWD)/client/contracts/truffle/:/src -v $(PWD)/docs/docs/smartcontracts:/out kowalatech/solidoc
 
 ## Dev docker images
 
