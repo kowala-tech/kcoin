@@ -167,10 +167,8 @@ func (val *validator) run() {
 	}()
 
 	initialStateFunc := val.notLoggedInState
-	if isGenesisValidator, err := val.isGenesisValidator(); err != nil {
-		if isGenesisValidator {
-			initialStateFunc = val.genesisNotLoggedInState
-		}
+	if isGenesisValidator, err := val.isGenesisValidator(); err != nil && isGenesisValidator {
+		initialStateFunc = val.genesisNotLoggedInState
 	}
 
 	log.Info("Starting the consensus state machine")
