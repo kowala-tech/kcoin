@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 
@@ -190,10 +191,28 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	)
 	if contractCreation {
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
+		if vmerr != nil {
+			vmerr = fmt.Errorf("error creating contract from: %s with data: %v gas: %d value: %d error msg: %s",
+				sender.Address().String(),
+				st.data,
+				st.gas,
+				st.value,
+			)
+		}
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, st.value)
+		if vmerr != nil {
+			vmerr = fmt.Errorf(
+				"error executing tx contract from: %s to: %s with data: %v and gas: %d value: %d error msg: %s",
+				sender.Address().String(),
+				st.to().String(),
+				st.data,
+				st.gas,
+				vmerr,
+			)
+		}
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
