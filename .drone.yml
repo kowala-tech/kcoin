@@ -19,10 +19,9 @@ pipeline:
 
   build_solidity_docs:
     group: build_artifacts
-    image: kowalatech/solidoc
-    commands:
-      - make dev_solidocs_docker_image
-      - make build_solidity_docs_with_docker
+    image: kowalatech/solidoc:1.0.1
+    commands: 
+      - 'dotnet /app/bin/Release/netcoreapp2.1/publish/Solidoc.dll /go/src/github.com/kowala-tech/kcoin/client/contracts/truffle /go/src/github.com/kowala-tech/kcoin/docs/docs/smartcontracts'
     when:
       event: [push,tag]
       branch: [master,dev]
