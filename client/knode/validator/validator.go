@@ -650,6 +650,13 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 			}
 		}
 
+		if err != nil {
+			log.Error("error while verifying a block headers",
+				"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block",
+				block, "headers", headers, "seals", seals)
+			return err
+		}
+
 		parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
 
 		// Process block using the parent state as reference point.
