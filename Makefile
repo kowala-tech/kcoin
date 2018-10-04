@@ -106,6 +106,11 @@ go_generate: client/contracts/truffle/node_modules
 	go generate ./client/contracts/bindings/utils/namehash.go
 	go generate ./...
 
+# This is designed to be run inside a kowalatech/solidoc container
+.PHONY: solidoc_generate
+solidoc_generate: client/contracts/truffle/node_modules
+	dotnet /app/bin/Release/netcoreapp2.1/publish/Solidoc.dll /go/src/github.com/kowala-tech/kcoin/client/contracts/truffle /go/src/github.com/kowala-tech/kcoin/docs/docs/smartcontracts
+
 .PHONY: docker_generate
 docker_generate: docker_go_generate docker_solidoc_generate 
 
