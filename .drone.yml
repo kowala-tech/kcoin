@@ -18,13 +18,12 @@ pipeline:
       event: [pull_request]
 
   build_solidity_docs:
-    group: build_artifacts
-    image: kowalatech/solidoc:1.0.1
+    group: solidity_docs
+    image: kowalatech/solidoc:1.0.2
     commands: 
       - 'dotnet /app/bin/Release/netcoreapp2.1/publish/Solidoc.dll /go/src/github.com/kowala-tech/kcoin/client/contracts/truffle /go/src/github.com/kowala-tech/kcoin/docs/docs/smartcontracts'
     when:
-      event: [push,tag]
-      branch: [master,dev]
+      event: [pull_request]
 
   go_generate:
     group: generate
@@ -390,8 +389,8 @@ pipeline:
     commands:
       - make build_docs
     when:
-      event: [push,tag]
-      branch: [master,dev]
+      event: [push]
+      branch: [dev]
 
   build_cdn:
     group: build_artifacts
