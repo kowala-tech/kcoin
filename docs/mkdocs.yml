@@ -51,7 +51,7 @@ pages:
     - Official networks: 'advanced/official-networks.md'
     - Running local testnet: 'advanced/running-local-testnet.md'
     - Minting mining tokens: 'advanced/minting-tokens.md'
-    - Smart Contracs:
+    - Core Contracs:
       - 'Balance Contract': 'smartcontracts/BalanceContract.md'
       - 'Capped Token': 'smartcontracts/CappedToken.md'
       - 'Consensus': 'smartcontracts/Consensus.md'
