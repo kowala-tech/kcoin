@@ -123,6 +123,7 @@ docker_solidoc_generate:
 
 .PHONY: assert_no_changes
 assert_no_changes:
+	git --no-pager diff
 	git status
 	@if ! git diff-index --quiet HEAD; then echo 'There are uncommited generated files.\nRun `make docker_generate` to regenerate all of them.'; exit 1; fi
 
