@@ -3,7 +3,6 @@ package validator
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -422,10 +421,10 @@ func (val *validator) leave() {
 	}
 	receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
 	if err != nil {
-		log.Error("Failed to verify the voter deregistration", "err", err)
+		log.Error("Failed to verify the voter unregistration", "err", err)
 	}
 	if receipt.Status == types.ReceiptStatusFailed {
-		log.Error("Failed to deregister validator - receipt status failed")
+		log.Error("Failed to unregister validator - receipt status failed")
 	}
 }
 
@@ -639,21 +638,19 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		defer close(abort)
 
 		err = <-results
-		if err == nil {
-			err = val.chain.Validator().ValidateBody(block)
-			if err != nil {
-				err = errors.New("Failed to validate thr block body: " + err.Error())
-				log.Error("error while validating a block body",
-					"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block", block)
-
-				return err
-			}
-		}
-
 		if err != nil {
 			log.Error("error while verifying a block headers",
 				"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block",
 				block, "headers", headers, "seals", seals)
+			return err
+		}
+
+		err = val.chain.Validator().ValidateBody(block)
+		if err != nil {
+			err = errors.New("Failed to validate thr block body: " + err.Error())
+			log.Error("error while validating a block body",
+				"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block", block)
+
 			return err
 		}
 
@@ -745,12 +742,14 @@ func (val *validator) RedeemDeposits() error {
 	if err != nil {
 		return err
 	}
+
 	receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
 	if err != nil {
 		return err
 	}
+
 	if receipt.Status == types.ReceiptStatusFailed {
-		return fmt.Errorf("Failed to redeem deposits - receipt status failed")
+		return errors.New("failed to redeem deposits - receipt status failed")
 	}
 
 	return nil
