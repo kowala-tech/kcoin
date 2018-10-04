@@ -25,7 +25,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/node"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/kowala-tech/kcoin/client/version"
-	"github.com/blang/semver"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -359,7 +358,7 @@ func mustBeLatestMajorVersion(ctx *cli.Context) {
 		return
 	}
 
-	current, err := semver.Make(params.Version)
+	current, err := version.MakeSemver(params.Version)
 	if err != nil {
 		log.Error("Error parsing current version, exiting checker", "err", err)
 		return

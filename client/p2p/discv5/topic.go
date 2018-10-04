@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 const (
@@ -392,7 +392,7 @@ func (tq *topicRequestQueue) update(item *topicRequestQueueItem, priority uint64
 	heap.Fix(tq, item.index)
 }
 
-func DiscoveryTopic(genesisHash common.Hash, protocolName string, protocolVersion uint) Topic {
-	protocolName = fmt.Sprintf("%s%d", strings.ToUpper(protocolName), protocolVersion)
+func DiscoveryTopic(genesisHash common.Hash, protocolName string, protocolVersion uint, networkID uint64, chainID int64) Topic {
+	protocolName = fmt.Sprintf("%s%d-%d.%d", strings.ToUpper(protocolName), protocolVersion, networkID, chainID)
 	return Topic(protocolName + "@" + common.Bytes2Hex(genesisHash.Bytes()[0:8]))
 }
