@@ -2,10 +2,8 @@ package version
 
 import (
 	"bufio"
-	"net/http"
-	"time"
-
 	"github.com/kowala-tech/kcoin/client/log"
+	"net/http"
 )
 
 type AssetRepository interface {
@@ -34,11 +32,14 @@ func (ar s3assetRepository) All() ([]Asset, error) {
 	var assets []Asset
 	scanner := bufio.NewScanner(response.Body)
 	for scanner.Scan() {
-		version, err := filenameParser(scanner.Text())
+		filename := scanner.Text()
+		version, err := filenameParser(filename)
 		if err != nil {
 			// ignore error and continue to next filename
-			log.Debug("could not parse filename", "err", err)
-			time.Sleep(500 * time.Millisecond)
+			log.Debug(
+				"file is not a binary asset",
+				"filename", filename,
+				"err", err)
 			continue
 		}
 		assets = append(assets, version)
