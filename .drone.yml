@@ -38,6 +38,13 @@ pipeline:
     image: kowalatech/go:1.0.12
     commands:
       - make go_generate
+    when:
+      event: [pull_request]
+
+  assert_no_changes:
+    group: assert_no_changes
+    image: kowalatech/go:1.0.12
+    commands:
       - make assert_no_changes
     when:
       event: [pull_request]
@@ -531,7 +538,7 @@ pipeline:
       status: failure
       event: [tag, pull_request]
 
-services2:
+services:
   docker:
     image: docker:dind
     command: [ '-l', 'fatal' ]
