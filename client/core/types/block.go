@@ -345,6 +345,10 @@ func (b *Block) Hash() common.Hash {
 	return v
 }
 
+func (b *Block) IsEmpty() bool {
+	return b == nil || bytes.Equal(b.Hash().Bytes(), common.Hash{}.Bytes())
+}
+
 func (b *Block) AsFragments(size int) (*BlockFragments, error) {
 	rawBlock, err := rlp.EncodeToBytes(b)
 	if err != nil {

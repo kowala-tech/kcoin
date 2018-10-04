@@ -1,13 +1,11 @@
 package validator
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 	"sync/atomic"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/tx"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
@@ -190,7 +188,7 @@ func (val *validator) preCommitWaitState() stateFn {
 	select {
 	case event := <-val.majority.Chan():
 		log.Info("There's a majority in the pre-commit sub-election!", "event", spew.Sdump(event))
-		if val.block == nil || bytes.Equal(val.block.Hash().Bytes(), common.Hash{}.Bytes()) {
+		if val.block.IsEmpty() {
 			log.Debug("No one block wins!")
 			return val.newRoundState
 		}

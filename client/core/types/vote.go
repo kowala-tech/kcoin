@@ -244,13 +244,13 @@ func (v *VotesSet) Add(vote *Vote) {
 
 	if bytes.Equal(vote.data.BlockHash.Bytes(), common.Hash{}.Bytes()) {
 		v.nilVotes[vote.Hash()] = vote
-		return
+	} else {
+		v.m[vote.Hash()] = vote
 	}
 
 	log.Debug("voting. add vote", "type", vote.data.Type, "number", vote.data.BlockNumber.String(),
 		"round", vote.data.Round, "hash", vote.data.BlockHash.String())
 
-	v.m[vote.Hash()] = vote
 	v.counter[vote.data.BlockHash]++
 	if v.counter[vote.data.BlockHash] > v.counter[v.leader] {
 		v.leader = vote.data.BlockHash
