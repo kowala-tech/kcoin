@@ -273,6 +273,29 @@ contract('ValidatorMgr', ([_, owner, newOwner, newOwner2, newOwner3, newOwner4, 
         // then
         await exptectedFailedDepositSet.should.eventually.be.rejectedWith(EVMError('revert'));
       });
+
+      it('should increase deposit of validator', async () => {
+        // given
+        await this.validator.registerValidator(newOwner, 150, { from: newOwner });
+
+        // when
+        await this.validator.increaseDeposit(newOwner, 10);
+
+        // then
+        const validatorDeposit = await this.validator.getDepositAtIndex(0, { from: newOwner });
+        await validatorDeposit[0].should.be.bignumber.equal(160);
+      });
+
+      it('should not increase deposit of validator by not owner', async () => {
+        // given
+        await this.validator.registerValidator(newOwner, 150, { from: newOwner });
+
+        // when
+        const expectedValidatorIncreaseDepositFailure = this.validator.increaseDeposit(notOwner, 10);
+
+        // then
+        await expectedValidatorIncreaseDepositFailure.should.eventually.be.rejectedWith(EVMError('revert'));
+      });
     });
   });
 });
