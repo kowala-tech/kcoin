@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/kowala-tech/kcoin/client/contracts/bindings"
+
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/vm"
 )
@@ -21,15 +23,24 @@ func (*EvmRevertedTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas
 }
 
 func (*EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
-	fmt.Printf(
-		"error with transaction from address: %s to address: %s {opcode: %s (%s) pc: %d msg: %s}\n",
-		contract.CallerAddress.String(),
-		contract.Address().String(),
-		op.String(),
-		fmt.Sprintf("%s%s", "0x", common.Bytes2Hex([]byte{byte(op)})),
-		pc,
-		err,
-	)
+	contractName, cErr := bindings.GetContractByAddr(contract.Address())
+	if cErr != nil {
+		contractName = "undetected"
+	}
+
+	if err.Error() == "evm: execution reverted" {
+		fmt.Printf(
+			"error with transaction from address: %s to address: %s {opcode: %s (%s) pc: %d Contract Name: %s Error msg: %s}\n",
+			contract.CallerAddress.String(),
+			contract.Address().String(),
+			op.String(),
+			fmt.Sprintf("%s%s", "0x", common.Bytes2Hex([]byte{byte(op)})),
+			pc,
+			contractName,
+			err,
+		)
+	}
+
 	return nil
 }
 
