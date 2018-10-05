@@ -27,7 +27,7 @@ pipeline:
 
   build_solidity_docs:
     group: solidity_docs
-    image: kowalatech/solidoc:1.0.2
+    image: kowalatech/solidoc:1.0.3
     commands: 
       - make solidoc_generate
     when:
