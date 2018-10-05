@@ -44,7 +44,6 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	var (
 		receipts types.Receipts
 		usedGas  = new(uint64)
-		accruedStabilityFees = new(big.Int).SetUint64(0)
 		header   = block.Header()
 		allLogs  []*types.Log
 		gp       = new(GasPool).AddGas(block.GasLimit())
@@ -62,18 +61,15 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 				header.TxHash,
 				header.ValidatorsHash,
 				header.LastCommitHash,
-				tx, usedGas, accruedStabilityFees, allLogs))
+				tx, usedGas, allLogs))
 
 			return nil, nil, 0, err
 		}
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
-
-		// update accrued stability fees
-		accruedStabilityFees.Add(accruedStabilityFees, receipt.StabilityFee)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.LastCommit(), receipts, accruedStabilityFees)
+	p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.LastCommit(), receipts)
 
 	return receipts, allLogs, *usedGas, nil
 }

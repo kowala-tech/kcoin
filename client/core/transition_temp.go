@@ -23,7 +23,6 @@ type State interface {
 	GetNonce(common.Address)
 }
 
-
 type ExecutionEnvironment interface {
 	State
 	Create(vm.ContractRef, []byte, uint64, *big.Int) ([]byte, common.Address, uint64, error)
@@ -31,8 +30,6 @@ type ExecutionEnvironment interface {
 	StabilizationLevel() uint64
 	Proposer() common.Address
 }
-
-
 
 /*
 The State Transitioning Model
@@ -86,21 +83,17 @@ func NewStateTransition(env ExecutionEnvironment, msg Message, gasPool *GasPool)
 // state and would never be accepted within a block.
 func ApplyMessage(env ExecutionEnvironment, msg Message) ([]byte, uint64, *big.Int, bool, error) {
 
+	st := NewStateTransition(vm, msg, gasPool)
 
 	// Make sure this transaction's nonce is correct.
 	if st.msg.CheckNonce() {
 		nonce := st.state.GetNonce(st.msg.From())
 		if nonce < st.msg.Nonce() {
-			return ErrNonceTooHigh
+			return nil, 0, nil, false, ErrNonceTooHigh
 		} else if nonce > st.msg.Nonce() {
-			return ErrNonceTooLow
+			return nil, 0, nil, false, ErrNonceTooLow
 		}
 	}
-	
-	validateMsgNonce()
-	
-	
-	st := NewStateTransition(vm, msg, gasPool)
 
 	contractCreation := msg.To() == nil
 
@@ -191,7 +184,6 @@ func (st *StateTransition) buyGas() error {
 }
 
 func (st *StateTransition) preCheck(intrinsicGas uint64) error {
-	
 
 	// prepay stability fee if it applies
 	if st.vm.StabilizationLevel() != 0 {
