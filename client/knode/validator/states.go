@@ -50,10 +50,6 @@ func (val *validator) genesisNotLoggedInState() stateFn {
 }
 
 func (val *validator) notLoggedInState() stateFn {
-	chainHeadCh := make(chan core.ChainHeadEvent)
-	chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
-	defer chainHeadSub.Unsubscribe()
-
 	isValidator, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify if account is already a validator")
