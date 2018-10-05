@@ -50,7 +50,6 @@
     "truffle-hdwallet-provider": "^0.0.3",
     "web3": "^1.0.0-beta.36",
     "web3-eth-abi": "^1.0.0-beta.35",
-    "zos": "^1.4.2",
     "zos-lib": "^1.4.1"
   }
 }
