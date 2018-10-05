@@ -159,7 +159,7 @@ function blacklistExchange(string name) public whenNotPaused onlyOwner onlyWhite
 
 ### isExchange
 
-checks whether the given name is an whitelisted exchange or not
+checks whether the given name is a whitelisted exchange or not
 
 ```js
 function isExchange(string name) public view
@@ -174,7 +174,7 @@ returns(isIndeed bool)
 
 ### isWhitelistedExchange
 
-checks whether the given name is an whitelisted exchange or not
+checks whether the given name is a whitelisted exchange or not
 
 ```js
 function isWhitelistedExchange(string name) public view
