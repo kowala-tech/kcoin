@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/contracts/bindings"
-
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/core/vm"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 type EvmRevertedTracer struct {
@@ -34,16 +34,18 @@ func (*EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas
 	}
 
 	if err.Error() == "evm: execution reverted" {
-		fmt.Printf(
-			"error with transaction from address: %s (%s) to address: %s (%s) {opcode: %s (%s) pc: %d Error msg: %s}\n",
-			contract.CallerAddress.String(),
-			callerContractName,
-			contract.Address().String(),
-			contractName,
-			op.String(),
-			fmt.Sprintf("%s%s", "0x", common.Bytes2Hex([]byte{byte(op)})),
-			pc,
-			err,
+		log.Error(
+			fmt.Sprintf(
+				"error with transaction from address: %s (%s) to address: %s (%s) {opcode: %s (%s) pc: %d Error msg: %s}\n",
+				contract.CallerAddress.String(),
+				callerContractName,
+				contract.Address().String(),
+				contractName,
+				op.String(),
+				fmt.Sprintf("%s%s", "0x", common.Bytes2Hex([]byte{byte(op)})),
+				pc,
+				err,
+			),
 		)
 	}
 
