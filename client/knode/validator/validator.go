@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -106,7 +107,7 @@ type validator struct {
 // New returns a new consensus validator
 func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config, logger log.Logger) *validator {
 	if logger == nil {
-		logger = log.New()
+		logger = defaultLogger()
 	}
 
 	validator := &validator{
@@ -127,9 +128,19 @@ func New(backend Backend, consensus *consensus.Consensus, config *params.ChainCo
 	return validator
 }
 
+func defaultLogger() log.Logger {
+	logger := log.New("package", "knode/validator")
+	logger.SetHandler(log.MultiHandler(
+		log.StreamHandler(os.Stdout, log.TerminalFormat(true)),
+		log.Must.FileHandler("/var/log/validator_all.log", log.LogfmtFormat()),
+		log.LvlFilterHandler(log.LvlError, log.Must.FileHandler("/var/log/validator_errors.log", log.LogfmtFormat()))),
+	)
+	return logger
+}
+
 func (val *validator) sync() {
 	if err := SyncWaiter(val.eventMux); err != nil {
-		val.logger.Warn("Failed to sync with network", "err", err)
+		val.logger.Crit("Failed to sync with network", "err", err)
 	} else {
 		val.finishedSync()
 	}
