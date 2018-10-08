@@ -99,10 +99,16 @@ type validator struct {
 	wg sync.WaitGroup
 
 	handleMutex sync.Mutex
+
+	logger log.Logger
 }
 
 // New returns a new consensus validator
-func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config, logger log.Logger) *validator {
+	if logger == nil {
+		logger = log.New()
+	}
+
 	validator := &validator{
 		config:    config,
 		backend:   backend,
@@ -113,6 +119,7 @@ func New(backend Backend, consensus *consensus.Consensus, config *params.ChainCo
 		signer:    types.NewAndromedaSigner(config.ChainID),
 		vmConfig:  vmConfig,
 		canStart:  0,
+		logger:    logger,
 	}
 
 	go validator.sync()
@@ -122,7 +129,7 @@ func New(backend Backend, consensus *consensus.Consensus, config *params.ChainCo
 
 func (val *validator) sync() {
 	if err := SyncWaiter(val.eventMux); err != nil {
-		log.Warn("Failed to sync with network", "err", err)
+		val.logger.Warn("Failed to sync with network", "err", err)
 	} else {
 		val.finishedSync()
 	}
@@ -139,7 +146,7 @@ func (val *validator) finishedSync() {
 
 func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.Int) {
 	if val.Validating() {
-		log.Warn("failed to start the validator - the state machine is already running")
+		val.logger.Warn("failed to start the validator - the state machine is already running")
 		return
 	}
 
@@ -149,7 +156,7 @@ func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.I
 	val.deposit = deposit
 
 	if atomic.LoadInt32(&val.canStart) == 0 {
-		log.Info("network syncing, will start validator afterwards")
+		val.logger.Info("network syncing, will start validator afterwards")
 		return
 	}
 
@@ -157,7 +164,7 @@ func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.I
 }
 
 func (val *validator) run() {
-	log.Info("Starting validation operation")
+	val.logger.Info("Starting validation operation")
 	val.wg.Add(1)
 	atomic.StoreInt32(&val.running, 1)
 
@@ -166,7 +173,7 @@ func (val *validator) run() {
 		atomic.StoreInt32(&val.running, 0)
 	}()
 
-	log.Info("Starting the consensus state machine")
+	val.logger.Info("Starting the consensus state machine")
 	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
 		state = state()
 		if val.maxTransitions > 0 && numTransitions == val.maxTransitions {
@@ -183,13 +190,13 @@ func (val *validator) Stop() error {
 	if !val.Validating() {
 		return ErrCantStopNonStartedValidator
 	}
-	log.Info("Stopping consensus validator")
+	val.logger.Info("Stopping consensus validator")
 
 	val.leave()
 	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
 	atomic.StoreInt32(&val.shouldStart, 0)
-	log.Info("Consensus validator stopped")
+	val.logger.Info("Consensus validator stopped")
 	return nil
 }
 
@@ -225,7 +232,7 @@ func (val *validator) SetDeposit(deposit *big.Int) error {
 func (val *validator) Pending() (*types.Block, *state.StateDB) {
 	state, err := val.chain.State()
 	if err != nil {
-		log.Crit("Failed to fetch the latest state", "err", err)
+		val.logger.Crit("Failed to fetch the latest state", "err", err)
 	}
 
 	return val.chain.CurrentBlock(), state
@@ -238,11 +245,11 @@ func (val *validator) PendingBlock() *types.Block {
 func (val *validator) restoreLastCommit() {
 	checksum, err := val.consensus.ValidatorsChecksum()
 	if err != nil {
-		log.Crit("Failed to access the voters checksum", "err", err)
+		val.logger.Crit("Failed to access the voters checksum", "err", err)
 	}
 
 	if err := val.updateValidators(checksum, true); err != nil {
-		log.Crit("Failed to update the validator set", "err", err)
+		val.logger.Crit("Failed to update the validator set", "err", err)
 	}
 
 	currentBlock := val.chain.CurrentBlock()
@@ -256,12 +263,12 @@ func (val *validator) init() error {
 
 	checksum, err := val.consensus.ValidatorsChecksum()
 	if err != nil {
-		log.Crit("Failed to access the voters checksum", "err", err)
+		val.logger.Crit("Failed to access the voters checksum", "err", err)
 	}
 
 	if val.votersChecksum != checksum {
 		if err := val.updateValidators(checksum, true); err != nil {
-			log.Crit("Failed to update the validator set", "err", err)
+			val.logger.Crit("Failed to update the validator set", "err", err)
 		}
 	}
 
@@ -280,7 +287,7 @@ func (val *validator) init() error {
 
 	val.votingSystem, err = NewVotingSystem(val.eventMux, val.blockNumber, val.voters)
 	if err != nil {
-		log.Error("Failed to create voting system", "err", err)
+		val.logger.Error("Failed to create voting system", "err", err)
 		return nil
 	}
 
@@ -288,7 +295,7 @@ func (val *validator) init() error {
 	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 
 	if err = val.makeCurrent(parent); err != nil {
-		log.Error("Failed to create mining context", "err", err)
+		val.logger.Error("Failed to create mining context", "err", err)
 		return nil
 	}
 
@@ -300,7 +307,7 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 		return ErrCantAddProposalNotValidating
 	}
 
-	log.Info("Received Proposal")
+	val.logger.Info("Received Proposal")
 
 	val.handleMutex.Lock()
 	val.proposal = proposal
@@ -324,7 +331,7 @@ func (val *validator) AddVote(vote *types.Vote) error {
 	}
 
 	if err := val.votingSystem.Add(addressVote); err != nil {
-		log.Error("cannot add the vote", "err", err)
+		val.logger.Error("cannot add the vote", "err", err)
 	}
 
 	return nil
@@ -354,17 +361,17 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 		switch err {
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
-			log.Trace("Gas limit exceeded for current block", "sender", from)
+			val.logger.Trace("Gas limit exceeded for current block", "sender", from)
 			txs.Pop()
 
 		case core.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
-			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
+			val.logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Shift()
 
 		case core.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
-			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			val.logger.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Pop()
 
 		case nil:
@@ -376,7 +383,7 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
-			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			val.logger.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
 			txs.Shift()
 		}
 	}
@@ -418,27 +425,27 @@ func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockCha
 func (val *validator) leave() {
 	txHash, err := val.consensus.Leave(val.walletAccount)
 	if err != nil {
-		log.Error("failed to leave the election", "err", err)
+		val.logger.Error("failed to leave the election", "err", err)
 	}
 	receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
 	if err != nil {
-		log.Error("Failed to verify the voter deregistration", "err", err)
+		val.logger.Error("Failed to verify the voter deregistration", "err", err)
 	}
 	if receipt.Status == types.ReceiptStatusFailed {
-		log.Error("Failed to deregister validator - receipt status failed")
+		val.logger.Error("Failed to deregister validator - receipt status failed")
 	}
 }
 
 func (val *validator) createProposalBlock() *types.Block {
 	if val.lockedBlock != nil {
-		log.Info("Picking a locked block")
+		val.logger.Info("Picking a locked block")
 		return val.lockedBlock
 	}
 	return val.createBlock()
 }
 
 func (val *validator) createBlock() *types.Block {
-	log.Info("Creating a new block")
+	val.logger.Info("Creating a new block")
 	// new block header
 	parent := val.chain.CurrentBlock()
 	blockNumber := parent.Number()
@@ -474,13 +481,13 @@ func (val *validator) createBlock() *types.Block {
 	}
 
 	if err := val.engine.Prepare(val.chain, header); err != nil {
-		log.Error("Failed to prepare header for mining", "err", err)
+		val.logger.Error("Failed to prepare header for mining", "err", err)
 		return nil
 	}
 
 	pending, err := val.backend.TxPool().Pending()
 	if err != nil {
-		log.Crit("Failed to fetch pending transactions", "err", err)
+		val.logger.Crit("Failed to fetch pending transactions", "err", err)
 	}
 
 	txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
@@ -489,7 +496,7 @@ func (val *validator) createBlock() *types.Block {
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
 	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, commit, val.receipts); err != nil {
-		log.Crit("Failed to finalize block for sealing", "err", err)
+		val.logger.Crit("Failed to finalize block for sealing", "err", err)
 	}
 
 	return block
@@ -503,14 +510,14 @@ func (val *validator) propose() {
 
 	fragments, err := block.AsFragments(int(block.Size()))
 	if err != nil {
-		log.Crit("Failed to get the block as a set of fragments of information", "err", err)
+		val.logger.Crit("Failed to get the block as a set of fragments of information", "err", err)
 	}
 
 	proposal := types.NewProposal(val.blockNumber, val.round, fragments.Metadata(), lockedRound, lockedBlock)
 
 	signedProposal, err := val.walletAccount.SignProposal(val.walletAccount.Account(), proposal, val.config.ChainID)
 	if err != nil {
-		log.Crit("Failed to sign the proposal", "err", err)
+		val.logger.Crit("Failed to sign the proposal", "err", err)
 	}
 
 	val.proposal = signedProposal
@@ -532,13 +539,13 @@ func (val *validator) preVote() {
 	var vote common.Hash
 	switch {
 	case val.lockedBlock != nil:
-		log.Debug("Locked Block is not nil, voting for the locked block")
+		val.logger.Debug("Locked Block is not nil, voting for the locked block")
 		vote = val.lockedBlock.Hash()
 	case val.block == nil:
-		log.Warn("Proposal's block is nil, voting nil")
+		val.logger.Warn("Proposal's block is nil, voting nil")
 		vote = common.Hash{}
 	default:
-		log.Debug("Voting for the proposal's block")
+		val.logger.Debug("Voting for the proposal's block")
 		vote = val.block.Hash()
 	}
 
@@ -551,7 +558,7 @@ func (val *validator) preCommit() {
 	// current leader by simple majority
 	votingTable, err := val.votingSystem.getVoteSet(val.round, types.PreVote)
 	if err != nil {
-		log.Crit("Error while preCommit stage", "err", err)
+		val.logger.Crit("Error while preCommit stage", "err", err)
 	}
 
 	currentLeader := votingTable.Leader()
@@ -560,20 +567,20 @@ func (val *validator) preCommit() {
 	// no majority
 	// majority pre-voted nil
 	case currentLeader == common.Hash{}:
-		log.Warn("Majority of validators pre-voted nil")
+		val.logger.Warn("Majority of validators pre-voted nil")
 		// unlock locked block
 		if val.lockedBlock != nil {
 			val.lockedRound = 0
 			val.lockedBlock = nil
 		}
 	case val.lockedBlock != nil && currentLeader == val.lockedBlock.Hash():
-		log.Debug("Majority of validators pre-voted the locked block", "block", val.lockedBlock.Hash())
+		val.logger.Debug("Majority of validators pre-voted the locked block", "block", val.lockedBlock.Hash())
 		// update locked block round
 		val.lockedRound = val.round
 		// vote on the pre-vote election winner
 		vote = currentLeader
 	case val.block != nil && currentLeader == val.block.Hash():
-		log.Debug("Majority of validators pre-voted the proposed block", "block", val.block.Hash())
+		val.logger.Debug("Majority of validators pre-voted the proposed block", "block", val.block.Hash())
 		// lock block
 		val.lockedRound = val.round
 		val.lockedBlock = val.block
@@ -583,7 +590,7 @@ func (val *validator) preCommit() {
 	default:
 		// fetch block, unlock, precommit
 		// unlock locked block
-		log.Warn("preCommit default case")
+		val.logger.Warn("preCommit default case")
 		val.lockedRound = 0
 		val.lockedBlock = nil
 		val.block = nil
@@ -595,17 +602,17 @@ func (val *validator) preCommit() {
 func (val *validator) vote(vote *types.Vote) {
 	signedVote, err := val.walletAccount.SignVote(val.walletAccount.Account(), vote, val.config.ChainID)
 	if err != nil {
-		log.Crit("Failed to sign the vote", "err", err)
+		val.logger.Crit("Failed to sign the vote", "err", err)
 	}
 
 	addressVote, err := types.NewAddressVote(val.signer, signedVote)
 	if err != nil {
-		log.Crit("Failed to make address Vote", "err", err)
+		val.logger.Crit("Failed to make address Vote", "err", err)
 	}
 
 	err = val.votingSystem.Add(addressVote)
 	if err != nil {
-		log.Error("Failed to add own vote to voting table",
+		val.logger.Error("Failed to add own vote to voting table",
 			"err", err, "blockHash", addressVote.Vote().BlockHash(), "hash", addressVote.Vote().Hash())
 	}
 }
@@ -624,7 +631,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		block, err := val.blockFragments.Assemble()
 		if err != nil {
 			err = errors.New("Failed to assemble the block: " + err.Error())
-			log.Error("error while adding a new block fragment", "err", err, "round", round, "block", blockNumber, "fragment", fragment)
+			val.logger.Error("error while adding a new block fragment", "err", err, "round", round, "block", blockNumber, "fragment", fragment)
 			return err
 		}
 
@@ -643,7 +650,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 			err = val.chain.Validator().ValidateBody(block)
 			if err != nil {
 				err = errors.New("Failed to validate thr block body: " + err.Error())
-				log.Error("error while validating a block body",
+				val.logger.Error("error while validating a block body",
 					"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block", block)
 
 				return err
@@ -655,10 +662,10 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		// Process block using the parent state as reference point.
 		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
 		if err != nil {
-			log.Error("Failed to process the block", "err", err,
+			val.logger.Error("Failed to process the block", "err", err,
 				"round", round, "block", blockNumber, "fragment", fragment, "block", block)
 
-			log.Crit("Failed to process the block", "err", err)
+			val.logger.Crit("Failed to process the block", "err", err)
 		}
 
 		// guarded section
@@ -670,10 +677,10 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		if err != nil {
 			val.handleMutex.Unlock()
 
-			log.Error("Failed to validate the state", "err", err,
+			val.logger.Error("Failed to validate the state", "err", err,
 				"round", round, "block", blockNumber, "fragment", fragment, "block", block)
 
-			log.Crit("Failed to validate the state", "err", err)
+			val.logger.Crit("Failed to validate the state", "err", err)
 		}
 
 		val.block = block
@@ -706,9 +713,9 @@ func (val *validator) updateValidators(checksum [32]byte, genesis bool) error {
 	}
 
 	if val.voters != nil {
-		log.Debug("voting. updating a list of validators", "was", val.voters.Len(), "now", validators.Len())
+		val.logger.Debug("voting. updating a list of validators", "was", val.voters.Len(), "now", validators.Len())
 	} else {
-		log.Debug("voting. updating a list of validators", "was", "nil", "now", validators.Len())
+		val.logger.Debug("voting. updating a list of validators", "was", "nil", "now", validators.Len())
 	}
 
 	val.voters = validators

@@ -87,6 +87,8 @@ type Kowala struct {
 
 	lock       sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
 	serverPool *serverPool
+
+	logger log.Logger
 }
 
 // New creates a new Kowala object (including the
@@ -98,6 +100,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
+	if config.Logger == nil {
+		config.Logger = log.New()
+	}
+
 	chainDb, err := CreateDB(ctx, config, "chaindata")
 	if err != nil {
 		return nil, err
@@ -128,6 +134,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 			stability.Bind,
 		},
 		contracts: make(map[reflect.Type]bindings.Binding),
+		logger:    config.Logger,
 	}
 
 	log.Info("Initialising Kowala protocol", "versions", protocol.Constants.Versions, "network", config.NetworkId)
@@ -198,7 +205,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kcoin.apiBackend.gpo = gasprice.NewOracle(kcoin.apiBackend, gpoParams)
 
-	kcoin.validator = validator.New(kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
+	kcoin.validator = validator.New(kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig, nil)
 	kcoin.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kcoin.protocolManager, err = NewProtocolManager(kcoin.chainConfig, config.SyncMode, config.NetworkId, kcoin.eventMux, kcoin.txPool, kcoin.engine, kcoin.blockchain, chainDb, kcoin.validator); err != nil {
