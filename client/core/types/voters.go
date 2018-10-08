@@ -1,12 +1,13 @@
 package types
 
 import (
+	"bytes"
 	"errors"
-	"io"
-	"math/big"
-
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/rlp"
+	"io"
+	"math/big"
+	"sort"
 )
 
 var ErrInvalidParams = errors.New("voters set needs at least one voter")
@@ -49,12 +50,15 @@ type Voters interface {
 }
 
 // NewVoter validates that a list of voters is valid returning a new type if so
+// returns sorted by address list to prevent non-deterministic behaviour
 func NewVoters(voterList []*Voter) (voters, error) {
 	if len(voterList) == 0 {
 		return nil, ErrInvalidParams
 	}
 
-	return voters(voterList), nil
+	vs := voters(voterList)
+	sort.Sort(vs)
+	return vs, nil
 }
 
 // voters is a list of Voter
@@ -102,6 +106,14 @@ func (voters voters) Get(addr common.Address) *Voter {
 // needed for hash thru interface DerivableList interface
 func (voters voters) Len() int {
 	return len(voters)
+}
+
+func (voters voters) Swap(i, j int) {
+	voters[i], voters[j] = voters[j], voters[i]
+}
+
+func (voters voters) Less(i, j int) bool {
+	return bytes.Compare(voters[i].Address().Bytes(), voters[j].Address().Bytes()) == 0
 }
 
 // GetRlp returns encoded bytes for one voter
