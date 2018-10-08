@@ -19,7 +19,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
@@ -125,7 +124,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 			oracle.Bind,
 			consensus.Bind,
 			sysvars.Bind,
-			stability.Bind,
 		},
 		contracts: make(map[reflect.Type]bindings.Binding),
 	}
@@ -466,7 +464,6 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 			maxPeers = srvr.MaxPeers / 2
 		}
 	}
-
 
 	//fixme: should be removed after develop light client
 	if srvr.DiscoveryV5 {
