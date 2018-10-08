@@ -20,7 +20,7 @@ const SysVar = artifacts.require('SystemVars.sol');
 contract('Stability', ([_, owner, sub1, anotherAccount]) => {
   beforeEach(async () => {
     this.sysvar = await SysVar.new(kcoin(10), 100, { from: owner });
-    this.stability = await Stability.new(kcoin(0.5), this.sysvar.address, { from: owner });
+    this.stability = await Stability.new(kcoin(0.5), 0, this.sysvar.address, { from: owner });
   });
 
   it('Should subscribe to stability contract service', async () => {
@@ -77,7 +77,7 @@ contract('Stability', ([_, owner, sub1, anotherAccount]) => {
   it('Should not unsubscribe from stability contract service when price is not greater equal one', async () => {
     // given
     const sysvar = await SysVar.new(kcoin(0.5), 100, { from: owner });
-    const stability = await Stability.new(kcoin(0.5), sysvar.address, { from: owner });
+    const stability = await Stability.new(kcoin(0.5), 0, sysvar.address, { from: owner });
     await stability.subscribe({ from: sub1, value: kcoin(1) });
 
     // when

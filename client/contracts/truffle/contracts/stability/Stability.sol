@@ -13,12 +13,14 @@ contract Stability is Pausable, Initializable{
     uint constant ONE = 1 ether;
     
     uint public minDeposit;
+    uint public initialReward;
     PriceProvider priceProvider;
     
     struct Subscription {
         uint index;
         bool hasSubscription;
         uint deposit;
+        uint reward;
     }
 
     mapping (address => Subscription) private subscriptionRegistry;
@@ -35,18 +37,15 @@ contract Stability is Pausable, Initializable{
         _;
     }
 
-    modifier whenPriceGreaterEqualOne {
-        require(priceProvider.price() >= ONE);
-        _;
-    }
-
     /**
      * Constructor
      * @param _minDeposit minimum deposit required to subscribe to the service
+     * @param _initialReward is the initial reward for subscribing (useful for tests)
      * @param _priceProviderAddr address of system variables contract
      */
-    function Stability(uint _minDeposit, address _priceProviderAddr) public {
+    function Stability(uint _minDeposit, uint _initialReward, address _priceProviderAddr) public {
         minDeposit = _minDeposit;
+        initialReward = _initialReward;
         priceProvider = PriceProvider(_priceProviderAddr);
     }
 
@@ -79,6 +78,7 @@ contract Stability is Pausable, Initializable{
         subs.index = subscriptions.push(msg.sender) - 1;
         subs.hasSubscription = true;
         subs.deposit = msg.value;
+        subs.reward = initialReward;
     }
 
      /**
@@ -97,9 +97,10 @@ contract Stability is Pausable, Initializable{
     /**
      * @dev Unsubscribe the service
      */
-    function unsubscribe() public onlySubscriber whenPriceGreaterEqualOne {
+    function unsubscribe() public onlySubscriber {
         Subscription subs = subscriptionRegistry[msg.sender];
         uint rowToDelete = subs.index;
+        if (priceProvider.price() >= ONE) msg.sender.transfer(subs.reward);
         msg.sender.transfer(subs.deposit);
         delete subscriptionRegistry[msg.sender];
 

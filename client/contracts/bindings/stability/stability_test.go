@@ -2,7 +2,10 @@ package stability_test
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
@@ -17,7 +20,7 @@ import (
 )
 
 var (
-	owner, _       = crypto.GenerateKey()
+	owner, _       = ecdsa.GenerateKey(crypto.S256(), strings.NewReader("ownerAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")) // Needed deterministic in order to link NameHash lib in contract.
 	initialBalance = new(big.Int).Mul(new(big.Int).SetUint64(100), new(big.Int).SetUint64(params.Kcoin))
 )
 
@@ -35,6 +38,9 @@ func (suite *StabilityContractSuite) BeforeTest(suiteName, testName string) {
 
 	backend := backends.NewSimulatedBackend(core.GenesisAlloc{
 		crypto.PubkeyToAddress(owner.PublicKey): core.GenesisAccount{
+			Balance: initialBalance,
+		},
+		common.HexToAddress("0x2b0D8ac41bD7aF24160c1F3C5430F496116b2292"): core.GenesisAccount{
 			Balance: initialBalance,
 		},
 	})
@@ -57,7 +63,9 @@ func (suite *StabilityContractSuite) TestDeploy() {
 
 	// deploy stability contract
 	minDeposit := new(big.Int).Mul(common.Big32, big.NewInt(params.Kcoin))
-	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, mockAddr)
+	reward := new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
+	addr, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, reward, mockAddr)
+	fmt.Println(addr.Hex())
 	req.NoError(err)
 	req.NotNil(stabilityContract)
 
@@ -67,6 +75,11 @@ func (suite *StabilityContractSuite) TestDeploy() {
 	req.NoError(err)
 	req.NotNil(storedMinDeposit)
 	req.Equal(minDeposit, storedMinDeposit)
+
+	storedReward, err := stabilityContract.InitialReward(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(storedReward)
+	req.Equal(reward, storedReward)
 }
 
 func (suite *StabilityContractSuite) TestSubscribe_NoSubscription_LessThanMinDeposit() {
@@ -84,7 +97,8 @@ func (suite *StabilityContractSuite) TestSubscribe_NoSubscription_LessThanMinDep
 
 	// deploy stability contract
 	minDeposit := new(big.Int).Mul(common.Big32, big.NewInt(params.Kcoin))
-	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, mockAddr)
+	reward := new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
+	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, reward, mockAddr)
 	req.NoError(err)
 	req.NotNil(stabilityContract)
 
@@ -111,7 +125,8 @@ func (suite *StabilityContractSuite) TestSubscribe_NoSubscription_GreaterOrEqual
 
 	// deploy stability contract
 	minDeposit := new(big.Int).Mul(common.Big32, big.NewInt(params.Kcoin))
-	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, mockAddr)
+	reward := new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
+	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, reward, mockAddr)
 	req.NoError(err)
 	req.NotNil(stabilityContract)
 
@@ -154,7 +169,8 @@ func (suite *StabilityContractSuite) TestSubscribe_HasSubscription_AnyValue() {
 
 	// deploy stability contract
 	minDeposit := new(big.Int).Mul(common.Big32, big.NewInt(params.Kcoin))
-	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, mockAddr)
+	reward := new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
+	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, reward, mockAddr)
 	req.NoError(err)
 	req.NotNil(stabilityContract)
 
@@ -204,7 +220,8 @@ func (suite *StabilityContractSuite) TestUnsubscribe_NotSubscriber() {
 
 	// deploy stability contract
 	minDeposit := new(big.Int).Mul(common.Big32, big.NewInt(params.Kcoin))
-	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, mockAddr)
+	reward := new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
+	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, reward, mockAddr)
 	req.NoError(err)
 	req.NotNil(stabilityContract)
 
@@ -222,40 +239,6 @@ func (suite *StabilityContractSuite) TestUnsubscribe_Subscriber_PriceLessThanOne
 
 	// deploy price provider
 	mockPrice := new(big.Int).Mul(common.Big0, big.NewInt(params.Kcoin))
-	mockAddr, _, _, err := testfiles.DeployPriceProviderMock(transactOpts, suite.backend, mockPrice)
-	req.NoError(err)
-	req.NotZero(mockAddr)
-
-	suite.backend.Commit()
-
-	// deploy stability contract
-	minDeposit := new(big.Int).Mul(common.Big32, big.NewInt(params.Kcoin))
-	_, _, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, mockAddr)
-	req.NoError(err)
-	req.NotNil(stabilityContract)
-
-	suite.backend.Commit()
-
-	// subscribe service
-	subscribeOpts := bind.NewKeyedTransactor(owner)
-	subscribeOpts.Value = minDeposit
-	_, err = stabilityContract.Subscribe(subscribeOpts)
-	req.NoError(err)
-
-	suite.backend.Commit()
-
-	// unsubscribe service
-	_, err = stabilityContract.Unsubscribe(transactOpts)
-	req.Error(err, "price is less than one")
-}
-
-func (suite *StabilityContractSuite) TestUnsubscribe_Subscriber_PriceGreaterOrEqualOne() {
-	req := suite.Require()
-
-	transactOpts := bind.NewKeyedTransactor(owner)
-
-	// deploy price provider
-	mockPrice := new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
 	mockAddr, priceProviderTx, _, err := testfiles.DeployPriceProviderMock(transactOpts, suite.backend, mockPrice)
 	req.NoError(err)
 	req.NotNil(priceProviderTx)
@@ -265,7 +248,8 @@ func (suite *StabilityContractSuite) TestUnsubscribe_Subscriber_PriceGreaterOrEq
 
 	// deploy stability contract
 	minDeposit := new(big.Int).Mul(common.Big32, big.NewInt(params.Kcoin))
-	_, stabilityTx, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, mockAddr)
+	reward := new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
+	_, stabilityTx, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, reward, mockAddr)
 	req.NoError(err)
 	req.NotNil(stabilityTx)
 	req.NotNil(stabilityContract)
@@ -317,6 +301,83 @@ func (suite *StabilityContractSuite) TestUnsubscribe_Subscriber_PriceGreaterOrEq
 	finalBalance.Sub(finalBalance, stabilityCost)
 	finalBalance.Sub(finalBalance, subscribeCost)
 	finalBalance.Sub(finalBalance, unsubscribeCost)
+
+	currentBalance, err := suite.backend.BalanceAt(context.TODO(), crypto.PubkeyToAddress(owner.PublicKey), suite.backend.CurrentBlock().Number())
+	req.NoError(err)
+	req.NotNil(currentBalance)
+	req.Equal(finalBalance, currentBalance)
+}
+
+func (suite *StabilityContractSuite) TestUnsubscribe_Subscriber_PriceEqualOrGreaterThanOne() {
+	req := suite.Require()
+
+	transactOpts := bind.NewKeyedTransactor(owner)
+
+	// deploy price provider
+	mockPrice := new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
+	mockAddr, priceProviderTx, _, err := testfiles.DeployPriceProviderMock(transactOpts, suite.backend, mockPrice)
+	req.NoError(err)
+	req.NotNil(priceProviderTx)
+	req.NotZero(mockAddr)
+
+	suite.backend.Commit()
+
+	// deploy stability contract
+	minDeposit := new(big.Int).Mul(common.Big32, big.NewInt(params.Kcoin))
+	reward := new(big.Int).Mul(common.Big1, big.NewInt(params.Kcoin))
+	_, stabilityTx, stabilityContract, err := stability.DeployStability(transactOpts, suite.backend, minDeposit, reward, mockAddr)
+	req.NoError(err)
+	req.NotNil(stabilityTx)
+	req.NotNil(stabilityContract)
+
+	suite.backend.Commit()
+
+	// subscribe service
+	subscribeOpts := bind.NewKeyedTransactor(owner)
+	subscribeOpts.Value = minDeposit
+	subscribeTx, err := stabilityContract.Subscribe(subscribeOpts)
+	req.NoError(err)
+	req.NotNil(subscribeTx)
+
+	suite.backend.Commit()
+
+	// unsubscribe service
+	unsubscribeTx, err := stabilityContract.Unsubscribe(transactOpts)
+	req.NoError(err)
+	req.NotNil(unsubscribeTx)
+
+	suite.backend.Commit()
+
+	// zero subscribers by now
+	count, err := stabilityContract.GetSubscriptionCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(count)
+	req.Zero(count.Uint64())
+
+	// user balance must be equal to initial balance - deployTx cost - subscribeTx cost - unsubscribeTx cost + reward
+	priceProviderReceipt, err := suite.backend.TransactionReceipt(context.TODO(), priceProviderTx.Hash())
+	req.NoError(err)
+	req.NotNil(priceProviderReceipt)
+	stabilityReceipt, err := suite.backend.TransactionReceipt(context.TODO(), stabilityTx.Hash())
+	req.NoError(err)
+	req.NotNil(stabilityReceipt)
+	subscribeReceipt, err := suite.backend.TransactionReceipt(context.TODO(), subscribeTx.Hash())
+	req.NoError(err)
+	req.NotNil(subscribeReceipt)
+	unsubscribeReceipt, err := suite.backend.TransactionReceipt(context.TODO(), unsubscribeTx.Hash())
+	req.NoError(err)
+	req.NotNil(unsubscribeReceipt)
+
+	priceProviderCost := new(big.Int).Mul(priceProviderTx.GasPrice(), new(big.Int).SetUint64(priceProviderReceipt.GasUsed))
+	stabilityCost := new(big.Int).Mul(stabilityTx.GasPrice(), new(big.Int).SetUint64(stabilityReceipt.GasUsed))
+	subscribeCost := new(big.Int).Mul(subscribeTx.GasPrice(), new(big.Int).SetUint64(subscribeReceipt.GasUsed))
+	unsubscribeCost := new(big.Int).Mul(unsubscribeTx.GasPrice(), new(big.Int).SetUint64(unsubscribeReceipt.GasUsed))
+
+	finalBalance := new(big.Int).Sub(initialBalance, priceProviderCost)
+	finalBalance.Sub(finalBalance, stabilityCost)
+	finalBalance.Sub(finalBalance, subscribeCost)
+	finalBalance.Sub(finalBalance, unsubscribeCost)
+	finalBalance.Add(finalBalance, reward)
 
 	currentBalance, err := suite.backend.BalanceAt(context.TODO(), crypto.PubkeyToAddress(owner.PublicKey), suite.backend.CurrentBlock().Number())
 	req.NoError(err)

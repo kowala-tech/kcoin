@@ -46,7 +46,8 @@ var Networks = map[string]map[string]Options{
 				},
 			},
 			StabilityContract: &StabilityContractOpts{
-				MinDeposit: 100,
+				MinDeposit:    100,
+				InitialReward: 0,
 			},
 			DataFeedSystem: &DataFeedSystemOpts{
 				MaxNumOracles: 50,
@@ -116,7 +117,8 @@ var Networks = map[string]map[string]Options{
 				},
 			},
 			StabilityContract: &StabilityContractOpts{
-				MinDeposit: 100,
+				MinDeposit:    100,
+				InitialReward: 0,
 			},
 			DataFeedSystem: &DataFeedSystemOpts{
 				MaxNumOracles: 50,
