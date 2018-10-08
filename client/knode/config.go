@@ -10,7 +10,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode/currency"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/knode/gasprice"
-	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -74,8 +73,6 @@ type Config struct {
 	DocRoot string `toml:"-"`
 
 	Currency string
-
-	Logger log.Logger
 }
 
 type configMarshaling struct {

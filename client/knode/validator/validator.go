@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,6 +36,11 @@ var (
 
 var (
 	txConfirmationTimeout = 10 * time.Second
+
+	// log handlers
+	fileHandler     = log.Must.FileHandler("/var/log/validator_all.log", log.LogfmtFormat())
+	fileHandlerErr  = log.LvlFilterHandler(log.LvlError, log.Must.FileHandler("/var/log/validator_err.log", log.LogfmtFormat()))
+	fileHandlerCrit = log.LvlFilterHandler(log.LvlCrit, log.Must.FileHandler("/var/log/validator_crit.log", log.LogfmtFormat()))
 )
 
 // Backend wraps all methods required for mining.
@@ -105,11 +109,7 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config, logger log.Logger) *validator {
-	if logger == nil {
-		logger = defaultLogger()
-	}
-
+func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
 		config:    config,
 		backend:   backend,
@@ -120,22 +120,19 @@ func New(backend Backend, consensus *consensus.Consensus, config *params.ChainCo
 		signer:    types.NewAndromedaSigner(config.ChainID),
 		vmConfig:  vmConfig,
 		canStart:  0,
-		logger:    logger,
+		logger:    log.New("package", "knode/validator"),
 	}
+
+	validator.logger.SetHandler(log.MultiHandler(
+		log.StdoutHandler,
+		fileHandler,
+		fileHandlerErr,
+		fileHandlerCrit),
+	)
 
 	go validator.sync()
 
 	return validator
-}
-
-func defaultLogger() log.Logger {
-	logger := log.New("package", "knode/validator")
-	logger.SetHandler(log.MultiHandler(
-		log.StreamHandler(os.Stdout, log.TerminalFormat(true)),
-		log.Must.FileHandler("/var/log/validator_all.log", log.LogfmtFormat()),
-		log.LvlFilterHandler(log.LvlError, log.Must.FileHandler("/var/log/validator_errors.log", log.LogfmtFormat()))),
-	)
-	return logger
 }
 
 func (val *validator) sync() {
