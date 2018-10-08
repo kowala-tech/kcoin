@@ -1,9 +1,9 @@
 package genesis
 
-import "github.com/kowala-tech/kcoin/client/knode"
+import "github.com/kowala-tech/kcoin/client/knode/currency"
 
 var Networks = map[string]map[string]Options{
-	knode.KUSD: {
+	currency.KUSD: {
 		MainNetwork: Options{
 			Network:     MainNetwork,
 			BlockNumber: 0,

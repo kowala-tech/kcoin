@@ -622,11 +622,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if !pm.validator.Validating() {
 			break
 		}
+
 		// Retrieve and decode the propagated proposal
 		var proposal types.Proposal
 		if err := msg.Decode(&proposal); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+
+		p.MarkProposal(proposal.Hash())
+
 		if err := pm.validator.AddProposal(&proposal); err != nil {
 			// ignore
 			break
@@ -643,6 +647,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 		p.MarkVote(vote.Hash())
+
 		if err := pm.validator.AddVote(&vote); err != nil {
 			// ignore
 			break
@@ -659,7 +664,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
-		p.MarkFragment(request.Data.Proof)
+		p.MarkBlockFragment(request.Data.Proof)
+
 		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Round, request.Data); err != nil {
 			log.Error("error while adding a new block fragment", "err", err, "round", request.Round, "block", request.BlockNumber, "fragment", request.Data)
 			// ignore
@@ -733,11 +739,11 @@ func (pm *ProtocolManager) proposalBroadcastLoop() {
 	for obj := range pm.proposalSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case core.NewProposalEvent:
-			for _, peer := range pm.peers.Peers() {
+			for _, peer := range pm.peers.PeersWithoutProposal(ev.Proposal.Hash()) {
 				peer.SendNewProposal(ev.Proposal)
 			}
 		case core.NewBlockFragmentEvent:
-			for _, peer := range pm.peers.PeersWithoutFragment(ev.Data.Proof) {
+			for _, peer := range pm.peers.PeersWithoutBlockFragment(ev.Data.Proof) {
 				peer.SendBlockFragment(ev.BlockNumber, ev.Round, ev.Data)
 			}
 		}
