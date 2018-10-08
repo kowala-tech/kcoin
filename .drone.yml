@@ -15,7 +15,7 @@ pipeline:
     commands:
       - make install_tools
     when:
-      event: [push,pull_request]
+      event: [push, pull_request]
       branch: [dev]
   
   truffle_node_modules:
