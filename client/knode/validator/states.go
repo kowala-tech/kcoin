@@ -121,8 +121,8 @@ func (val *validator) newRoundState() stateFn {
 		val.block = nil
 		val.blockFragments = nil
 
-		//fixme: should be checked how to revert stateDB state
-		val.state.RevertToSnapshot(val.state.Snapshot())
+		parent := val.chain.CurrentBlock()
+		val.makeCurrent(parent)
 	}
 
 	return val.newProposalState
