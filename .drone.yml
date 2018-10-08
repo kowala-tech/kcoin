@@ -24,7 +24,7 @@ pipeline:
     commands:
       - make client/contracts/truffle/node_modules
     when:
-      event: [push, pull_request]
+      event: [push,pull_request]
       branch: [dev, feature/*]
 
   build_solidity_docs:
@@ -33,7 +33,7 @@ pipeline:
     commands: 
       - make solidoc_generate
     when:
-      event: [push, pull_request]
+      event: [push,pull_request]
       branch: [dev, feature/*]
 
   go_generate:
