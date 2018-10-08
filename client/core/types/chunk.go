@@ -146,7 +146,7 @@ func (ds *DataSet) Add(blockNumber *big.Int, blockHash common.Hash, chunk *Chunk
 	default:
 		if ds.blockHash != blockHash || ds.blockNumber.Cmp(blockNumber) == 0 {
 			return fmt.Errorf("expected fragments for %d(%v), got %d(%v)",
-				blockNumber.Int64(), blockHash, ds.blockNumber.Int64(), ds.blockHash,)
+				blockNumber.Int64(), blockHash, ds.blockNumber.Int64(), ds.blockHash)
 		}
 	}
 

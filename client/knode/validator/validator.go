@@ -76,7 +76,7 @@ type validator struct {
 	validating int32
 	deposit    *big.Int
 
-	signer   types.Signer
+	signer types.Signer
 
 	// blockchain
 	backend  Backend
