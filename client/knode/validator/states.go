@@ -33,19 +33,9 @@ func (val *validator) genesisNotLoggedInState() stateFn {
 	// no need to make a deposit if the block number is 0
 	// since these validators will be marked as voters from the start
 	if val.isBlockZero() {
-		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
-		if err != nil {
-			log.Crit("Failed to verify the voter information", "err", err)
-			return nil
-		}
-		if !isVoter {
-			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.walletAccount.Account().Address)
-		}
 		log.Info("Deposit is not necessary for a genesis validator (first block)")
-
 		return val.startValidating
 	}
-
 	return val.notLoggedInState
 }
 
