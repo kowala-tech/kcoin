@@ -118,6 +118,7 @@ func (val *validator) newRoundState() stateFn {
 	if val.round != 0 {
 		val.round++
 		val.proposal = nil
+		val.proposer = nil
 		val.block = nil
 		val.blockFragments = nil
 

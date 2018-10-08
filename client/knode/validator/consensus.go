@@ -19,6 +19,7 @@ type VotingState struct {
 	voters         types.Voters
 	votersChecksum [32]byte
 
+	proposer       *types.Voter
 	proposal       *types.Proposal
 	block          *types.Block
 	blockFragments *types.BlockFragments

@@ -77,7 +77,6 @@ type validator struct {
 	deposit    *big.Int
 
 	signer   types.Signer
-	proposer *types.Voter
 
 	// blockchain
 	backend  Backend
@@ -272,6 +271,7 @@ func (val *validator) init() error {
 	val.round = 0
 
 	val.proposal = nil
+	val.proposer = nil
 	val.block = nil
 	val.blockFragments = nil
 
