@@ -467,12 +467,15 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 		}
 	}
 
-
 	//fixme: should be removed after develop light client
 	if srvr.DiscoveryV5 {
-		chainID := s.chainConfig.ChainID.Int64()
-		networkID := s.networkID
-		protocolTopic := discv5.DiscoveryTopic(s.blockchain.Genesis().Hash(), protocol.ProtocolName, protocol.Kcoin1, networkID, chainID)
+		protocolTopic := discv5.DiscoveryTopic(
+			s.blockchain.Genesis().Hash(),
+			protocol.ProtocolName,
+			protocol.Kcoin1,
+			s.networkID,
+			s.chainConfig.ChainID.Int64(),
+			s.config.Currency)
 
 		go func() {
 			srvr.DiscV5.RegisterTopic(protocolTopic, s.shutdownChan)
