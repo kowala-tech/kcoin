@@ -2,6 +2,8 @@ package types
 
 import (
 	"bytes"
+	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -44,6 +46,9 @@ type DataSet struct {
 	data       []*Chunk         // stores data chunks
 	membership *common.BitArray // indicates whether a data unit is present or not
 	l          sync.RWMutex
+
+	blockHash   common.Hash
+	blockNumber *big.Int
 }
 
 // Metadata represents the content specifications
@@ -127,12 +132,23 @@ func (ds *DataSet) Get(i int) *Chunk {
 	return ds.data[i]
 }
 
-func (ds *DataSet) Add(chunk *Chunk) error {
+func (ds *DataSet) Add(blockNumber *big.Int, blockHash common.Hash, chunk *Chunk) error {
 	if chunk == nil {
 		return errors.New("got a nil fragment")
 	}
 
 	ds.l.Lock()
+
+	switch len(ds.data) {
+	case 0:
+		ds.blockNumber = blockNumber
+		ds.blockHash = blockHash
+	default:
+		if ds.blockHash != blockHash || ds.blockNumber.Cmp(blockNumber) == 0 {
+			return fmt.Errorf("expected fragments for %d(%v), got %d(%v)",
+				blockNumber.Int64(), blockHash, ds.blockNumber.Int64(), ds.blockHash,)
+		}
+	}
 
 	// @TODO (rgeraldes) - validate index
 	// @TODO (rgeraldes) - check hash proof

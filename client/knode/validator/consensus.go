@@ -27,6 +27,8 @@ type VotingState struct {
 	lockedRound uint64
 	lockedBlock *types.Block
 
+	leaderBlockHash common.Hash
+
 	start time.Time // used to sync the validator nodes
 
 	commitRound int

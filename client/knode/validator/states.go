@@ -129,12 +129,14 @@ func (val *validator) newRoundState() stateFn {
 }
 
 func (val *validator) newProposalState() stateFn {
-	proposer := val.voters.NextProposer()
-	if proposer.Address() == val.walletAccount.Account().Address {
+	val.proposer = val.voters.NextProposer()
+
+	log.Info("a new proposer", "addr", val.proposer.Address().String())
+	if val.proposer.Address() == val.walletAccount.Account().Address {
 		log.Info("Proposing a new block")
 		val.propose()
 	} else {
-		log.Info("Waiting for the proposal", "addr", proposer.Address())
+		log.Info("Waiting for the proposal", "addr", val.proposer.Address())
 		val.waitForProposal()
 	}
 	return val.preVoteState

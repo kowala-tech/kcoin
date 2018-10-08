@@ -19,6 +19,7 @@ type NewProposalEvent struct{ Proposal *types.Proposal }
 // NewBlockFragmentEvent is posted when a consensus validator broadcasts block fragments.
 type NewBlockFragmentEvent struct {
 	BlockNumber *big.Int
+	BlockHash   common.Hash
 	Round       uint64
 	Data        *types.BlockFragment
 }

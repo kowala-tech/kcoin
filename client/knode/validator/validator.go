@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -63,7 +64,7 @@ type Service interface {
 	Running() bool
 	AddProposal(proposal *types.Proposal) error
 	AddVote(vote *types.Vote) error
-	AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error
+	AddBlockFragment(blockNumber *big.Int, blockHash common.Hash, round uint64, fragment *types.BlockFragment) error
 }
 
 // validator represents a consensus validator
@@ -75,7 +76,8 @@ type validator struct {
 	validating int32
 	deposit    *big.Int
 
-	signer types.Signer
+	signer   types.Signer
+	proposer *types.Voter
 
 	// blockchain
 	backend  Backend
@@ -300,6 +302,28 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	}
 
 	log.Info("Received Proposal")
+	if val.config.ChainID.Cmp(proposal.ChainID()) != 0 {
+		return fmt.Errorf("expected proposed block for chainID %v, got %v",
+			val.config.ChainID.Int64(), proposal.ChainID().Int64())
+	}
+
+	if val.blockNumber.Cmp(proposal.BlockNumber()) != 0 {
+		return fmt.Errorf("expected proposed block number %v, got %v",
+			val.blockNumber.Int64(), proposal.BlockNumber().Int64())
+	}
+
+	if val.round != proposal.Round() {
+		return fmt.Errorf("expected proposed block round %v, got %v", val.round, proposal.Round())
+	}
+
+	proposalAddress, err := types.ProposalSender(val.signer, proposal)
+	if err != nil {
+		return err
+	}
+
+	if val.proposer.Address() != proposalAddress {
+		return fmt.Errorf("expected proposer %v, got %v", val.proposer.Address(), proposalAddress)
+	}
 
 	val.handleMutex.Lock()
 	val.proposal = proposal
@@ -520,11 +544,11 @@ func (val *validator) propose() {
 	for i := uint(0); i < fragments.Size(); i++ {
 		val.eventMux.Post(core.NewBlockFragmentEvent{
 			BlockNumber: val.blockNumber,
+			BlockHash:   val.header.Hash(),
 			Round:       val.round,
 			Data:        fragments.Get(int(i)),
 		})
 	}
-
 }
 
 func (val *validator) preVote() {
@@ -609,12 +633,16 @@ func (val *validator) vote(vote *types.Vote) {
 	}
 }
 
-func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragment *types.BlockFragment) error {
+func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Hash, round uint64, fragment *types.BlockFragment) error {
 	if !val.Validating() {
 		return ErrCantAddBlockFragmentNotValidating
 	}
 
-	if err := val.blockFragments.Add(fragment); err != nil {
+	if val.blockNumber.Cmp(blockNumber) != 0 {
+		return fmt.Errorf("expected block fragments for %d, got %d", val.blockNumber.Int64(), blockNumber.Int64())
+	}
+
+	if err := val.blockFragments.Add(blockNumber, blockHash, fragment); err != nil {
 		err = errors.New("Failed to add a new block fragment: " + err.Error())
 		return err
 	}

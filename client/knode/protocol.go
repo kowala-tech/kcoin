@@ -172,6 +172,7 @@ type electionData struct {
 // blockFragmentData is the network packet that is sent to let the other validators have a part of the proposed block
 type blockFragmentData struct {
 	BlockNumber *big.Int
+	Hash        common.Hash
 	Round       uint64
 	Data        *types.BlockFragment
 }

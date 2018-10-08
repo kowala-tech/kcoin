@@ -280,8 +280,8 @@ func (p *peer) SendVote(vote *types.Vote) error {
 }
 
 // SendBlockFragment propagates a block fragment to a remote peer.
-func (p *peer) SendBlockFragment(blockNumber *big.Int, round uint64, data *types.BlockFragment) error {
-	return p2p.Send(p.rw, BlockFragmentMsg, blockFragmentData{blockNumber, round, data})
+func (p *peer) SendBlockFragment(blockNumber *big.Int, blockHash common.Hash, round uint64, data *types.BlockFragment) error {
+	return p2p.Send(p.rw, BlockFragmentMsg, blockFragmentData{blockNumber, blockHash, round, data})
 }
 
 // SendBlockHeaders sends a batch of block headers to the remote peer.
