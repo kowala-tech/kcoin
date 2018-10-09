@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/golang-lru"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
@@ -28,7 +29,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/trie"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"github.com/davecgh/go-spew/spew"
 )
 
 var (
@@ -922,10 +922,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 func (bc *BlockChain) doReorg(block *types.Block, currentBlock *types.Block, batch kcoindb.Batch, state *state.StateDB) (WriteStatus, error) {
 	// Reorganise the chain if the parent is not the head block
-	if IsHead(block, currentBlock) {
-		log.Warn(fmt.Sprintf("a blockchain reorganization needed: block parent hash %v, current block hash %v",
-			block.ParentHash().String(), currentBlock.Hash().String()))
-
+	if !currentBlock.IsParent(block) {
 		if err := bc.reorg(currentBlock, block); err != nil {
 			return NonStatTy, err
 		}
@@ -938,10 +935,6 @@ func (bc *BlockChain) doReorg(block *types.Block, currentBlock *types.Block, bat
 func writePositionalMetadata(batch kcoindb.Batch, block *types.Block, state *state.StateDB) {
 	rawdb.WriteTxLookupEntries(batch, block)
 	rawdb.WritePreimages(batch, block.NumberU64(), state.Preimages())
-}
-
-func IsHead(block *types.Block, currentBlock *types.Block) bool {
-	return block.ParentHash() != currentBlock.Hash()
 }
 
 func (bc *BlockChain) isReorgState(block *types.Block, currentBlock *types.Block) bool {
@@ -1196,6 +1189,14 @@ func countTransactions(chain []*types.Block) (c int) {
 // to be part of the new canonical chain and accumulates potential missing transactions and post an
 // event about them
 func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
+	if oldBlock.IsSame(newBlock) {
+		// don't need a reorg if got the same block as old and new ones
+		return nil
+	}
+	log.Warn(fmt.Sprintf("a blockchain reorganization needed: block parent hash %v(%d), current block hash %v(%d)",
+		newBlock.ParentHash().String(), newBlock.Number().Int64()-1,
+		oldBlock.Hash().String(), oldBlock.Number().Int64()))
+
 	var (
 		newChain    types.Blocks
 		oldChain    types.Blocks
@@ -1272,7 +1273,12 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		logFn("Chain split detected", "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 	} else {
-		log.Error("Impossible reorg, please file an issue", "oldnum", oldBlock.Number(), "oldhash", oldBlock.Hash(), "len(oldChain)", len(oldChain), "newnum", newBlock.Number(), "newhash", newBlock.Hash(), "len(newChain)", len(newChain))
+		log.Error("Impossible reorg, please file an issue",
+			"oldnum", oldBlock.Number(),
+			"oldhash", oldBlock.Hash(),
+			"len(oldChain)", len(oldChain),
+			"newnum", newBlock.Number(),
+			"newhash", newBlock.Hash(), "len(newChain)", len(newChain))
 	}
 	// Insert the new chain, taking care of the proper incremental order
 	var addedTxs types.Transactions

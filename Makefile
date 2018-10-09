@@ -108,7 +108,7 @@ go_generate: client/contracts/truffle/node_modules
 
 .PHONY: docker_go_generate
 docker_go_generate:
-	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.12 make go_generate
+	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.12 make install_tools go_generate
 
 .PHONY: assert_no_changes
 assert_no_changes:
@@ -161,7 +161,7 @@ ifdef DRONE_TAG
 	mkdir -p client/build/bin/tags/$(DRONE_TAG)
 	cd client/build/bin && for f in kcoin-*; do \
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
-		version=$$(echo $$f | awk '{ gsub("kcoin", "tags/$(DRONE_TAG)/kcoin"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_TAG)"); print }');\
 		cp $$f $$release;\
 		mv $$f $$version;\
 	done;

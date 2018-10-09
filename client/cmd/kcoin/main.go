@@ -257,8 +257,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
 	setupLogging(ctx)
 
-	// make use client runs latest major version if not in testnet mode, need to check pre Start node!
-	if !ctx.GlobalBool(utils.TestnetFlag.Name) {
+	// make use client runs latest major version if not in testnet mode or devnet, need to check pre Start node!
+	if !isTestnetOrDevnet(ctx) {
 		mustBeLatestMajorVersion(ctx)
 	}
 
@@ -330,19 +330,29 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := kowala.StartValidating(); err != nil {
 			utils.Fatalf("Failed to start validation: %v", err)
 		}
-	}
-
-	// Start self update service if enabled
-	if ctx.GlobalBool(utils.SelfUpdateEnabledFlag.Name) {
+	} else if ctx.GlobalBool(utils.SelfUpdateEnabledFlag.Name) {
+		// Start self update service if enabled and not in validation mode
 		repository := ctx.GlobalString(utils.VersionRepository.Name)
 		selfUpdater := version.NewSelfUpdater(repository, stack, getConsoleLogger())
 		go selfUpdater.Run()
 	}
 }
 
+func isTestnetOrDevnet(ctx *cli.Context) bool {
+	return isTestnet(ctx) || isDevnet(ctx)
+}
+
+func isTestnet(ctx *cli.Context) bool {
+	return ctx.GlobalBool(utils.TestnetFlag.Name)
+}
+
+func isDevnet(ctx *cli.Context) bool {
+	return ctx.GlobalBool(utils.DevModeFlag.Name)
+}
+
 func mustBeLatestMajorVersion(ctx *cli.Context) {
 	repository := ctx.GlobalString(utils.VersionRepository.Name)
-	finder := version.NewFinder(repository)
+	finder := version.NewFinder(version.NewS3AssetRepository(repository))
 	latest, err := finder.Latest(runtime.GOOS, runtime.GOARCH)
 	if err != nil {
 		log.Error("Error parsing current version, exiting checker", "err", err)

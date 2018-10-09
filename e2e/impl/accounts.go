@@ -169,13 +169,13 @@ func (vctx *ValidationContext) IHaveTheFollowingAccounts(accountsDataTable *gher
 		}
 
 		if accountData.Funds != 0 {
-			if _, err := ctx.sendFundsAndWait(ctx.kusdSeederAccount, acct, accountData.Funds); err != nil {
+			if _, err := ctx.sendFundsAndWait(ctx.kusdSeederAccount, acct, toWei(accountData.Funds)); err != nil {
 				return accountError(accountData, err)
 			}
 		}
 
 		if accountData.Tokens != 0 {
-			if err := ctx.sendTokensAndWait(ctx.mtokensSeederAccount, acct, accountData.Tokens); err != nil {
+			if err := ctx.sendTokensAndWait(ctx.mtokensSeederAccount, acct, toWei(accountData.Tokens)); err != nil {
 				return accountError(accountData, err)
 			}
 		}
