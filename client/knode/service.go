@@ -199,7 +199,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 	kcoin.apiBackend.gpo = gasprice.NewOracle(kcoin.apiBackend, gpoParams)
 
-	kcoin.validator = validator.New(kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
+	kcoin.validator = validator.New(kcoin.config.ValidatorConfig, kcoin, kcoin.consensus, kcoin.chainConfig, kcoin.EventMux(), kcoin.engine, vmConfig)
 	kcoin.validator.SetExtra(makeExtraData(config.ExtraData))
 
 	if kcoin.protocolManager, err = NewProtocolManager(kcoin.chainConfig, config.SyncMode, config.NetworkId, kcoin.eventMux, kcoin.txPool, kcoin.engine, kcoin.blockchain, chainDb, kcoin.validator); err != nil {

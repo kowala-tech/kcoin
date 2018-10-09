@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,6 +25,12 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
+const (
+	logFilename     = "validator_all.log"
+	logFilenameErr  = "validator_err.log"
+	logFilenameCrit = "validator_crit.log"
+)
+
 var (
 	ErrCantStopNonStartedValidator       = errors.New("can't stop validator, not started")
 	ErrCantVoteNotValidating             = errors.New("can't vote, not validating")
@@ -36,11 +43,6 @@ var (
 
 var (
 	txConfirmationTimeout = 10 * time.Second
-
-	// log handlers
-	fileHandler     = log.Must.FileHandler("/var/log/validator_all.log", log.LogfmtFormat())
-	fileHandlerErr  = log.LvlFilterHandler(log.LvlError, log.Must.FileHandler("/var/log/validator_err.log", log.LogfmtFormat()))
-	fileHandlerCrit = log.LvlFilterHandler(log.LvlCrit, log.Must.FileHandler("/var/log/validator_crit.log", log.LogfmtFormat()))
 )
 
 // Backend wraps all methods required for mining.
@@ -74,6 +76,7 @@ type Service interface {
 
 // validator represents a consensus validator
 type validator struct {
+	config         *Config
 	VotingState        // consensus internal state
 	maxTransitions int // max number of state transitions (tests) 0 - unlimited
 
@@ -84,11 +87,11 @@ type validator struct {
 	signer types.Signer
 
 	// blockchain
-	backend  Backend
-	chain    *core.BlockChain
-	config   *params.ChainConfig
-	engine   engine.Engine
-	vmConfig vm.Config
+	backend     Backend
+	chain       *core.BlockChain
+	chainConfig *params.ChainConfig
+	engine      engine.Engine
+	vmConfig    vm.Config
 
 	walletAccount accounts.WalletAccount
 
@@ -109,25 +112,26 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
+func New(config *Config, backend Backend, consensus *consensus.Consensus, chainConfig *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
-		config:    config,
-		backend:   backend,
-		chain:     backend.BlockChain(),
-		engine:    engine,
-		consensus: consensus,
-		eventMux:  eventMux,
-		signer:    types.NewAndromedaSigner(config.ChainID),
-		vmConfig:  vmConfig,
-		canStart:  0,
-		logger:    log.New("package", "knode/validator"),
+		config:      config,
+		chainConfig: chainConfig,
+		backend:     backend,
+		chain:       backend.BlockChain(),
+		engine:      engine,
+		consensus:   consensus,
+		eventMux:    eventMux,
+		signer:      types.NewAndromedaSigner(chainConfig.ChainID),
+		vmConfig:    vmConfig,
+		canStart:    0,
+		logger:      log.New("package", "knode/validator"),
 	}
 
 	validator.logger.SetHandler(log.MultiHandler(
 		log.StdoutHandler,
-		fileHandler,
-		fileHandlerErr,
-		fileHandlerCrit),
+		log.Must.FileHandler(filepath.Join(config.LogDir, logFilename), log.LogfmtFormat()),
+		log.LvlFilterHandler(log.LvlError, log.Must.FileHandler(filepath.Join(config.LogDir, logFilenameErr), log.LogfmtFormat())),
+		log.LvlFilterHandler(log.LvlCrit, log.Must.FileHandler(filepath.Join(config.LogDir, logFilenameCrit), log.LogfmtFormat()))),
 	)
 
 	go validator.sync()
@@ -419,7 +423,7 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := val.state.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
+	receipt, _, err := core.ApplyTransaction(val.chainConfig, bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
 	if err != nil {
 		val.state.RevertToSnapshot(snap)
 		return err, nil
@@ -523,7 +527,7 @@ func (val *validator) propose() {
 
 	proposal := types.NewProposal(val.blockNumber, val.round, fragments.Metadata(), lockedRound, lockedBlock)
 
-	signedProposal, err := val.walletAccount.SignProposal(val.walletAccount.Account(), proposal, val.config.ChainID)
+	signedProposal, err := val.walletAccount.SignProposal(val.walletAccount.Account(), proposal, val.chainConfig.ChainID)
 	if err != nil {
 		val.logger.Crit("Failed to sign the proposal", "err", err)
 	}
@@ -608,7 +612,7 @@ func (val *validator) preCommit() {
 }
 
 func (val *validator) vote(vote *types.Vote) {
-	signedVote, err := val.walletAccount.SignVote(val.walletAccount.Account(), vote, val.config.ChainID)
+	signedVote, err := val.walletAccount.SignVote(val.walletAccount.Account(), vote, val.chainConfig.ChainID)
 	if err != nil {
 		val.logger.Crit("Failed to sign the vote", "err", err)
 	}
