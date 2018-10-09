@@ -15,7 +15,8 @@ pipeline:
     commands:
       - make install_tools
     when:
-      event: [pull_request]
+      event: [push, pull_request]
+      branch: [dev]
   
   truffle_node_modules:
     group: truffle_setup
@@ -23,7 +24,8 @@ pipeline:
     commands:
       - make client/contracts/truffle/node_modules
     when:
-      event: [pull_request]
+      event: [push, pull_request]
+      branch: [dev]
 
   build_solidity_docs:
     group: solidity_docs
@@ -31,7 +33,8 @@ pipeline:
     commands: 
       - make solidoc_generate
     when:
-      event: [pull_request]
+      event: [push, pull_request]
+      branch: [dev]
 
   go_generate:
     group: generate
