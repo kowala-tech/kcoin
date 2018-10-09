@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"io"
 	"math/big"
@@ -113,13 +114,14 @@ func (voters voters) Swap(i, j int) {
 }
 
 func (voters voters) Less(i, j int) bool {
-	return bytes.Compare(voters[i].Address().Bytes(), voters[j].Address().Bytes()) == 0
+	return bytes.Compare(voters[i].Address().Bytes(), voters[j].Address().Bytes()) == -1
 }
 
 // GetRlp returns encoded bytes for one voter
 // needed for hash thru interface DerivableList interface
 func (voters voters) GetRlp(i int) []byte {
-	enc, _ := rlp.EncodeToBytes(voters[i])
+	enc, err := rlp.EncodeToBytes(voters[i])
+	log.Error("cannot marshall to RLP voters array", "err", err)
 	return enc
 }
 

@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"math/big"
 	"testing"
 
@@ -81,10 +82,46 @@ func TestVoters_UpdateWeightChangesProposer(t *testing.T) {
 	assert.Equal(t, 3, voters.Len())
 }
 
+func TestVoters_UpdateWeightChangesProposerWith2Voters(t *testing.T) {
+	voters1, err := NewVoters([]*Voter{voterSet[0], voterSet[1], voterSet[2]})
+	require.NoError(t, err)
+
+	voters2, err := NewVoters([]*Voter{voterSet[0], voterSet[1], voterSet[2]})
+	require.NoError(t, err)
+
+	proposer1 := voters1.NextProposer()
+	assert.Equal(t, voterSet[1], proposer1)
+	assert.Equal(t, big.NewInt(101), proposer1.weight)
+	assert.Equal(t, big.NewInt(200), voters1.At(0).weight)
+	assert.Equal(t, big.NewInt(101), voters1.At(1).weight)
+	assert.Equal(t, big.NewInt(198), voters1.At(2).weight)
+	assert.Equal(t, 3, voters1.Len())
+
+	proposer2 := voters2.NextProposer()
+	assert.Equal(t, voterSet[1], proposer2)
+	assert.Equal(t, big.NewInt(101), proposer2.weight)
+	assert.Equal(t, big.NewInt(200), voters2.At(0).weight)
+	assert.Equal(t, big.NewInt(101), voters2.At(1).weight)
+	assert.Equal(t, big.NewInt(198), voters2.At(2).weight)
+	assert.Equal(t, 3, voters2.Len())
+}
+
+func TestVoters_NewVotersReturnsSortedArray(t *testing.T) {
+	voters, err := NewVoters([]*Voter{voterSet[1], voterSet[0], voterSet[2]})
+	require.NoError(t, err)
+
+	assert.Equal(t, voterSet[0].Address().String(), voters.At(0).Address().String())
+	assert.Equal(t, voterSet[1].Address().String(), voters.At(1).Address().String())
+	assert.Equal(t, voterSet[2].Address().String(), voters.At(2).Address().String())
+	assert.Equal(t, 3, voters.Len())
+}
+
 func TestVoters_UpdateWeightChangesProposerElections(t *testing.T) {
 	voters, err := NewVoters([]*Voter{voterSet[0], voterSet[1], voterSet[2]})
 	require.NoError(t, err)
 	require.Equal(t, 3, voters.Len())
+
+	spew.Dump(voters)
 
 	elections := []struct {
 		proposerWeight *big.Int
@@ -100,10 +137,58 @@ func TestVoters_UpdateWeightChangesProposerElections(t *testing.T) {
 	for round, tc := range elections {
 		t.Run(fmt.Sprintf("round %d", round), func(t *testing.T) {
 			proposer := voters.NextProposer()
+			assert.Equal(t, voterSet[0].Address().String(), proposer.Address().String())
 			assert.Equal(t, tc.proposerWeight, proposer.weight)
 			assert.Equal(t, tc.voter1weight, voters.At(0).weight)
 			assert.Equal(t, tc.voter2weight, voters.At(1).weight)
 			assert.Equal(t, tc.voter3weight, voters.At(2).weight)
+		})
+	}
+}
+
+func TestVoters_UpdateWeightChangesProposerElectionsWith2Voters(t *testing.T) {
+	voters1, err := NewVoters([]*Voter{voterSet[0], voterSet[1], voterSet[2]})
+	require.NoError(t, err)
+	require.Equal(t, 3, voters1.Len())
+
+	voters2, err := NewVoters([]*Voter{voterSet[0], voterSet[1], voterSet[2]})
+	require.NoError(t, err)
+	require.Equal(t, 3, voters2.Len())
+
+	elections := []struct {
+		proposerWeight *big.Int
+		voter1weight   *big.Int
+		voter2weight   *big.Int
+		voter3weight   *big.Int
+	}{
+		{big.NewInt(200), big.NewInt(200), big.NewInt(202), big.NewInt(297)},
+		{big.NewInt(297), big.NewInt(300), big.NewInt(303), big.NewInt(297)},
+		{big.NewInt(303), big.NewInt(400), big.NewInt(303), big.NewInt(396)},
+	}
+
+	for round, tc := range elections {
+		t.Run(fmt.Sprintf("round %d", round), func(t *testing.T) {
+			proposer1 := voters1.NextProposer()
+			proposer2 := voters2.NextProposer()
+
+			assert.Equal(t, tc.proposerWeight, proposer2.weight)
+			assert.Equal(t, voters1.At(0).address, voters2.At(0).address)
+			assert.Equal(t, voters1.At(1).address, voters2.At(1).address)
+			assert.Equal(t, voters1.At(2).address, voters2.At(2).address)
+
+			assert.Equal(t, voters1.At(0).weight, voters2.At(0).weight)
+			assert.Equal(t, voters1.At(1).weight, voters2.At(1).weight)
+			assert.Equal(t, voters1.At(2).weight, voters2.At(2).weight)
+
+			assert.Equal(t, tc.proposerWeight, proposer1.weight)
+			assert.Equal(t, tc.voter1weight, voters1.At(0).weight)
+			assert.Equal(t, tc.voter2weight, voters1.At(1).weight)
+			assert.Equal(t, tc.voter3weight, voters1.At(2).weight)
+
+			assert.Equal(t, tc.proposerWeight, proposer2.weight)
+			assert.Equal(t, tc.voter1weight, voters2.At(0).weight)
+			assert.Equal(t, tc.voter2weight, voters2.At(1).weight)
+			assert.Equal(t, tc.voter3weight, voters2.At(2).weight)
 		})
 	}
 }
