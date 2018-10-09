@@ -258,7 +258,7 @@ func TestVoters_UpdateWeightChangesProposerElectionsWith2VotersEventual(t *testi
 	require.Equal(t, 3, voters2.Len())
 
 	freq := make(map[string]int)
-	totalRounds := 100000
+	totalRounds := 1000000
 
 	for i := 0; i < totalRounds; i++ {
 		proposer1 := voters1.NextProposer()
