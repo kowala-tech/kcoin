@@ -2,7 +2,6 @@ package bindings
 
 import (
 	"fmt"
-
 	"github.com/kowala-tech/kcoin/client/common"
 )
 
@@ -21,6 +20,7 @@ var contracts = map[common.Address]string{
 	MultiSigWalletAddr:   "Multisig Wallet Contract",
 }
 
+// Returns the contract name description from given Address.
 func GetContractByAddr(addr common.Address) (string, error) {
 	addrName, ok := contracts[addr]
 	if !ok {

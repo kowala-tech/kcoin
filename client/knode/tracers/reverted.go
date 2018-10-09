@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/log"
@@ -22,15 +23,15 @@ func (*EvmRevertedTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas
 	return nil
 }
 
-func (*EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
-	contractName, cErr := bindings.GetContractByAddr(contract.Address())
+func (e *EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+	contractName, cErr := e.getContractByAddr(contract.Address(), env)
 	if cErr != nil {
 		contractName = "Undetected Contract"
 	}
 
-	callerContractName, cErr := bindings.GetContractByAddr(contract.CallerAddress)
+	callerContractName, cErr := e.getContractByAddr(contract.CallerAddress, env)
 	if cErr != nil {
-		callerContractName = "Undected Contract"
+		callerContractName = "Undetected Contract"
 	}
 
 	if err.Error() == "evm: execution reverted" {
@@ -54,4 +55,18 @@ func (*EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas
 
 func (*EvmRevertedTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
 	return nil
+}
+
+func (e *EvmRevertedTracer) getContractByAddr(addr common.Address, env *vm.EVM) (string, error) {
+	contractName, err := bindings.GetContractByAddr(addr)
+	if err == nil {
+		return contractName, nil
+	}
+
+	contractName, err = kns.GetContractFromRegisteredDomains(addr, env)
+	if err != nil {
+		return "", err
+	}
+
+	return contractName, nil
 }
