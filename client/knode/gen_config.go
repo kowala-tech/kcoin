@@ -11,6 +11,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/knode/gasprice"
+	"github.com/kowala-tech/kcoin/client/knode/validator"
 )
 
 var _ = (*configMarshaling)(nil)
@@ -38,6 +39,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		EnablePreimageRecording bool
 		DocRoot                 string `toml:"-"`
 		Currency                string
+		ValidatorConfig         *validator.Config
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -60,6 +62,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.DocRoot = c.DocRoot
 	enc.Currency = c.Currency
+	enc.ValidatorConfig = c.ValidatorConfig
 	return &enc, nil
 }
 
@@ -86,6 +89,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		EnablePreimageRecording *bool
 		DocRoot                 *string `toml:"-"`
 		Currency                *string
+		ValidatorConfig         *validator.Config
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -150,6 +154,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.Currency != nil {
 		c.Currency = *dec.Currency
+	}
+	if dec.ValidatorConfig != nil {
+		c.ValidatorConfig = dec.ValidatorConfig
 	}
 	return nil
 }
