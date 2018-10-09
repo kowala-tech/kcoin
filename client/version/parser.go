@@ -2,7 +2,6 @@ package version
 
 import (
 	"errors"
-	"github.com/blang/semver"
 	"regexp"
 )
 
@@ -23,7 +22,7 @@ func filenameParser(filename string) (Asset, error) {
 		return asset{}, errors.New("cant parse filename")
 	}
 
-	version, err := semver.Make(matches[0][1])
+	version, err := MakeSemver(matches[0][1])
 	if err != nil {
 		return asset{}, err
 	}

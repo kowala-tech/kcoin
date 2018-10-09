@@ -9,8 +9,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/log"
 )
 
-var ErrDuplicateVote = errors.New("duplicate vote")
-
 type VotingTable interface {
 	Add(vote types.AddressVote) error
 	Leader() common.Hash
@@ -42,14 +40,11 @@ func (table *votingTable) Add(voteAddressed types.AddressVote) error {
 	if !table.isVoter(voteAddressed.Address()) {
 		return fmt.Errorf("voter address not found in voting table: 0x%x", voteAddressed.Address().Hash())
 	}
-
-	vote := voteAddressed.Vote()
-	if table.isDuplicate(vote) {
-		log.Error(fmt.Sprintf("a duplicate vote in voting table %v; blockHash %v; voteHash %v. Error: %s",
-			table.voteType, vote.BlockHash(), vote.Hash(), vote.String()))
-		return ErrDuplicateVote
+	if err := table.isDuplicate(voteAddressed); err != nil {
+		return err
 	}
 
+	vote := voteAddressed.Vote()
 	table.votes.Add(vote)
 
 	if table.hasQuorum() {
@@ -64,8 +59,14 @@ func (table *votingTable) Leader() common.Hash {
 	return table.votes.Leader()
 }
 
-func (table *votingTable) isDuplicate(vote *types.Vote) bool {
-	return table.votes.Contains(vote.Hash())
+func (table *votingTable) isDuplicate(voteAddressed types.AddressVote) error {
+	vote := voteAddressed.Vote()
+	err := table.votes.Contains(vote.Hash())
+	if err != nil {
+		log.Error(fmt.Sprintf("a duplicate vote in voting table %v; blockHash %v; voteHash %v; from validator %v. Error: %s",
+			table.voteType, vote.BlockHash(), vote.Hash(), voteAddressed.Address(), vote.String()))
+	}
+	return err
 }
 
 func (table *votingTable) isVoter(address common.Address) bool {

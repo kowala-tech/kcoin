@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
+	cur "github.com/kowala-tech/kcoin/client/knode/currency"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 const (
@@ -392,7 +393,12 @@ func (tq *topicRequestQueue) update(item *topicRequestQueueItem, priority uint64
 	heap.Fix(tq, item.index)
 }
 
-func DiscoveryTopic(genesisHash common.Hash, protocolName string, protocolVersion uint) Topic {
-	protocolName = fmt.Sprintf("%s%d", strings.ToUpper(protocolName), protocolVersion)
+func DiscoveryTopic(genesisHash common.Hash, protocolName string, protocolVersion uint, networkID uint64, chainID int64, currency string) Topic {
+	if currency == cur.KUSD {
+		// Don't include currency for kUSD so we don't have to migrate topics. Other currencies will use a different topic
+		protocolName = fmt.Sprintf("%s%d-%d.%d", strings.ToUpper(protocolName), protocolVersion, networkID, chainID)
+	} else {
+		protocolName = fmt.Sprintf("%s%d.%s-%d.%d", strings.ToUpper(protocolName), protocolVersion, currency, networkID, chainID)
+	}
 	return Topic(protocolName + "@" + common.Bytes2Hex(genesisHash.Bytes()[0:8]))
 }
