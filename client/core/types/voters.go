@@ -83,6 +83,9 @@ func (voters voters) NextProposer() *Voter {
 	// decrement this Voter weight since he has been selected as next proposer
 	proposer.weight.Sub(proposer.weight, totalDeposit)
 
+	log.Info("proposer has been chosen", "proposer", proposer.Address().String(),
+		"deposit", proposer.Deposit().Int64(), "weight", proposer.Weight().Int64())
+
 	return proposer
 }
 

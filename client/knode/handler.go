@@ -630,11 +630,14 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 		p.MarkProposal(proposal.Hash())
+		log.Info("got a proposal block", "block", proposal.String())
 
 		if err := pm.validator.AddProposal(&proposal); err != nil {
+			log.Info("got a proposal block add error", "err", err.Error(), "block", proposal.String())
 			// ignore
 			break
 		}
+		log.Info("got a proposal block", "block", proposal.String())
 
 	case msg.Code == VoteMsg:
 		if !pm.validator.Validating() {
