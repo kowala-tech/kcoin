@@ -630,10 +630,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 		p.MarkProposal(proposal.Hash())
-		log.Info("got a proposal block", "block", proposal.String())
+		log.Info("got a proposal block", "chainID", proposal.ChainID().Int64(),
+			"number", proposal.BlockNumber().Int64(), "round", proposal.Round(), "hash", proposal.Hash().String())
 
 		if err := pm.validator.AddProposal(&proposal); err != nil {
-			log.Info("got a proposal block add error", "err", err.Error(), "block", proposal.String())
+			log.Warn("got a proposal block add error", "err", err.Error(), "block", proposal.String())
 			// ignore
 			break
 		}

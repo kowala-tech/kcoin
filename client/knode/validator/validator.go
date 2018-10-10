@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -547,10 +548,13 @@ func (val *validator) propose() {
 		log.Crit("Failed to sign the proposal", "err", err)
 	}
 
+	spew.Dump("!!!! signed proposal", signedProposal)
+	log.Error("!!!! signed proposal", "account", val.walletAccount.Account().Address.String(), "chainID", val.config.ChainID.Int64())
+
 	val.proposal = signedProposal
 	val.block = block
 
-	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
+	val.eventMux.Post(core.NewProposalEvent{Proposal: signedProposal})
 
 	for i := uint(0); i < fragments.Size(); i++ {
 		val.eventMux.Post(core.NewBlockFragmentEvent{

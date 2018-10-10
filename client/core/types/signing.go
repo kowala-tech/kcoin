@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	ErrInvalidSig     = errors.New("invalid v, r, s values")
-	ErrInvalidChainID = errors.New("invalid chain id for signer")
+	ErrInvalidSig = errors.New("invalid v, r, s values")
 )
 
 type Hasher interface {
@@ -173,7 +172,8 @@ func (s AndromedaSigner) Sender(sn Sender) (common.Address, error) {
 		return UnprotectedSigner{}.Sender(sn)
 	}
 	if sn.ChainID().Cmp(s.chainID) != 0 {
-		return common.Address{}, ErrInvalidChainID
+		return common.Address{}, fmt.Errorf("invalid chain id for signer. expected %d, got %d",
+			s.chainID.Int64(), sn.ChainID().Int64())
 	}
 
 	snR, snS, snV := sn.SignatureValues()

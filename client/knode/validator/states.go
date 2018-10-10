@@ -131,7 +131,7 @@ func (val *validator) newRoundState() stateFn {
 func (val *validator) newProposalState() stateFn {
 	val.proposer = val.voters.NextProposer()
 
-	log.Info("a new proposer", "addr", val.proposer.Address().String())
+	log.Info("a new proposer", "addr", val.proposer.Address().String(), "block", val.blockNumber.Int64(), "round", val.round)
 	if val.proposer.Address() == val.walletAccount.Account().Address {
 		log.Info("Proposing a new block")
 		val.propose()
@@ -147,9 +147,10 @@ func (val *validator) waitForProposal() {
 	select {
 	case block := <-val.blockCh:
 		val.block = block
-		log.Info("Received the block", "hash", val.block.Hash())
+		log.Info("Received the block", "blockNumber", val.block.Number().Int64(),
+			"valBlockNumber", val.blockNumber.Int64(), "hash", val.block.Hash())
 	case <-time.After(timeout):
-		log.Info("Timeout expired", "duration", timeout)
+		log.Info("Timeout expired", "duration", timeout, "number", val.blockNumber.Int64())
 	}
 }
 
