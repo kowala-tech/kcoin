@@ -65,6 +65,7 @@ type Service interface {
 	AddProposal(proposal *types.Proposal) error
 	AddVote(vote *types.Vote) error
 	AddBlockFragment(blockNumber *big.Int, blockHash common.Hash, round uint64, fragment *types.BlockFragment) error
+	HasProposer() bool
 }
 
 // validator represents a consensus validator
@@ -648,10 +649,6 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Ha
 		return ErrCantAddBlockFragmentNotValidating
 	}
 
-	if val.proposal == nil {
-		return fmt.Errorf("expected block fragments only after the block had been proposed. block %d, got %d", val.blockNumber.Int64(), blockNumber.Int64())
-	}
-
 	if val.blockNumber.Cmp(blockNumber) != 0 {
 		return fmt.Errorf("expected block fragments for %d, got %d", val.blockNumber.Int64(), blockNumber.Int64())
 	}
@@ -795,4 +792,8 @@ func (val *validator) RedeemDeposits() error {
 	}
 
 	return nil
+}
+
+func (val *validator) HasProposer() bool {
+	return val.proposer == nil
 }

@@ -664,6 +664,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
+		if !pm.validator.HasProposer() {
+			return fmt.Errorf("expected block fragments only after the block had been proposed. block %d", request.BlockNumber)
+		}
+
 		p.MarkBlockFragment(request.Data.Proof)
 
 		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Hash, request.Round, request.Data); err != nil {
