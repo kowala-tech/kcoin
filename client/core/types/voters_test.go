@@ -96,10 +96,10 @@ func TestVoters_UpdateWeightChangesProposer(t *testing.T) {
 
 	require.NoError(t, err)
 	proposer := voters.NextProposer()
-	assert.Equal(t, voterSet[1], proposer)
-	assert.Equal(t, big.NewInt(101), proposer.weight)
+	assert.Equal(t, voterSet[1].Address(), proposer.Address())
+	assert.Equal(t, big.NewInt(-98), proposer.weight)
 	assert.Equal(t, big.NewInt(200), voters.At(0).weight)
-	assert.Equal(t, big.NewInt(101), voters.At(1).weight)
+	assert.Equal(t, big.NewInt(-98), voters.At(1).weight)
 	assert.Equal(t, big.NewInt(198), voters.At(2).weight)
 	assert.Equal(t, 3, voters.Len())
 }
@@ -112,18 +112,18 @@ func TestVoters_UpdateWeightChangesProposerWith2Voters(t *testing.T) {
 	require.NoError(t, err)
 
 	proposer1 := voters1.NextProposer()
-	assert.Equal(t, voterSet[1], proposer1)
-	assert.Equal(t, big.NewInt(101), proposer1.weight)
+	assert.Equal(t, voterSet[1].Address(), proposer1.Address())
+	assert.Equal(t, big.NewInt(-98), proposer1.weight)
 	assert.Equal(t, big.NewInt(200), voters1.At(0).weight)
-	assert.Equal(t, big.NewInt(101), voters1.At(1).weight)
+	assert.Equal(t, big.NewInt(-98), voters1.At(1).weight)
 	assert.Equal(t, big.NewInt(198), voters1.At(2).weight)
 	assert.Equal(t, 3, voters1.Len())
 
 	proposer2 := voters2.NextProposer()
-	assert.Equal(t, voterSet[1], proposer2)
-	assert.Equal(t, big.NewInt(101), proposer2.weight)
+	assert.Equal(t, voterSet[1].Address(), proposer2.Address())
+	assert.Equal(t, big.NewInt(-98), proposer2.weight)
 	assert.Equal(t, big.NewInt(200), voters2.At(0).weight)
-	assert.Equal(t, big.NewInt(101), voters2.At(1).weight)
+	assert.Equal(t, big.NewInt(-98), voters2.At(1).weight)
 	assert.Equal(t, big.NewInt(198), voters2.At(2).weight)
 	assert.Equal(t, 3, voters2.Len())
 }
@@ -151,25 +151,25 @@ func TestVoters_UpdateWeightChangesProposerElections(t *testing.T) {
 		voter3weight    *big.Int
 	}{
 		{
-			big.NewInt(101),
+			big.NewInt(-98),
 			voterSet[1].Address().String(),
 			big.NewInt(200),
-			big.NewInt(101),
+			big.NewInt(-98),
 			big.NewInt(198),
 		},
 		{
-			big.NewInt(200),
+			big.NewInt(0),
 			voterSet[0].Address().String(),
-			big.NewInt(200),
-			big.NewInt(202),
+			big.NewInt(0),
+			big.NewInt(3),
 			big.NewInt(297),
 		},
 		{
-			big.NewInt(297),
+			big.NewInt(96),
 			voterSet[2].Address().String(),
-			big.NewInt(300),
-			big.NewInt(303),
-			big.NewInt(297),
+			big.NewInt(100),
+			big.NewInt(104),
+			big.NewInt(96),
 		},
 	}
 
@@ -177,10 +177,10 @@ func TestVoters_UpdateWeightChangesProposerElections(t *testing.T) {
 		t.Run(fmt.Sprintf("round %d", round), func(t *testing.T) {
 			proposer := voters.NextProposer()
 			assert.Equal(t, tc.proposerAddress, proposer.Address().String())
-			assert.Equal(t, tc.proposerWeight, proposer.weight)
-			assert.Equal(t, tc.voter1weight, voters.At(0).weight)
-			assert.Equal(t, tc.voter2weight, voters.At(1).weight)
-			assert.Equal(t, tc.voter3weight, voters.At(2).weight)
+			assert.Equal(t, tc.proposerWeight.Int64(), proposer.weight.Int64())
+			assert.Equal(t, tc.voter1weight.Int64(), voters.At(0).weight.Int64())
+			assert.Equal(t, tc.voter2weight.Int64(), voters.At(1).weight.Int64())
+			assert.Equal(t, tc.voter3weight.Int64(), voters.At(2).weight.Int64())
 		})
 	}
 }
@@ -202,25 +202,25 @@ func TestVoters_UpdateWeightChangesProposerElectionsWith2Voters(t *testing.T) {
 		voter3weight    *big.Int
 	}{
 		{
-			big.NewInt(101),
+			big.NewInt(-98),
 			voterSet[1].Address().String(),
 			big.NewInt(200),
-			big.NewInt(101),
+			big.NewInt(-98),
 			big.NewInt(198),
 		},
 		{
-			big.NewInt(200),
+			big.NewInt(0),
 			voterSet[0].Address().String(),
-			big.NewInt(200),
-			big.NewInt(202),
+			big.NewInt(0),
+			big.NewInt(3),
 			big.NewInt(297),
 		},
 		{
-			big.NewInt(297),
+			big.NewInt(96),
 			voterSet[2].Address().String(),
-			big.NewInt(300),
-			big.NewInt(303),
-			big.NewInt(297),
+			big.NewInt(100),
+			big.NewInt(104),
+			big.NewInt(96),
 		},
 	}
 
@@ -229,24 +229,24 @@ func TestVoters_UpdateWeightChangesProposerElectionsWith2Voters(t *testing.T) {
 			proposer1 := voters1.NextProposer()
 			proposer2 := voters2.NextProposer()
 
-			assert.Equal(t, tc.proposerWeight, proposer2.weight)
+			assert.Equal(t, tc.proposerWeight.Int64(), proposer2.weight.Int64())
 			assert.Equal(t, voters1.At(0).address, voters2.At(0).address)
 			assert.Equal(t, voters1.At(1).address, voters2.At(1).address)
 			assert.Equal(t, voters1.At(2).address, voters2.At(2).address)
 
-			assert.Equal(t, voters1.At(0).weight, voters2.At(0).weight)
-			assert.Equal(t, voters1.At(1).weight, voters2.At(1).weight)
-			assert.Equal(t, voters1.At(2).weight, voters2.At(2).weight)
+			assert.Equal(t, voters1.At(0).weight.Int64(), voters2.At(0).weight.Int64())
+			assert.Equal(t, voters1.At(1).weight.Int64(), voters2.At(1).weight.Int64())
+			assert.Equal(t, voters1.At(2).weight.Int64(), voters2.At(2).weight.Int64())
 
-			assert.Equal(t, tc.proposerWeight, proposer1.weight)
-			assert.Equal(t, tc.voter1weight, voters1.At(0).weight)
-			assert.Equal(t, tc.voter2weight, voters1.At(1).weight)
-			assert.Equal(t, tc.voter3weight, voters1.At(2).weight)
+			assert.Equal(t, tc.proposerWeight.Int64(), proposer1.weight.Int64())
+			assert.Equal(t, tc.voter1weight.Int64(), voters1.At(0).weight.Int64())
+			assert.Equal(t, tc.voter2weight.Int64(), voters1.At(1).weight.Int64())
+			assert.Equal(t, tc.voter3weight.Int64(), voters1.At(2).weight.Int64())
 
-			assert.Equal(t, tc.proposerWeight, proposer2.weight)
-			assert.Equal(t, tc.voter1weight, voters2.At(0).weight)
-			assert.Equal(t, tc.voter2weight, voters2.At(1).weight)
-			assert.Equal(t, tc.voter3weight, voters2.At(2).weight)
+			assert.Equal(t, tc.proposerWeight.Int64(), proposer2.weight.Int64())
+			assert.Equal(t, tc.voter1weight.Int64(), voters2.At(0).weight.Int64())
+			assert.Equal(t, tc.voter2weight.Int64(), voters2.At(1).weight.Int64())
+			assert.Equal(t, tc.voter3weight.Int64(), voters2.At(2).weight.Int64())
 		})
 	}
 }
