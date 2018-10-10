@@ -251,7 +251,7 @@ func TestVoters_UpdateWeightChangesProposerElectionsWith2Voters(t *testing.T) {
 	}
 }
 
-func TestVoters_UpdateWeightChangesProposerElectionsVotersShouldBeChosen(t *testing.T) {
+func TestVoters_UpdateWeightChangesProposerElectionsVotersShouldBeChosenWithGivenProbability(t *testing.T) {
 	voters1, err := NewVoters(getVoters(4, 5, 6))
 	require.NoError(t, err)
 	require.Equal(t, 3, voters1.Len())
@@ -284,51 +284,7 @@ func TestVoters_UpdateWeightChangesProposerElectionsVotersShouldBeChosen(t *test
 		voters1.At(2).Address().String(): float64(voters1.At(2).deposit.Int64()) / totalDeposit,
 	}
 
-	epsilon := 0.005
-	for address, calculatedFreq := range expectedFreq {
-		count, ok := freq[address]
-		assert.Truef(t, ok, "address '%v' hadn't been chosen", address)
-
-		addressFreq := float64(count) / float64(totalRounds)
-		assert.InEpsilonf(t, calculatedFreq, addressFreq, epsilon, "expected for '%v' %.4f, got %.4f",
-			address, calculatedFreq, addressFreq)
-	}
-}
-
-func TestVoters_UpdateWeightChangesProposerElectionsVotersShouldBeChosenWithGivenProbability(t *testing.T) {
-	voters1, err := NewVoters(getVoters(7, 8, 9))
-	require.NoError(t, err)
-	require.Equal(t, 3, voters1.Len())
-
-	voters2, err := NewVoters(getVoters(7, 8, 9))
-	require.NoError(t, err)
-	require.Equal(t, 3, voters2.Len())
-
-	freq := make(map[string]int)
-	totalRounds := 1000000
-
-	for i := 0; i < totalRounds; i++ {
-		proposer1 := voters1.NextProposer()
-		proposer2 := voters2.NextProposer()
-
-		assert.Equal(t, proposer1.Address(), proposer2.Address())
-		assert.Equal(t, proposer1.Deposit(), proposer2.Deposit())
-
-		assert.Equal(t, voters1.At(0).weight, voters2.At(0).weight)
-		assert.Equal(t, voters1.At(1).weight, voters2.At(1).weight)
-		assert.Equal(t, voters1.At(2).weight, voters2.At(2).weight)
-
-		freq[proposer1.Address().String()]++
-	}
-
-	totalDeposit := float64(voters1.At(0).Deposit().Int64() + voters1.At(1).Deposit().Int64() + voters1.At(2).Deposit().Int64())
-	expectedFreq := map[string]float64{
-		voters1.At(0).Address().String(): float64(voters1.At(0).deposit.Int64()) / totalDeposit,
-		voters1.At(1).Address().String(): float64(voters1.At(1).deposit.Int64()) / totalDeposit,
-		voters1.At(2).Address().String(): float64(voters1.At(2).deposit.Int64()) / totalDeposit,
-	}
-
-	epsilon := 0.005
+	epsilon := 0.0000001
 	for address, calculatedFreq := range expectedFreq {
 		count, ok := freq[address]
 		assert.Truef(t, ok, "address '%v' hadn't been chosen", address)
