@@ -648,6 +648,10 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Ha
 		return ErrCantAddBlockFragmentNotValidating
 	}
 
+	if val.proposal == nil {
+		return fmt.Errorf("expected block fragments only after the block had been proposed. block %d, got %d", val.blockNumber.Int64(), blockNumber.Int64())
+	}
+
 	if val.blockNumber.Cmp(blockNumber) != 0 {
 		return fmt.Errorf("expected block fragments for %d, got %d", val.blockNumber.Int64(), blockNumber.Int64())
 	}
