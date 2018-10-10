@@ -121,8 +121,7 @@ func (voters voters) Less(i, j int) bool {
 // GetRlp returns encoded bytes for one voter
 // needed for hash thru interface DerivableList interface
 func (voters voters) GetRlp(i int) []byte {
-	enc, err := rlp.EncodeToBytes(voters[i])
-	log.Error("cannot marshall to RLP voters array", "err", err)
+	enc, _ := rlp.EncodeToBytes(voters[i])
 	return enc
 }
 
