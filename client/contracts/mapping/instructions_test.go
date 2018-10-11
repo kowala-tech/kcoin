@@ -17,12 +17,54 @@ func TestInstructionParserWith1ByteInstructions(t *testing.T) {
 }
 
 func TestInstructionParserWithMoreThan1ByteInstruction(t *testing.T) {
-	byteCode := "6001"
+	insBytes := []struct {
+		instruction     string
+		numInstructions int
+	}{
+		{
+			instruction:     "6001",
+			numInstructions: 1,
+		},
+		{
+			instruction:     "610102",
+			numInstructions: 1,
+		},
+		{
+			instruction:     "62010203",
+			numInstructions: 1,
+		},
+	}
 
-	instructions, err := ParseByteCode(common.Hex2Bytes(byteCode))
-	assert.NoError(t, err)
+	for _, ins := range insBytes {
+		instructions, err := ParseByteCode(common.Hex2Bytes(ins.instruction))
+		assert.NoError(t, err)
 
-	assert.Len(t, instructions, 1)
+		assert.Len(t, instructions, ins.numInstructions)
+	}
+}
+
+func TestGetPushNumBytes(t *testing.T) {
+	pushOps := []struct {
+		pushOp   byte
+		numBytes int
+	}{
+		{
+			pushOp:   byte(0x60),
+			numBytes: 1,
+		},
+		{
+			pushOp:   byte(0x70),
+			numBytes: 17,
+		},
+		{
+			pushOp:   byte(0x7f),
+			numBytes: 32,
+		},
+	}
+
+	for _, pushOp := range pushOps {
+		assert.Equal(t, pushOp.numBytes, GetLengthPushBytes(pushOp.pushOp))
+	}
 }
 
 func TestIsPushFunc(t *testing.T) {

@@ -1,20 +1,36 @@
 package mapping
 
-import "fmt"
-
+//ParseByteCode parses a byte code and returns an array of instructions.
 func ParseByteCode(byteCode []byte) ([]Instruction, error) {
-	fmt.Printf("%v\n", byteCode)
 	var instructions []Instruction
 
-	for _, byteC := range byteCode {
-		instructions = append(instructions, Instruction{OpCode: []byte{byteC}})
+	numBytes := len(byteCode)
+
+	for i := 0; i < numBytes; i++ {
+		instruction := Instruction{}
+
+		lengthPushBytes := 0
+
+		if IsPush(byteCode[i]) {
+			lengthPushBytes = GetLengthPushBytes(byteCode[i])
+			instruction.OpCode = byteCode[i : i+lengthPushBytes+1]
+		}
+
+		instructions = append(instructions, Instruction{OpCode: []byte{}})
+		i = i + lengthPushBytes + 1
 	}
 
 	return instructions, nil
 }
 
+//IsPush returns true if it is a push operation opcode
 func IsPush(b byte) bool {
 	return b >= 0x60 && b <= 0x7f
+}
+
+//GetLengthPushBytes returns the number of bytes the operation adds to the stack
+func GetLengthPushBytes(pushOp byte) int {
+	return int(pushOp) - 0x5f
 }
 
 type Instruction struct {
