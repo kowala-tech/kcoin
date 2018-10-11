@@ -6,23 +6,26 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/log"
 )
 
 type VotingTable interface {
 	Add(vote types.AddressVote) error
 	Leader() common.Hash
+	SubscribeNewMajorityEvent(ch chan<- NewMajorityEvent) event.Subscription
 }
 
 type votingTable struct {
-	voteType types.VoteType
-	voters   types.Voters
-	votes    *types.VotesSet
-	quorum   QuorumFunc
-	majority QuorumReachedFunc
+	voteType     types.VoteType
+	voters       types.Voters
+	votes        *types.VotesSet
+	quorum       QuorumFunc
+	majorityFeed event.Feed
+	scope        event.SubscriptionScope
 }
 
-func NewVotingTable(voteType types.VoteType, voters types.Voters, majority QuorumReachedFunc) (*votingTable, error) {
+func NewVotingTable(voteType types.VoteType, voters types.Voters) (*votingTable, error) {
 	if voters == nil {
 		return nil, errors.New("cant create a voting table with nil voters")
 	}
@@ -32,7 +35,6 @@ func NewVotingTable(voteType types.VoteType, voters types.Voters, majority Quoru
 		voters:   voters,
 		votes:    types.NewVotesSet(),
 		quorum:   TwoThirdsPlusOneVoteQuorum,
-		majority: majority,
 	}, nil
 }
 
@@ -49,7 +51,7 @@ func (table *votingTable) Add(voteAddressed types.AddressVote) error {
 
 	if table.hasQuorum() {
 		log.Debug("voting. Quorum has been achieved. majority", "votes", table.votes.Len(), "voters", table.voters.Len())
-		table.majority(vote.BlockHash())
+		go table.majorityFeed.Send(NewMajorityEvent{Winner: vote.BlockHash()})
 	}
 
 	return nil
@@ -78,7 +80,9 @@ func (table *votingTable) hasQuorum() bool {
 	return table.quorum(table.votes.Len(), table.voters.Len())
 }
 
-type QuorumReachedFunc func(winner common.Hash)
+func (table *votingTable) SubscribeNewMajorityEvent(ch chan<- NewMajorityEvent) event.Subscription {
+	return table.scope.Track(table.majorityFeed.Subscribe(ch))
+}
 
 type QuorumFunc func(votes, voters int) bool
 

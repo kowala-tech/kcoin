@@ -23,12 +23,13 @@ import (
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
-	"github.com/kowala-tech/kcoin/client/knode"
-	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/rpc"
+	"github.com/kowala-tech/kcoin/client/services/knode"
+	"github.com/kowala-tech/kcoin/client/services/knode/protocol"
+	"github.com/kowala-tech/kcoin/client/services/mining"
 	"golang.org/x/net/websocket"
 )
 
@@ -62,6 +63,8 @@ type Service struct {
 	server *p2p.Server   // Peer-to-peer server to retrieve networking infos
 	kcoin  *knode.Kowala // Full Kowala service if monitoring a full node
 	engine engine.Engine // Consensus engine to retrieve variadic block fields
+
+	mining *mining.Service
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page

@@ -46,11 +46,6 @@ func NewPublicKowalaAPI(b Backend) *PublicKowalaAPI {
 	return &PublicKowalaAPI{b}
 }
 
-// GasPrice returns a suggestion for a gas price.
-func (s *PublicKowalaAPI) GasPrice(ctx context.Context) (*big.Int, error) {
-	return s.b.SuggestPrice(ctx)
-}
-
 // ProtocolVersion returns the current Kowala protocol version this node supports
 func (s *PublicKowalaAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
@@ -1056,10 +1051,8 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		*(*uint64)(args.Gas) = 90000
 	}
 	if args.GasPrice == nil {
-		price, err := b.SuggestPrice(ctx)
-		if err != nil {
-			return err
-		}
+		// @ TODO (rgeraldes) - temporary (#740)
+		price := common.Big1
 		args.GasPrice = (*hexutil.Big)(price)
 	}
 	if args.Value == nil {

@@ -12,9 +12,10 @@ import (
 	"gopkg.in/urfave/cli.v1"
 
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
-	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/services/knode"
+	"github.com/kowala-tech/kcoin/client/services/mining"
 	"github.com/kowala-tech/kcoin/client/stats"
 	"github.com/naoina/toml"
 )
@@ -54,8 +55,9 @@ var tomlSettings = toml.Config{
 }
 
 type kcoinConfig struct {
-	Kowala knode.Config
 	Node   node.Config
+	Kowala knode.Config
+	Mining mining.Config
 	Stats  stats.Config
 }
 
@@ -104,7 +106,11 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
+
 	utils.SetKowalaConfig(ctx, stack, &cfg.Kowala)
+
+	utils.SetMiningConfig(ctx, stack, &cfg.Mining)
+
 	if ctx.GlobalIsSet(utils.KowalaStatsURLFlag.Name) {
 		cfg.Stats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
 	}
@@ -117,10 +123,12 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 
 	utils.RegisterKowalaService(stack, &cfg.Kowala)
 
+	utils.RegisterMiningService(stack, &cfg.Mining)
+
 	// Add the Stats daemon if requested.
 	statsURL := cfg.Stats.GetURL()
 	if statsURL != "" {
-		utils.RegisterKowalaStatsService(stack, statsURL)
+		utils.RegisterKowalaStatsService(stack, &cfg.Stats)
 	}
 
 	return stack

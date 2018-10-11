@@ -19,9 +19,13 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/event"
-	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
+)
+
+const (
+	// majorityChanSize is the size of channel listening to NewMajorityEvent.
+	majorityChSize = 256
 )
 
 var (
@@ -42,7 +46,6 @@ var (
 type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
-	ChainDb() kcoindb.Database
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 }
 
@@ -57,6 +60,9 @@ type Validator interface {
 	PendingBlock() *types.Block
 	Deposits(address *common.Address) ([]*types.Deposit, error)
 	RedeemDeposits() error
+	SubscribeNewProposalEvent(ch chan<- core.NewProposalEvent) event.Subscription
+	SubscribeNewBlockFragmentEvent(ch chan<- core.NewBlockFragmentEvent) event.Subscription
+	VotingSystem() *VotingSystem
 }
 
 type Service interface {
@@ -81,20 +87,22 @@ type validator struct {
 	// blockchain
 	backend  Backend
 	chain    *core.BlockChain
-	config   *params.ChainConfig
 	engine   engine.Engine
-	vmConfig vm.Config
 
 	walletAccount accounts.WalletAccount
 
 	consensus *consensus.Consensus // consensus binding
+
+	proposalFeed      event.Feed
+	blockFragmentFeed event.Feed
+	scope             event.SubscriptionScope
 
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
 	shouldStart int32 // should start indicates whether we should start after sync
 
 	// events
-	eventMux *event.TypeMux
+	globalEventMux *event.TypeMux
 
 	wg sync.WaitGroup
 
@@ -102,7 +110,7 @@ type validator struct {
 }
 
 // New returns a new consensus validator
-func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
+func New(backend Backend, consensus *consensus.Consensus, globalEventMux *event.TypeMux) *validator {
 	validator := &validator{
 		config:    config,
 		backend:   backend,

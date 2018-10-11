@@ -186,10 +186,8 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 	// Figure out the gas allowance and gas price values
 	gasPrice := opts.GasPrice
 	if gasPrice == nil {
-		gasPrice, err = c.transactor.SuggestGasPrice(ensureContext(opts.Context))
-		if err != nil {
-			return nil, fmt.Errorf("failed to suggest gas price: %v", err)
-		}
+		// @NOTE (rgeraldes) - temporary (#740)
+		gasPrice = common.Big1
 	}
 	gasLimit := opts.GasLimit
 	if gasLimit == 0 {

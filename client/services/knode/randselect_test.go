@@ -1,8 +1,8 @@
 package knode
 
 import (
-	"testing"
 	"math/rand"
+	"testing"
 )
 
 type testWrsItem struct {

@@ -553,7 +553,12 @@ web3._extend({
 			call: 'validator_redeemDeposits'
 		}),
 	],
-	properties: []
+	properties: [
+		new web3._extend.Property({
+			name: 'coinbase',
+			getter: 'validator_coinbase'
+		}),
+	]
 });
 `
 

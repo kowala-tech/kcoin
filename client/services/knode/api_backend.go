@@ -16,7 +16,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
 )
@@ -24,7 +23,6 @@ import (
 // KowalaAPIBackend implements kcoinapi.Backend for full nodes
 type KowalaAPIBackend struct {
 	kcoin *Kowala
-	gpo   *gasprice.Oracle
 }
 
 // ChainConfig returns the active chain configuration.
@@ -42,12 +40,6 @@ func (b *KowalaAPIBackend) SetHead(number uint64) {
 }
 
 func (b *KowalaAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
-	// Pending block is only known by the validator
-	if blockNr == rpc.PendingBlockNumber {
-		block := b.kcoin.validator.PendingBlock()
-		return block.Header(), nil
-	}
-
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
 		return b.kcoin.blockchain.CurrentBlock().Header(), nil
@@ -57,11 +49,6 @@ func (b *KowalaAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.Block
 }
 
 func (b *KowalaAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
-	// Pending block is only known by the validator
-	if blockNr == rpc.PendingBlockNumber {
-		block := b.kcoin.validator.PendingBlock()
-		return block, nil
-	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
 		return b.kcoin.blockchain.CurrentBlock(), nil
@@ -70,11 +57,6 @@ func (b *KowalaAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockN
 }
 
 func (b *KowalaAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
-	// Pending state is only known by the validator
-	if blockNr == rpc.PendingBlockNumber {
-		block, state := b.kcoin.validator.Pending()
-		return state, block.Header(), nil
-	}
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
 	if header == nil || err != nil {

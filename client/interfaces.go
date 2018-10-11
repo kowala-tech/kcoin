@@ -155,12 +155,6 @@ type TransactionSender interface {
 	SendTransaction(ctx context.Context, tx *types.Transaction) error
 }
 
-// GasPricer wraps the gas price oracle, which monitors the blockchain to determine the
-// optimal gas price given current fee market conditions.
-type GasPricer interface {
-	SuggestGasPrice(ctx context.Context) (*big.Int, error)
-}
-
 // A PendingStateReader provides access to the pending state, which is the result of all
 // known executable transactions which have not yet been included in the blockchain. It is
 // commonly used to display the result of ’unconfirmed’ actions (e.g. wallet value
