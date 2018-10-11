@@ -662,72 +662,84 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Ha
 		return err
 	}
 
-	if val.blockFragments.HasAll() {
-		block, err := val.blockFragments.Assemble()
-		if err != nil {
-			err = errors.New("Failed to assemble the block: " + err.Error())
-			log.Error("error while adding a new block fragment", "err", err, "round", round, "block", blockNumber, "fragment", fragment)
-			return err
-		}
-
-		// Start the parallel header verifier
-		nBlocks := 1
-		headers := make([]*types.Header, nBlocks)
-		seals := make([]bool, nBlocks)
-		headers[nBlocks-1] = block.Header()
-		seals[nBlocks-1] = true
-
-		abort, results := val.engine.VerifyHeaders(val.chain, headers, seals)
-		defer close(abort)
-
-		err = <-results
-		if err != nil {
-			log.Error("error while verifying a block headers",
-				"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block",
-				block, "headers", headers, "seals", seals)
-			return err
-		}
-
-		err = val.chain.Validator().ValidateBody(block)
-		if err != nil {
-			err = errors.New("Failed to validate thr block body: " + err.Error())
-			log.Error("error while validating a block body",
-				"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block", block)
-
-			return err
-		}
-
-		parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
-
-		// Process block using the parent state as reference point.
-		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
-		if err != nil {
-			log.Error("Failed to process the block", "err", err,
-				"round", round, "block", blockNumber, "fragment", fragment, "block", block)
-
-			log.Crit("Failed to process the block", "err", err)
-		}
-
-		// guarded section
-		val.handleMutex.Lock()
-		val.receipts = receipts
-
-		// Validate the state using the default validator
-		err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
-		if err != nil {
-			val.handleMutex.Unlock()
-
-			log.Error("Failed to validate the state", "err", err,
-				"round", round, "block", blockNumber, "fragment", fragment, "block", block)
-
-			log.Crit("Failed to validate the state", "err", err)
-		}
-
-		val.block = block
-		val.handleMutex.Unlock()
-
-		go func() { val.blockCh <- block }()
+	if !val.blockFragments.HasAll() {
+		return nil
 	}
+
+	return val.assembleBlock(round, blockNumber, fragment)
+}
+
+func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, fragment *types.BlockFragment) error {
+	block, err := val.blockFragments.Assemble()
+	if err != nil {
+		err = errors.New("Failed to assemble the block: " + err.Error())
+		log.Error("error while adding a new block fragment", "err", err, "round", round, "block", blockNumber, "fragment", fragment)
+		return err
+	}
+
+	// Start the parallel header verifier
+	if err = val.validateProposalBlock(block, round, blockNumber, fragment); err != nil {
+		return err
+	}
+
+	parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
+
+	// Process block using the parent state as reference point.
+	receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
+	if err != nil {
+		log.Error("Failed to process the block", "err", err,
+			"round", round, "block", blockNumber, "fragment", fragment, "block", block)
+
+		log.Crit("Failed to process the block", "err", err)
+	}
+
+	val.handleMutex.Lock()
+	defer val.handleMutex.Unlock()
+
+	val.receipts = receipts
+
+	// Validate the state using the default validator
+	err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
+	if err != nil {
+		log.Error("Failed to validate the state", "err", err,
+			"round", round, "block", blockNumber, "fragment", fragment, "block", block)
+
+		log.Crit("Failed to validate the state", "err", err)
+	}
+
+	val.block = block
+
+	go func() { val.blockCh <- block }()
+
+	return nil
+}
+
+func (val *validator) validateProposalBlock(block *types.Block, round uint64, blockNumber *big.Int, fragment *types.BlockFragment) error {
+	nBlocks := 1
+	headers := make([]*types.Header, nBlocks)
+	seals := make([]bool, nBlocks)
+	headers[nBlocks-1] = block.Header()
+	seals[nBlocks-1] = true
+	abort, results := val.engine.VerifyHeaders(val.chain, headers, seals)
+	defer close(abort)
+
+	err := <-results
+	if err != nil {
+		log.Error("error while verifying a block headers",
+			"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block",
+			block, "headers", headers, "seals", seals)
+		return err
+	}
+
+	err = val.chain.Validator().ValidateBody(block)
+	if err != nil {
+		err = errors.New("Failed to validate thr block body: " + err.Error())
+		log.Error("error while validating a block body",
+			"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block", block)
+
+		return err
+	}
+
 	return nil
 }
 

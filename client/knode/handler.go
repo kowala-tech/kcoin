@@ -638,7 +638,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// ignore
 			break
 		}
-		log.Info("got a proposal block", "block", proposal.String())
+		log.Info("a proposal block added successfully", "chainID", proposal.ChainID().Int64(),
+			"number", proposal.BlockNumber().Int64(), "round", proposal.Round(), "hash", proposal.Hash().String())
 
 	case msg.Code == VoteMsg:
 		if !pm.validator.Validating() {
@@ -668,17 +669,19 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
+		/*
 		if !pm.validator.HasProposer() {
 			return fmt.Errorf("expected block fragments only after the block had been proposed. block %d", request.BlockNumber)
 		}
-
-		p.MarkBlockFragment(request.Data.Proof)
+		*/
 
 		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Hash, request.Round, request.Data); err != nil {
 			log.Error("error while adding a new block fragment", "err", err, "round", request.Round, "block", request.BlockNumber, "fragment", request.Data)
 			// ignore
 			break
 		}
+
+		p.MarkBlockFragment(request.Data.Proof)
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
