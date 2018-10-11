@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/core"
-	"github.com/kowala-tech/kcoin/client/knode/currency"
-	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/services/knode/currency"
+	"github.com/kowala-tech/kcoin/client/services/knode/downloader"
 )
 
 // DefaultConfig contains default settings for use on the Kowala main net.

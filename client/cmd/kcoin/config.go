@@ -16,7 +16,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/services/knode"
 	"github.com/kowala-tech/kcoin/client/services/mining"
-	"github.com/kowala-tech/kcoin/client/stats"
+	"github.com/kowala-tech/kcoin/client/services/stats"
 	"github.com/naoina/toml"
 )
 

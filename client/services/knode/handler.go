@@ -15,15 +15,14 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
-	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/fetcher"
-	"github.com/kowala-tech/kcoin/client/knode/protocol"
-	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/p2p/discover"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rlp"
+	"github.com/kowala-tech/kcoin/client/services/knode/downloader"
+	"github.com/kowala-tech/kcoin/client/services/knode/fetcher"
+	"github.com/kowala-tech/kcoin/client/services/knode/protocol"
 )
 
 const (
@@ -78,7 +77,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new kowala sub protocol manager. The Kowala sub protocol manages peers capable
 // with the kowala network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kcoindb.Database, validator validator.Validator) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb kcoindb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,

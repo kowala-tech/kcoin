@@ -7,9 +7,9 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
-	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p/discover"
+	"github.com/kowala-tech/kcoin/client/services/knode/downloader"
 )
 
 const (

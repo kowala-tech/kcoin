@@ -2,7 +2,6 @@ package knode
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
@@ -15,9 +14,9 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
-	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
+	"github.com/kowala-tech/kcoin/client/services/knode/downloader"
 )
 
 // KowalaAPIBackend implements kcoinapi.Backend for full nodes
@@ -163,10 +162,6 @@ func (b *KowalaAPIBackend) Downloader() *downloader.Downloader {
 
 func (b *KowalaAPIBackend) ProtocolVersion() int {
 	return b.kcoin.EthVersion()
-}
-
-func (b *KowalaAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
-	return b.gpo.SuggestPrice(ctx)
 }
 
 func (b *KowalaAPIBackend) ChainDb() kcoindb.Database {

@@ -1,4 +1,4 @@
-// Package kcoin implements the Kowala protocol.
+// Package knode implements the Kowala protocol.
 package knode
 
 import (
@@ -25,15 +25,15 @@ import (
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
-	"github.com/kowala-tech/kcoin/client/knode/downloader"
-	"github.com/kowala-tech/kcoin/client/knode/filters"
-	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/p2p"
-	"github.com/kowala-tech/kcoin/client/p2p/discv5"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
+	root "github.com/kowala-tech/kcoin/client/services"
+	"github.com/kowala-tech/kcoin/client/services/knode/downloader"
+	"github.com/kowala-tech/kcoin/client/services/knode/filters"
+	"github.com/kowala-tech/kcoin/client/services/knode/protocol"
 	"github.com/pkg/errors"
 )
 
@@ -70,8 +70,7 @@ type Kowala struct {
 	networkID     uint64
 	netRPCService *kcoinapi.PublicNetAPI
 
-	lock       sync.RWMutex // Protects the variadic fields (e.g. gas price)
-	serverPool *serverPool
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price)
 }
 
 // New creates a new Kowala object (including the
@@ -97,7 +96,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 		config:         config,
 		chainDb:        chainDb,
 		chainConfig:    chainConfig,
-		eventMux:       ctx.EventMux,
+		eventMux:       ctx.GlobalEventMux,
 		accountManager: ctx.AccountManager,
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
@@ -133,7 +132,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 
 	for _, constructor := range kcoin.bindingFuncs {
-		contract, err := constructor(NewContractBackend(kcoin.apiBackend), kcoin.chainConfig.ChainID)
+		contract, err := constructor(root.NewContractBackend(kcoin.apiBackend), kcoin.chainConfig.ChainID)
 		if err != nil {
 			return nil, err
 		}
@@ -171,8 +170,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	if kcoin.protocolManager, err = NewProtocolManager(kcoin.chainConfig, config.SyncMode, config.NetworkId, kcoin.eventMux, kcoin.txPool, kcoin.engine, kcoin.blockchain, chainDb); err != nil {
 		return nil, err
 	}
-
-	kcoin.serverPool = newServerPool(chainDb, kcoin.shutdownChan, new(sync.WaitGroup))
 
 	return kcoin, nil
 }
@@ -277,12 +274,6 @@ func (s *Kowala) TransactionReceipt(ctx context.Context, txHash common.Hash) (*t
 	return receipts[index], nil
 }
 
-// Protocols implements node.Service, returning all the currently configured
-// network protocols to start.
-func (s *Kowala) Protocols() []p2p.Protocol {
-	return s.protocolManager.SubProtocols
-}
-
 // Start implements node.Service, starting all internal goroutines needed by the
 // Kowala protocol implementation.
 func (s *Kowala) Start(srvr *p2p.Server) error {
@@ -299,23 +290,6 @@ func (s *Kowala) Start(srvr *p2p.Server) error {
 		if maxPeers < srvr.MaxPeers/2 {
 			maxPeers = srvr.MaxPeers / 2
 		}
-	}
-
-	//fixme: should be removed after develop light client
-	if srvr.DiscoveryV5 {
-		protocolTopic := discv5.DiscoveryTopic(
-			s.blockchain.Genesis().Hash(),
-			protocol.ProtocolName,
-			protocol.Kcoin1,
-			s.networkID,
-			s.chainConfig.ChainID.Int64(),
-			s.config.Currency)
-
-		go func() {
-			srvr.DiscV5.RegisterTopic(protocolTopic, s.shutdownChan)
-		}()
-
-		s.serverPool.start(srvr, protocolTopic)
 	}
 
 	// Start the networking layer and the light server if requested

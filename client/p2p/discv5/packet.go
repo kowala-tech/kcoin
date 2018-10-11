@@ -2,7 +2,8 @@ package discv5
 
 import (
 	"bytes"
-	"github.com/kowala-tech/kcoin/client/knode/protocol"
+
+	"github.com/kowala-tech/kcoin/client/services/knode/protocol"
 )
 
 type Packet struct {

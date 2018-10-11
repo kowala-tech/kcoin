@@ -34,10 +34,10 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
-	"github.com/kowala-tech/kcoin/client/knode/tracers"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/rpc"
+	"github.com/kowala-tech/kcoin/client/services/knode/tracers"
 	"github.com/kowala-tech/kcoin/client/trie"
 )
 

@@ -85,9 +85,9 @@ type validator struct {
 	signer types.Signer
 
 	// blockchain
-	backend  Backend
-	chain    *core.BlockChain
-	engine   engine.Engine
+	backend Backend
+	chain   *core.BlockChain
+	engine  engine.Engine
 
 	walletAccount accounts.WalletAccount
 
@@ -112,13 +112,11 @@ type validator struct {
 // New returns a new consensus validator
 func New(backend Backend, consensus *consensus.Consensus, globalEventMux *event.TypeMux) *validator {
 	validator := &validator{
-		backend:   backend,
-		chain:     backend.BlockChain(),
-		consensus: consensus,
-		globalEventMux:  globalEventMux,
-		signer:    types.NewAndromedaSigner(config.ChainID),
-		vmConfig:  vmConfig,
-		canStart:  0,
+		backend:        backend,
+		chain:          backend.BlockChain(),
+		consensus:      consensus,
+		globalEventMux: globalEventMux,
+		canStart:       0,
 	}
 	validator.engine = validator.chain.Engine()
 	validator.signer = types.NewAndromedaSigner(validator.chain.Config().ChainID)
@@ -129,7 +127,7 @@ func New(backend Backend, consensus *consensus.Consensus, globalEventMux *event.
 }
 
 func (val *validator) sync() {
-	if err := SyncWaiter(val.eventMux); err != nil {
+	if err := SyncWaiter(val.globalEventMux); err != nil {
 		log.Warn("Failed to sync with network", "err", err)
 	} else {
 		val.finishedSync()
@@ -296,14 +294,19 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.votingSystem, err = NewVotingSystem(val.globalEventMux, val.blockNumber, val.voters)
+	val.votingSystem, err = NewVotingSystem(val.blockNumber, val.voters)
 	if err != nil {
 		log.Error("Failed to create voting system", "err", err)
 		return nil
 	}
 
+	// @TODO (rgeraldes) - close channels
+	val.preVoteMajorityCh = make(chan core.NewMajorityEvent, majorityChSize)
+	val.preVoteMajoritySub = val.votingSystem.SubscribePreVoteMajority(val.preVoteMajorityCh)
+	val.preCommitMajorityCh = make(chan core.NewMajorityEvent, majorityChSize)
+	val.preCommitMajoritySub = val.votingSystem.SubscribePreCommitMajority(val.preCommitMajorityCh)
+
 	val.blockCh = make(chan *types.Block)
-	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 
 	if err = val.makeCurrent(parent); err != nil {
 		log.Error("Failed to create mining context", "err", err)
@@ -323,6 +326,7 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	val.handleMutex.Lock()
 	val.proposal = proposal
 	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
+	go val.proposalFeed.Send(core.NewProposalEvent{Proposal: proposal})
 	val.handleMutex.Unlock()
 
 	return nil
@@ -422,7 +426,7 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 	snap := val.state.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
+	receipt, _, err := core.ApplyTransaction(val.chain.Config(), bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
 	if err != nil {
 		val.state.RevertToSnapshot(snap)
 		return err, nil
@@ -502,7 +506,7 @@ func (val *validator) createBlock() *types.Block {
 	}
 
 	txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
-	val.commitTransactions(val.eventMux, txs, val.chain, val.walletAccount.Account().Address)
+	val.commitTransactions(val.globalEventMux, txs, val.chain, val.walletAccount.Account().Address)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
@@ -526,7 +530,7 @@ func (val *validator) propose() {
 
 	proposal := types.NewProposal(val.blockNumber, val.round, fragments.Metadata(), lockedRound, lockedBlock)
 
-	signedProposal, err := val.walletAccount.SignProposal(val.walletAccount.Account(), proposal, val.config.ChainID)
+	signedProposal, err := val.walletAccount.SignProposal(val.walletAccount.Account(), proposal, val.chain.Config().ChainID)
 	if err != nil {
 		log.Crit("Failed to sign the proposal", "err", err)
 	}
@@ -534,10 +538,10 @@ func (val *validator) propose() {
 	val.proposal = signedProposal
 	val.block = block
 
-	val.eventMux.Post(core.NewProposalEvent{Proposal: proposal})
+	go val.proposalFeed.Send(core.NewProposalEvent{Proposal: proposal})
 
 	for i := uint(0); i < fragments.Size(); i++ {
-		val.eventMux.Post(core.NewBlockFragmentEvent{
+		go val.blockFragmentFeed.Send(core.NewBlockFragmentEvent{
 			BlockNumber: val.blockNumber,
 			Round:       val.round,
 			Data:        fragments.Get(int(i)),
@@ -611,7 +615,7 @@ func (val *validator) preCommit() {
 }
 
 func (val *validator) vote(vote *types.Vote) {
-	signedVote, err := val.walletAccount.SignVote(val.walletAccount.Account(), vote, val.config.ChainID)
+	signedVote, err := val.walletAccount.SignVote(val.walletAccount.Account(), vote, val.chain.Config().ChainID)
 	if err != nil {
 		log.Crit("Failed to sign the vote", "err", err)
 	}
@@ -637,6 +641,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		err = errors.New("Failed to add a new block fragment: " + err.Error())
 		return err
 	}
+	go val.blockFragmentFeed.Send(core.NewBlockFragmentEvent{BlockNumber: blockNumber, Round: round, Data: fragment})
 
 	if val.blockFragments.HasAll() {
 		block, err := val.blockFragments.Assemble()
@@ -671,7 +676,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, round uint64, fragm
 		parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
 
 		// Process block using the parent state as reference point.
-		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
+		receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.chain.VMConfig())
 		if err != nil {
 			log.Error("Failed to process the block", "err", err,
 				"round", round, "block", blockNumber, "fragment", fragment, "block", block)
@@ -770,9 +775,9 @@ func (val *validator) RedeemDeposits() error {
 func (val *validator) VotingSystem() *VotingSystem {
 	return val.votingSystem
 }
- func (val *validator) SubscribeNewProposalEvent(ch chan<- core.NewProposalEvent) event.Subscription {
+func (val *validator) SubscribeNewProposalEvent(ch chan<- core.NewProposalEvent) event.Subscription {
 	return val.scope.Track(val.proposalFeed.Subscribe(ch))
 }
- func (val *validator) SubscribeNewBlockFragmentEvent(ch chan<- core.NewBlockFragmentEvent) event.Subscription {
+func (val *validator) SubscribeNewBlockFragmentEvent(ch chan<- core.NewBlockFragmentEvent) event.Subscription {
 	return val.scope.Track(val.blockFragmentFeed.Subscribe(ch))
 }

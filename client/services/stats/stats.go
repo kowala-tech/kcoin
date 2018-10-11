@@ -2,7 +2,6 @@
 package stats
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -117,10 +116,6 @@ func New(url string, kowalaServ *knode.Kowala) (*Service, error) {
 		histCh:       make(chan []uint64, 1),
 	}, nil
 }
-
-// Protocols implements node.Service, returning the P2P network protocols used
-// by the stats service (nil as it doesn't use the devp2p overlay network).
-func (s *Service) Protocols() []p2p.Protocol { return nil }
 
 // APIs implements node.Service, returning the RPC API endpoints provided by the
 // stats service (nil as it doesn't provide any user callable APIs).
@@ -550,18 +545,18 @@ func (s *Service) assembleBlockStats(block *types.Block) (*blockStats, error) {
 	author, _ := s.engine.Author(header)
 
 	// Gather the contracts info from the local blockchain
-	consensus := s.kcoin.Consensus()
-	minDeposit, err := consensus.MinimumDeposit()
+	validatorMgr := s.mining.ValidatorMgr()
+	minDeposit, err := validatorMgr.MinimumDeposit()
 	if err != nil {
 		return nil, err
 	}
 
-	validatorCount, err := consensus.GetValidatorCount()
+	validatorCount, err := validatorMgr.GetValidatorCount()
 	if err != nil {
 		return nil, err
 	}
 
-	maxValidators, err := consensus.MaxValidators()
+	maxValidators, err := validatorMgr.MaxValidators()
 	if err != nil {
 		return nil, err
 	}
@@ -693,13 +688,15 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 		gasprice   int
 	)
 
-	validating = s.kcoin.Validator().Validating()
+	validating = s.mining.Validator().Validating()
 
 	sync := s.kcoin.Downloader().Progress()
 	syncing = s.kcoin.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
 
-	price, _ := s.kcoin.APIBackend().SuggestPrice(context.Background())
-	gasprice = int(price.Uint64())
+	// @TODO (rgeraldes) - temporary
+	//price, _ := s.kcoin.APIBackend().SuggestPrice(context.Background())
+	//gasprice = int(price.Uint64())
+	gasprice = 1
 
 	// Assemble the node stats and send it to the server
 	log.Trace("Sending node details to kcoinstats")

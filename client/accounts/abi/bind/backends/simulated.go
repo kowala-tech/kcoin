@@ -19,11 +19,10 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
-	"github.com/kowala-tech/kcoin/client/knode/filters"
-
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rpc"
+	"github.com/kowala-tech/kcoin/client/services/knode/filters"
 )
 
 var errBlockNumberUnsupported = errors.New("SimulatedBackend cannot access blocks other than the latest block")

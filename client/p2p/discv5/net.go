@@ -13,10 +13,10 @@ import (
 	"github.com/kowala-tech/kcoin/client/common/mclock"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/crypto/sha3"
-	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
+	"github.com/kowala-tech/kcoin/client/services/knode/protocol"
 )
 
 var (

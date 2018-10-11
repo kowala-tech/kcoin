@@ -164,7 +164,7 @@ func (val *validator) preVoteWaitState() stateFn {
 	timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
 
 	select {
-	case <-val.majority.Chan():
+	case <-val.preVoteMajorityCh:
 		log.Info("There's a majority in the pre-vote sub-election!")
 		// fixme shall we do something here with current stateDB?
 	case <-time.After(timeout):
@@ -184,10 +184,9 @@ func (val *validator) preCommitState() stateFn {
 func (val *validator) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit sub-election")
 	timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
-	defer val.majority.Unsubscribe()
 
 	select {
-	case event := <-val.majority.Chan():
+	case event := <-val.preCommitMajorityCh:
 		log.Info("There's a majority in the pre-commit sub-election!", "event", spew.Sdump(event))
 		if val.block == nil || bytes.Equal(val.block.Hash().Bytes(), common.Hash{}.Bytes()) {
 			log.Debug("No one block wins!")
@@ -223,7 +222,7 @@ func (val *validator) commitState() stateFn {
 	}
 
 	// Broadcast the block and announce chain insertion event
-	go val.eventMux.Post(core.NewMinedBlockEvent{Block: val.block})
+	go val.globalEventMux.Post(core.NewMinedBlockEvent{Block: val.block})
 	var (
 		events []interface{}
 		logs   = val.work.state.Logs()

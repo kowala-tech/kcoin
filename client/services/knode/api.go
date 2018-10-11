@@ -22,6 +22,12 @@ import (
 	"github.com/kowala-tech/kcoin/client/trie"
 )
 
+// PrivateAdminAPI is the collection of Kowala full node-related APIs
+// exposed over the private admin endpoint.
+type PrivateAdminAPI struct {
+	kcoin *Kowala
+}
+
 // NewPrivateAdminAPI creates a new API definition for the full node private
 // admin methods of the Kowala service.
 func NewPrivateAdminAPI(kcoin *Kowala) *PrivateAdminAPI {

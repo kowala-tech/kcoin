@@ -9,9 +9,9 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
-	"github.com/kowala-tech/kcoin/client/knode/protocol"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/rlp"
+	"github.com/kowala-tech/kcoin/client/services/knode/protocol"
 	"gopkg.in/fatih/set.v0"
 )
 

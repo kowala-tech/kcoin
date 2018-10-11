@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
-	"github.com/kowala-tech/kcoin/client/knode/protocol"
-	"github.com/kowala-tech/kcoin/client/params"
-	"gopkg.in/urfave/cli.v1"
-	"github.com/kowala-tech/kcoin/client/version"
 	"github.com/kowala-tech/kcoin/client/log"
-	"os"
+	"github.com/kowala-tech/kcoin/client/params"
+	"github.com/kowala-tech/kcoin/client/services/knode/protocol"
+	"github.com/kowala-tech/kcoin/client/version"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (

@@ -10,8 +10,8 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/mclock"
-	cur "github.com/kowala-tech/kcoin/client/knode/currency"
 	"github.com/kowala-tech/kcoin/client/log"
+	cur "github.com/kowala-tech/kcoin/client/services/knode/currency"
 )
 
 const (

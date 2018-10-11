@@ -32,8 +32,9 @@ type VotingState struct {
 	commitRound int
 
 	// inputs
-	blockCh  chan *types.Block
-	majority *event.TypeMuxSubscription
+	blockCh                                  chan *types.Block
+	preVoteMajorityCh, preCommitMajorityCh   chan core.NewMajorityEvent
+	preVoteMajoritySub, preCommitMajoritySub event.Subscription
 
 	// state changes related to the election
 	*work
@@ -42,22 +43,18 @@ type VotingState struct {
 // VotingTables represents the voting tables available for each election round
 type VotingTables = [2]core.VotingTable
 
-func NewVotingTables(eventMux *event.TypeMux, voters types.Voters) (VotingTables, error) {
-	majorityFunc := func(winnerBlock common.Hash) {
-		go eventMux.Post(core.NewMajorityEvent{Winner: winnerBlock})
-	}
-
+func NewVotingTables(voters types.Voters) (VotingTables, error) {
 	var err error
 	tables := VotingTables{}
 
 	// prevote
-	tables[types.PreVote], err = core.NewVotingTable(types.PreVote, voters, majorityFunc)
+	tables[types.PreVote], err = core.NewVotingTable(types.PreVote, voters)
 	if err != nil {
 		return tables, err
 	}
 
 	// precommit
-	tables[types.PreCommit], err = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
+	tables[types.PreCommit], err = core.NewVotingTable(types.PreCommit, voters)
 	if err != nil {
 		return tables, err
 	}
@@ -72,17 +69,17 @@ type VotingSystem struct {
 	round          uint64
 	votesPerRound  map[uint64]VotingTables
 
-	eventMux *event.TypeMux
+	voteFeed event.Feed
+	scope    event.SubscriptionScope
 }
 
 // NewVotingSystem returns a new voting system
-func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters types.Voters) (*VotingSystem, error) {
+func NewVotingSystem(electionNumber *big.Int, voters types.Voters) (*VotingSystem, error) {
 	system := &VotingSystem{
 		voters:         voters,
 		electionNumber: electionNumber,
 		round:          0,
 		votesPerRound:  make(map[uint64]VotingTables),
-		eventMux:       eventMux,
 	}
 
 	err := system.NewRound()
@@ -95,7 +92,7 @@ func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters ty
 
 func (vs *VotingSystem) NewRound() error {
 	var err error
-	vs.votesPerRound[vs.round], err = NewVotingTables(vs.eventMux, vs.voters)
+	vs.votesPerRound[vs.round], err = NewVotingTables(vs.voters)
 	if err != nil {
 		return err
 	}
@@ -114,7 +111,7 @@ func (vs *VotingSystem) Add(vote types.AddressVote) error {
 		return err
 	}
 
-	go vs.eventMux.Post(core.NewVoteEvent{Vote: vote.Vote()})
+	go vs.voteFeed.Send(core.NewVoteEvent{Vote: vote.Vote()})
 
 	return nil
 }
@@ -139,4 +136,24 @@ func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) (core.
 	}
 
 	return votingTables[int(voteType)], nil
+}
+
+// SubscribeNewVoteEvent registers a subscription of NewVoteEvent and
+// starts sending event to the given channel.
+func (vs *VotingSystem) SubscribeNewVoteEvent(ch chan<- core.NewVoteEvent) event.Subscription {
+	return vs.scope.Track(vs.voteFeed.Subscribe(ch))
+}
+
+// SubscribePreVoteMajority registers a subscription of NewMajorityEvent
+// in the pre vote table and starts sending event to the given channel.
+func (vs *VotingSystem) SubscribePreVoteMajority(ch chan<- core.NewMajorityEvent) event.Subscription {
+	votingTables := vs.votesPerRound[vs.round]
+	return votingTables[int(types.PreVote)].SubscribeNewMajorityEvent(ch)
+}
+
+// SubscribePreCommitMajority registers a subscription of NewMajorityEvent
+// in the pre commit table and starts sending event to the given channel.
+func (vs *VotingSystem) SubscribePreCommitMajority(ch chan<- core.NewMajorityEvent) event.Subscription {
+	votingTables := vs.votesPerRound[vs.round]
+	return votingTables[int(types.PreCommit)].SubscribeNewMajorityEvent(ch)
 }

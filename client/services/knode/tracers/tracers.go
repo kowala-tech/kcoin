@@ -21,7 +21,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/kowala-tech/kcoin/client/knode/tracers/internal/tracers"
+	"github.com/kowala-tech/kcoin/client/services/knode/tracers/internal/tracers"
 )
 
 // all contains all the built in JavaScript tracers by name.

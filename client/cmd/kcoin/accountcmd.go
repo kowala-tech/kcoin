@@ -20,14 +20,13 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/kowala-tech/kcoin/client/knode"
-
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
 	"github.com/kowala-tech/kcoin/client/console"
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/services/knode"
 	"gopkg.in/urfave/cli.v1"
 )
 

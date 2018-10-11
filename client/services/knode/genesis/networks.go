@@ -1,6 +1,6 @@
 package genesis
 
-import "github.com/kowala-tech/kcoin/client/knode/currency"
+import "github.com/kowala-tech/kcoin/client/services/knode/currency"
 
 var Networks = map[string]map[string]Options{
 	currency.KUSD: {

@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/kowala-tech/kcoin/client/event"
-	"github.com/kowala-tech/kcoin/client/knode/downloader"
+	"github.com/kowala-tech/kcoin/client/services/knode/downloader"
 )
 
 var (
