@@ -112,16 +112,16 @@ type validator struct {
 // New returns a new consensus validator
 func New(backend Backend, consensus *consensus.Consensus, globalEventMux *event.TypeMux) *validator {
 	validator := &validator{
-		config:    config,
 		backend:   backend,
 		chain:     backend.BlockChain(),
-		engine:    engine,
 		consensus: consensus,
-		eventMux:  eventMux,
+		globalEventMux:  globalEventMux,
 		signer:    types.NewAndromedaSigner(config.ChainID),
 		vmConfig:  vmConfig,
 		canStart:  0,
 	}
+	validator.engine = validator.chain.Engine()
+	validator.signer = types.NewAndromedaSigner(validator.chain.Config().ChainID)
 
 	go validator.sync()
 
@@ -296,7 +296,7 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.votingSystem, err = NewVotingSystem(val.eventMux, val.blockNumber, val.voters)
+	val.votingSystem, err = NewVotingSystem(val.globalEventMux, val.blockNumber, val.voters)
 	if err != nil {
 		log.Error("Failed to create voting system", "err", err)
 		return nil
@@ -765,4 +765,14 @@ func (val *validator) RedeemDeposits() error {
 	}
 
 	return nil
+}
+
+func (val *validator) VotingSystem() *VotingSystem {
+	return val.votingSystem
+}
+ func (val *validator) SubscribeNewProposalEvent(ch chan<- core.NewProposalEvent) event.Subscription {
+	return val.scope.Track(val.proposalFeed.Subscribe(ch))
+}
+ func (val *validator) SubscribeNewBlockFragmentEvent(ch chan<- core.NewBlockFragmentEvent) event.Subscription {
+	return val.scope.Track(val.blockFragmentFeed.Subscribe(ch))
 }
