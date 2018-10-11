@@ -2,6 +2,7 @@ package validator
 
 import (
 	"fmt"
+	"github.com/kowala-tech/kcoin/client/common"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -119,7 +120,10 @@ func (val *validator) newRoundState() stateFn {
 		val.proposal = nil
 		val.proposer = nil
 		val.block = nil
-		val.blockFragments = nil
+
+		val.blockFragmentsLock.Lock()
+		val.blockFragments = make(map[common.Hash]*types.BlockFragments)
+		val.blockFragmentsLock.Unlock()
 
 		parent := val.chain.CurrentBlock()
 		val.makeCurrent(parent)

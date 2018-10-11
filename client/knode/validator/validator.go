@@ -285,7 +285,10 @@ func (val *validator) init() error {
 	val.proposal = nil
 	val.proposer = nil
 	val.block = nil
-	val.blockFragments = nil
+
+	val.blockFragmentsLock.Lock()
+	val.blockFragments = make(map[common.Hash]*types.BlockFragments)
+	val.blockFragmentsLock.Unlock()
 
 	val.lockedRound = 0
 	val.lockedBlock = nil
@@ -339,8 +342,22 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 
 	val.handleMutex.Lock()
 	val.proposal = proposal
-	val.blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
+
+	val.blockFragmentsLock.Lock()
+	if _, ok := val.blockFragments[proposal.Hash()]; !ok {
+		val.blockFragments[proposal.Hash()] = types.NewDataSetFromMeta(proposal.BlockMetadata())
+	}
+	val.blockFragmentsLock.Unlock()
+
 	val.handleMutex.Unlock()
+
+	val.blockFragmentsLock.Lock()
+	defer val.blockFragmentsLock.Unlock()
+
+	blockFragments := val.blockFragments[proposal.Hash()]
+	if blockFragments.HasAll() {
+		return val.assembleBlock(proposal.Round(), proposal.BlockNumber(), proposal.Hash())
+	}
 
 	return nil
 }
@@ -657,28 +674,56 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Ha
 		return fmt.Errorf("expected block fragments for %d, got %d", val.blockNumber.Int64(), blockNumber.Int64())
 	}
 
-	if err := val.blockFragments.Add(blockNumber, blockHash, fragment); err != nil {
-		err = errors.New("Failed to add a new block fragment: " + err.Error())
+	err, canAssemble := val.addFragment(fragment, blockHash)
+	if err != nil {
 		return err
 	}
 
-	if !val.blockFragments.HasAll() {
-		return nil
+	if canAssemble {
+		return val.assembleBlock(round, blockNumber, blockHash)
 	}
 
-	return val.assembleBlock(round, blockNumber, fragment)
+	return nil
 }
 
-func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, fragment *types.BlockFragment) error {
-	block, err := val.blockFragments.Assemble()
+// returns true if all fragments can be assembled now
+func (val *validator) addFragment(fragment *types.BlockFragment, blockHash common.Hash) (error, bool) {
+	val.blockFragmentsLock.Lock()
+	defer val.blockFragmentsLock.Unlock()
+
+	blockFragments, ok := val.blockFragments[blockHash]
+	if !ok {
+		blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
+		val.blockFragments[blockHash] = blockFragments
+	}
+
+	if err := blockFragments.Add(fragment); err != nil {
+		err = errors.New("Failed to add a new block fragment: " + err.Error())
+		return err, false
+	}
+
+	if !val.HasProposer() {
+		return nil, false
+	}
+
+	return nil, blockFragments.HasAll()
+}
+
+func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, blockHash common.Hash) error {
+	val.blockFragmentsLock.Lock()
+	defer val.blockFragmentsLock.Unlock()
+	blockFragments := val.blockFragments[blockHash]
+
+	block, err := blockFragments.Assemble()
 	if err != nil {
 		err = errors.New("Failed to assemble the block: " + err.Error())
-		log.Error("error while adding a new block fragment", "err", err, "round", round, "block", blockNumber, "fragment", fragment)
+		log.Error("error while adding a new block fragment", "err", err,
+			"round", round, "block", blockNumber)
 		return err
 	}
 
 	// Start the parallel header verifier
-	if err = val.validateProposalBlock(block, round, blockNumber, fragment); err != nil {
+	if err = val.validateProposalBlock(block, round, blockNumber); err != nil {
 		return err
 	}
 
@@ -688,7 +733,7 @@ func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, fragment
 	receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
 	if err != nil {
 		log.Error("Failed to process the block", "err", err,
-			"round", round, "block", blockNumber, "fragment", fragment, "block", block)
+			"round", round, "block", blockNumber, "block", block)
 
 		log.Crit("Failed to process the block", "err", err)
 	}
@@ -702,7 +747,7 @@ func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, fragment
 	err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
 	if err != nil {
 		log.Error("Failed to validate the state", "err", err,
-			"round", round, "block", blockNumber, "fragment", fragment, "block", block)
+			"round", round, "block", blockNumber, "block", block)
 
 		log.Crit("Failed to validate the state", "err", err)
 	}
@@ -714,7 +759,7 @@ func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, fragment
 	return nil
 }
 
-func (val *validator) validateProposalBlock(block *types.Block, round uint64, blockNumber *big.Int, fragment *types.BlockFragment) error {
+func (val *validator) validateProposalBlock(block *types.Block, round uint64, blockNumber *big.Int) error {
 	nBlocks := 1
 	headers := make([]*types.Header, nBlocks)
 	seals := make([]bool, nBlocks)
@@ -726,7 +771,7 @@ func (val *validator) validateProposalBlock(block *types.Block, round uint64, bl
 	err := <-results
 	if err != nil {
 		log.Error("error while verifying a block headers",
-			"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block",
+			"err", err, "round", round, "block", blockNumber, "block",
 			block, "headers", headers, "seals", seals)
 		return err
 	}
@@ -735,7 +780,7 @@ func (val *validator) validateProposalBlock(block *types.Block, round uint64, bl
 	if err != nil {
 		err = errors.New("Failed to validate thr block body: " + err.Error())
 		log.Error("error while validating a block body",
-			"err", err, "round", round, "block", blockNumber, "fragment", fragment, "block", block)
+			"err", err, "round", round, "block", blockNumber, "block", block)
 
 		return err
 	}

@@ -3,6 +3,7 @@ package validator
 import (
 	"errors"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
@@ -19,11 +20,12 @@ type VotingState struct {
 	voters         types.Voters
 	votersChecksum [32]byte
 
-	proposer       *types.Voter
-	proposal       *types.Proposal
-	block          *types.Block
-	blockFragments *types.BlockFragments
-	votingSystem   *VotingSystem // election votes since round 1
+	proposer           *types.Voter
+	proposal           *types.Proposal
+	block              *types.Block
+	blockFragmentsLock sync.RWMutex
+	blockFragments     map[common.Hash]*types.BlockFragments
+	votingSystem       *VotingSystem // election votes since round 1
 
 	lockedRound uint64
 	lockedBlock *types.Block
