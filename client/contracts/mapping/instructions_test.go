@@ -33,6 +33,18 @@ func TestInstructionParserWithMoreThan1ByteInstruction(t *testing.T) {
 			instruction:     "62010203",
 			numInstructions: 1,
 		},
+		{
+			instruction:     "0262010203",
+			numInstructions: 2,
+		},
+		{
+			instruction:     "02630102030432",
+			numInstructions: 3,
+		},
+		{
+			instruction:     "0101630102030432",
+			numInstructions: 4,
+		},
 	}
 
 	for _, ins := range insBytes {

@@ -6,7 +6,7 @@ func ParseByteCode(byteCode []byte) ([]Instruction, error) {
 
 	numBytes := len(byteCode)
 
-	for i := 0; i < numBytes; i++ {
+	for i := 0; i < numBytes; {
 		instruction := Instruction{}
 
 		lengthPushBytes := 0
@@ -14,9 +14,11 @@ func ParseByteCode(byteCode []byte) ([]Instruction, error) {
 		if IsPush(byteCode[i]) {
 			lengthPushBytes = GetLengthPushBytes(byteCode[i])
 			instruction.OpCode = byteCode[i : i+lengthPushBytes+1]
+		} else {
+			instruction.OpCode = []byte{byteCode[i]}
 		}
 
-		instructions = append(instructions, Instruction{OpCode: []byte{}})
+		instructions = append(instructions, instruction)
 		i = i + lengthPushBytes + 1
 	}
 
