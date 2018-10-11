@@ -23,9 +23,6 @@ type contract struct {
 	SrcMapRuntime string `json:"srcmap-runtime"`
 }
 
-type Instruction struct {
-}
-
 func NewFromSourceMap(filePath string) (*SourceMapper, error) {
 	fileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {

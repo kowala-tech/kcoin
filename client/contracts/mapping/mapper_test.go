@@ -33,3 +33,13 @@ func TestWeCanCreateAMapAndGetItsFiles(t *testing.T) {
 		}
 	})
 }
+
+func TestWeCanCreateAMapAndGetInstructions(t *testing.T) {
+	mapper, err := NewFromSourceMap("files/combined.json")
+	assert.NoError(t, err)
+
+	t.Run("We Can Get Instructions By Index", func(t *testing.T) {
+		_, err = mapper.GetFileByIndex(4)
+		assert.EqualError(t, err, "invalid index for file")
+	})
+}
