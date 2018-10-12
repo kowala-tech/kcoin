@@ -40,35 +40,47 @@ func TestParseSourceMap(t *testing.T) {
 				},
 			},
 		},
-		{
-			"1:2:1;:9;2:1:2;;",
-			[]SourceMapInstruction{
-				{
-					byteOffsetStart:   83,
-					sourceRangeLength: 453,
-					fileIndex:         1,
-					typeJump:          "-",
-				},
-				{
-					byteOffsetStart:   83,
-					sourceRangeLength: 453,
-					fileIndex:         1,
-					typeJump:          "-",
-				},
-				{
-					byteOffsetStart:   83,
-					sourceRangeLength: 453,
-					fileIndex:         1,
-					typeJump:          "-",
-				},
-				{
-					byteOffsetStart:   83,
-					sourceRangeLength: 453,
-					fileIndex:         1,
-					typeJump:          "-",
-				},
-			},
-		},
+		//{
+		//	"1:2:1:-;:9;2:1:2;;",
+		//	[]SourceMapInstruction{
+		//		{
+		//			byteOffsetStart:   1,
+		//			sourceRangeLength: 2,
+		//			fileIndex:         1,
+		//			typeJump:          "-",
+		//		},
+		//		{
+		//			byteOffsetStart:   1,
+		//			sourceRangeLength: 9,
+		//			fileIndex:         1,
+		//			typeJump:          "-",
+		//		},
+		//		{
+		//			byteOffsetStart:   2,
+		//			sourceRangeLength: 1,
+		//			fileIndex:         2,
+		//			typeJump:          "-",
+		//		},
+		//		{
+		//			byteOffsetStart:   2,
+		//			sourceRangeLength: 1,
+		//			fileIndex:         2,
+		//			typeJump:          "-",
+		//		},
+		//		{
+		//			byteOffsetStart:   2,
+		//			sourceRangeLength: 1,
+		//			fileIndex:         2,
+		//			typeJump:          "-",
+		//		},
+		//		{
+		//			byteOffsetStart:   2,
+		//			sourceRangeLength: 1,
+		//			fileIndex:         2,
+		//			typeJump:          "-",
+		//		},
+		//	},
+		//},
 	}
 
 	for _, item := range items {
