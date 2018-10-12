@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/kowala-tech/kcoin/client/log"
 	"io"
 	"math/big"
 	"os"
@@ -59,6 +60,7 @@ func NewPrivateValidatorAPI(kcoin *Kowala) *PrivateValidatorAPI {
 
 // Start the validator.
 func (api *PrivateValidatorAPI) Start(deposit *hexutil.Big) error {
+	log.Info("validator API is starting")
 	// Start the validator and return
 	if !api.kcoin.IsValidating() {
 		// Propagate the initial price point to the transaction pool

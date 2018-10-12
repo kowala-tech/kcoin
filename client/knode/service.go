@@ -370,6 +370,8 @@ func (s *Kowala) SetDeposit(deposit *big.Int) error {
 }
 
 func (s *Kowala) StartValidating() error {
+	log.Info("Kowala service. Starting validation.")
+
 	_, err := s.Coinbase()
 	if err != nil {
 		log.Error("Cannot start consensus validation without coinbase", "err", err)

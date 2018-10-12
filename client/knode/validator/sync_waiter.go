@@ -2,6 +2,7 @@ package validator
 
 import (
 	"errors"
+	"github.com/kowala-tech/kcoin/client/log"
 
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
@@ -21,8 +22,10 @@ func SyncWaiter(eventMux *event.TypeMux) error {
 	for ev := range events.Chan() {
 		switch ev.Data.(type) {
 		case downloader.DoneEvent:
+			log.Info("sync finished in SyncWaiter")
 			return nil
 		case downloader.FailedEvent:
+			log.Info("failed to sync while SyncWaiter", "err", ev.Data.(downloader.FailedEvent).Err)
 			return errFailedEventReceived
 		}
 	}

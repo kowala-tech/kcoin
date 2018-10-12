@@ -66,7 +66,6 @@ type Service interface {
 	AddProposal(proposal *types.Proposal) error
 	AddVote(vote *types.Vote) error
 	AddBlockFragment(blockNumber *big.Int, blockHash common.Hash, round uint64, fragment *types.BlockFragment) error
-	HasProposer() bool
 }
 
 // validator represents a consensus validator
@@ -147,6 +146,7 @@ func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.I
 
 	atomic.StoreInt32(&val.shouldStart, 1)
 
+	log.Info("starting validation", "account", walletAccount.Account().Address.String(), "deposit", deposit.Int64())
 	val.walletAccount = walletAccount
 	val.deposit = deposit
 
@@ -159,7 +159,7 @@ func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.I
 }
 
 func (val *validator) run() {
-	log.Info("Starting validation operation")
+	log.Info("Starting validation operation. run")
 	val.wg.Add(1)
 	atomic.StoreInt32(&val.running, 1)
 
@@ -228,6 +228,7 @@ func (val *validator) SetDeposit(deposit *big.Int) error {
 		return ErrIsRunning
 	}
 
+	log.Info("setting a deposit", "account", val.walletAccount.Account().Address.String(), "deposit", deposit.Int64())
 	val.deposit = deposit
 
 	return nil
@@ -288,6 +289,7 @@ func (val *validator) init() error {
 
 	val.blockFragmentsLock.Lock()
 	val.blockFragments = make(map[common.Hash]*types.BlockFragments)
+	val.blockFragmentsStorage = make(map[common.Hash][]*types.BlockFragment)
 	val.blockFragmentsLock.Unlock()
 
 	val.lockedRound = 0
@@ -341,20 +343,17 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	}
 
 	val.handleMutex.Lock()
+	defer val.handleMutex.Unlock()
+
 	val.proposal = proposal
 
 	val.blockFragmentsLock.Lock()
-	if _, ok := val.blockFragments[proposal.Hash()]; !ok {
-		val.blockFragments[proposal.Hash()] = types.NewDataSetFromMeta(proposal.BlockMetadata())
-	}
-	val.blockFragmentsLock.Unlock()
-
-	val.handleMutex.Unlock()
-
-	val.blockFragmentsLock.Lock()
 	defer val.blockFragmentsLock.Unlock()
+	blockFragments, ok := val.blockFragments[proposal.Hash()]
+	if !ok {
+		blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
+	}
 
-	blockFragments := val.blockFragments[proposal.Hash()]
 	if blockFragments.HasAll() {
 		return val.assembleBlock(proposal.Round(), proposal.BlockNumber(), proposal.Hash())
 	}
@@ -691,19 +690,39 @@ func (val *validator) addFragment(fragment *types.BlockFragment, blockHash commo
 	val.blockFragmentsLock.Lock()
 	defer val.blockFragmentsLock.Unlock()
 
+	var (
+		blockFragmentsList []*types.BlockFragment
+		ok                 bool
+	)
+
 	blockFragments, ok := val.blockFragments[blockHash]
 	if !ok {
-		blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
-		val.blockFragments[blockHash] = blockFragments
+		// proposel block metadata has not received yet
+		blockFragmentsList, ok = val.blockFragmentsStorage[blockHash]
+		if !ok {
+			blockFragmentsList = []*types.BlockFragment{}
+		}
+		val.blockFragmentsStorage[blockHash] = append(blockFragmentsList, fragment)
+		return nil, false
 	}
 
-	if err := blockFragments.Add(fragment); err != nil {
-		err = errors.New("Failed to add a new block fragment: " + err.Error())
-		return err, false
+	// if val.blockFragments is set, proposel block metadata was received
+	for _, blockFragment := range blockFragmentsList {
+		if err := blockFragments.Add(blockFragment); err != nil {
+			log.Error("failed to add a new block fragment", "err", err.Error())
+		}
 	}
 
 	if !val.HasProposer() {
 		return nil, false
+	}
+
+	// cleanup
+	val.blockFragmentsStorage[blockHash] = nil
+
+	if err := blockFragments.Add(fragment); err != nil {
+		err = errors.New("failed to add a new block fragment: " + err.Error())
+		return err, false
 	}
 
 	return nil, blockFragments.HasAll()
@@ -856,5 +875,5 @@ func (val *validator) RedeemDeposits() error {
 }
 
 func (val *validator) HasProposer() bool {
-	return val.proposer == nil
+	return val.proposer != nil
 }

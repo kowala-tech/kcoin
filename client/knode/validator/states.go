@@ -1,12 +1,13 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
-	"github.com/kowala-tech/kcoin/client/common"
 	"math/big"
 	"sync/atomic"
 	"time"
 
+	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/tx"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
@@ -49,16 +50,32 @@ func (val *validator) notLoggedInState() stateFn {
 			log.Error("Failed to make deposit", "err", err)
 			return nil
 		}
+
+		try := 0
+		err = val.makeDeposit()
+		for err != nil {
+			time.Sleep(time.Second)
+			err = val.makeDeposit()
+			log.Error("Failed to make deposit", "try", try, "err", err)
+			if try >= 10 {
+				return nil
+			}
+		}
 	}
 
 	return val.startValidating
 }
 
 func (val *validator) makeDeposit() error {
+	if val.deposit.Cmp(big.NewInt(0)) == 0 {
+		err := errors.New("failed to join the network as a validator. Deposit is 0")
+		return err
+	}
+
 	txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
 	if err != nil {
 		log.Error("Error joining validators network", "err", err)
-		return nil
+		return err
 	}
 	log.Info("Waiting confirmation to participate in the consensus")
 
@@ -76,7 +93,8 @@ func (val *validator) startValidating() stateFn {
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
 
-	log.Info("Voter has been accepted in the election", "enode", val.walletAccount.Account().Address.String())
+	log.Info("Voter has been accepted in the election",
+		"enode", val.walletAccount.Account().Address.String(), "deposit", val.deposit.Int64())
 	val.restoreLastCommit()
 
 	return val.newElectionState
@@ -123,6 +141,7 @@ func (val *validator) newRoundState() stateFn {
 
 		val.blockFragmentsLock.Lock()
 		val.blockFragments = make(map[common.Hash]*types.BlockFragments)
+		val.blockFragmentsStorage = make(map[common.Hash][]*types.BlockFragment)
 		val.blockFragmentsLock.Unlock()
 
 		parent := val.chain.CurrentBlock()

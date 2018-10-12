@@ -318,6 +318,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.ValidationEnabledFlag.Name) {
+		log.Info("validation flag is set")
 		// Validation only makes sense if a full Kowala node is running
 		var kowala *knode.Kowala
 		if err := stack.Service(&kowala); err != nil {
