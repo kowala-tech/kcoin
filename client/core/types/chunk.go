@@ -3,11 +3,11 @@ package types
 import (
 	"bytes"
 	"sync"
+	"errors"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/rlp"
-	"github.com/pkg/errors"
 )
 
 // @TODO (rgeraldes) - review uint64/int

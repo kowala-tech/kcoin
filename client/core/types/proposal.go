@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"github.com/kowala-tech/kcoin/client/log"
 	"io"
 	"math/big"
 	"sync/atomic"
@@ -146,9 +145,6 @@ func (proposal *Proposal) WithSignature(signer Signer, sig []byte) (*Proposal, e
 
 	cpy := &Proposal{data: proposal.data}
 	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
-
-	log.Info("proposer block signed with values", "chainID", deriveChainID(v).Int64(),
-		"r", r.Int64(), "s", s.Int64(), "v", v.Int64())
 
 	return cpy, nil
 }

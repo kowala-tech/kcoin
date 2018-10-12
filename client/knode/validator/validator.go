@@ -355,6 +355,7 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	}
 
 	if blockFragments.HasAll() {
+		log.Info("addProposal has all fragments and assembling a block")
 		return val.assembleBlock(proposal.Round(), proposal.BlockNumber(), proposal.Hash())
 	}
 
@@ -679,6 +680,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Ha
 	}
 
 	if canAssemble {
+		log.Info("addBlockFragment has all fragments and assembling a block")
 		return val.assembleBlock(round, blockNumber, blockHash)
 	}
 
@@ -697,7 +699,7 @@ func (val *validator) addFragment(fragment *types.BlockFragment, blockHash commo
 
 	blockFragments, ok := val.blockFragments[blockHash]
 	if !ok {
-		// proposel block metadata has not received yet
+		// proposal block metadata has not received yet
 		blockFragmentsList, ok = val.blockFragmentsStorage[blockHash]
 		if !ok {
 			blockFragmentsList = []*types.BlockFragment{}
@@ -706,7 +708,7 @@ func (val *validator) addFragment(fragment *types.BlockFragment, blockHash commo
 		return nil, false
 	}
 
-	// if val.blockFragments is set, proposel block metadata was received
+	// if val.blockFragments is set, proposal block metadata was received
 	for _, blockFragment := range blockFragmentsList {
 		if err := blockFragments.Add(blockFragment); err != nil {
 			log.Error("failed to add a new block fragment", "err", err.Error())

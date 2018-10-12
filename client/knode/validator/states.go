@@ -154,7 +154,12 @@ func (val *validator) newRoundState() stateFn {
 func (val *validator) newProposalState() stateFn {
 	val.proposer = val.voters.NextProposer()
 
-	log.Info("a new proposer", "addr", val.proposer.Address().String(), "block", val.blockNumber.Int64(), "round", val.round)
+	log.Info("a new proposer",
+		"addr", val.proposer.Address().String(),
+		"isSelf", val.walletAccount.Account().Address == val.proposer.Address(),
+		"block", val.blockNumber.Int64(),
+		"round", val.round)
+
 	if val.proposer.Address() == val.walletAccount.Account().Address {
 		log.Info("Proposing a new block")
 		val.propose()

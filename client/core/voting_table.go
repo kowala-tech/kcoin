@@ -74,8 +74,9 @@ func (table *votingTable) isVoter(address common.Address) bool {
 }
 
 func (table *votingTable) hasQuorum() bool {
-	log.Debug("voting. hasQuorum", "voters", table.voters.Len(), "votes", table.votes.Len())
-	return table.quorum(table.votes.Len(), table.voters.Len())
+	isQuorum := table.quorum(table.votes.Len(), table.voters.Len())
+	log.Debug("voting. hasQuorum", "voters", table.voters.Len(), "votes", table.votes.Len(), "isQuorum", isQuorum)
+	return isQuorum
 }
 
 type QuorumReachedFunc func(winner common.Hash)
