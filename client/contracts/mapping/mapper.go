@@ -5,11 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+
+	"github.com/kowala-tech/kcoin/client/common"
 )
 
 type SourceMapper struct {
-	instructions []Instruction
-	files        []string
+	contracts             []Contract
+	sourceMapInstructions []SourceMapInstruction
+	files                 []string
+}
+
+type Contract struct {
+	instructions          []Instruction
+	sourceMapInstructions []SourceMapInstruction
 }
 
 type JSONSourceMap struct {
@@ -37,8 +45,14 @@ func NewFromSourceMap(filePath string) (*SourceMapper, error) {
 		return nil, fmt.Errorf("error decoding source map: %s", err)
 	}
 
+	contracts, err := parseContracts(sourceMap)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing contract data: %s", err)
+	}
+
 	return &SourceMapper{
-		files: parseFiles(sourceMap),
+		files:     parseFiles(sourceMap),
+		contracts: contracts,
 	}, nil
 }
 
@@ -58,4 +72,27 @@ func parseFiles(jsm JSONSourceMap) []string {
 	}
 
 	return files
+}
+
+func parseContracts(jsm JSONSourceMap) ([]Contract, error) {
+	var contracts []Contract
+
+	for _, c := range jsm.Contracts {
+		smi, err := ParseSourceMap(c.SrcMapRuntime)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing source map: %s", err)
+		}
+
+		ins, err := ParseByteCode(common.Hex2Bytes(c.BinRuntime))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing bytecode: %s", err)
+		}
+
+		contracts = append(contracts, Contract{
+			sourceMapInstructions: smi,
+			instructions:          ins,
+		})
+	}
+
+	return contracts, nil
 }
