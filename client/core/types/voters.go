@@ -1,12 +1,14 @@
 package types
 
 import (
+	"bytes"
 	"errors"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/rlp"
 	"io"
 	"math/big"
-
-	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/rlp"
+	"sort"
 )
 
 var ErrInvalidParams = errors.New("voters set needs at least one voter")
@@ -49,12 +51,15 @@ type Voters interface {
 }
 
 // NewVoter validates that a list of voters is valid returning a new type if so
+// returns sorted by address list to prevent non-deterministic behaviour
 func NewVoters(voterList []*Voter) (voters, error) {
 	if len(voterList) == 0 {
 		return nil, ErrInvalidParams
 	}
 
-	return voters(voterList), nil
+	vs := voters(voterList)
+	sort.Sort(vs)
+	return vs, nil
 }
 
 // voters is a list of Voter
@@ -63,11 +68,12 @@ type voters []*Voter
 // NextProposer returns the next proposer based on the round and weight of the each voters
 func (voters voters) NextProposer() *Voter {
 	proposer := voters[0]
+	totalDeposit := big.NewInt(0)
 
 	for _, voter := range voters {
-
 		// add more chance for each voter to be the next Proposer by adding their deposit amount as weight
-		voter.weight = voter.weight.Add(voter.weight, voter.deposit)
+		voter.weight.Add(voter.weight, voter.deposit)
+		totalDeposit.Add(totalDeposit, voter.deposit)
 
 		if voter.weight.Cmp(proposer.weight) > 0 {
 			proposer = voter
@@ -75,7 +81,10 @@ func (voters voters) NextProposer() *Voter {
 	}
 
 	// decrement this Voter weight since he has been selected as next proposer
-	proposer.weight.Sub(proposer.weight, proposer.deposit)
+	proposer.weight.Sub(proposer.weight, totalDeposit)
+
+	log.Info("proposer has been chosen", "proposer", proposer.Address().String(),
+		"deposit", proposer.Deposit().Int64(), "weight", proposer.Weight().Int64())
 
 	return proposer
 }
@@ -102,6 +111,14 @@ func (voters voters) Get(addr common.Address) *Voter {
 // needed for hash thru interface DerivableList interface
 func (voters voters) Len() int {
 	return len(voters)
+}
+
+func (voters voters) Swap(i, j int) {
+	voters[i], voters[j] = voters[j], voters[i]
+}
+
+func (voters voters) Less(i, j int) bool {
+	return bytes.Compare(voters[i].Address().Bytes(), voters[j].Address().Bytes()) == -1
 }
 
 // GetRlp returns encoded bytes for one voter
