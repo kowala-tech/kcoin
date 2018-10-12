@@ -27,7 +27,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/p2p/discover"
-	"github.com/kowala-tech/kcoin/client/p2p/discv5"
 	"github.com/kowala-tech/kcoin/client/p2p/nat"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/params"
@@ -556,46 +555,13 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 
 	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
 	for _, url := range urls {
-		node, err := discover.ParseNode(url)
+		peerInfo, err := p2p.ParseURL(url)
 		if err != nil {
-			log.Error("Bootstrap URL invalid", "enode", url, "err", err)
+			log.Error("Invalid Bootstrap url", "url", url, "err", err)
 			continue
 		}
-		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
-	}
-}
-
-// setBootstrapNodesV5 creates a list of bootstrap nodes from the command line
-// flags, reverting to pre-configured ones if none have been specified.
-func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
-	urls := params.MainnetDiscoveryV5Bootnodes
-
-	switch {
-	case ctx.GlobalBool(TestnetFlag.Name):
-		urls = params.TestnetDiscoveryV5Bootnodes
-	case ctx.GlobalBool(DevModeFlag.Name):
-		urls = params.DevnetDiscoveryV5Bootnodes
-	}
-
-	switch {
-	case ctx.GlobalIsSet(BootnodesFlag.Name) || ctx.GlobalIsSet(BootnodesV5Flag.Name):
-		if ctx.GlobalIsSet(BootnodesV5Flag.Name) {
-			urls = strings.Split(ctx.GlobalString(BootnodesV5Flag.Name), ",")
-		} else {
-			urls = strings.Split(ctx.GlobalString(BootnodesFlag.Name), ",")
-		}
-	case cfg.BootstrapNodesV5 != nil:
-		return // already set, don't apply defaults.
-	}
-
-	cfg.BootstrapNodesV5 = make([]*discv5.Node, 0, len(urls))
-	for _, url := range urls {
-		node, err := discv5.ParseNode(url)
-		if err != nil {
-			log.Error("Bootstrap URL invalid", "enode", url, "err", err)
-			continue
-		}
-		cfg.BootstrapNodesV5 = append(cfg.BootstrapNodesV5, node)
+		cfg.BootstrapNodes = append(cfg.BootstrapNodes, peerInfo)
+		bootnodes[i] = *p
 	}
 }
 
@@ -790,7 +756,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
 	setNAT(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
-	setBootstrapNodesV5(ctx, cfg)
 	setListenAddress(ctx, cfg)
 	setDiscoveryV5Address(ctx, cfg)
 

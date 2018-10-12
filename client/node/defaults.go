@@ -26,10 +26,10 @@ var DefaultConfig = Config{
 	WSPort:           DefaultWSPort,
 	WSModules:        []string{"net", "web3"},
 	P2P: p2p.Config{
-		ListenAddr:      ":22334",
-		DiscoveryV5Addr: ":30304",
-		MaxPeers:        100,
-		NAT:             nat.Any(),
+		ListenAddr: "/ip4/127.0.0.1/tcp/10000",
+		MaxPeers:   100,
+		NAT:        nat.Any(),
+		IsBootNode: false,
 	},
 }
 

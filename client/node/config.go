@@ -1,7 +1,7 @@
 package node
 
 import (
-	"crypto/ecdsa"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,19 +12,15 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
 	"github.com/kowala-tech/kcoin/client/accounts/usbwallet"
-	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p"
-	"github.com/kowala-tech/kcoin/client/p2p/discover"
+	crypto "github.com/libp2p/go-libp2p-crypto"
 )
 
 const (
-	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
-	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
-	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
-	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
-	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
+	datadirPrivateKey      = "nodekey"  // Path within the datadir to the node's private key
+	datadirDefaultKeyStore = "keystore" // Path within the datadir to the keystore
+	datadirNodeDatabase    = "nodes"    // Path within the datadir to store the node infos
 )
 
 // Config represents a small collection of configuration values to fine tune the
@@ -40,7 +36,7 @@ type Config struct {
 	UserIdent string `toml:",omitempty"`
 
 	// Version should be set to the version number of the program. It is used
-	// in the devp2p node identifier.
+	// in the host identifier.
 	Version string `toml:"-"`
 
 	// DataDir is the file system folder the node should use for any data storage
@@ -237,15 +233,6 @@ func (c *Config) name() string {
 	return c.Name
 }
 
-// These resources are resolved differently for "kcoin" instances.
-var isOldKusdResource = map[string]bool{
-	"chaindata":          true,
-	"nodes":              true,
-	"nodekey":            true,
-	"static-nodes.json":  true,
-	"trusted-nodes.json": true,
-}
-
 // resolvePath resolves path in the instance directory.
 func (c *Config) resolvePath(path string) string {
 	if filepath.IsAbs(path) {
@@ -254,18 +241,7 @@ func (c *Config) resolvePath(path string) string {
 	if c.DataDir == "" {
 		return ""
 	}
-	// Backwards-compatibility: ensure that data directory files created
-	// by kcoin 1.4 are used if they exist.
-	if c.name() == "kcoin" && isOldKusdResource[path] {
-		oldpath := ""
-		if c.Name == "kcoin" {
-			oldpath = filepath.Join(c.DataDir, path)
-		}
-		if oldpath != "" && common.FileExist(oldpath) {
-			// TODO: print warning
-			return oldpath
-		}
-	}
+
 	return filepath.Join(c.instanceDir(), path)
 }
 
@@ -279,16 +255,16 @@ func (c *Config) instanceDir() string {
 // NodeKey retrieves the currently configured private key of the node, checking
 // first any manually set key, falling back to the one found in the configured
 // data folder. If no key can be found, a new one is generated.
-func (c *Config) NodeKey() *ecdsa.PrivateKey {
+func (c *Config) NodeKey() *crypto.PrivKey {
 	// Use any specifically configured key.
 	if c.P2P.PrivateKey != nil {
 		return c.P2P.PrivateKey
 	}
 	// Generate ephemeral key if no datadir is being used.
 	if c.DataDir == "" {
-		key, err := crypto.GenerateKey()
+		key, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.Reader)
 		if err != nil {
-			log.Crit(fmt.Sprintf("Failed to generate ephemeral node key: %v", err))
+			log.Crit(fmt.Sprintf("Failed to generate node key: %v", err))
 		}
 		return key
 	}
@@ -298,7 +274,7 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 		return key
 	}
 	// No persistent key found, generate and store a new one.
-	key, err := crypto.GenerateKey()
+	key, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.Reader)
 	if err != nil {
 		log.Crit(fmt.Sprintf("Failed to generate node key: %v", err))
 	}
@@ -312,48 +288,6 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 	}
 	return key
-}
-
-// StaticNodes returns a list of node enode URLs configured as static nodes.
-func (c *Config) StaticNodes() []*discover.Node {
-	return c.parsePersistentNodes(c.resolvePath(datadirStaticNodes))
-}
-
-// TrustedNodes returns a list of node enode URLs configured as trusted nodes.
-func (c *Config) TrustedNodes() []*discover.Node {
-	return c.parsePersistentNodes(c.resolvePath(datadirTrustedNodes))
-}
-
-// parsePersistentNodes parses a list of discovery node URLs loaded from a .json
-// file from within the data directory.
-func (c *Config) parsePersistentNodes(path string) []*discover.Node {
-	// Short circuit if no node config is present
-	if c.DataDir == "" {
-		return nil
-	}
-	if _, err := os.Stat(path); err != nil {
-		return nil
-	}
-	// Load the nodes from the config file.
-	var nodelist []string
-	if err := common.LoadJSON(path, &nodelist); err != nil {
-		log.Error(fmt.Sprintf("Can't load node file %s: %v", path, err))
-		return nil
-	}
-	// Interpret the list as a discovery node array
-	var nodes []*discover.Node
-	for _, url := range nodelist {
-		if url == "" {
-			continue
-		}
-		node, err := discover.ParseNode(url)
-		if err != nil {
-			log.Error(fmt.Sprintf("Node URL %s: %v\n", url, err))
-			continue
-		}
-		nodes = append(nodes, node)
-	}
-	return nodes
 }
 
 // AccountConfig determines the settings for scrypt and keydirectory

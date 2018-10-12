@@ -17,7 +17,7 @@ type ServiceContext struct {
 	config         *Config
 	services       map[reflect.Type]Service // Index of the already constructed services
 	GlobalEventMux *event.TypeMux           // Event multiplexer used for decoupled notifications
-	AccountManager *accounts.Manager        // Account manager created by the node.
+	AccountMgr     *accounts.Manager        // Account manager created by the node.
 }
 
 // OpenDatabase opens an existing database with the given name (or creates one

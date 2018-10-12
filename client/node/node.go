@@ -23,14 +23,14 @@ import (
 // Node is a container on which services can be registered.
 type Node struct {
 	globalEventMux *event.TypeMux // Event multiplexer used between the services of a stack
-	config         *Config
-	accman         *accounts.Manager
+	cfg         *Config
+	accountMgr     *accounts.Manager
 
 	ephemeralKeystore string         // if non-empty, the key directory that will be removed by Stop
 	instanceDirLock   flock.Releaser // prevents concurrent use of instance directory
 
-	serverConfig p2p.Config
-	server       *p2p.Server // Currently running P2P networking layer
+	hostCfg p2p.Config
+	host       p2p.Host // Currently running P2P networking layer
 
 	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
 	services     map[reflect.Type]Service // Currently running services
@@ -83,7 +83,7 @@ func New(conf *Config) (*Node, error) {
 	}
 	// Ensure that the AccountManager method works before the node has started.
 	// We rely on this in cmd/kcoin.
-	am, ephemeralKeystore, err := makeAccountManager(conf)
+	accountMgr, ephemeralKeystore, err := makeAccountManager(conf)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func New(conf *Config) (*Node, error) {
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
 	return &Node{
-		accman:            am,
+		accountMgr:        accountMgr,
 		ephemeralKeystore: ephemeralKeystore,
 		config:            conf,
 		serviceFuncs:      []ServiceConstructor{},
@@ -111,7 +111,7 @@ func (n *Node) Register(constructor ServiceConstructor) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	if n.server != nil {
+	if n.IsRunning() {
 		return ErrNodeRunning
 	}
 	n.serviceFuncs = append(n.serviceFuncs, constructor)
@@ -124,32 +124,23 @@ func (n *Node) Start() error {
 	defer n.lock.Unlock()
 
 	// Short circuit if the node's already running
-	if n.server != nil {
+	if n.IsRunning() 
 		return ErrNodeRunning
 	}
 	if err := n.openDataDir(); err != nil {
 		return err
 	}
 
-	// Initialize the p2p server. This creates the node key and
-	// discovery databases.
-	n.serverConfig = n.config.P2P
-	n.serverConfig.PrivateKey = n.config.NodeKey()
-	n.serverConfig.Name = n.config.NodeName()
-	n.serverConfig.Logger = n.log
-	if n.serverConfig.StaticNodes == nil {
-		n.serverConfig.StaticNodes = n.config.StaticNodes()
-	}
-	if n.serverConfig.TrustedNodes == nil {
-		n.serverConfig.TrustedNodes = n.config.TrustedNodes()
-	}
-	if n.serverConfig.NodeDatabase == "" {
-		n.serverConfig.NodeDatabase = n.config.NodeDB()
-	}
-	running := &p2p.Server{Config: n.serverConfig}
+	// Initialize the p2p host
+	n.hostCfg = n.config.P2P
+	n.hostCfg.PrivateKey = n.config.NodeKey()
+	n.hostCfg.Name = n.config.NodeName()
+	n.hostCfg.Logger = n.log
+	host := p2p.NewHost(n.hostCfg)
+
 	n.log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
 
-	// Otherwise copy and specialize the P2P configuration
+	// Create the services
 	services := make(map[reflect.Type]Service)
 	for _, constructor := range n.serviceFuncs {
 		// Create a new context for the particular service
@@ -157,7 +148,7 @@ func (n *Node) Start() error {
 			config:         n.config,
 			services:       make(map[reflect.Type]Service),
 			GlobalEventMux: n.globalEventMux,
-			AccountManager: n.accman,
+			AccountMgr:     n.accountMgr,
 		}
 		for kind, s := range services { // copy needed for threaded access
 			ctx.services[kind] = s
@@ -173,39 +164,40 @@ func (n *Node) Start() error {
 		}
 		services[kind] = service
 	}
-	// Gather the protocols and start the freshly assembled P2P server
-	for _, service := range services {
-		running.Protocols = append(running.Protocols, service.Protocols()...)
-	}
-	if err := running.Start(); err != nil {
+	
+	// Start the host
+	if err := host.Start(); err != nil {
 		return convertFileLockError(err)
 	}
-	// Start each of the services
+
+	// Start the services
 	started := []reflect.Type{}
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
-		if err := service.Start(running); err != nil {
+		if err := service.Start(host); err != nil {
 			for _, kind := range started {
 				services[kind].Stop()
 			}
-			running.Stop()
+			host.Stop()
 
 			return err
 		}
 		// Mark the service started for potential cleanup
 		started = append(started, kind)
 	}
-	// Lastly start the configured RPC interfaces
+
+	// Start the configured RPC interfaces
 	if err := n.startRPC(services); err != nil {
 		for _, service := range services {
 			service.Stop()
 		}
-		running.Stop()
+		host.Stop()
 		return err
 	}
+
 	// Finish initializing the startup
 	n.services = services
-	n.server = running
+	n.server = host
 	n.stop = make(chan struct{})
 
 	return nil
@@ -523,7 +515,7 @@ func (n *Node) InstanceDir() string {
 
 // AccountManager retrieves the account manager used by the protocol stack.
 func (n *Node) AccountManager() *accounts.Manager {
-	return n.accman
+	return n.accountMgr
 }
 
 // IPCEndpoint retrieves the current IPC endpoint used by the protocol stack.
@@ -590,4 +582,8 @@ func (n *Node) apis() []rpc.API {
 			Public:    true,
 		},
 	}
+}
+
+func (n *Node) IsRunning() bool {
+	return n.host != nil
 }
