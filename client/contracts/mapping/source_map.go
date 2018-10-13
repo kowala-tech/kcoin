@@ -9,6 +9,10 @@ import (
 const Separator = ";"
 const PartSeparator = ":"
 
+const ByteOffsetConverterKey = "byteOffsetConverter"
+const SourceRangeLengthConverterKey = "sourceRangeLengthConverter"
+const FileIndexConverterKey = "fileIndexConverter"
+
 type SourceMapInstruction struct {
 	byteOffsetStart   int
 	sourceRangeLength int
@@ -21,37 +25,28 @@ func ParseSourceMap(sm string) ([]SourceMapInstruction, error) {
 
 	var sourceItem []SourceMapInstruction
 
-	byteOffsetConverter := &IntSourceMapConverter{}
-	sourceRangeLengthConverter := &IntSourceMapConverter{}
-	fileIndexConverter := &IntSourceMapConverter{}
 	typeJumpConverter := &StringSourceMapConverter{}
+	intConverters := getIntConverters()
 
 	for _, item := range items {
 		p := strings.Split(item, PartSeparator)
 
 		if len(item) == 0 {
 			sourceItem = append(sourceItem, SourceMapInstruction{
-				byteOffsetStart:   byteOffsetConverter.lastItem,
-				sourceRangeLength: sourceRangeLengthConverter.lastItem,
-				fileIndex:         fileIndexConverter.lastItem,
+				byteOffsetStart:   intConverters[0].lastItem,
+				sourceRangeLength: intConverters[1].lastItem,
+				fileIndex:         intConverters[2].lastItem,
 				typeJump:          typeJumpConverter.lastItem,
 			})
 			continue
 		}
 
-		byteOffset, err := byteOffsetConverter.Extract(p[0])
-		if err != nil {
-			return nil, fmt.Errorf("error extracting byte offset: %s", err)
-		}
-
-		sourceRangeLength, err := sourceRangeLengthConverter.Extract(p[1])
-		if err != nil {
-			return nil, fmt.Errorf("error extracting source range length: %s", err)
-		}
-
-		fileIndex, err := fileIndexConverter.Extract(p[2])
-		if err != nil {
-			return nil, fmt.Errorf("error extracting file index: %s", err)
+		var err error
+		for i, intConverter := range intConverters {
+			intConverter.convertedValue, err = intConverter.Extract(p[i])
+			if err != nil {
+				return nil, fmt.Errorf("error extracting byte offset: %s", err)
+			}
 		}
 
 		typeJump, err := typeJumpConverter.Extract(p[3])
@@ -60,14 +55,42 @@ func ParseSourceMap(sm string) ([]SourceMapInstruction, error) {
 		}
 
 		sourceItem = append(sourceItem, SourceMapInstruction{
-			byteOffsetStart:   byteOffset,
-			sourceRangeLength: sourceRangeLength,
-			fileIndex:         fileIndex,
+			byteOffsetStart:   intConverters[0].convertedValue,
+			sourceRangeLength: intConverters[1].convertedValue,
+			fileIndex:         intConverters[2].convertedValue,
 			typeJump:          typeJump,
 		})
 	}
 
 	return sourceItem, nil
+}
+
+func getIntConverters() []*struct {
+	name string
+	*IntSourceMapConverter
+	convertedValue int
+} {
+	return []*struct {
+		name string
+		*IntSourceMapConverter
+		convertedValue int
+	}{
+		{
+			ByteOffsetConverterKey,
+			&IntSourceMapConverter{},
+			0,
+		},
+		{
+			SourceRangeLengthConverterKey,
+			&IntSourceMapConverter{},
+			0,
+		},
+		{
+			FileIndexConverterKey,
+			&IntSourceMapConverter{},
+			0,
+		},
+	}
 }
 
 type IntSourceMapConverter struct {
