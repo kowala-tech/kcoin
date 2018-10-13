@@ -41,17 +41,28 @@ func ParseSourceMap(sm string) ([]SourceMapInstruction, error) {
 			continue
 		}
 
+		includesTypeJump := len(p) == 4
+
 		var err error
-		for i, intConverter := range intConverters {
-			intConverter.convertedValue, err = intConverter.Extract(p[i])
+		var counterLegth int
+		var typeJump string
+
+		if includesTypeJump {
+			counterLegth = len(p) - 1
+			typeJump, err = typeJumpConverter.Extract(p[3])
+			if err != nil {
+				return nil, fmt.Errorf("error extracting type jump: %s", err)
+			}
+		} else {
+			counterLegth = len(p)
+			typeJump = typeJumpConverter.lastItem
+		}
+
+		for i := 0; i < counterLegth; i++ {
+			intConverters[i].convertedValue, err = intConverters[i].Extract(p[i])
 			if err != nil {
 				return nil, fmt.Errorf("error extracting byte offset: %s", err)
 			}
-		}
-
-		typeJump, err := typeJumpConverter.Extract(p[3])
-		if err != nil {
-			return nil, fmt.Errorf("error extracting type jump: %s", err)
 		}
 
 		sourceItem = append(sourceItem, SourceMapInstruction{
