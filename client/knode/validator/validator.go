@@ -34,6 +34,10 @@ var (
 	ErrIsRunning                         = errors.New("validator is running, cannot change its parameters")
 )
 
+var (
+	txConfirmationTimeout = 10 * time.Second
+)
+
 // Backend wraps all methods required for mining.
 type Backend interface {
 	BlockChain() *core.BlockChain
@@ -163,8 +167,13 @@ func (val *validator) run() {
 		atomic.StoreInt32(&val.running, 0)
 	}()
 
+	initialStateFunc := val.notLoggedInState
+	if isGenesisValidator, err := val.isGenesisValidator(); err != nil && isGenesisValidator {
+		initialStateFunc = val.genesisNotLoggedInState
+	}
+
 	log.Info("Starting the consensus state machine")
-	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
+	for state, numTransitions := initialStateFunc, 0; state != nil; numTransitions++ {
 		state = state()
 		if val.maxTransitions > 0 && numTransitions == val.maxTransitions {
 			break
@@ -172,7 +181,12 @@ func (val *validator) run() {
 	}
 }
 
+func (val *validator) isGenesisValidator() (bool, error) {
+	return val.consensus.IsGenesisValidator(val.walletAccount.Account().Address)
+}
+
 func (val *validator) Stop() error {
+
 	if !val.Running() {
 		return nil
 	}
@@ -418,7 +432,7 @@ func (val *validator) leave() {
 		log.Error("failed to leave the election", "err", err)
 		return
 	}
-	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+	receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
 	if err != nil {
 		log.Error("Failed to verify the voter deregistration", "err", err)
 		return
@@ -550,7 +564,7 @@ func (val *validator) preVote() {
 		log.Debug("Locked Block is not nil, voting for the locked block")
 		vote = val.lockedBlock.Hash()
 	case val.block == nil:
-		log.Debug("Proposal's block is nil, voting nil")
+		log.Warn("Proposal's block is nil, voting nil")
 		vote = common.Hash{}
 	default:
 		log.Debug("Voting for the proposal's block")
@@ -575,7 +589,7 @@ func (val *validator) preCommit() {
 	// no majority
 	// majority pre-voted nil
 	case currentLeader == common.Hash{}:
-		log.Debug("Majority of validators pre-voted nil")
+		log.Warn("Majority of validators pre-voted nil")
 		// unlock locked block
 		if val.lockedBlock != nil {
 			val.lockedRound = 0
@@ -598,7 +612,7 @@ func (val *validator) preCommit() {
 	default:
 		// fetch block, unlock, precommit
 		// unlock locked block
-		log.Debug("preCommit default case")
+		log.Warn("preCommit default case")
 		val.lockedRound = 0
 		val.lockedBlock = nil
 		val.block = nil
@@ -753,7 +767,7 @@ func (val *validator) RedeemDeposits() error {
 	if err != nil {
 		return err
 	}
-	receipt, err := tx.WaitMined(context.TODO(), val.backend, txHash)
+	receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
 	if err != nil {
 		return err
 	}

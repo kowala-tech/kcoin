@@ -25,7 +25,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/node"
 	"gopkg.in/urfave/cli.v1"
 	"github.com/kowala-tech/kcoin/client/version"
-	"github.com/blang/semver"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -257,8 +256,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
 	setupLogging(ctx)
 
-	// make use client runs latest major version if not in testnet mode, need to check pre Start node!
-	if !ctx.GlobalBool(utils.TestnetFlag.Name) {
+	// make use client runs latest major version if not in testnet mode or devnet, need to check pre Start node!
+	if !isTestnetOrDevnet(ctx) {
 		mustBeLatestMajorVersion(ctx)
 	}
 
@@ -338,6 +337,18 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 }
 
+func isTestnetOrDevnet(ctx *cli.Context) bool {
+	return isTestnet(ctx) || isDevnet(ctx)
+}
+
+func isTestnet(ctx *cli.Context) bool {
+	return ctx.GlobalBool(utils.TestnetFlag.Name)
+}
+
+func isDevnet(ctx *cli.Context) bool {
+	return ctx.GlobalBool(utils.DevModeFlag.Name)
+}
+
 func mustBeLatestMajorVersion(ctx *cli.Context) {
 	repository := ctx.GlobalString(utils.VersionRepository.Name)
 	finder := version.NewFinder(version.NewS3AssetRepository(repository))
@@ -347,7 +358,7 @@ func mustBeLatestMajorVersion(ctx *cli.Context) {
 		return
 	}
 
-	current, err := semver.Make(params.Version)
+	current, err := version.MakeSemver(params.Version)
 	if err != nil {
 		log.Error("Error parsing current version, exiting checker", "err", err)
 		return

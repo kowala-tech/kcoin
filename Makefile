@@ -106,14 +106,25 @@ go_generate: client/contracts/truffle/node_modules
 	go generate ./client/contracts/bindings/utils/namehash.go
 	go generate ./...
 
+# This is designed to be run inside a kowalatech/solidoc container
+.PHONY: solidoc_generate
+solidoc_generate: client/contracts/truffle/node_modules
+	dotnet /app/bin/Release/netcoreapp2.1/publish/Solidoc.dll /go/src/github.com/kowala-tech/kcoin/client/contracts/truffle /go/src/github.com/kowala-tech/kcoin/docs/docs/smartcontracts
+
+.PHONY: docker_generate
+docker_generate: docker_go_generate docker_solidoc_generate 
+
 .PHONY: docker_go_generate
 docker_go_generate:
 	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.12 make install_tools go_generate
 
+docker_solidoc_generate:
+	docker run --rm -it -v $(PWD)/client/contracts/truffle/:/src -v $(PWD)/docs/docs/smartcontracts:/out kowalatech/solidoc:1.0.3 /src /out
+
 .PHONY: assert_no_changes
 assert_no_changes:
 	git status
-	@if ! git diff-index --quiet HEAD; then echo 'There are uncommited go generate files.\nRun `make docker_go_generate` to regenerate all of them.'; exit 1; fi
+	@if ! git diff-index --quiet HEAD; then echo 'There are uncommited generated files.\nRun `make docker_generate` to regenerate all of them.'; exit 1; fi
 
 .PHONY: notifications_dep
 notifications_dep: dep
@@ -161,7 +172,7 @@ ifdef DRONE_TAG
 	mkdir -p client/build/bin/tags/$(DRONE_TAG)
 	cd client/build/bin && for f in kcoin-*; do \
 		release=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-stable"); print }');\
-		version=$$(echo $$f | awk '{ gsub("kcoin", "tags/$(DRONE_TAG)/kcoin"); print }');\
+		version=$$(echo $$f | awk '{ gsub("kcoin", "kcoin-$(DRONE_TAG)"); print }');\
 		cp $$f $$release;\
 		mv $$f $$version;\
 	done;
