@@ -571,7 +571,7 @@ func (suite *ValidatorMgrSuite) TestGetMinimumDeposit_Full() {
 	req.Equal(new(big.Int).Add(suite.baseDeposit, common.Big1), storedMinDeposit)
 }
 
-func (suite *ValidatorMgrSuite) TestRegisterValidator_WhenPaused() {
+func (suite *ValidatorMgrSuite) TestRegisterValidator_Paused() {
 	req := suite.Require()
 
 	pauseOpts := bind.NewKeyedTransactor(owner)
@@ -759,7 +759,7 @@ func (suite *ValidatorMgrSuite) TestRegister_NotPaused_NewCandidate_WithMinDepos
 	req.Equal(storedValidator.Deposit, value2)
 }
 
-func (suite *ValidatorMgrSuite) TestDeregister_WhenPaused() {
+func (suite *ValidatorMgrSuite) TestDeregister_Paused() {
 	req := suite.Require()
 
 	pauseOpts := bind.NewKeyedTransactor(owner)
@@ -861,7 +861,6 @@ func (suite *ValidatorMgrSuite) TestReleaseDeposits_NotPaused_LockedDeposits() {
 	req.Zero(mtokens.Uint64())
 }
 
-//
 func (suite *ValidatorMgrSuite) TestReleaseDeposits_UnlockedDeposit() {
 	req := suite.Require()
 
@@ -889,6 +888,68 @@ func (suite *ValidatorMgrSuite) TestReleaseDeposits_UnlockedDeposit() {
 	mtokens, err := suite.tokenMock.BalanceOf(&bind.CallOpts{}, crypto.PubkeyToAddress(owner.PublicKey))
 	req.NoError(err)
 	req.Equal(value, mtokens)
+}
+
+func (suite *ValidatorMgrSuite) TestIncreaseDeposit_Paused() {
+	req := suite.Require()
+
+	// register a validator
+	registerOpts := bind.NewKeyedTransactor(user)
+	from := crypto.PubkeyToAddress(user.PublicKey)
+	value := new(big.Int).SetUint64(200)
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value)
+	req.NoError(err)
+
+	suite.Backend.Commit()
+
+	// pause the service
+	pauseOpts := bind.NewKeyedTransactor(owner)
+	_, err = suite.validatorMgr.Pause(pauseOpts)
+	req.NoError(err)
+
+	suite.Backend.Commit()
+
+	depositOpts := bind.NewKeyedTransactor(owner)
+	_, err = suite.validatorMgr.IncreaseDeposit(depositOpts, from, value)
+	req.Error(err, "cannot increase deposit if the service is paused")
+}
+
+func (suite *ValidatorMgrSuite) TestIncreaseDeposit_NotPaused_NotValidator() {
+	req := suite.Require()
+
+	// increase deposit
+	depositOpts := bind.NewKeyedTransactor(owner)
+	from := crypto.PubkeyToAddress(user.PublicKey)
+	value := new(big.Int).SetUint64(200)
+	_, err := suite.validatorMgr.IncreaseDeposit(depositOpts, from, value)
+	req.Error(err, "cannot increase deposit if not a validator")
+}
+
+func (suite *ValidatorMgrSuite) TestIncreaseDeposit_NotPaused_Validator() {
+	req := suite.Require()
+
+	// register a validator
+	registerOpts := bind.NewKeyedTransactor(user)
+	from := crypto.PubkeyToAddress(user.PublicKey)
+	value := new(big.Int).SetUint64(200)
+	_, err := suite.validatorMgr.RegisterValidator(registerOpts, from, value)
+	req.NoError(err)
+
+	suite.Backend.Commit()
+
+	// increase deposit
+	depositOpts := bind.NewKeyedTransactor(user)
+	_, err = suite.validatorMgr.IncreaseDeposit(depositOpts, from, value)
+	req.NoError(err)
+
+	suite.Backend.Commit()
+
+	// current deposit must match initial deposit + new deposit
+	deposit, err := suite.validatorMgr.GetDepositAtIndex(&bind.CallOpts{From: from}, common.Big0)
+	req.NoError(err)
+	req.NotZero(deposit)
+	req.Zero(deposit.AvailableAt.Uint64())
+	req.Equal(new(big.Int).Mul(value, common.Big2), deposit.Amount)
 }
 
 // dtos converts days to seconds

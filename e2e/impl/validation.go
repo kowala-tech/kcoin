@@ -50,9 +50,9 @@ func (ctx *ValidationContext) IWaitForTheUnbondingPeriodToBeOver() error {
 	return godog.ErrPending
 }
 
-func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
+func (ctx *ValidationContext) IStartTheValidator(mTokens int64) error {
 	return ctx.waiter.Do(
-		ctx.globalCtx.makeExecFunc(ctx.nodeID(), validatorStartCommand(kcoin)),
+		ctx.globalCtx.makeExecFunc(ctx.nodeID(), validatorStartCommand(mTokens)),
 		func() error {
 			pending, err := ctx.globalCtx.client.PendingTransactionCount(context.Background())
 			if err != nil {
@@ -231,6 +231,20 @@ func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
 	})
 }
 
+func (ctx *ValidationContext) IncreaseDeposit(mTokens int64) error {
+	return ctx.globalCtx.makeExecFunc(ctx.nodeID(), increaseDepositCommand(mTokens))()
+}
+
+func (ctx *ValidationContext) TheDepositIsExactly(expectedMTokens int64) error {
+	expectedWei := toWei(expectedMTokens)
+	deposit, err := ctx.getMTokensDeposit()
+	if err != nil {
+		return err
+	}
+
+	return ctx.isMTokensDepositExact(deposit, expectedWei)
+}
+
 func isError(s string) error {
 	if strings.HasPrefix(s, "Error: EOF") {
 		return nil
@@ -242,11 +256,11 @@ func isError(s string) error {
 }
 
 func blockNumberCommand() []string {
-	return cluster.KcoinExecCommand("eth.blockNumber")
+	return cluster.KcoinExecCommand("kcoin.blockNumber")
 }
 
 func isSyncedCommand() []string {
-	return cluster.KcoinExecCommand("eth.blockNumber > 1 && net.peerCount > 0 && eth.syncing == false")
+	return cluster.KcoinExecCommand("kcoin.blockNumber > 1 && net.peerCount > 0 && kcoin.syncing == false")
 }
 
 func validatorStartCommand(mtokens int64) []string {
@@ -263,6 +277,10 @@ func isValidatingCommand() []string {
 
 func getDepositsCommand() []string {
 	return cluster.KcoinExecCommand("validator.getDeposits()")
+}
+
+func increaseDepositCommand(mtokens int64) []string {
+	return cluster.KcoinExecCommand(fmt.Sprintf("validator.increaseDeposit(%d)", toWei(mtokens)))
 }
 
 func getTokenBalance(at common.Address) []string {

@@ -251,8 +251,8 @@ func (ctx *Context) runRpc() error {
 
 func (ctx *Context) triggerGenesisValidation() error {
 	command := fmt.Sprintf(`
-		personal.unlockAccount(eth.coinbase, "%s");
-		eth.sendTransaction({from:eth.coinbase,to: "%v",value: 1})
+		personal.unlockAccount(kcoin.coinbase, "%s");
+		kcoin.sendTransaction({from:kcoin.coinbase,to: "%v",value: 1})
 	`, AccountPass, ctx.kusdSeederAccount.Address.Hex())
 	_, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand(command))
 	if err != nil {
@@ -260,7 +260,7 @@ func (ctx *Context) triggerGenesisValidation() error {
 	}
 
 	return common.WaitFor("validation starts", 2*time.Second, 20*time.Second, func() error {
-		res, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand("eth.blockNumber"))
+		res, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand("kcoin.blockNumber"))
 		if err != nil {
 			return err
 		}

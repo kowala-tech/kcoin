@@ -135,6 +135,11 @@ func (api *PrivateValidatorAPI) GetDeposits(address *common.Address) (GetDeposit
 	return depositsToResponse(rawDeposits), nil
 }
 
+// IncreaseDeposit increases the validator's deposit
+func (api *PrivateValidatorAPI) IncreaseDeposit(deposit *big.Int) error {
+	return api.kcoin.Validator().IncreaseDeposit(deposit)
+}
+
 func depositsToResponse(rawDeposits []*types.Deposit) GetDepositsResult {
 	deposits := make([]depositEntry, len(rawDeposits))
 
@@ -160,7 +165,7 @@ func (api *PrivateValidatorAPI) IsValidating() bool {
 	return api.kcoin.IsValidating()
 }
 
-// IsValidating returns the validator is currently running
+// IsRunning returns the validator is currently running
 func (api *PrivateValidatorAPI) IsRunning() bool {
 	return api.kcoin.IsRunning()
 }
@@ -293,7 +298,7 @@ func (api *PublicTokenAPI) MintList() (ret PendingMintTransactions, err error) {
 		return ret, err
 	}
 
-	mintMethodId := crypto.Keccak256([]byte("mint(address,uint256)"))[:4]
+	mintMethodID := crypto.Keccak256([]byte("mint(address,uint256)"))[:4]
 
 	for _, id := range ids {
 		output, err := multiSig.Transactions(&bind.CallOpts{}, id)
@@ -302,7 +307,7 @@ func (api *PublicTokenAPI) MintList() (ret PendingMintTransactions, err error) {
 			return ret, err
 		}
 
-		if !bytes.Equal(output.Data[:4], mintMethodId) {
+		if !bytes.Equal(output.Data[:4], mintMethodID) {
 			continue
 		}
 

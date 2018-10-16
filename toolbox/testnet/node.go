@@ -13,12 +13,14 @@ type node struct {
 }
 
 func (n *node) Start() error {
-	err := n.dockerEngine.PullImage(n.nodeSpec.Image)
-	if err != nil {
-		return err
-	}
+	/*
+		err := n.dockerEngine.PullImage(n.nodeSpec.Image)
+		if err != nil {
+			return err
+		}
+	*/
 
-	err = n.dockerEngine.CreateContainer(n.nodeSpec.Image, n.nodeSpec.ID, n.nodeSpec.NetworkID, n.nodeSpec.Cmd, nil, n.nodeSpec.PortMapping)
+	err := n.dockerEngine.CreateContainer(n.nodeSpec.Image, n.nodeSpec.ID, n.nodeSpec.NetworkID, n.nodeSpec.Cmd, nil, n.nodeSpec.PortMapping)
 	if err != nil {
 		return err
 	}

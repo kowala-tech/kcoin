@@ -116,7 +116,7 @@ func (ctx *Context) TransactionHashTheSame() error {
 		return err
 	}
 
-	command := fmt.Sprintf("web3.eth.getTransactionFromBlock('%d', 0);", txBlock.NumberU64())
+	command := fmt.Sprintf("kcoin.getTransactionFromBlock('%d', 0);", txBlock.NumberU64())
 	resp, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand(command))
 	if err != nil {
 		return err
