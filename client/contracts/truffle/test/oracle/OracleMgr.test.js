@@ -66,7 +66,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
     describe('registration', async () => {
       it('should register oracle', async () => {
         // when
-        await this.oracle.registerOracle({ from: newOwner });
+        await this.oracle.registerOracle(newOwner, { from: owner });
 
         // then
         const oracleCount = await this.oracle.getOracleCount();
@@ -75,10 +75,10 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
 
       it('should not register already registered oracle', async () => {
         // given
-        await this.oracle.registerOracle({ from: newOwner });
+        await this.oracle.registerOracle(newOwner, { from: owner });
 
         // when
-        const expectedRegistrationFailure = this.oracle.registerOracle({ from: newOwner });
+        const expectedRegistrationFailure = this.oracle.registerOracle(newOwner, { from: owner });
 
         // then
         await expectedRegistrationFailure.should.eventually.be.rejectedWith(EVMError('revert'));
@@ -86,36 +86,36 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
 
       it('should not register oracle above oracle limit', async () => {
         // given
-        await this.oracle.registerOracle({ from: newOwner });
-        await this.oracle.registerOracle({ from: newOwner2 });
-        await this.oracle.registerOracle({ from: newOwner3 });
+        await this.oracle.registerOracle(newOwner, { from: owner });
+        await this.oracle.registerOracle(newOwner2, { from: owner });
+        await this.oracle.registerOracle(newOwner3, { from: owner });
 
         // when
-        const expectedRegistrationFailure = this.oracle.registerOracle({ from: newOwner4 });
+        const expectedRegistrationFailure = this.oracle.registerOracle(newOwner4, { from: owner });
 
         // then
         await expectedRegistrationFailure.should.eventually.be.rejectedWith(EVMError('revert'));
       });
 
-      it('should not register oracle when not super node', async () => {
-        const consensus = await ConsensusMock.new(false);
-        const resolver = await DomainResolverMock.new(consensus.address);
-        const oracleWithoutSuperNode = await OracleMgr.new(3, 1, 1, resolver.address, { from: owner });
-        // when
-        const expectedRegistrationFailure = oracleWithoutSuperNode.registerOracle({ from: newOwner });
+      // it('should not register oracle when not super node', async () => {
+      //   const consensus = await ConsensusMock.new(false);
+      //   const resolver = await DomainResolverMock.new(consensus.address);
+      //   const oracleWithoutSuperNode = await OracleMgr.new(3, 1, 1, resolver.address, { from: owner });
+      //   // when
+      //   const expectedRegistrationFailure = oracleWithoutSuperNode.registerOracle(newOwner, { from: owner });
 
-        // then
-        await expectedRegistrationFailure.should.eventually.be.rejectedWith(EVMError('revert'));
-      });
+      //   // then
+      //   await expectedRegistrationFailure.should.eventually.be.rejectedWith(EVMError('revert'));
+      // });
     });
 
     describe('deregistration', async () => {
       it('should deregister oracle', async () => {
         // given
-        await this.oracle.registerOracle({ from: newOwner });
+        await this.oracle.registerOracle(newOwner, { from: owner });
 
         // when
-        await this.oracle.deregisterOracle({ from: newOwner });
+        await this.oracle.deregisterOracle(newOwner, { from: owner });
 
         // then
         const oracleCount = await this.oracle.getOracleCount();
@@ -124,11 +124,11 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
 
       it('should not deregister deregistered oracle', async () => {
         // given
-        await this.oracle.registerOracle({ from: newOwner });
-        await this.oracle.deregisterOracle({ from: newOwner });
+        await this.oracle.registerOracle(newOwner, { from: owner });
+        await this.oracle.deregisterOracle(newOwner, { from: owner });
 
         // when
-        const exptectedFailedDeregistration = this.oracle.deregisterOracle({ from: newOwner });
+        const exptectedFailedDeregistration = this.oracle.deregisterOracle(newOwner, { from: owner });
 
         // then
         await exptectedFailedDeregistration.should.eventually.be.rejectedWith(EVMError('revert'));
@@ -136,7 +136,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
 
       it('should not deregister non-oracle', async () => {
         // when
-        const exptectedFailedDeregistration = this.oracle.deregisterOracle({ from: notOwner });
+        const exptectedFailedDeregistration = this.oracle.deregisterOracle(notOwner, { from: owner });
 
         // then
         await exptectedFailedDeregistration.should.eventually.be.rejectedWith(EVMError('revert'));
@@ -160,7 +160,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
 
       it('should get oracle`s price', async () => {
         // given
-        await this.oracle.registerOracle({ from: newOwner });
+        await this.oracle.registerOracle(newOwner, { from: owner });
         await this.oracle.submitPrice(10, { from: newOwner });
 
         // when
@@ -171,7 +171,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
 
       it('should get oracle at index', async () => {
         // given
-        await this.oracle.registerOracle({ from: newOwner });
+        await this.oracle.registerOracle(newOwner, { from: owner });
 
         // when
         const oracleAtIndex = await this.oracle.getOracleAtIndex(0, { from: newOwner });
@@ -182,7 +182,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
 
       it('should not set price twice', async () => {
         // given
-        await this.oracle.registerOracle({ from: newOwner });
+        await this.oracle.registerOracle(newOwner, { from: owner });
         await this.oracle.submitPrice(10, { from: newOwner });
 
         // when
@@ -194,7 +194,7 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
 
       it('should not set price if not oracle', async () => {
         // given
-        await this.oracle.registerOracle({ from: newOwner });
+        await this.oracle.registerOracle(newOwner, { from: owner });
 
         // when
         const expectedPriceFailure = this.oracle.submitPrice(10, { from: notOwner });
@@ -205,8 +205,8 @@ contract('OracleMgr', ([_, admin, owner, newOwner, newOwner2, newOwner3, newOwne
 
       it('should get price count', async () => {
         // given
-        await this.oracle.registerOracle({ from: newOwner });
-        await this.oracle.registerOracle({ from: newOwner2 });
+        await this.oracle.registerOracle(newOwner, { from: owner });
+        await this.oracle.registerOracle(newOwner2, { from: owner });
 
         // when
         await this.oracle.submitPrice(10, { from: newOwner });

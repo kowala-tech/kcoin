@@ -165,6 +165,144 @@ func (suite *OracleMgrSuite) TestRegisterOracle_Paused() {
 	suite.Backend.Commit()
 
 	// register oracle must fail
+	_, err = suite.oracleMgr.RegisterOracle(transactOpts, crypto.PubkeyToAddress(user.PublicKey))
+	req.Error(err, "service is paused")
+}
+
+func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_NotOwner() {
+	req := suite.Require()
+
+	transactOpts := bind.NewKeyedTransactor(user)
+
+	// register oracle must fail
+	_, err := suite.oracleMgr.RegisterOracle(transactOpts, crypto.PubkeyToAddress(owner.PublicKey))
+	req.Error(err, "not owner")
+}
+
+func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_Owner_Duplicate() {
+	req := suite.Require()
+
+	transactOpts := bind.NewKeyedTransactor(owner)
+
+	// register an oracle
+	_, err := suite.oracleMgr.RegisterOracle(transactOpts, crypto.PubkeyToAddress(user.PublicKey))
+	req.NoError(err)
+
+	suite.Backend.Commit()
+
+	// register the same oracle again
+	_, err = suite.oracleMgr.RegisterOracle(transactOpts, crypto.PubkeyToAddress(user.PublicKey))
+	req.Error(err, "duplicate registration")
+}
+
+func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_Owner_NewCandidate_Full() {
+	req := suite.Require()
+
+	transactOpts := bind.NewKeyedTransactor(owner)
+
+	// register an oracle
+	_, err := suite.oracleMgr.RegisterOracle(transactOpts, crypto.PubkeyToAddress(owner.PublicKey))
+	req.NoError(err)
+
+	suite.Backend.Commit()
+
+	// register the same oracle again
+	_, err = suite.oracleMgr.RegisterOracle(transactOpts, crypto.PubkeyToAddress(user.PublicKey))
+	req.Error(err, "duplicate registration")
+}
+
+func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_Owner_NewCandidate_NotFull() {
+	req := suite.Require()
+
+	transactOpts := bind.NewKeyedTransactor(owner)
+
+	// register an oracle
+	userAddr := crypto.PubkeyToAddress(user.PublicKey)
+	_, err := suite.oracleMgr.RegisterOracle(transactOpts, userAddr)
+	req.NoError(err)
+
+	suite.Backend.Commit()
+
+	oracleCount, err := suite.oracleMgr.GetOracleCount(&bind.CallOpts{})
+	req.NoError(err)
+	req.NotNil(oracleCount)
+	req.Equal(common.Big1, oracleCount)
+
+	storedOracle, err := suite.oracleMgr.GetOracleAtIndex(&bind.CallOpts{}, common.Big0)
+	req.NoError(err)
+	req.NotZero(storedOracle)
+	req.Equal(storedOracle, userAddr)
+}
+
+func (suite *OracleMgrSuite) TestDeregisterOracle_Paused() {
+	req := suite.Require()
+
+	transactOpts := bind.NewKeyedTransactor(owner)
+	userAddr := crypto.PubkeyToAddress(user.PublicKey)
+
+	// register oracle
+	_, err := suite.oracleMgr.RegisterOracle(transactOpts, userAddr)
+	req.NoError(err)
+
+	suite.Backend.Commit()
+
+	// pause service
+	_, err = suite.oracleMgr.Pause(transactOpts)
+	req.NoError(err)
+	suite.Backend.Commit()
+
+	// deregister oracle
+	_, err = suite.oracleMgr.DeregisterOracle(transactOpts, userAddr)
+	req.Error(err, "service is paused")
+}
+
+func (suite *OracleMgrSuite) TestDeregisterOracle_NotPaused_NotOwner() {
+	req := suite.Require()
+
+	// deregister oracle
+	transactOpts := bind.NewKeyedTransactor(user)
+	_, err := suite.oracleMgr.DeregisterOracle(transactOpts, crypto.PubkeyToAddress(owner.PublicKey))
+	req.Error(err, "not owner")
+}
+
+func (suite *OracleMgrSuite) TestDeregisterOracle_NotPaused_Owner_NotOracle() {
+	req := suite.Require()
+
+	// deregister oracle
+	transactOpts := bind.NewKeyedTransactor(owner)
+	_, err := suite.oracleMgr.DeregisterOracle(transactOpts, crypto.PubkeyToAddress(user.PublicKey))
+	req.Error(err, "the user is not an oracle")
+}
+
+func (suite *OracleMgrSuite) TestDeregisterOracle_NotPaused_Owner_Oracle() {
+	req := suite.Require()
+
+	transactOpts := bind.NewKeyedTransactor(owner)
+	userAddr := crypto.PubkeyToAddress(user.PublicKey)
+
+	// register oracle
+	_, err := suite.oracleMgr.RegisterOracle(transactOpts, userAddr)
+	req.NoError(err)
+
+	suite.Backend.Commit()
+
+	// deregister oracle
+	_, err = suite.oracleMgr.DeregisterOracle(transactOpts, userAddr)
+	req.NoError(err)
+}
+
+/*
+func (suite *OracleMgrSuite) TestRegisterOracle_Paused() {
+	req := suite.Require()
+
+	transactOpts := bind.NewKeyedTransactor(owner)
+
+	// pause service
+	_, err := suite.oracleMgr.Pause(transactOpts)
+	req.NoError(err)
+	suite.Backend.Commit()
+
+	// register oracle must fail
 	registerOpts := bind.NewKeyedTransactor(user)
 	_, err = suite.oracleMgr.RegisterOracle(registerOpts)
 	req.Error(err, "service is paused")
@@ -185,6 +323,7 @@ func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_Duplicate() {
 	req.Error(err, "duplicate registration")
 }
 
+
 func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_NewCandidate_NotSuperNode() {
 	req := suite.Require()
 
@@ -193,6 +332,7 @@ func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_NewCandidate_NotSuperN
 	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
 	req.Error(err, "user is not a super node")
 }
+
 
 func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_NewCandidate_SuperNode_Full() {
 	req := suite.Require()
@@ -207,6 +347,7 @@ func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_NewCandidate_SuperNode
 	_, err = suite.oracleMgr.RegisterOracle(registerOpts)
 	req.Error(err, "no positions available")
 }
+
 
 func (suite *OracleMgrSuite) TestRegisterOracle_NotPaused_NewCandidate_SuperNode_NotFull() {
 	req := suite.Require()
@@ -270,13 +411,14 @@ func (suite *OracleMgrSuite) TestDeregisterOracle_NotPaused_Oracle() {
 	req.NoError(err)
 	req.Zero(count.Uint64())
 }
+*/
 
 func (suite *OracleMgrSuite) TestSubmitPrice_Paused() {
 	req := suite.Require()
 
 	// register oracle
-	registerOpts := bind.NewKeyedTransactor(user)
-	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
+	registerOpts := bind.NewKeyedTransactor(owner)
+	_, err := suite.oracleMgr.RegisterOracle(registerOpts, crypto.PubkeyToAddress(user.PublicKey))
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -304,8 +446,8 @@ func (suite *OracleMgrSuite) TestSubmitPrice_NotPaused_Oracle() {
 	req := suite.Require()
 
 	// register oracle
-	registerOpts := bind.NewKeyedTransactor(user)
-	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
+	registerOpts := bind.NewKeyedTransactor(owner)
+	_, err := suite.oracleMgr.RegisterOracle(registerOpts, crypto.PubkeyToAddress(user.PublicKey))
 	req.NoError(err)
 
 	suite.Backend.Commit()
@@ -320,8 +462,8 @@ func (suite *OracleMgrSuite) TestSubmitPrice_NotPaused_Oracle_SubmitPriceTwiceSa
 	req := suite.Require()
 
 	// register oracle
-	registerOpts := bind.NewKeyedTransactor(user)
-	_, err := suite.oracleMgr.RegisterOracle(registerOpts)
+	registerOpts := bind.NewKeyedTransactor(owner)
+	_, err := suite.oracleMgr.RegisterOracle(registerOpts, crypto.PubkeyToAddress(user.PublicKey))
 	req.NoError(err)
 
 	suite.Backend.Commit()
