@@ -20,10 +20,10 @@ type SourceMapInstruction struct {
 	typeJump          string
 }
 
-func ParseSourceMap(sm string) ([]SourceMapInstruction, error) {
+func ParseSourceMap(sm string) ([]*SourceMapInstruction, error) {
 	items := strings.Split(sm, Separator)
 
-	var sourceItem []SourceMapInstruction
+	var sourceItem []*SourceMapInstruction
 
 	typeJumpConverter := &StringSourceMapConverter{}
 	intConverters := getIntConverters()
@@ -32,7 +32,7 @@ func ParseSourceMap(sm string) ([]SourceMapInstruction, error) {
 		p := strings.Split(item, PartSeparator)
 
 		if len(item) == 0 {
-			sourceItem = append(sourceItem, SourceMapInstruction{
+			sourceItem = append(sourceItem, &SourceMapInstruction{
 				byteOffsetStart:   intConverters[0].lastItem,
 				sourceRangeLength: intConverters[1].lastItem,
 				fileIndex:         intConverters[2].lastItem,
@@ -65,7 +65,7 @@ func ParseSourceMap(sm string) ([]SourceMapInstruction, error) {
 			}
 		}
 
-		sourceItem = append(sourceItem, SourceMapInstruction{
+		sourceItem = append(sourceItem, &SourceMapInstruction{
 			byteOffsetStart:   intConverters[0].convertedValue,
 			sourceRangeLength: intConverters[1].convertedValue,
 			fileIndex:         intConverters[2].convertedValue,

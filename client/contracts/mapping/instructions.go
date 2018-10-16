@@ -1,13 +1,13 @@
 package mapping
 
 //ParseByteCode parses a byte code and returns an array of instructions.
-func ParseByteCode(byteCode []byte) ([]Instruction, error) {
-	var instructions []Instruction
+func ParseByteCode(byteCode []byte) ([]*Instruction, error) {
+	var instructions []*Instruction
 
 	numBytes := len(byteCode)
 
 	for i := 0; i < numBytes; {
-		instruction := Instruction{}
+		instruction := &Instruction{}
 
 		lengthPushBytes := 0
 

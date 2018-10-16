@@ -61,3 +61,46 @@ func TestItFailsWhenGettingContractWithOutOfBoundsIndex(t *testing.T) {
 	_, err = mapper.GetContractByIndex(50)
 	assert.EqualError(t, err, "invalid index for contract")
 }
+
+func TestWeCanGetInstructionsByPcFromContract(t *testing.T) {
+	contract := &Contract{
+		instructions: []*Instruction{
+			{OpCode: []byte{0x22, 0x23}},
+			{OpCode: []byte{0x22, 0x23}},
+			{OpCode: []byte{0x22, 0x23}},
+		},
+		sourceMapInstructions: []*SourceMapInstruction{
+			{
+				byteOffsetStart:   111,
+				sourceRangeLength: 111,
+				fileIndex:         1,
+				typeJump:          "-",
+			},
+			{
+				byteOffsetStart:   222,
+				sourceRangeLength: 222,
+				fileIndex:         2,
+				typeJump:          "-",
+			},
+			{
+				byteOffsetStart:   333,
+				sourceRangeLength: 333,
+				fileIndex:         2,
+				typeJump:          "-",
+			},
+		},
+	}
+
+	t.Run("getting instruction by index", func(t *testing.T) {
+		ins, smIns, err := contract.GetInstructionByPc(2)
+		assert.NoError(t, err)
+
+		assert.Equal(t, contract.sourceMapInstructions[2-1], smIns)
+		assert.Equal(t, contract.instructions[2-1], ins)
+	})
+
+	t.Run("it fails when instruction is out of bounds", func(t *testing.T) {
+		_, _, err := contract.GetInstructionByPc(10)
+		assert.EqualError(t, err, "contract instruction out of bounds")
+	})
+}

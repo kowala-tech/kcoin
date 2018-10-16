@@ -16,8 +16,21 @@ type SourceMapper struct {
 }
 
 type Contract struct {
-	instructions          []Instruction
-	sourceMapInstructions []SourceMapInstruction
+	instructions          []*Instruction
+	sourceMapInstructions []*SourceMapInstruction
+}
+
+func (c *Contract) GetInstructionByPc(pc uint64) (*Instruction, *SourceMapInstruction, error) {
+	insInMap := pc - 1
+
+	if len(c.instructions) <= int(insInMap) || len(c.sourceMapInstructions) <= int(insInMap) {
+		return nil, nil, fmt.Errorf("contract instruction out of bounds")
+	}
+
+	ins := c.instructions[insInMap]
+	smIns := c.sourceMapInstructions[insInMap]
+
+	return ins, smIns, nil
 }
 
 type JSONSourceMap struct {
