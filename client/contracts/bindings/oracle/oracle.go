@@ -6,6 +6,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
 	"github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -30,6 +31,7 @@ func Bind(contractBackend bind.ContractBackend, chainID *big.Int) (bindings.Bind
 		contractBackend,
 	)
 	if err != nil {
+		log.Error("can't find Oracle for given Network", "chainID", chainID.String())
 		return nil, bindings.ErrNoAddress
 	}
 

@@ -25,7 +25,7 @@ type updater struct {
 }
 
 func NewUpdater(repository string, logger log.Logger) (*updater, error) {
-	current, err := semver.Make(params.Version)
+	current, err := MakeSemver(params.Version)
 	if err != nil {
 		return nil, err
 	}
