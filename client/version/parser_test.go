@@ -19,7 +19,7 @@ func TestFilenameParser(t *testing.T) {
 	}
 	for _, bm := range filenames {
 		t.Run(bm.filename, func(t *testing.T) {
-			asset, err := filenameParser(bm.filename)
+			asset, err := FilenameParser(bm.filename)
 			assert.NoError(t, err)
 			assert.Equal(t, bm.filename, asset.Path())
 			assert.Equal(t, bm.version, asset.Semver().String())
