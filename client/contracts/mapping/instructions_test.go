@@ -45,6 +45,10 @@ func TestInstructionParserWithMoreThan1ByteInstruction(t *testing.T) {
 			instruction:     "0101630102030432",
 			numInstructions: 4,
 		},
+		{
+			instruction:     "73000000000000000000000000000000000000000030146080604052600080fd00a165627a7a723058202f32ca0834855db4fcb1a13371c8e65194aed941a4f501f535bc0df0399a9fae0029",
+			numInstructions: 10,
+		},
 	}
 
 	for _, ins := range insBytes {

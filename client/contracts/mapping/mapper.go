@@ -10,7 +10,7 @@ import (
 )
 
 type SourceMapper struct {
-	contracts             []Contract
+	contracts             []*Contract
 	sourceMapInstructions []SourceMapInstruction
 	files                 []string
 }
@@ -31,7 +31,7 @@ type contract struct {
 	SrcMapRuntime string `json:"srcmap-runtime"`
 }
 
-func NewFromSourceMap(filePath string) (*SourceMapper, error) {
+func NewFromCombinedRuntime(filePath string) (*SourceMapper, error) {
 	fileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading source map: %s", err)
@@ -64,6 +64,14 @@ func (sm *SourceMapper) GetFileByIndex(index int) (string, error) {
 	return sm.files[index], nil
 }
 
+func (sm *SourceMapper) GetContractByIndex(index int) (*Contract, error) {
+	if len(sm.contracts) <= index {
+		return nil, fmt.Errorf("invalid index for contract")
+	}
+
+	return sm.contracts[index], nil
+}
+
 func parseFiles(jsm JSONSourceMap) []string {
 	var files []string
 
@@ -74,8 +82,8 @@ func parseFiles(jsm JSONSourceMap) []string {
 	return files
 }
 
-func parseContracts(jsm JSONSourceMap) ([]Contract, error) {
-	var contracts []Contract
+func parseContracts(jsm JSONSourceMap) ([]*Contract, error) {
+	var contracts []*Contract
 
 	for _, c := range jsm.Contracts {
 		smi, err := ParseSourceMap(c.SrcMapRuntime)
@@ -88,7 +96,7 @@ func parseContracts(jsm JSONSourceMap) ([]Contract, error) {
 			return nil, fmt.Errorf("error parsing bytecode: %s", err)
 		}
 
-		contracts = append(contracts, Contract{
+		contracts = append(contracts, &Contract{
 			sourceMapInstructions: smi,
 			instructions:          ins,
 		})

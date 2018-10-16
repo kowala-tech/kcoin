@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/kowala-tech/kcoin/client/contracts/mapping"
+
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
@@ -48,6 +50,11 @@ func (e *EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, g
 				err,
 			),
 		)
+	}
+
+	_, err = mapping.NewFromCombinedRuntime("../../contracts/bindings/build/combined.json")
+	if err != nil {
+		return fmt.Errorf("error %s", err)
 	}
 
 	return nil
