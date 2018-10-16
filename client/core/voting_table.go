@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
@@ -40,16 +41,15 @@ func (table *votingTable) Add(voteAddressed types.AddressVote) error {
 	if !table.isVoter(voteAddressed.Address()) {
 		return fmt.Errorf("voter address not found in voting table: 0x%x", voteAddressed.Address().Hash())
 	}
+
 	if err := table.isDuplicate(voteAddressed); err != nil {
 		return err
 	}
 
-	vote := voteAddressed.Vote()
-	table.votes.Add(vote)
+	table.votes.Add(voteAddressed)
 
 	if table.hasQuorum() {
-		log.Debug("voting. Quorum has been achieved. majority", "votes", table.votes.Len(), "voters", table.voters.Len())
-		table.majority(vote.BlockHash())
+		table.majority(table.votes.Leader())
 	}
 
 	return nil
@@ -60,13 +60,13 @@ func (table *votingTable) Leader() common.Hash {
 }
 
 func (table *votingTable) isDuplicate(voteAddressed types.AddressVote) error {
-	vote := voteAddressed.Vote()
-	err := table.votes.Contains(vote.Hash())
+	err := table.votes.Contains(voteAddressed)
 	if err != nil {
+		vote := voteAddressed.Vote()
 		log.Error(fmt.Sprintf("a duplicate vote in voting table %v; blockHash %v; voteHash %v; from validator %v. Error: %s",
 			table.voteType, vote.BlockHash(), vote.Hash(), voteAddressed.Address(), vote.String()))
 	}
-	return err
+	return nil
 }
 
 func (table *votingTable) isVoter(address common.Address) bool {
@@ -74,15 +74,32 @@ func (table *votingTable) isVoter(address common.Address) bool {
 }
 
 func (table *votingTable) hasQuorum() bool {
-	isQuorum := table.quorum(table.votes.Len(), table.voters.Len())
-	log.Debug("voting. hasQuorum", "voters", table.voters.Len(), "votes", table.votes.Len(), "isQuorum", isQuorum)
+	leaderBlockVotes := table.votes.Count(table.Leader())
+	isQuorum := table.quorum(int64(leaderBlockVotes), int64(table.voters.Len()))
+
+	log.Debug("voting. hasQuorum", "leaderVotes", leaderBlockVotes, "votes", table.votes.Len(),
+		"voters", table.voters.Len(), "isQuorum", isQuorum, "leader", table.Leader())
+
 	return isQuorum
 }
 
 type QuorumReachedFunc func(winner common.Hash)
 
-type QuorumFunc func(votes, voters int) bool
+type QuorumFunc func(votes, voters int64) bool
 
-func TwoThirdsPlusOneVoteQuorum(votes, voters int) bool {
-	return votes >= voters*2/3+1
+func TwoThirdsPlusOneVoteQuorum(votes, voters int64) bool {
+	if votes > voters {
+		log.Error("the number of votes is greater than the number of voters", "votes", votes, "voters", voters)
+	}
+
+	majority := big.NewRat(2*voters,3)
+	majority.Add(majority, big.NewRat(1,1))
+
+	if majority.Cmp(big.NewRat(voters, 1)) > 0 {
+		// the majority shouldn't be greater than number of voters
+		majority.SetInt64(voters)
+	}
+
+	// votes >= voters*2/3+1
+	return majority.Cmp(big.NewRat(votes, 1)) <= 0
 }

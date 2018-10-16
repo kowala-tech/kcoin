@@ -33,7 +33,7 @@ func TestTwoThirdsPlusOneVoteQuorum(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("voters %d votes %d quorum %t", tc.voters, tc.votes, tc.hasQuorum), func(t *testing.T) {
-			assert.Equal(t, tc.hasQuorum, TwoThirdsPlusOneVoteQuorum(tc.votes, tc.voters))
+			assert.Equal(t, tc.hasQuorum, TwoThirdsPlusOneVoteQuorum(int64(tc.votes), int64(tc.voters)))
 		})
 	}
 }

@@ -46,9 +46,9 @@ type VotingState struct {
 // VotingTables represents the voting tables available for each election round
 type VotingTables = [2]core.VotingTable
 
-func NewVotingTables(eventMux *event.TypeMux, voters types.Voters) (VotingTables, error) {
+func NewVotingTables(voters types.Voters, poster eventPoster) (VotingTables, error) {
 	majorityFunc := func(winnerBlock common.Hash) {
-		go eventMux.Post(core.NewMajorityEvent{Winner: winnerBlock})
+		poster.EventPost(core.NewMajorityEvent{Winner: winnerBlock})
 	}
 
 	var err error
@@ -75,18 +75,17 @@ type VotingSystem struct {
 	electionNumber *big.Int // election number
 	round          uint64
 	votesPerRound  map[uint64]VotingTables
-
-	eventMux *event.TypeMux
+	poster         eventPoster
 }
 
 // NewVotingSystem returns a new voting system
-func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters types.Voters) (*VotingSystem, error) {
+func NewVotingSystem(electionNumber *big.Int, voters types.Voters, poster eventPoster) (*VotingSystem, error) {
 	system := &VotingSystem{
 		voters:         voters,
 		electionNumber: electionNumber,
 		round:          0,
 		votesPerRound:  make(map[uint64]VotingTables),
-		eventMux:       eventMux,
+		poster:         poster,
 	}
 
 	err := system.NewRound()
@@ -99,7 +98,7 @@ func NewVotingSystem(eventMux *event.TypeMux, electionNumber *big.Int, voters ty
 
 func (vs *VotingSystem) NewRound() error {
 	var err error
-	vs.votesPerRound[vs.round], err = NewVotingTables(vs.eventMux, vs.voters)
+	vs.votesPerRound[vs.round], err = NewVotingTables(vs.voters, vs.poster)
 	if err != nil {
 		return err
 	}
@@ -108,7 +107,7 @@ func (vs *VotingSystem) NewRound() error {
 
 // Add registers a vote
 func (vs *VotingSystem) Add(vote types.AddressVote) error {
-	votingTable, err := vs.getVoteSet(vote.Vote().Round(), vote.Vote().Type())
+	votingTable, err := vs.getVotingTable(vote.Vote().Round(), vote.Vote().Type())
 	if err != nil {
 		return err
 	}
@@ -118,13 +117,13 @@ func (vs *VotingSystem) Add(vote types.AddressVote) error {
 		return err
 	}
 
-	go vs.eventMux.Post(core.NewVoteEvent{Vote: vote.Vote()})
+	vs.poster.EventPost(core.NewVoteEvent{Vote: vote.Vote()})
 
 	return nil
 }
 
 func (vs *VotingSystem) Leader(round uint64, voteType types.VoteType) (common.Hash, error) {
-	votingTable, err := vs.getVoteSet(round, voteType)
+	votingTable, err := vs.getVotingTable(round, voteType)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -132,14 +131,14 @@ func (vs *VotingSystem) Leader(round uint64, voteType types.VoteType) (common.Ha
 	return votingTable.Leader(), nil
 }
 
-func (vs *VotingSystem) getVoteSet(round uint64, voteType types.VoteType) (core.VotingTable, error) {
+func (vs *VotingSystem) getVotingTable(round uint64, voteType types.VoteType) (core.VotingTable, error) {
 	votingTables, ok := vs.votesPerRound[round]
 	if !ok {
-		return nil, errors.New("voting table for round doesnt exists")
+		return nil, errors.New("voting table for round doesn't exists")
 	}
 
 	if uint64(voteType) > uint64(len(votingTables)-1) {
-		return nil, errors.New("invalid voteType on add vote ")
+		return nil, errors.New("invalid voteType on add vote")
 	}
 
 	return votingTables[int(voteType)], nil

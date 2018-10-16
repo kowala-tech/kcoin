@@ -76,9 +76,10 @@ type StateDB struct {
 
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
-	journal        *journal
-	validRevisions []revision
-	nextRevisionId int
+	journal           *journal
+	validRevisions    []revision
+	revertedRevisions []revision
+	nextRevisionId    int
 
 	lock sync.Mutex
 }
@@ -514,12 +515,25 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 	idx := sort.Search(len(self.validRevisions), func(i int) bool {
 		return self.validRevisions[i].id >= revid
 	})
+
 	if idx == len(self.validRevisions) || self.validRevisions[idx].id != revid {
-		panic(fmt.Errorf("revision id %v cannot be reverted", revid))
+		// check if the revision was already reverted
+		revertedIndex := sort.Search(len(self.revertedRevisions), func(i int) bool {
+			return self.revertedRevisions[i].id <= revid
+		})
+
+		if revertedIndex == -1 {
+			panic(fmt.Errorf("revision id %v cannot be reverted. found the revision at index %d. latest revision index %d",
+				revid, idx, self.validRevisions[idx].id))
+		} else {
+			log.Warn("already reverted", "revisionID", revid)
+			return
+		}
 	}
 	snapshot := self.validRevisions[idx].journalIndex
 
 	// Replay the journal to undo changes and remove invalidated snapshots
+	self.revertedRevisions = append(self.revertedRevisions, self.validRevisions[idx])
 	self.journal.revert(self, snapshot)
 	self.validRevisions = self.validRevisions[:idx]
 }
@@ -575,6 +589,7 @@ func (self *StateDB) Prepare(thash, bhash common.Hash, ti int) {
 func (s *StateDB) clearJournalAndRefund() {
 	s.journal = newJournal()
 	s.validRevisions = s.validRevisions[:0]
+	s.revertedRevisions = s.revertedRevisions[:0]
 	s.refund = 0
 }
 

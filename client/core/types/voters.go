@@ -69,10 +69,12 @@ type voters []*Voter
 // NextProposer returns the next proposer based on the round and weight of the each voters
 func (voters voters) NextProposer() *Voter {
 	proposer := voters[0]
+	totalDeposit := big.NewInt(0)
 
 	for _, voter := range voters {
 		// add more chance for each voter to be the next Proposer by adding their deposit amount as weight
 		voter.weight.Add(voter.weight, voter.deposit)
+		totalDeposit.Add(totalDeposit, voter.deposit)
 
 		if voter.weight.Cmp(proposer.weight) > 0 {
 			proposer = voter
@@ -80,7 +82,7 @@ func (voters voters) NextProposer() *Voter {
 	}
 
 	// decrement this Voter weight since he has been selected as next proposer
-	proposer.weight.Sub(proposer.weight, proposer.deposit)
+	proposer.weight.Sub(proposer.weight, totalDeposit)
 
 	log.Info("proposer has been chosen", "proposer", proposer.Address().String(),
 		"deposit", proposer.Deposit().Int64(), "weight", proposer.Weight().Int64())

@@ -549,7 +549,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		if err != nil {
-			log.Error("an error while the blockchain do a call. can't get a state and a header", "err", err)
+			log.Error("an error while the blockchain do a call. can't get a state and a header", "block", blockNr.Int64(), "err", err)
 		}
 		return nil, 0, false, err
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -93,9 +92,12 @@ type validator struct {
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
 	shouldStart int32 // should start indicates whether we should start after sync
+	isStarted   int32
+	startMutex  sync.Mutex
 
 	// events
-	eventMux *event.TypeMux
+	eventMux    *event.TypeMux
+	eventPoster eventPoster
 
 	wg sync.WaitGroup
 
@@ -105,15 +107,16 @@ type validator struct {
 // New returns a new consensus validator
 func New(backend Backend, consensus *consensus.Consensus, config *params.ChainConfig, eventMux *event.TypeMux, engine engine.Engine, vmConfig vm.Config) *validator {
 	validator := &validator{
-		config:    config,
-		backend:   backend,
-		chain:     backend.BlockChain(),
-		engine:    engine,
-		consensus: consensus,
-		eventMux:  eventMux,
-		signer:    types.NewAndromedaSigner(config.ChainID),
-		vmConfig:  vmConfig,
-		canStart:  0,
+		config:      config,
+		backend:     backend,
+		chain:       backend.BlockChain(),
+		engine:      engine,
+		consensus:   consensus,
+		eventMux:    eventMux,
+		eventPoster: newPoster(eventMux),
+		signer:      types.NewAndromedaSigner(config.ChainID),
+		vmConfig:    vmConfig,
+		canStart:    0,
 	}
 
 	go validator.sync()
@@ -130,9 +133,8 @@ func (val *validator) sync() {
 }
 
 func (val *validator) finishedSync() {
-	start := atomic.LoadInt32(&val.shouldStart) == 1
+	start := atomic.CompareAndSwapInt32(&val.shouldStart, 1, 0)
 	atomic.StoreInt32(&val.canStart, 1)
-	atomic.StoreInt32(&val.shouldStart, 0)
 	if start {
 		val.Start(val.walletAccount, val.deposit)
 	}
@@ -146,11 +148,17 @@ func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.I
 
 	atomic.StoreInt32(&val.shouldStart, 1)
 
+	if !atomic.CompareAndSwapInt32(&val.isStarted, 0, 1) {
+		log.Warn("failed to start the validator - the state machine is already running 1")
+		return
+	}
+
 	log.Info("starting validation", "account", walletAccount.Account().Address.String(), "deposit", deposit.Int64())
 	val.walletAccount = walletAccount
 	val.deposit = deposit
 
 	if atomic.LoadInt32(&val.canStart) == 0 {
+		atomic.StoreInt32(&val.isStarted, 0)
 		log.Info("network syncing, will start validator afterwards")
 		return
 	}
@@ -187,7 +195,6 @@ func (val *validator) isGenesisValidator() (bool, error) {
 }
 
 func (val *validator) Stop() error {
-
 	if !val.Running() {
 		return nil
 	}
@@ -201,6 +208,7 @@ func (val *validator) Stop() error {
 	val.wg.Wait() // waits until the validator is no longer registered as a voter.
 
 	atomic.StoreInt32(&val.shouldStart, 0)
+	atomic.StoreInt32(&val.isStarted, 0)
 	log.Info("Consensus validator stopped")
 	return nil
 }
@@ -296,7 +304,7 @@ func (val *validator) init() error {
 	val.lockedBlock = nil
 	val.commitRound = -1
 
-	val.votingSystem, err = NewVotingSystem(val.eventMux, val.blockNumber, val.voters)
+	val.votingSystem, err = NewVotingSystem(val.blockNumber, val.voters, val.eventPoster)
 	if err != nil {
 		log.Error("Failed to create voting system", "err", err)
 		return nil
@@ -349,6 +357,7 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 
 	val.blockFragmentsLock.Lock()
 	defer val.blockFragmentsLock.Unlock()
+
 	blockFragments, ok := val.blockFragments[proposal.Hash()]
 	if !ok {
 		blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
@@ -365,6 +374,16 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 func (val *validator) AddVote(vote *types.Vote) error {
 	if !val.Validating() {
 		return ErrCantVoteNotValidating
+	}
+
+	if val.config.ChainID.Cmp(vote.ChainID()) != 0 {
+		return fmt.Errorf("expected vote for chainID %v, got %v",
+			val.config.ChainID.Int64(), vote.ChainID().Int64())
+	}
+
+	if val.blockNumber.Cmp(vote.BlockNumber()) != 0 {
+		return fmt.Errorf("expected vote block number %v, got %v",
+			val.blockNumber.Int64(), vote.BlockNumber().Int64())
 	}
 
 	val.handleMutex.Lock()
@@ -494,8 +513,8 @@ func (val *validator) createBlock() *types.Block {
 	// new block header
 	parent := val.chain.CurrentBlock()
 	blockNumber := parent.Number()
-	tstart := time.Now()
-	tstamp := tstart.Unix()
+	tstamp := time.Now().Unix()
+
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
 		tstamp = parent.Time().Int64() + 1
 	}
@@ -540,7 +559,9 @@ func (val *validator) createBlock() *types.Block {
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
+
 	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, commit, val.receipts); err != nil {
+		// fixme what if the proposed block will be declined? shall we somehow revert this state on the proposer's stateDB? it looks like that we should see a lot reorgs in logs.
 		log.Crit("Failed to finalize block for sealing", "err", err)
 	}
 
@@ -565,21 +586,26 @@ func (val *validator) propose() {
 		log.Crit("Failed to sign the proposal", "err", err)
 	}
 
-	spew.Dump("!!!! signed proposal", signedProposal)
-	log.Error("!!!! signed proposal", "account", val.walletAccount.Account().Address.String(), "chainID", val.config.ChainID.Int64())
-
 	val.proposal = signedProposal
 	val.block = block
 
-	val.eventMux.Post(core.NewProposalEvent{Proposal: signedProposal})
+	if err := val.eventMux.Post(core.NewProposalEvent{Proposal: signedProposal}); err != nil {
+		log.Warn("can't post an event", "err", err, "event", "NewProposalEvent", "proposal", signedProposal)
+	}
+	log.Info("sending a signed proposal", "account", val.walletAccount.Account().Address.String(), "chainID", val.config.ChainID.Int64(), "block", signedProposal.String())
 
 	for i := uint(0); i < fragments.Size(); i++ {
-		val.eventMux.Post(core.NewBlockFragmentEvent{
+		blockFragmentEvent := core.NewBlockFragmentEvent{
 			BlockNumber: val.blockNumber,
 			BlockHash:   val.header.Hash(),
 			Round:       val.round,
 			Data:        fragments.Get(int(i)),
-		})
+		}
+
+		err := val.eventMux.Post(blockFragmentEvent)
+		if err != nil {
+			log.Warn("can't post an event", "err", err, "event", "NewBlockFragmentEvent", "blockFragment", blockFragmentEvent)
+		}
 	}
 }
 
@@ -590,7 +616,7 @@ func (val *validator) preVote() {
 		log.Debug("Locked Block is not nil, voting for the locked block")
 		vote = val.lockedBlock.Hash()
 	case val.block == nil:
-		log.Warn("Proposal's block is nil, voting nil")
+		log.Warn("Proposal's block is nil, voting nil", "block", val.block == nil, "locked", val.lockedBlock == nil)
 		vote = common.Hash{}
 	default:
 		log.Debug("Voting for the proposal's block")
@@ -604,7 +630,7 @@ func (val *validator) preCommit() {
 	var vote common.Hash
 
 	// current leader by simple majority
-	votingTable, err := val.votingSystem.getVoteSet(val.round, types.PreVote)
+	votingTable, err := val.votingSystem.getVotingTable(val.round, types.PreVote)
 	if err != nil {
 		log.Crit("Error while preCommit stage", "err", err)
 	}

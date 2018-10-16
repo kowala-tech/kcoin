@@ -223,50 +223,67 @@ func (vote *Vote) String() string {
 type Votes []*Vote
 
 type VotesSet struct {
-	m        map[common.Hash]*Vote // non-nil votes
-	nilVotes map[common.Hash]*Vote // nil votes
-	counter  map[common.Hash]int   // map[block.Hash]count
-	leader   common.Hash           // block.Hash
+	votes    map[common.Hash]*Vote       // non-nil votes
+	nilVotes map[common.Hash]*Vote       // nil votes
+	counter  map[common.Hash]int         // map[block.Hash]count
+	isVoted  map[common.Address]struct{} // map[voterAddress]count
+	leader   common.Hash                 // block.Hash
 	l        sync.RWMutex
 }
 
 func NewVotesSet() *VotesSet {
 	return &VotesSet{
-		m:        make(map[common.Hash]*Vote),
+		votes:    make(map[common.Hash]*Vote),
 		nilVotes: make(map[common.Hash]*Vote),
 		counter:  make(map[common.Hash]int),
+		isVoted:  make(map[common.Address]struct{}),
 	}
 }
 
-func (v *VotesSet) Add(vote *Vote) {
+func (v *VotesSet) Add(vote AddressVote) {
 	v.l.Lock()
 	defer v.l.Unlock()
 
-	if bytes.Equal(vote.data.BlockHash.Bytes(), common.Hash{}.Bytes()) {
-		v.nilVotes[vote.Hash()] = vote
+	voteData := vote.Vote()
+
+	if _, ok := v.isVoted[vote.Address()]; ok {
+		log.Warn("already voted", "address", vote.Address())
 	} else {
-		v.m[vote.Hash()] = vote
+		v.isVoted[vote.Address()] = struct{}{}
 	}
 
-	log.Debug("voting. add vote", "type", vote.data.Type, "number", vote.data.BlockNumber.String(),
-		"round", vote.data.Round, "hash", vote.data.BlockHash.String())
+	if bytes.Equal(voteData.data.BlockHash.Bytes(), common.Hash{}.Bytes()) {
+		v.nilVotes[voteData.Hash()] = voteData
+	} else {
+		v.votes[voteData.Hash()] = voteData
+	}
 
-	v.counter[vote.data.BlockHash]++
-	if v.counter[vote.data.BlockHash] > v.counter[v.leader] {
-		v.leader = vote.data.BlockHash
+	log.Debug("voting. add vote", "type", voteData.data.Type, "number", voteData.data.BlockNumber.Int64(),
+		"round", voteData.data.Round, "blockHash", voteData.data.BlockHash.String())
+
+	v.counter[voteData.data.BlockHash]++
+	if v.counter[voteData.data.BlockHash] > v.counter[v.leader] {
+		v.leader = voteData.data.BlockHash
 	}
 }
 
 var (
+	errDuplicate       = errors.New("already voted")
 	errNonNilDuplicate = errors.New("duplicate NON-NIL vote")
 	errNilDuplicate    = errors.New("duplicate NIL vote")
 )
 
-func (v *VotesSet) Contains(h common.Hash) error {
+func (v *VotesSet) Contains(vote AddressVote) error {
 	v.l.RLock()
 	defer v.l.RUnlock()
 
-	_, res := v.m[h]
+	if _, ok := v.isVoted[vote.Address()]; ok {
+		return errDuplicate
+	}
+
+	h := vote.Vote().Hash()
+
+	_, res := v.votes[h]
 	if res {
 		return errNonNilDuplicate
 	}
@@ -283,7 +300,7 @@ func (v *VotesSet) Contains(h common.Hash) error {
 
 func (v *VotesSet) Len() int {
 	v.l.RLock()
-	res := len(v.m)
+	res := len(v.isVoted)
 	v.l.RUnlock()
 	return res
 }
@@ -297,7 +314,14 @@ func (v *VotesSet) Leader() common.Hash {
 
 func (v *VotesSet) Get(h common.Hash) (*Vote, bool) {
 	v.l.RLock()
-	vote, ok := v.m[h]
+	vote, ok := v.votes[h]
 	v.l.RUnlock()
 	return vote, ok
+}
+
+func (v *VotesSet) Count(blockHash common.Hash) int {
+	v.l.RLock()
+	count := v.counter[blockHash]
+	v.l.RUnlock()
+	return count
 }
