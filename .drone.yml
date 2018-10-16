@@ -56,7 +56,6 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.12
     commands:
-      - make test_genesis
       - make test
       - make lint
     secrets: [ slack_app_webhook ]

@@ -2,7 +2,27 @@ package genesis
 
 import "github.com/kowala-tech/kcoin/client/knode/currency"
 
+/*
+LiveCurrencies is the list of currencies that currently have main nets, and
+thus their genesis block is frozen.
+
+For these currencies, core contracts must be updated on the network.
+
+To add a new currency to this list, use the genesisgen tool (`make genesisgen`
+from kcoin root) and add the resultant GeneratedXXX variable to the map below.
+
+Without this, the genesis block will be generated on each new initialisation of
+the chain, and will not match the nodes on main or test nets for that currency!
+
+THIS IS INCREDIBLY IMPORTANT!
+*/
+var LiveCurrencies = map[string]map[string][]byte{
+	currency.KUSD: GeneratedKUSD,
+}
+
 var Networks = map[string]map[string]Options{
+
+	// This currency is frozen! See LiveCurrencies above
 	currency.KUSD: {
 		MainNetwork: Options{
 			Network:     MainNetwork,
