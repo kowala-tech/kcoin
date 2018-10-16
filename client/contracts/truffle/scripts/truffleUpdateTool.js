@@ -32,10 +32,10 @@ module.exports = async () => {
     await contract1.initialize(value, { from: acc2 });
     console.log((await contract1.value({ from: acc2 })).toString());
 
-    const myContractV1 = await MyContractV1.new();
-    await adminProxy.upgradeTo(myContractV1.address, { from: acc1 });
-    const contract2 = await MyContractV1.at(proxyAddr);
-    await contract2.add(5, { from: acc2 });
-    console.log(await contract2.value({ from: acc2 }));
+    // const myContractV1 = await MyContractV1.new();
+    // await adminProxy.upgradeTo(myContractV1.address, { from: acc1 });
+    // const contract2 = await MyContractV1.at(proxyAddr);
+    // await contract2.add(5, { from: acc2 });
+    // console.log(await contract2.value({ from: acc2 }));
   } catch (err) { console.log(err); }
 };
