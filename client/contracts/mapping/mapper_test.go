@@ -22,9 +22,9 @@ func TestWeCanCreateAMapAndGetItsFiles(t *testing.T) {
 		assert.NoError(t, err)
 
 		expectedFiles := []string{
-			"../../truffle/contracts/sysvars/SystemVars.sol",
-			"../../truffle/node_modules/openzeppelin-solidity/contracts/math/Math.sol",
-			"../../truffle/node_modules/zos-lib/contracts/migrations/Initializable.sol",
+			"../truffle/contracts/sysvars/SystemVars.sol",
+			"../truffle/node_modules/openzeppelin-solidity/contracts/math/Math.sol",
+			"../truffle/node_modules/zos-lib/contracts/migrations/Initializable.sol",
 		}
 
 		for i, expectedFile := range expectedFiles {
@@ -96,4 +96,14 @@ func TestWeCanGetInstructionsByPcFromContract(t *testing.T) {
 		_, _, err := contract.GetInstructionByPc(9)
 		assert.EqualError(t, err, "instruction out of bounds")
 	})
+}
+
+func TestPrueba(t *testing.T) {
+	mapper, err := NewFromCombinedRuntime("files/combined.json")
+	assert.NoError(t, err)
+
+	lineContent, err := mapper.GetSolidityLineByPc(907)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "revert()", lineContent)
 }

@@ -94,6 +94,30 @@ func (sm *SourceMapper) GetContractByIndex(index int) (*Contract, error) {
 	return sm.contracts[index], nil
 }
 
+func (sm *SourceMapper) GetSolidityLineByPc(pc uint64) (string, error) {
+	contract, err := sm.GetContractByIndex(0)
+	if err != nil {
+		return "", fmt.Errorf("error getting contract bt pc: %s", err)
+	}
+
+	_, insMap, err := contract.GetInstructionByPc(pc)
+	if err != nil {
+		return "", fmt.Errorf("error getting instruction by pc: %s", err)
+	}
+
+	fileName, err := sm.GetFileByIndex(insMap.fileIndex)
+	if err != nil {
+		return "", fmt.Errorf("error getting contract file: %s", err)
+	}
+
+	fileContents, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return "", fmt.Errorf("error getting contents of contract file: %s", err)
+	}
+
+	return string(fileContents[insMap.byteOffsetStart : insMap.byteOffsetStart+insMap.sourceRangeLength]), nil
+}
+
 func parseFiles(jsm JSONSourceMap) []string {
 	var files []string
 
