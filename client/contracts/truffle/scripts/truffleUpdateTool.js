@@ -21,7 +21,7 @@ const {
 module.exports = async () => {
   try {
     const proxyFactory = await UpgradeabilityProxyFactory.new({ from: acc2 });
-    const myContractV0 = await MyContractV0.new();
+    const myContractV0 = await MyContractV0.at('0x6c9c61090de0dfa865ab443fce9e9fbdf73ca167');
 
     const logs = await proxyFactory.createProxy(acc1, myContractV0.address, { from: acc2 });
     const logs1 = logs.logs;
@@ -32,10 +32,10 @@ module.exports = async () => {
     await contract1.initialize(value, { from: acc2 });
     console.log((await contract1.value({ from: acc2 })).toString());
 
-    // const myContractV1 = await MyContractV1.new();
-    // await adminProxy.upgradeTo(myContractV1.address, { from: acc1 });
-    // const contract2 = await MyContractV1.at(proxyAddr);
-    // await contract2.add(5, { from: acc2 });
-    // console.log(await contract2.value({ from: acc2 }));
+    const myContractV1 = await MyContractV1.at('0x4980bc0d26e67ca9c8cfa6d121b87974eb096256');
+    await adminProxy.upgradeTo(myContractV1.address, { from: acc1 });
+    const contract2 = await MyContractV1.at(proxyAddr);
+    await contract2.add(5, { from: acc2 });
+    console.log(await contract2.value({ from: acc2 }));
   } catch (err) { console.log(err); }
 };

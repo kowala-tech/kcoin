@@ -74,22 +74,11 @@ async function signTransactionAndSend(_data, _to, _from, _pk) {
 
   console.log('transaction created');
   console.log('signing transaction');
-
-  const tx = new Tx(txObject);
-  const pk = Buffer.from(_pk, 'hex');
-  tx.sign(pk);
+  const txRaw = await web3.eth.accounts.signTransaction(txObject, _pk);
 
   console.log('transaction signed');
-  console.log('serializing transaction');
-
-  const serializedTx = tx.serialize();
-
-  console.log('serialization completed');
-  console.log('sending signed transaction');
-
-  const raw = `0x${serializedTx.toString('hex')}`;
-  web3.eth.sendSignedTransaction(raw).on('receipt', console.log);
-  console.log('transaction sent');
+  
+  return web3.eth.sendSignedTransaction(txRaw.rawTransaction).on('receipt', console.log);
 }
 
 async function readABIAndByteCode(_file){
@@ -102,44 +91,37 @@ async function readABIAndByteCode(_file){
   const abi = contract.abi;
 
   // Smart contract EVM bytecode as hex
-  const code = '0x' + contract.bin;
+  const code = contract.bytecode;
 
   return [abi, code];
 }
 
 async function deployContract(_bytecode, _from, _pk){
-  const txCount = await web3.eth.getTransactionCount(_from)
-  console.log('Creating transaction object');
+  console.log('creating transaction');
+
+  const nonce = await web3.eth.getTransactionCount(_from);
   const txObject = {
-    nonce:    web3.utils.toHex(txCount),
-    gasLimit: web3.utils.toHex(1000000), // Raise the gas limit to a much higher amount
-    gasPrice: web3.utils.toHex(web3.utils.toWei('10', 'gwei')),
-    data: _bytecode
-  }
+    nonce: nonce,
+    gasLimit: web3.utils.toHex(600000),
+    gasPrice: web3.utils.toHex(1),
+    from: _from,
+    data: _bytecode,
+  };
 
   console.log('transaction created');
   console.log('signing transaction');
-  const tx = new Tx(txObject);
-  const pk = Buffer.from(_pk, 'hex');
-  tx.sign(pk);
+  const txRaw = await web3.eth.accounts.signTransaction(txObject, _pk);
 
   console.log('transaction signed');
-  console.log('serializing transaction');
-  const serializedTx = tx.serialize();
-  const raw = '0x' + serializedTx.toString('hex');
-
-  console.log('serialization completed');
-  console.log('sending signed transaction');
-  const contract = await web3.eth.sendSignedTransaction(raw, (err, txHash) => {
-    console.log('error:', err, 'txHash:', txHash);
-  });
-  
+  console.log('deploying contract');
+  const contract = await web3.eth.sendSignedTransaction(txRaw.rawTransaction).on('receipt', console.log);
   return contract.contractAddress;
 }
 module.exports = {
   AdminUpgradeabilityProxy,
   AdminUpgradabilityProxyAbi,
   UpgradabilityProxyFactoryAbi,
+  UpgradabilityProxyFactoryBin,
   UpgradeabilityProxyFactory,
   PublicResolverABI,
   PublicResolver,

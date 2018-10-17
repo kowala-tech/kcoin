@@ -49,11 +49,13 @@ const {
 
     const contractInternals = await readABIAndByteCode(options.file);
     const contractAddress = await deployContract(contractInternals[1], admin, pk);
-
+    console.log('creating proxy contract object');
     const adminProxy = new web3.eth.Contract(AdminUpgradabilityProxyAbi, proxyAddr);
     console.log('created proxy contract object');
+    console.log('upgrading...');
     const data = adminProxy.methods.upgradeTo(contractAddress).encodeABI();
     await signTransactionAndSend(data, proxyAddr, admin, pk);
+    console.log('upgraded');
   } catch (err) {
     console.log(err);
   }

@@ -1,8 +1,8 @@
 /* global artifacts, web3 */
 /* eslint-disable max-len */
 
-// const SimpleContract = artifacts.require('SimpleContract.sol');
-// const SimpleContract2 = artifacts.require('SimpleContract2.sol');
+const MyContractV0 = artifacts.require('MyContractV0.sol');
+const MyContractV1 = artifacts.require('MyContractV1.sol');
 const NameHash = artifacts.require('NameHash.sol');
 const OracleMgr = artifacts.require('OracleMgr.sol');
 const ValidatorMgr = artifacts.require('ValidatorMgr.sol');
@@ -13,7 +13,7 @@ module.exports = (deployer) => {
   deployer.link(NameHash, OracleMgr);
   deployer.link(NameHash, ValidatorMgr);
 
-  // deployer.deploy(SimpleContract);
-  // deployer.deploy(SimpleContract2);
+  deployer.deploy(MyContractV0);
+  deployer.deploy(MyContractV1);
   deployer.deploy(KNSRegistryV1);
 };
