@@ -33,7 +33,7 @@ func (ar s3assetRepository) All() ([]Asset, error) {
 	scanner := bufio.NewScanner(response.Body)
 	for scanner.Scan() {
 		filename := scanner.Text()
-		version, err := filenameParser(filename)
+		version, err := FilenameParser(filename)
 		if err != nil {
 			// ignore error and continue to next filename
 			log.Debug(
