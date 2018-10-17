@@ -2,8 +2,8 @@ package types
 
 import (
 	"bytes"
-	"sync"
 	"errors"
+	"sync"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"

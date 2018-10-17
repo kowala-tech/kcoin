@@ -92,8 +92,7 @@ type validator struct {
 	// sync
 	canStart    int32 // can start indicates whether we can start the validation operation
 	shouldStart int32 // should start indicates whether we should start after sync
-	isStarted   int32
-	startMutex  sync.Mutex
+	isStarted   int32 // is Start method has been already called
 
 	// events
 	eventMux    *event.TypeMux

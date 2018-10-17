@@ -47,7 +47,7 @@ func (val *validator) notLoggedInState() stateFn {
 		try := 0
 		err = val.makeDeposit()
 		for err != nil {
-			time.Sleep(3*time.Second)
+			time.Sleep(3 * time.Second)
 
 			isValidator, err = val.consensus.IsValidator(val.walletAccount.Account().Address)
 			if err != nil {

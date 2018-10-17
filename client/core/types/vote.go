@@ -222,6 +222,12 @@ func (vote *Vote) String() string {
 
 type Votes []*Vote
 
+var (
+	errDuplicate       = errors.New("already voted")
+	errNonNilDuplicate = errors.New("duplicate NON-NIL vote")
+	errNilDuplicate    = errors.New("duplicate NIL vote")
+)
+
 type VotesSet struct {
 	votes    map[common.Hash]*Vote       // non-nil votes
 	nilVotes map[common.Hash]*Vote       // nil votes
@@ -247,7 +253,8 @@ func (v *VotesSet) Add(vote AddressVote) {
 	voteData := vote.Vote()
 
 	if _, ok := v.isVoted[vote.Address()]; ok {
-		log.Warn("already voted", "address", vote.Address())
+		log.Warn("already voted", "address", vote.Address(), "vote", vote.Vote().String())
+		return
 	} else {
 		v.isVoted[vote.Address()] = struct{}{}
 	}
@@ -266,12 +273,6 @@ func (v *VotesSet) Add(vote AddressVote) {
 		v.leader = voteData.data.BlockHash
 	}
 }
-
-var (
-	errDuplicate       = errors.New("already voted")
-	errNonNilDuplicate = errors.New("duplicate NON-NIL vote")
-	errNilDuplicate    = errors.New("duplicate NIL vote")
-)
 
 func (v *VotesSet) Contains(vote AddressVote) error {
 	v.l.RLock()
