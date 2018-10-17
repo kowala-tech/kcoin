@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	abiFlag = flag.String("abi", "", "Path to the Kowala contract ABI json to bind, - for STDIN")
-	binFlag = flag.String("bin", "", "Path to the Kowala contract bytecode (generate deploy method)")
-	typFlag = flag.String("type", "", "Struct name for the binding (default = package name)")
+	abiFlag    = flag.String("abi", "", "Path to the Kowala contract ABI json to bind, - for STDIN")
+	binFlag    = flag.String("bin", "", "Path to the Kowala contract bytecode (generate deploy method)")
+	srcMapFlag = flag.String("srcmap", "", "Path to the Kowala contract srcmap json to bind")
+	typFlag    = flag.String("type", "", "Struct name for the binding (default = package name)")
 
 	solFlag  = flag.String("sol", "", "Path to the Kowala contract Solidity source to build and bind")
 	solcFlag = flag.String("solc", "solc", "Solidity compiler to use if source builds are requested")
@@ -33,7 +34,7 @@ func main() {
 	if *abiFlag == "" && *solFlag == "" {
 		fmt.Printf("No contract ABI (--abi) or Solidity source (--sol) specified\n")
 		os.Exit(-1)
-	} else if (*abiFlag != "" || *binFlag != "" || *typFlag != "") && *solFlag != "" {
+	} else if (*abiFlag != "" || *binFlag != "" || *typFlag != "" || *srcMapFlag != "") && *solFlag != "" {
 		fmt.Printf("Contract ABI (--abi), bytecode (--bin) and type (--type) flags are mutually exclusive with the Solidity source (--sol) flag\n")
 		os.Exit(-1)
 	}
@@ -55,9 +56,10 @@ func main() {
 	}
 	// If the entire solidity code was specified, build and bind based on that
 	var (
-		abis  []string
-		bins  []string
-		types []string
+		abis    []string
+		bins    []string
+		types   []string
+		srcMaps []string
 	)
 	if *solFlag != "" || *abiFlag == "-" {
 		// Generate the list of types to exclude from binding
@@ -111,6 +113,15 @@ func main() {
 		}
 		bins = append(bins, string(bin))
 
+		srcMap := []byte{}
+		if *srcMapFlag != "" {
+			if bin, err = ioutil.ReadFile(*srcMapFlag); err != nil {
+				fmt.Printf("Failed to read input srcmap: %v\n", err)
+				os.Exit(-1)
+			}
+		}
+		bins = append(srcMaps, string(srcMap))
+
 		kind := *typFlag
 		if kind == "" {
 			kind = *pkgFlag
@@ -118,7 +129,7 @@ func main() {
 		types = append(types, kind)
 	}
 	// Generate the contract binding
-	code, err := bind.Bind(types, abis, bins, *pkgFlag, lang)
+	code, err := bind.Bind(types, abis, bins, srcMaps, *pkgFlag, lang)
 	if err != nil {
 		fmt.Printf("Failed to generate ABI binding: %v\n", err)
 		os.Exit(-1)
