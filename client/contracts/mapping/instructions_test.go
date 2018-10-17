@@ -45,10 +45,6 @@ func TestInstructionParserWithMoreThan1ByteInstruction(t *testing.T) {
 			instruction:     "0101630102030432",
 			numInstructions: 4,
 		},
-		{
-			instruction:     "73000000000000000000000000000000000000000030146080604052600080fd00a165627a7a723058202f32ca0834855db4fcb1a13371c8e65194aed941a4f501f535bc0df0399a9fae0029",
-			numInstructions: 10,
-		},
 	}
 
 	for _, ins := range insBytes {
@@ -57,6 +53,16 @@ func TestInstructionParserWithMoreThan1ByteInstruction(t *testing.T) {
 
 		assert.Len(t, instructions, ins.numInstructions)
 	}
+}
+
+func TestWeCanGetTheByteCodeOpCodePositionFromGeneralByteCode(t *testing.T) {
+	instructions, err := ParseByteCode(common.Hex2Bytes("0101630102030432"))
+	assert.NoError(t, err)
+
+	assert.Equal(t, instructions[0].byteCodePosition, 1)
+	assert.Equal(t, instructions[1].byteCodePosition, 2)
+	assert.Equal(t, instructions[2].byteCodePosition, 3) // 5 byte opCode
+	assert.Equal(t, instructions[3].byteCodePosition, 8)
 }
 
 func TestGetPushNumBytes(t *testing.T) {

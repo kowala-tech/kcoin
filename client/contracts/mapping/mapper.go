@@ -21,16 +21,25 @@ type Contract struct {
 }
 
 func (c *Contract) GetInstructionByPc(pc uint64) (*Instruction, *SourceMapInstruction, error) {
-	insInMap := pc - 1
-
-	if len(c.instructions) <= int(insInMap) || len(c.sourceMapInstructions) <= int(insInMap) {
-		return nil, nil, fmt.Errorf("contract instruction out of bounds")
+	insInMap, err := c.getByteIndexByPc(pc)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	ins := c.instructions[insInMap]
 	smIns := c.sourceMapInstructions[insInMap]
 
 	return ins, smIns, nil
+}
+
+func (c *Contract) getByteIndexByPc(pc uint64) (int, error) {
+	for i, ins := range c.instructions {
+		if ins.byteCodePosition >= int(pc) {
+			return i, nil
+		}
+	}
+
+	return 0, fmt.Errorf("instruction out of bounds")
 }
 
 type JSONSourceMap struct {

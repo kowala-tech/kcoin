@@ -3,6 +3,8 @@ package mapping
 import (
 	"testing"
 
+	"github.com/kowala-tech/kcoin/client/common"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,32 +65,15 @@ func TestItFailsWhenGettingContractWithOutOfBoundsIndex(t *testing.T) {
 }
 
 func TestWeCanGetInstructionsByPcFromContract(t *testing.T) {
+	ins, err := ParseByteCode(common.Hex2Bytes("0101630102030432"))
+	assert.NoError(t, err)
+
+	mapIns, err := ParseSourceMap("83:453:1:-;;;;")
+	assert.NoError(t, err)
+
 	contract := &Contract{
-		instructions: []*Instruction{
-			{OpCode: []byte{0x22, 0x23}},
-			{OpCode: []byte{0x22, 0x23}},
-			{OpCode: []byte{0x22, 0x23}},
-		},
-		sourceMapInstructions: []*SourceMapInstruction{
-			{
-				byteOffsetStart:   111,
-				sourceRangeLength: 111,
-				fileIndex:         1,
-				typeJump:          "-",
-			},
-			{
-				byteOffsetStart:   222,
-				sourceRangeLength: 222,
-				fileIndex:         2,
-				typeJump:          "-",
-			},
-			{
-				byteOffsetStart:   333,
-				sourceRangeLength: 333,
-				fileIndex:         2,
-				typeJump:          "-",
-			},
-		},
+		instructions:          ins,
+		sourceMapInstructions: mapIns,
 	}
 
 	t.Run("getting instruction by index", func(t *testing.T) {
@@ -99,8 +84,16 @@ func TestWeCanGetInstructionsByPcFromContract(t *testing.T) {
 		assert.Equal(t, contract.instructions[2-1], ins)
 	})
 
+	t.Run("we can get instructions by pc when some of them are longer than a byte", func(t *testing.T) {
+		ins, smIns, err := contract.GetInstructionByPc(8)
+		assert.NoError(t, err)
+
+		assert.Equal(t, contract.sourceMapInstructions[3], smIns)
+		assert.Equal(t, contract.instructions[3], ins)
+	})
+
 	t.Run("it fails when instruction is out of bounds", func(t *testing.T) {
-		_, _, err := contract.GetInstructionByPc(10)
-		assert.EqualError(t, err, "contract instruction out of bounds")
+		_, _, err := contract.GetInstructionByPc(9)
+		assert.EqualError(t, err, "instruction out of bounds")
 	})
 }

@@ -17,6 +17,7 @@ func ParseByteCode(byteCode []byte) ([]*Instruction, error) {
 		} else {
 			instruction.OpCode = []byte{byteCode[i]}
 		}
+		instruction.byteCodePosition = i + 1 //Bytecode position in total bytecode map (+1 because it starts at 0)
 
 		instructions = append(instructions, instruction)
 		i = i + lengthPushBytes + 1
@@ -36,5 +37,6 @@ func GetLengthPushBytes(pushOp byte) int {
 }
 
 type Instruction struct {
-	OpCode []byte
+	OpCode           []byte
+	byteCodePosition int
 }
