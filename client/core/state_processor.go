@@ -1,7 +1,6 @@
 package core
 
 import (
-	"github.com/davecgh/go-spew/spew"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/consensus"
 	"github.com/kowala-tech/kcoin/client/core/state"
@@ -52,14 +51,16 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, _, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, header, tx, usedGas, cfg)
 		if err != nil {
-			log.Debug("failed StateProcessor.Process", "data", spew.Sdump(
-				header.Number,
-				header.Root,
-				header.ParentHash,
-				header.TxHash,
-				header.ValidatorsHash,
-				header.LastCommitHash,
-				tx, usedGas, allLogs))
+			log.Debug("failed StateProcessor.Process",
+				"blockNumber", header.Number,
+				"transaction", tx,
+				"root", header.Root,
+				"parentHash", header.ParentHash,
+				"txHash", header.TxHash,
+				"validatorHash", header.ValidatorsHash,
+				"lastCommitHash", header.LastCommitHash,
+				"usedGas", usedGas,
+				"logs", allLogs)
 
 			return nil, nil, 0, err
 		}

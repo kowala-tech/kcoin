@@ -14,9 +14,7 @@ type Backend interface {
 }
 
 // WaitMinedWithTimeout waits for tx to be mined on the blockchain within a given period of time.
-func WaitMinedWithTimeout(backend Backend, txHash common.Hash, duration time.Duration) (*types.Receipt, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), duration)
-	defer cancel()
+func WaitMinedWithTimeout(ctx context.Context, backend Backend, txHash common.Hash) (*types.Receipt, error) {
 	return WaitMined(ctx, backend, txHash)
 }
 
@@ -37,11 +35,12 @@ func WaitMined(ctx context.Context, backend Backend, txHash common.Hash) (*types
 		} else {
 			logger.Trace("Transaction not yet mined")
 		}
-		// Wait for the next round.
+
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-queryTicker.C:
+			// Wait for the next round.
 		}
 	}
 }

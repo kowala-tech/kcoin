@@ -1,14 +1,13 @@
 package validator
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"math/big"
 	"sync/atomic"
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/common/tx"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/types"
@@ -45,7 +44,7 @@ func (val *validator) notLoggedInState() stateFn {
 
 	if !isValidator {
 		try := 0
-		err = val.makeDeposit()
+		err = val.join()
 		for err != nil {
 			time.Sleep(3 * time.Second)
 
@@ -58,11 +57,12 @@ func (val *validator) notLoggedInState() stateFn {
 				break
 			}
 
-			if err = val.makeDeposit(); err != nil {
+			if err = val.join(); err != nil {
 				log.Error("Failed to make deposit", "try", try, "err", err)
 			}
 
 			if try >= 10 {
+				log.Error("Failed to make deposit. Stopping validation", "try", try)
 				return nil
 			}
 		}
@@ -72,36 +72,12 @@ func (val *validator) notLoggedInState() stateFn {
 	return val.startValidating
 }
 
-func (val *validator) makeDeposit() error {
-	if val.deposit.Cmp(big.NewInt(0)) <= 0 {
-		err := errors.New("failed to join the network as a validator. Deposit is less or equal 0")
-		return err
-	}
-
-	txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
-	if err != nil {
-		log.Error("Error joining validators network", "err", err)
-		return err
-	}
-	log.Info("Waiting confirmation to participate in the consensus")
-
-	receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
-	if err != nil {
-		log.Crit("Failed to verify the voter registration", "err", err)
-	}
-	if receipt.Status == types.ReceiptStatusFailed {
-		log.Crit("Failed to register the validator - receipt status failed")
-	}
-	return nil
-}
-
 func (val *validator) startValidating() stateFn {
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
 
 	log.Info("Voter has been accepted in the election",
 		"enode", val.walletAccount.Account().Address.String(), "deposit", val.deposit.Int64())
-	val.restoreLastCommit()
 
 	return val.newElectionState
 }
@@ -114,6 +90,7 @@ func (val *validator) newElectionState() stateFn {
 	log.Info("Starting a new election")
 	// update state machine based on current state
 	if err := val.init(); err != nil {
+		log.Error("validator init error", "err", err)
 		return nil
 	}
 
@@ -136,6 +113,7 @@ func (val *validator) newElectionState() stateFn {
 
 func (val *validator) newRoundState() stateFn {
 	if val.round != 0 {
+		//fixme never happens
 		val.round++
 		val.proposal = nil
 		val.proposer = nil
@@ -149,6 +127,8 @@ func (val *validator) newRoundState() stateFn {
 		parent := val.chain.CurrentBlock()
 		val.makeCurrent(parent)
 	}
+
+	val.checkUpdateValidators(false)
 
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 	return val.newProposalState
@@ -236,12 +216,18 @@ func (val *validator) preCommitWaitState() stateFn {
 			"round", val.round)
 
 		if val.block.IsEmpty() {
-			log.Debug("No one block wins!")
+			if val.block != nil {
+				log.Debug("No one block wins!", "isNil", val.block == nil, "isEmpty", bytes.Equal(val.block.Hash().Bytes(), common.Hash{}.Bytes()))
+			} else {
+				log.Debug("No one block wins!", "isNil", val.block == nil)
+			}
+
 			return val.newRoundState
 		}
 		return val.commitState
 	case <-time.After(timeout):
 		log.Info("Timeout expired. preCommitWaitState stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
+
 		return val.newRoundState
 	}
 }
@@ -281,6 +267,8 @@ func (val *validator) commitState() stateFn {
 	events = append(events, core.ChainHeadEvent{Block: electedBlock})
 	val.chain.PostChainEvents(events, logs)
 
+	log.Info("Commit state done", "hash", electedBlock.Hash(), "block", electedBlock.Number().Int64(), "round", val.round)
+
 	// election state updates
 	val.commitRound = int(val.round)
 
@@ -300,6 +288,5 @@ func (val *validator) loggedOutState() stateFn {
 	log.Info("Logged out")
 
 	atomic.StoreInt32(&val.validating, 0)
-
 	return nil
 }

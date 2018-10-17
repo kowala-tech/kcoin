@@ -580,6 +580,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 
+		log.Debug("a new block received", "number", request.Block.Number().Int64(), "peer", p.String())
+
 		block := request.Block
 		request.Block.ReceivedAt = msg.ReceivedAt
 		request.Block.ReceivedFrom = p

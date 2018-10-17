@@ -49,7 +49,7 @@ func (table *votingTable) Add(voteAddressed types.AddressVote) error {
 	table.votes.Add(voteAddressed)
 
 	if table.hasQuorum() {
-		table.majority(table.votes.Leader())
+		table.majority(table.Leader())
 	}
 
 	return nil
