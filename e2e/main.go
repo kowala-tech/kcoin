@@ -40,7 +40,7 @@ func main() {
 		})
 	}, godog.Options{
 		Format:        "progress",
-		Concurrency:   2,
+		Concurrency:   4,
 		Paths:         []string(featuresFlag),
 		Randomize:     -1,
 		StopOnFailure: true,
