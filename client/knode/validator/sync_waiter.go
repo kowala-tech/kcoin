@@ -21,11 +21,6 @@ func SyncWaiter(ctx context.Context, eventMux *event.TypeMux) error {
 	events := eventMux.Subscribe(downloader.DoneEvent{}, downloader.FailedEvent{})
 	defer events.Unsubscribe()
 
-	log.Warn("!!!!! SyncWaiter started")
-	defer func() {
-		log.Warn("!!!!! SyncWaiter stopped")
-	}()
-
 	for {
 		select {
 		case ev, ok := <-events.Chan():
@@ -45,6 +40,4 @@ func SyncWaiter(ctx context.Context, eventMux *event.TypeMux) error {
 			return ctx.Err()
 		}
 	}
-
-	return nil
 }

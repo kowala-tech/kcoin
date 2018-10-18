@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -19,7 +20,7 @@ func TestSyncWaiterNoError(t *testing.T) {
 		assert.NoError(t, err, "error posting event")
 	}()
 
-	err := SyncWaiter(mux)
+	err := SyncWaiter(context.Background(), mux)
 	assert.NoError(t, err, "error from SyncWaiter")
 }
 
@@ -33,7 +34,7 @@ func TestSyncWaiterReturnErrorOnFailedEvent(t *testing.T) {
 		assert.NoError(t, err, "error posting event")
 	}()
 
-	err := SyncWaiter(mux)
+	err := SyncWaiter(context.Background(), mux)
 	assert.Error(t, err, "error from SyncWaiter")
 }
 
@@ -45,6 +46,6 @@ func TestSyncWaiterReturnsErrorOnClosedMutex(t *testing.T) {
 		mux.Stop()
 	}()
 
-	err := SyncWaiter(mux)
+	err := SyncWaiter(context.Background(), mux)
 	assert.Error(t, err, "failed to receive DoneEvent")
 }

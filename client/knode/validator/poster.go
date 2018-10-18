@@ -1,10 +1,11 @@
 package validator
 
 import (
+	"sync/atomic"
+
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/log"
-	"sync/atomic"
 )
 
 type poster struct {

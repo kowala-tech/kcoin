@@ -90,9 +90,8 @@ type validator struct {
 	consensus *consensus.Consensus // consensus binding
 
 	// sync
-	canStart    int32 // can start indicates whether we can start the validation operation
-	shouldStart int32 // should start indicates whether we should start after sync
-	isStarted   int32 // is Start method has been already called
+	canStart  int32 // can start indicates whether we can start the validation operation
+	isStarted int32 // is Start method has been already called
 
 	// events
 	eventMux    *event.TypeMux
