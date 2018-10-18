@@ -45,7 +45,7 @@ const (
 // to be used as is in client code, but rather as an intermediate struct which
 // enforces compile time type safety and naming convention opposed to having to
 // manually maintain hard coded strings that break on runtime.
-func Bind(types []string, abis []string, bytecodes []string, srcMaps []string, pkg string, lang Lang) (string, error) {
+func Bind(types []string, abis []string, bytecodes []string, pkg string, lang Lang) (string, error) {
 	// Process each individual contract requested binding
 	contracts := make(map[string]*tmplContract)
 
@@ -121,7 +121,6 @@ func Bind(types []string, abis []string, bytecodes []string, srcMaps []string, p
 			Type:        capitalise(types[i]),
 			InputABI:    strings.Replace(strippedABI, "\"", "\\\"", -1),
 			InputBin:    strings.TrimSpace(bytecodes[i]),
-			InputSrcMap: strings.TrimSpace(srcMaps[i]),
 			Constructor: evmABI.Constructor,
 			Calls:       calls,
 			Transacts:   transacts,

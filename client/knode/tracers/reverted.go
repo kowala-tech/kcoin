@@ -26,32 +26,20 @@ func (*EvmRevertedTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas
 }
 
 func (e *EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
+	contractName, cErr := e.getContractByAddr(contract.Address(), env)
+	if cErr != nil {
+		contractName = "Undetected Contract"
+	}
+
+	callerContractName, cErr := e.getContractByAddr(contract.CallerAddress, env)
+	if cErr != nil {
+		callerContractName = "Undetected Contract"
+	}
+
 	if err.Error() == "evm: execution reverted" {
-		contractName, cErr := e.getContractByAddr(contract.Address(), env)
-		if cErr != nil {
-			contractName = "Undetected Contract"
-		}
-
-		callerContractName, cErr := e.getContractByAddr(contract.CallerAddress, env)
-		if cErr != nil {
-			callerContractName = "Undetected Contract"
-		}
-
-		mapper, err := mapping.NewFromCombinedRuntime("../contracts/bindings/sysvars/build/combined.json")
-		if err != nil {
-			log.Error(fmt.Sprintf("error %s", err))
-			return fmt.Errorf("error %s", err)
-		}
-
-		lineContent, err := mapper.GetSolidityLineByPc(pc)
-		if err != nil {
-			log.Error(fmt.Sprintf("error getting line from contract: %s", err))
-			return fmt.Errorf("error getting line from contract: %s", err)
-		}
-
 		log.Error(
 			fmt.Sprintf(
-				"error with transaction from address: %s (%s) to address: %s (%s) {opcode: %s (%s) pc: %d Aproximate solidity line content: \"%s\"Error msg: %s}\n",
+				"error with transaction from address: %s (%s) to address: %s (%s) {opcode: %s (%s) pc: %d Error msg: %s}\n",
 				contract.CallerAddress.String(),
 				callerContractName,
 				contract.Address().String(),
@@ -59,10 +47,14 @@ func (e *EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, g
 				op.String(),
 				fmt.Sprintf("%s%s", "0x", common.Bytes2Hex([]byte{byte(op)})),
 				pc,
-				lineContent,
 				err,
 			),
 		)
+	}
+
+	_, err = mapping.NewFromCombinedRuntime("../../contracts/bindings/build/combined.json")
+	if err != nil {
+		return fmt.Errorf("error %s", err)
 	}
 
 	return nil
