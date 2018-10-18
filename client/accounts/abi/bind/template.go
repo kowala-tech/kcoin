@@ -29,6 +29,7 @@ type tmplContract struct {
 	Type        string                 // Type name of the main contract binding
 	InputABI    string                 // JSON ABI used as the input to generate the binding from
 	InputBin    string                 // Optional EVM bytecode used to denetare deploy code from
+	InputSrcMap string                 // Optional EVM source map
 	Constructor abi.Method             // Contract constructor for deploy parametrization
 	Calls       map[string]*tmplMethod // Contract calls that only read state data
 	Transacts   map[string]*tmplMethod // Contract calls that write state data
@@ -71,6 +72,10 @@ import (
 {{range $contract := .Contracts}}
 	// {{.Type}}ABI is the input ABI used to generate the binding from.
 	const {{.Type}}ABI = "{{.InputABI}}"
+
+	{{if .InputSrcMap}}
+		const {{.Type}}SrcMap = ` + "`" + `{{.InputSrcMap}}` + "`" + `
+	{{end}}
 
 	{{if .InputBin}}
 		// {{.Type}}Bin is the compiled bytecode used for deploying new contracts.
