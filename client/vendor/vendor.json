@@ -876,6 +876,18 @@
 			"revisionTime": "2018-03-19T18:50:19Z"
 		},
 		{
+			"checksumSHA1": "gwIRmefj8a2DrdUxeQ9lg9bQkX0=",
+			"path": "github.com/sqs/goreturns",
+			"revision": "83e02874ec120f73d5f7dd382d62449dc8abe9c6",
+			"revisionTime": "2018-03-02T07:33:49Z"
+		},
+		{
+			"checksumSHA1": "w3X+epqpyi9Y8nlbIOmJhZo9kV8=",
+			"path": "github.com/sqs/goreturns/returns",
+			"revision": "83e02874ec120f73d5f7dd382d62449dc8abe9c6",
+			"revisionTime": "2018-03-02T07:33:49Z"
+		},
+		{
 			"checksumSHA1": "6thzskcj6XrMO5kW6GlRiuTDYjU=",
 			"path": "github.com/stretchr/objx",
 			"revision": "8a3f7159479fbc75b30357fbc48f380b7320f08e",
@@ -984,10 +996,10 @@
 			"revisionTime": "2017-11-14T20:44:01Z"
 		},
 		{
-		"checksumSHA1": "IQkUIOnvlf0tYloFx9mLaXSvXWQ=",
-		"path": "golang.org/x/crypto/curve25519",
-		"revision": "6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd",
-		"revisionTime": "2017-09-25T11:22:06Z"
+			"checksumSHA1": "IQkUIOnvlf0tYloFx9mLaXSvXWQ=",
+			"path": "golang.org/x/crypto/curve25519",
+			"revision": "6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd",
+			"revisionTime": "2017-09-25T11:22:06Z"
 		},
 		{
 			"checksumSHA1": "1hwn8cgg4EVXhCpJIqmMbzqnUo0=",
