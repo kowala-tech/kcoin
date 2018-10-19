@@ -250,13 +250,8 @@ func (val *validator) init() error {
 
 	start := time.Unix(parent.Time().Int64(), 0)
 	val.start = start.Add(time.Duration(params.BlockTime) * time.Millisecond)
+	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
-
-
-	val.blockFragmentsLock.Lock()
-	val.blockFragments = make(map[common.Hash]*types.BlockFragments)
-	val.blockFragmentsStorage = make(map[common.Hash][]*types.BlockFragment)
-	val.blockFragmentsLock.Unlock()
 
 	val.lockedRound = 0
 	val.lockedBlock = nil
@@ -296,12 +291,7 @@ func (val *validator) checkUpdateValidators(forceUpdate bool) {
 		log.Crit("Failed to update the validator set", "err", err)
 	}
 
-	votingSystem, err := NewVotingSystem(val.blockNumber, val.voters, val.eventPoster)
-	if err != nil {
-		log.Crit("Failed to create voting system", "err", err)
-	}
-
-	val.votingSystem = votingSystem
+	val.votingSystem = NewVotingSystem(val.voters, val.eventPoster)
 }
 
 func (val *validator) AddProposal(proposal *types.Proposal) error {
@@ -331,6 +321,7 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	if val.proposer == nil {
 		return errors.New("a proposer not defined yet")
 	}
+
 	if val.proposer.Address() != proposalAddress {
 		return fmt.Errorf("expected proposer %v, got %v", val.proposer.Address(), proposalAddress)
 	}
@@ -347,6 +338,7 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	if !ok {
 		blockFragments = types.NewDataSetFromMeta(proposal.BlockMetadata())
 	}
+	val.blockFragments[proposal.Hash()] = blockFragments
 
 	if blockFragments.HasAll() {
 		log.Debug("addProposal has all fragments and assembling a block")
@@ -369,6 +361,11 @@ func (val *validator) AddVote(vote *types.Vote) error {
 	if val.blockNumber.Cmp(vote.BlockNumber()) != 0 {
 		return fmt.Errorf("expected vote block number %v, got %v",
 			val.blockNumber.Int64(), vote.BlockNumber().Int64())
+	}
+
+	if val.round != vote.Round() {
+		return fmt.Errorf("expected vote round number %v, got %v",
+			val.round, vote.Round())
 	}
 
 	val.handleMutex.Lock()
@@ -625,12 +622,16 @@ func (val *validator) propose() {
 	if err := val.eventMux.Post(core.NewProposalEvent{Proposal: signedProposal}); err != nil {
 		log.Warn("can't post an event", "err", err, "event", "NewProposalEvent", "proposal", signedProposal)
 	}
-	log.Info("sending a signed proposal", "account", val.walletAccount.Account().Address.String(), "chainID", val.config.ChainID.Int64(), "block", signedProposal.String())
+	log.Info("sending a signed proposal",
+		"account", val.walletAccount.Account().Address.String(),
+		"chainID", val.config.ChainID.Int64(),
+		"block", signedProposal.String(),
+		"round", val.round)
 
 	for i := uint(0); i < fragments.Size(); i++ {
 		blockFragmentEvent := core.NewBlockFragmentEvent{
 			BlockNumber: val.blockNumber,
-			BlockHash:   val.header.Hash(),
+			BlockHash:   signedProposal.Hash(),
 			Round:       val.round,
 			Data:        fragments.Get(int(i)),
 		}
@@ -640,6 +641,12 @@ func (val *validator) propose() {
 			log.Warn("can't post an event", "err", err, "event", "NewBlockFragmentEvent", "blockFragment", blockFragmentEvent)
 		}
 	}
+
+	log.Info("all block fragments has been sent",
+		"account", val.walletAccount.Account().Address.String(),
+		"chainID", val.config.ChainID.Int64(),
+		"block", signedProposal.String(),
+		"round", val.round)
 }
 
 func (val *validator) preVote() {
@@ -775,6 +782,7 @@ func (val *validator) addFragment(fragment *types.BlockFragment, blockHash commo
 		if !ok {
 			blockFragmentsList = []*types.BlockFragment{}
 		}
+
 		val.blockFragmentsStorage[blockHash] = append(blockFragmentsList, fragment)
 		return nil, false
 	}
@@ -856,11 +864,12 @@ func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, blockHas
 }
 
 func (val *validator) validateProposalBlock(block *types.Block, round uint64, blockNumber *big.Int) error {
-	nBlocks := 1
+	const nBlocks = 1
 	headers := make([]*types.Header, nBlocks)
 	seals := make([]bool, nBlocks)
 	headers[nBlocks-1] = block.Header()
 	seals[nBlocks-1] = true
+
 	abort, results := val.engine.VerifyHeaders(val.chain, headers, seals)
 	defer close(abort)
 
@@ -905,10 +914,14 @@ func (val *validator) updateValidators(checksum [32]byte) error {
 		return err
 	}
 
+	blockNumber := int64(-1)
+	if val.blockNumber != nil {
+		blockNumber = val.blockNumber.Int64()
+	}
 	if val.voters != nil {
-		log.Debug("voting. updating a list of validators", "was", val.voters.Len(), "now", validators.Len(), "block", val.blockNumber.Int64())
+		log.Debug("voting. updating a list of validators", "was", val.voters.Len(), "now", validators.Len(), "block", blockNumber, "round", val.round)
 	} else {
-		log.Debug("voting. updating a list of validators", "was", "nil", "now", validators.Len(), "block", val.blockNumber.Int64())
+		log.Debug("voting. updating a list of validators", "was", "nil", "now", validators.Len(), "block", blockNumber, "round", val.round)
 	}
 
 	val.voters = validators

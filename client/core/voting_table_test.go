@@ -38,13 +38,6 @@ func TestTwoThirdsPlusOneVoteQuorum(t *testing.T) {
 	}
 }
 
-func TestNewVotingTable_ReturnsErrorsOnNilVoters(t *testing.T) {
-	votingTable, err := NewVotingTable(types.PreVote, nil, nil)
-
-	assert.Error(t, err, "cant create a voting table with nil voters")
-	assert.Nil(t, votingTable)
-}
-
 func TestVotingTable_Add_CheckIsVoterAndVoteNotSeen_CallsQuorum(t *testing.T) {
 	quorum := false
 	voterAddress := common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
@@ -53,14 +46,13 @@ func TestVotingTable_Add_CheckIsVoterAndVoteNotSeen_CallsQuorum(t *testing.T) {
 	voters, err := types.NewVoters([]*types.Voter{voter})
 	require.NoError(t, err)
 
-	votingTable, err := NewVotingTable(
+	votingTable := NewVotingTable(
 		types.PreVote,
 		voters,
 		func(winner common.Hash) {
 			quorum = true
 		},
 	)
-	assert.NoError(t, err)
 
 	signedVote := &mocks.AddressVote{}
 	signedVote.On("Address").Return(voterAddress)
@@ -81,12 +73,11 @@ func TestVotingTable_Add_DoubleVoteFromAddressReturnsError(t *testing.T) {
 	voters, err := types.NewVoters([]*types.Voter{voter})
 	require.NoError(t, err)
 
-	votingTable, err := NewVotingTable(
+	votingTable := NewVotingTable(
 		types.PreVote,
 		voters,
 		func(winner common.Hash) {},
 	)
-	assert.NoError(t, err)
 
 	signedVote := &mocks.AddressVote{}
 	signedVote.On("Address").Return(voterAddress)
@@ -110,14 +101,13 @@ func TestVotingTable_Add_VoteFromNonVoterReturnsError(t *testing.T) {
 	voters, err := types.NewVoters([]*types.Voter{voter})
 	require.NoError(t, err)
 
-	votingTable, err := NewVotingTable(
+	votingTable := NewVotingTable(
 		types.PreVote,
 		voters,
 		func(winner common.Hash) {
 			assert.Fail(t, "unexpected Quorum reached call")
 		},
 	)
-	assert.NoError(t, err)
 
 	signedVote := &mocks.AddressVote{}
 	signedVote.On("Address").Return(nonVoterAddress)

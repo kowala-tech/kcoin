@@ -25,32 +25,22 @@ func TestNewVotingTables_Return2Tables(t *testing.T) {
 	assert.NotNil(t, votingTables[1])
 }
 
-func TestNewVotingSystem_CreatesNewRound(t *testing.T) {
+func TestVotingSystem_AddVoteNewRound(t *testing.T) {
 	address := common.HexToAddress("0x1000000000000000000000000000000000000000")
 	voters, err := types.NewVoters([]*types.Voter{types.NewVoter(address, common.Big0, big.NewInt(1))})
 	require.NoError(t, err)
 
-	eventPoster := newPoster(&event.TypeMux{})
-	votingSystem, err := NewVotingSystem(big.NewInt(1), voters, eventPoster)
-	require.NoError(t, err)
-
-	assert.NotNil(t, votingSystem.votesPerRound[0])
-}
-
-func TestVotingSystem_AddVoteWrongRoundReturnsError(t *testing.T) {
-	address := common.HexToAddress("0x1000000000000000000000000000000000000000")
-	voters, err := types.NewVoters([]*types.Voter{types.NewVoter(address, common.Big0, big.NewInt(1))})
-	require.NoError(t, err)
 	vote := types.NewVote(big.NewInt(1), common.Hash{}, 1, types.PreCommit)
 	addressVote := &mocks.AddressVote{}
 	addressVote.On("Vote").Return(vote)
+	addressVote.On("Address").Return(address)
+
 	eventPoster := newPoster(&event.TypeMux{})
-	votingSystem, err := NewVotingSystem(big.NewInt(1), voters, eventPoster)
-	require.NoError(t, err)
+	votingSystem := NewVotingSystem(voters, eventPoster)
 
 	err = votingSystem.Add(addressVote)
 
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 func TestVotingSystem_AddVoteWrongVoteTypeReturnsError(t *testing.T) {
@@ -61,8 +51,7 @@ func TestVotingSystem_AddVoteWrongVoteTypeReturnsError(t *testing.T) {
 	addressVote := &mocks.AddressVote{}
 	addressVote.On("Vote").Return(vote)
 	eventPoster := newPoster(&event.TypeMux{})
-	votingSystem, err := NewVotingSystem(big.NewInt(1), voters, eventPoster)
-	require.NoError(t, err)
+	votingSystem := NewVotingSystem(voters, eventPoster)
 
 	err = votingSystem.Add(addressVote)
 
@@ -78,8 +67,7 @@ func TestVotingSystem_AddVoteAddsVoteToTable(t *testing.T) {
 	addressVote.On("Vote").Return(vote)
 	addressVote.On("Address").Return(address)
 	eventPoster := newPoster(&event.TypeMux{})
-	votingSystem, err := NewVotingSystem(big.NewInt(1), voters, eventPoster)
-	assert.NoError(t, err)
+	votingSystem := NewVotingSystem(voters, eventPoster)
 
 	err = votingSystem.Add(addressVote)
 	assert.NoError(t, err)

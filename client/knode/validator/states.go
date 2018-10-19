@@ -112,36 +112,30 @@ func (val *validator) newElectionState() stateFn {
 }
 
 func (val *validator) newRoundState() stateFn {
-	if val.round != 0 {
-		//fixme never happens
-		val.round++
-		val.proposal = nil
-		val.proposer = nil
-		val.block = nil
-
-		val.blockFragmentsLock.Lock()
-		val.blockFragments = make(map[common.Hash]*types.BlockFragments)
-		val.blockFragmentsStorage = make(map[common.Hash][]*types.BlockFragment)
-		val.blockFragmentsLock.Unlock()
-
-		parent := val.chain.CurrentBlock()
-		val.makeCurrent(parent)
-	}
-
-	parent := val.chain.CurrentBlock()
-	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
-	//val.round = 0
-
 	val.proposal = nil
 	val.proposer = nil
 	val.block = nil
+
+	parent := val.chain.CurrentBlock()
+	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 
 	val.blockFragmentsLock.Lock()
 	val.blockFragments = make(map[common.Hash]*types.BlockFragments)
 	val.blockFragmentsStorage = make(map[common.Hash][]*types.BlockFragment)
 	val.blockFragmentsLock.Unlock()
 
-	val.checkUpdateValidators(false)
+	if val.majority.Closed() {
+		val.blockCh = make(chan *types.Block, 1)
+		val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
+	}
+
+	if val.round != 0 {
+		val.checkUpdateValidators(false)
+		if err := val.makeCurrent(parent); err != nil {
+			log.Error("Failed to create mining context", "err", err)
+			return nil
+		}
+	}
 
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
 	return val.newProposalState
@@ -172,15 +166,16 @@ func (val *validator) waitForProposal() {
 	for {
 		select {
 		case block := <-val.blockCh:
-			if val.blockNumber.Cmp(block.Number()) != 0 {
-				log.Warn(fmt.Sprintf("expected proposed block number %v, got %v",
-					val.blockNumber.Int64(), block.Number().Int64()))
+			if val.blockNumber.Cmp(block.Number()) == 0 {
+				val.block = block
+				log.Debug("Received the block", "blockNumber", val.block.Number().Int64(),
+					"valBlockNumber", val.blockNumber.Int64(), "hash", val.block.Hash())
+				return
 			}
 
-			val.block = block
-			log.Info("Received the block", "blockNumber", val.block.Number().Int64(),
-				"valBlockNumber", val.blockNumber.Int64(), "hash", val.block.Hash())
-			return
+			log.Debug("unexpected proposed block number",
+				"want", val.blockNumber.Int64(),
+				"got", block.Number().Int64())
 		case <-time.After(timeout):
 			log.Info("Timeout expired. waitForProposal stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
 			return
@@ -223,10 +218,17 @@ func (val *validator) preCommitWaitState() stateFn {
 	defer val.majority.Unsubscribe()
 
 	select {
-	case <-val.majority.Chan():
+	case blockEvent, ok := <-val.majority.Chan():
 		log.Info("There's a majority in the pre-commit sub-election!",
 			"blockNumber", val.blockNumber,
-			"round", val.round)
+			"round", val.round,
+			"chan", ok,
+			"blockEvent", blockEvent)
+		if !ok {
+			log.Debug("precommit state. stop watching val.majority. starting a new round")
+			val.round++
+			return val.newRoundState
+		}
 
 		if val.block.IsEmpty() {
 			if val.block != nil {
@@ -235,12 +237,14 @@ func (val *validator) preCommitWaitState() stateFn {
 				log.Debug("No one block wins!", "isNil", val.block == nil)
 			}
 
+			val.round++
 			return val.newRoundState
 		}
 		return val.commitState
 	case <-time.After(timeout):
 		log.Info("Timeout expired. preCommitWaitState stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
 
+		val.round++
 		return val.newRoundState
 	}
 }

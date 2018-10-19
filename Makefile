@@ -88,7 +88,7 @@ bindings:
 	go generate ./client/contracts/bindings/...
 
 .PHONY: install_tools
-install_tools: notifications_dep wallet_backend_dep abigen genesisgen moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
+install_tools: notifications_dep wallet_backend_dep abigen genesisgen moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata
 
 client/contracts/truffle/node_modules:
 	cd client/contracts/truffle; npm ci

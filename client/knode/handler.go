@@ -628,10 +628,12 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Retrieve and decode the propagated proposal
 		var proposal types.Proposal
 		if err := msg.Decode(&proposal); err != nil {
+			log.Info("got a proposal block error", "data", msg, "err", err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
 		p.MarkProposal(proposal.Hash())
+
 		log.Info("got a proposal block", "chainID", proposal.ChainID().Int64(),
 			"number", proposal.BlockNumber().Int64(), "round", proposal.Round(), "hash", proposal.Hash().String())
 

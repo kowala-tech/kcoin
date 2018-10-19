@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -23,18 +22,14 @@ type votingTable struct {
 	majority QuorumReachedFunc
 }
 
-func NewVotingTable(voteType types.VoteType, voters types.Voters, majority QuorumReachedFunc) (*votingTable, error) {
-	if voters == nil {
-		return nil, errors.New("cant create a voting table with nil voters")
-	}
-
+func NewVotingTable(voteType types.VoteType, voters types.Voters, majority QuorumReachedFunc) *votingTable {
 	return &votingTable{
 		voteType: voteType,
 		voters:   voters,
 		votes:    types.NewVotesSet(),
 		quorum:   TwoThirdsPlusOneVoteQuorum,
 		majority: majority,
-	}, nil
+	}
 }
 
 func (table *votingTable) Add(voteAddressed types.AddressVote) error {

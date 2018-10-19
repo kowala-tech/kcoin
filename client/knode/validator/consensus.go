@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kowala-tech/kcoin/client/log"
+
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
@@ -43,66 +45,48 @@ type VotingState struct {
 	*work
 }
 
+const votingTypes = 2
+
 // VotingTables represents the voting tables available for each election round
-type VotingTables = [2]core.VotingTable
+type VotingTables = [votingTypes]core.VotingTable
 
-func NewVotingTables(voters types.Voters, poster eventPoster) (VotingTables, error) {
-	majorityFunc := func(winnerBlock common.Hash) {
-		poster.EventPost(core.NewMajorityEvent{Winner: winnerBlock})
+func NewVotingTables(voters types.Voters, poster eventPoster) (*VotingTables, error) {
+	majorityFunc := contextMajorityFunc(poster)
+
+	if voters == nil {
+		return nil, errors.New("cant create a voting table with nil voters")
 	}
 
-	var err error
-	tables := VotingTables{}
+	return &VotingTables{
+		types.PreVote:   core.NewVotingTable(types.PreVote, voters, majorityFunc("prevote")),
+		types.PreCommit: core.NewVotingTable(types.PreCommit, voters, majorityFunc("precommit")),
+	}, nil
+}
 
-	// prevote
-	tables[types.PreVote], err = core.NewVotingTable(types.PreVote, voters, majorityFunc)
-	if err != nil {
-		return tables, err
+func contextMajorityFunc(poster eventPoster) func(msg string) func(common.Hash) {
+	return func(msg string) func(common.Hash) {
+		return func(winnerBlock common.Hash) {
+			log.Debug("voting majority established", "log", msg)
+			poster.EventPost(core.NewMajorityEvent{Winner: winnerBlock})
+		}
 	}
-
-	// precommit
-	tables[types.PreCommit], err = core.NewVotingTable(types.PreCommit, voters, majorityFunc)
-	if err != nil {
-		return tables, err
-	}
-
-	return tables, nil
 }
 
 // VotingSystem records the election votes since round 1
 type VotingSystem struct {
-	voters         types.Voters
-	electionNumber *big.Int // election number
-	round          uint64
-	votesPerRound  map[uint64]VotingTables
-	poster         eventPoster
+	voters        types.Voters
+	round         uint64
+	votesPerRound map[uint64]*VotingTables
+	poster        eventPoster
 }
 
 // NewVotingSystem returns a new voting system
-func NewVotingSystem(electionNumber *big.Int, voters types.Voters, poster eventPoster) (*VotingSystem, error) {
-	system := &VotingSystem{
-		voters:         voters,
-		electionNumber: electionNumber,
-		round:          0,
-		votesPerRound:  make(map[uint64]VotingTables),
-		poster:         poster,
+func NewVotingSystem(voters types.Voters, poster eventPoster) *VotingSystem {
+	return &VotingSystem{
+		voters:        voters,
+		votesPerRound: make(map[uint64]*VotingTables),
+		poster:        poster,
 	}
-
-	err := system.NewRound()
-	if err != nil {
-		return nil, err
-	}
-
-	return system, nil
-}
-
-func (vs *VotingSystem) NewRound() error {
-	var err error
-	vs.votesPerRound[vs.round], err = NewVotingTables(vs.voters, vs.poster)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // Add registers a vote
@@ -132,14 +116,17 @@ func (vs *VotingSystem) Leader(round uint64, voteType types.VoteType) (common.Ha
 }
 
 func (vs *VotingSystem) getVotingTable(round uint64, voteType types.VoteType) (core.VotingTable, error) {
-	votingTables, ok := vs.votesPerRound[round]
-	if !ok {
-		return nil, errors.New("voting table for round doesn't exists")
-	}
-
-	if uint64(voteType) > uint64(len(votingTables)-1) {
+	if uint64(voteType) > votingTypes-1 {
 		return nil, errors.New("invalid voteType on add vote")
 	}
 
-	return votingTables[int(voteType)], nil
+	if _, ok := vs.votesPerRound[round]; !ok {
+		votingTables, err := NewVotingTables(vs.voters, vs.poster)
+		if err != nil {
+			return nil, err
+		}
+		vs.votesPerRound[vs.round] = votingTables
+	}
+
+	return vs.votesPerRound[vs.round][voteType], nil
 }
