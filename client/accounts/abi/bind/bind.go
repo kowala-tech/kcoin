@@ -118,11 +118,19 @@ func Bind(types []string, abis []string, bytecodes []string, srcMaps []string, p
 			events[original.Name] = &tmplEvent{Original: original, Normalized: normalized}
 		}
 
+		// Strip any whitespace from the JSON ABI
+		strippedSrcMap := strings.Map(func(r rune) rune {
+			if unicode.IsSpace(r) {
+				return -1
+			}
+			return r
+		}, srcMaps[i])
+
 		contracts[types[i]] = &tmplContract{
 			Type:        capitalise(types[i]),
 			InputABI:    strings.Replace(strippedABI, "\"", "\\\"", -1),
 			InputBin:    strings.TrimSpace(bytecodes[i]),
-			InputSrcMap: strings.TrimSpace(srcMaps[i]),
+			InputSrcMap: strings.Replace(strippedSrcMap, "\"", "\\\"", -1),
 			Constructor: evmABI.Constructor,
 			Calls:       calls,
 			Transacts:   transacts,
@@ -149,11 +157,11 @@ func Bind(types []string, abis []string, bytecodes []string, srcMaps []string, p
 	}
 	// For Go bindings pass the code through goimports to clean it up and double check
 	if lang == LangGo {
-		code, err := imports.Process(".", buffer.Bytes(), nil)
+		_, err := imports.Process(".", buffer.Bytes(), nil)
 		if err != nil {
 			return "", fmt.Errorf("%v\n%s", err, buffer)
 		}
-		return string(code), nil
+		return string(buffer.Bytes()), nil
 	}
 	// For all others just return as is for now
 	return buffer.String(), nil

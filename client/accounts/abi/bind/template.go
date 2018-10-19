@@ -74,7 +74,7 @@ import (
 	const {{.Type}}ABI = "{{.InputABI}}"
 
 	{{if .InputSrcMap}}
-		const {{.Type}}SrcMap = ` + "`" + `{{.InputSrcMap}}` + "`" + `
+		const {{.Type}}SrcMap = "{{.InputSrcMap}}"
 	{{end}}
 
 	{{if .InputBin}}

@@ -22,9 +22,11 @@ import (
 )
 
 //go:generate solc --allow-paths ., --abi --bin --overwrite --libraries NameHash:0x3b058a1a62E59D185618f64BeBBAF3C52bf099E0 -o build zos-lib/=../../truffle/node_modules/zos-lib/ github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
-//go:generate ../../../build/bin/abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -pkg consensus -type ValidatorMgr -out ./gen_manager.go
+//go:generate solc --allow-paths ., --combined-json bin-runtime,srcmap-runtime --overwrite --libraries NameHash:0x3b058a1a62E59D185618f64BeBBAF3C52bf099E0 -o build/validator-combined zos-lib/=../../truffle/node_modules/zos-lib/ github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/  ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
+//go:generate ../../../build/bin/abigen -abi build/ValidatorMgr.abi -bin build/ValidatorMgr.bin -srcmap build/validator-combined/combined.json -pkg consensus -type ValidatorMgr -out ./gen_manager.go
 //go:generate solc --allow-paths ., --abi --bin --overwrite -o build zos-lib/=../../truffle/node_modules/zos-lib/ github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ ../../truffle/contracts/consensus/token/MiningToken.sol
-//go:generate ../../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -pkg consensus -type MiningToken -out ./gen_mtoken.go
+//go:generate solc --allow-paths ., --combined-json bin-runtime,srcmap-runtime --overwrite -o build/mining-token-combined zos-lib/=../../truffle/node_modules/zos-lib/ github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ ../../truffle/contracts/consensus/token/MiningToken.sol
+//go:generate ../../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -srcmap build/mining-token-combined/combined.json -pkg consensus -type MiningToken -out ./gen_mtoken.go
 
 const RegistrationHandler = "registerValidator(address,uint256)"
 
