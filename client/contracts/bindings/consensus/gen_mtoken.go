@@ -4,7 +4,15 @@
 package consensus
 
 import (
+	"math/big"
+	"strings"
+
 	kowala "github.com/kowala-tech/kcoin/client"
+	"github.com/kowala-tech/kcoin/client/accounts/abi"
+	"github.com/kowala-tech/kcoin/client/accounts/abi/bind"
+	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/core/types"
+	"github.com/kowala-tech/kcoin/client/event"
 )
 
 // MiningTokenABI is the input ABI used to generate the binding from.

@@ -28,9 +28,8 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/sqs/goreturns/returns"
-
 	"github.com/kowala-tech/kcoin/client/accounts/abi"
+	"golang.org/x/tools/imports"
 )
 
 // Lang is a target programming language selector to generate bindings for.
@@ -158,7 +157,7 @@ func Bind(types []string, abis []string, bytecodes []string, srcMaps []string, p
 	}
 	// For Go bindings pass the code through goreturns to clean it up and double check (goimports made some code to dissapear)
 	if lang == LangGo {
-		code, err := returns.Process("", ".", buffer.Bytes(), nil)
+		code, err := imports.Process(".", buffer.Bytes(), nil)
 		if err != nil {
 			return "", fmt.Errorf("%v\n%s", err, buffer)
 		}

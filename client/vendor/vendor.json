@@ -1254,10 +1254,22 @@
 			"revisionTime": "2016-11-04T18:56:24Z"
 		},
 		{
-			"checksumSHA1": "2ko3hvt1vrfwG+p7SLW+zqDEeV4=",
+			"checksumSHA1": "DKA+RIOxdeQre+Q/IGRxslpJeQs=",
 			"path": "golang.org/x/tools/imports",
-			"revision": "be0fcc31ae2332374e800dfff29b721c585b35df",
-			"revisionTime": "2016-11-04T18:56:24Z"
+			"revision": "6adeb8aab2ded9eb693b831d5fd090c10a6ebdfa",
+			"revisionTime": "2018-10-16T20:17:24Z"
+		},
+		{
+			"checksumSHA1": "1TVpQKxF3ThIjFl7IIkfawKQsrE=",
+			"path": "golang.org/x/tools/internal/fastwalk",
+			"revision": "6adeb8aab2ded9eb693b831d5fd090c10a6ebdfa",
+			"revisionTime": "2018-10-16T20:17:24Z"
+		},
+		{
+			"checksumSHA1": "ZxzECBF+XaWZh20q+lMQlXQNXFg=",
+			"path": "golang.org/x/tools/internal/gopathwalk",
+			"revision": "6adeb8aab2ded9eb693b831d5fd090c10a6ebdfa",
+			"revisionTime": "2018-10-16T20:17:24Z"
 		},
 		{
 			"checksumSHA1": "L2Ypub9LmgZvcJphw29xwZRrteY=",
