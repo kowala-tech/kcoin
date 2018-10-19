@@ -41,11 +41,11 @@ Feature: Joining network as a validator
     And I start validator with 5 mTokens deposit
     And the token balance of A should be 10 mTokens
 
-#  Scenario:
-#    Given: I wait for my node to be synced
-#    When I start validator with 5 mTokens deposit
-#    And I wait for my node to be synced
-#    And crash my node validator
-#    And I restart the validator
-#    And I wait for my node to be synced
-#    Then My node should be a validator
+  Scenario: Re-Start mining on miner crush
+    Given: I wait for my node to be synced
+    When I start validator with 5 mTokens deposit
+    And I wait for my node to be synced
+    And crash my node validator
+    And I restart the validator
+    And I wait for my node to be synced
+    Then My node should be a validator
