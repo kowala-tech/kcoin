@@ -34,7 +34,7 @@ func (p *poster) EventPost(event interface{}) {
 						log.Warn("can't post an event", "err", err, "event", event)
 					}
 				default:
-					log.Error("unknown validator event", "event", event)
+					log.Debug("unknown validator event", "event", event)
 				}
 			}
 		}()

@@ -46,6 +46,7 @@ func (val *validator) notLoggedInState() stateFn {
 		try := 0
 		err = val.join()
 		for err != nil {
+			log.Error("Failed to make deposit", "try", try, "err", err)
 			time.Sleep(3 * time.Second)
 
 			isValidator, err = val.consensus.IsValidator(val.walletAccount.Account().Address)
@@ -57,14 +58,13 @@ func (val *validator) notLoggedInState() stateFn {
 				break
 			}
 
-			if err = val.join(); err != nil {
-				log.Error("Failed to make deposit", "try", try, "err", err)
-			}
+			err = val.join()
 
 			if try >= 10 {
 				log.Error("Failed to make deposit. Stopping validation", "try", try)
 				return nil
 			}
+			try++
 		}
 		log.Warn("started as a validator")
 	}
@@ -128,6 +128,19 @@ func (val *validator) newRoundState() stateFn {
 		val.makeCurrent(parent)
 	}
 
+	parent := val.chain.CurrentBlock()
+	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
+	//val.round = 0
+
+	val.proposal = nil
+	val.proposer = nil
+	val.block = nil
+
+	val.blockFragmentsLock.Lock()
+	val.blockFragments = make(map[common.Hash]*types.BlockFragments)
+	val.blockFragmentsStorage = make(map[common.Hash][]*types.BlockFragment)
+	val.blockFragmentsLock.Unlock()
+
 	val.checkUpdateValidators(false)
 
 	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
@@ -137,7 +150,7 @@ func (val *validator) newRoundState() stateFn {
 func (val *validator) newProposalState() stateFn {
 	val.proposer = val.voters.NextProposer()
 
-	log.Info("a new proposer",
+	log.Debug("a new proposer",
 		"addr", val.proposer.Address().String(),
 		"isSelf", val.walletAccount.Account().Address == val.proposer.Address(),
 		"block", val.blockNumber.Int64(),
@@ -160,7 +173,7 @@ func (val *validator) waitForProposal() {
 		select {
 		case block := <-val.blockCh:
 			if val.blockNumber.Cmp(block.Number()) != 0 {
-				log.Error(fmt.Sprintf("expected proposed block number %v, got %v",
+				log.Warn(fmt.Sprintf("expected proposed block number %v, got %v",
 					val.blockNumber.Int64(), block.Number().Int64()))
 			}
 

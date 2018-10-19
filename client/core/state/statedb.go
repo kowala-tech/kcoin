@@ -523,7 +523,7 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 		})
 
 		if revertedIndex == -1 {
-			panic(fmt.Errorf("revision id %v cannot be reverted. found the revision at index %d. latest revision index %d",
+			log.Crit(fmt.Sprintf("revision id %v cannot be reverted. found the revision at index %d. latest revision index %d",
 				revid, idx, self.validRevisions[idx].id))
 		} else {
 			log.Warn("already reverted", "revisionID", revid)

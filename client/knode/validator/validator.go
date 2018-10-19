@@ -250,12 +250,8 @@ func (val *validator) init() error {
 
 	start := time.Unix(parent.Time().Int64(), 0)
 	val.start = start.Add(time.Duration(params.BlockTime) * time.Millisecond)
-	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
 
-	val.proposal = nil
-	val.proposer = nil
-	val.block = nil
 
 	val.blockFragmentsLock.Lock()
 	val.blockFragments = make(map[common.Hash]*types.BlockFragments)
@@ -268,7 +264,7 @@ func (val *validator) init() error {
 
 	val.checkUpdateValidators(true)
 
-	val.blockCh = make(chan *types.Block)
+	val.blockCh = make(chan *types.Block, 1)
 	val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 
 	if err := val.makeCurrent(parent); err != nil {
@@ -353,7 +349,7 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	}
 
 	if blockFragments.HasAll() {
-		log.Info("addProposal has all fragments and assembling a block")
+		log.Debug("addProposal has all fragments and assembling a block")
 		return val.assembleBlock(proposal.Round(), proposal.BlockNumber(), proposal.Hash())
 	}
 
@@ -384,7 +380,7 @@ func (val *validator) AddVote(vote *types.Vote) error {
 	}
 
 	if err := val.votingSystem.Add(addressVote); err != nil {
-		log.Error("cannot add the vote", "err", err)
+		log.Debug("cannot add the vote", "err", err)
 	}
 
 	return nil
@@ -735,7 +731,7 @@ func (val *validator) vote(vote *types.Vote) {
 
 	err = val.votingSystem.Add(addressVote)
 	if err != nil {
-		log.Error("Failed to add own vote to voting table",
+		log.Debug("Failed to add own vote to voting table",
 			"err", err, "blockHash", addressVote.Vote().BlockHash(), "hash", addressVote.Vote().Hash())
 	}
 }
@@ -755,7 +751,7 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Ha
 	}
 
 	if canAssemble {
-		log.Info("addBlockFragment has all fragments and assembling a block")
+		log.Debug("addBlockFragment has all fragments and assembling a block")
 		return val.assembleBlock(round, blockNumber, blockHash)
 	}
 
@@ -786,7 +782,7 @@ func (val *validator) addFragment(fragment *types.BlockFragment, blockHash commo
 	// if val.blockFragments is set, proposal block metadata was received
 	for _, blockFragment := range blockFragmentsList {
 		if err := blockFragments.Add(blockFragment); err != nil {
-			log.Error("failed to add a new block fragment", "err", err.Error())
+			log.Debug("failed to add a new block fragment", "err", err.Error())
 		}
 	}
 
@@ -813,7 +809,7 @@ func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, blockHas
 	block, err := blockFragments.Assemble()
 	if err != nil {
 		err = errors.New("Failed to assemble the block: " + err.Error())
-		log.Error("error while adding a new block fragment", "err", err,
+		log.Warn("error while adding a new block fragment", "err", err,
 			"round", round, "block", blockNumber)
 		return err
 	}
@@ -824,6 +820,10 @@ func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, blockHas
 	}
 
 	parent := val.chain.GetBlock(block.ParentHash(), block.NumberU64()-1)
+	if parent == nil {
+		return fmt.Errorf("wrong block received. hash %v, number %v, parentHash %v",
+			block.Hash().String(), block.Number().Int64(), block.ParentHash().String())
+	}
 
 	// Process block using the parent state as reference point.
 	receipts, _, usedGas, err := val.chain.Processor().Process(block, val.state, val.vmConfig)
@@ -850,7 +850,6 @@ func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, blockHas
 
 	val.block = block
 
-	//fixme goroutine leak
 	go func() { val.blockCh <- block }()
 
 	return nil
@@ -867,7 +866,7 @@ func (val *validator) validateProposalBlock(block *types.Block, round uint64, bl
 
 	err := <-results
 	if err != nil {
-		log.Error("error while verifying a block headers",
+		log.Debug("error while verifying a block headers",
 			"err", err, "round", round, "block", blockNumber, "block",
 			block, "headers", headers, "seals", seals)
 		return err
@@ -876,7 +875,7 @@ func (val *validator) validateProposalBlock(block *types.Block, round uint64, bl
 	err = val.chain.Validator().ValidateBody(block)
 	if err != nil {
 		err = errors.New("Failed to validate thr block body: " + err.Error())
-		log.Error("error while validating a block body",
+		log.Debug("error while validating a block body",
 			"err", err, "round", round, "block", blockNumber, "block", block)
 
 		return err

@@ -63,8 +63,9 @@ func (table *votingTable) isDuplicate(voteAddressed types.AddressVote) error {
 	err := table.votes.Contains(voteAddressed)
 	if err != nil {
 		vote := voteAddressed.Vote()
-		log.Info(fmt.Sprintf("a duplicate vote in voting table %v; blockHash %v; voteHash %v; from validator %v. Error: %s",
-			table.voteType, vote.BlockHash(), vote.Hash(), voteAddressed.Address(), vote.String()))
+		log.Debug(fmt.Sprintf("a duplicate vote in voting table %v; blockHash %v; voteHash %v; from validator %v. Error: %s",
+			table.voteType, vote.BlockHash().String(), vote.Hash().String(), voteAddressed.Address().String(), vote.String()))
+		return err
 	}
 	return nil
 }
@@ -78,7 +79,7 @@ func (table *votingTable) hasQuorum() bool {
 	isQuorum := table.quorum(int64(leaderBlockVotes), int64(table.voters.Len()))
 
 	log.Debug("voting. hasQuorum", "leaderVotes", leaderBlockVotes, "votes", table.votes.Len(),
-		"voters", table.voters.Len(), "isQuorum", isQuorum, "leader", table.Leader())
+		"voters", table.voters.Len(), "isQuorum", isQuorum, "leader", table.Leader().String())
 
 	return isQuorum
 }

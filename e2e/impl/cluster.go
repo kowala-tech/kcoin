@@ -259,7 +259,7 @@ func (ctx *Context) triggerGenesisValidation() error {
 		return err
 	}
 
-	return common.WaitFor("validation starts", 2*time.Second, 20*time.Second, func() error {
+	return common.WaitFor("validation starts", 2*time.Second, 40*time.Second, func() error {
 		res, err := ctx.nodeRunner.Exec(ctx.genesisValidatorNodeID, cluster.KcoinExecCommand("eth.blockNumber"))
 		if err != nil {
 			return err
