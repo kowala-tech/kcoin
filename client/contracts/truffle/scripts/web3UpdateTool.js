@@ -33,11 +33,14 @@ const {
     let proxyAddr;
     let admin;
     let pk;
+    let file;
 
     if (options.admin === undefined || !(await web3.utils.isAddress(options.admin))) throw 'Admin field should be populated';
     else admin = options.admin;
     if (options.privateKey === undefined) throw 'Private key field should be populated';
     else pk = options.privateKey;
+    if (options.file === undefined) throw 'File field should be populated with a path to a Contract.json';
+    else file = options.file;
     if (options.domain !== undefined && options.contractAddr === undefined) {
       const publicResolver = new web3.eth.Contract(PublicResolverABI, publicResolverAddr);
       proxyAddr = await publicResolver.methods.addr(namehash(options.domain)).call(); 
@@ -47,7 +50,7 @@ const {
       throw 'domain or contract address should be populated';
     }
 
-    const contractInternals = await readABIAndByteCode(options.file);
+    const contractInternals = await readABIAndByteCode(file);
     const contractAddress = await deployContract(contractInternals[1], admin, pk);
     console.log('creating proxy contract object');
     const adminProxy = new web3.eth.Contract(AdminUpgradabilityProxyAbi, proxyAddr);

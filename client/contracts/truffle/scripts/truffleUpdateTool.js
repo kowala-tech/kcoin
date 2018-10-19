@@ -1,41 +1,68 @@
-/* global artifacts */
+/* global artifacts, assert */
 /* eslint-disable max-len */
 
 // const Web3 = require('web3');
 // const web3 = new Web3(new Web3.providers.HttpProvider('http://0.0.0.0:30503'));
 
-const MyContractV0 = artifacts.require('MyContractV0.sol');
-const MyContractV1 = artifacts.require('MyContractV1.sol');
+const MultiSig = artifacts.require('MultiSigWallet.sol');
+const SysVars1 = artifacts.require('SystemVars.sol');
+const SysVars2 = artifacts.require('SystemVars2.sol');
 
-const acc1 = '0xEC057cCeA42C0b39086C5bc21FA0DD873bDa78A7';
-const acc2 = '0xD1eFC9Ed211F8943B07a5Ce739d6C3a05e7EF4FD';
-// const { Contracts } = require('zos-lib');
+const governor1 = '0xf861e10641952a42f9c527a43ab77c3030ee2c8f';
+const governor2 = '0xa1d4755112491db5ddf0e10b9253b5a0f6783759';
+const namehash = require('eth-ens-namehash');
+const assert = require('chai').assert;
 
-// const AdminUpgradeabilityProxy = Contracts.getFromNodeModules('zos-lib', 'AdminUpgradeabilityProxy');
 const {
   AdminUpgradeabilityProxy, UpgradeabilityProxyFactory,
-  PublicResolver, KNSRegistry,
-  account1, governor1
+  PublicResolver, KNSRegistry
 } = require('./helpers.js');
+
+
+const getParamFromTxEvent = async (transaction, paramName, contractFactory, eventName) => {
+  assert.isObject(transaction);
+  let logs = transaction.logs;
+  if (eventName != null) {
+    logs = logs.filter(l => l.event === eventName);
+  }
+  assert.equal(logs.length, 1, 'too many logs found!');
+  const param = logs[0].args[paramName];
+  if (contractFactory != null) {
+    const contract = contractFactory.at(param);
+    assert.isObject(contract, `getting ${paramName} failed for ${param}`);
+    return contract;
+  }
+  return param;
+};
+const multiSigAddr = '0x0e5d0Fd336650E663C710EF420F85Fb081E21415';
 
 module.exports = async () => {
   try {
-    const proxyFactory = await UpgradeabilityProxyFactory.new({ from: acc2 });
-    const myContractV0 = await MyContractV0.at('0x6c9c61090de0dfa865ab443fce9e9fbdf73ca167');
+    const domain = 'systemvars.kowala';
+    const sig = await MultiSig.at(multiSigAddr);
+    const owners = await sig.getOwners();
+    console.log(owners);
+    const prAddress = '0x01e1056f6a829E53dadeb8a5A6189A9333Bd1d63';
+    const publicResolver = await PublicResolver.at(prAddress);
+    const svAddr = await publicResolver.addr(namehash(domain));
+    const adminProxy = await AdminUpgradeabilityProxy.at(svAddr);
+    const contract1 = await SysVars1.at(adminProxy.address);
+    const sys2 = await SysVars2.new({ from: governor1 });
+    const upgradeData = await adminProxy.contract.upgradeTo.getData(sys2.address);
+    console.log("submitting");
+    const transactionID = await getParamFromTxEvent(
+      await sig.submitTransaction(adminProxy.address, 0, upgradeData, { from: governor1 }),
+      'transactionId',
+      null,
+      'Submission',
+    );
+    console.log("confirming");
+    const tmp = await sig.confirmTransaction(transactionID, { from: governor2 });
+    console.log(tmp);
+    console.log("confirmed");
+    
+    // const contract2 = await SysVars2.at(adminProxy.address);
+    // const tmp = await contract2.helloProxy({ from: governor2 });
 
-    const logs = await proxyFactory.createProxy(acc1, myContractV0.address, { from: acc2 });
-    const logs1 = logs.logs;
-    const proxyAddr = logs1.find(l => l.event === 'ProxyCreated').args.proxy;
-    const adminProxy = await AdminUpgradeabilityProxy.at(proxyAddr);
-    const contract1 = await MyContractV0.at(adminProxy.address);
-    const value = 42;
-    await contract1.initialize(value, { from: acc2 });
-    console.log((await contract1.value({ from: acc2 })).toString());
-
-    const myContractV1 = await MyContractV1.at('0x4980bc0d26e67ca9c8cfa6d121b87974eb096256');
-    await adminProxy.upgradeTo(myContractV1.address, { from: acc1 });
-    const contract2 = await MyContractV1.at(proxyAddr);
-    await contract2.add(5, { from: acc2 });
-    console.log(await contract2.value({ from: acc2 }));
   } catch (err) { console.log(err); }
 };

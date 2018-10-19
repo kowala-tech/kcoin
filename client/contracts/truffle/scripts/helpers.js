@@ -1,9 +1,10 @@
+/* global assert */
 /* eslint-disable max-len */
 
 const Web3 = require('web3');
 
-// const web3 = new Web3(new Web3.providers.HttpProvider('http://0.0.0.0:30503'));
-const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
+const web3 = new Web3(new Web3.providers.HttpProvider('http://0.0.0.0:30503'));
+// const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 const truffleContract = require('truffle-contract');
 const Tx = require('ethereumjs-tx');
