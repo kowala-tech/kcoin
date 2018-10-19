@@ -74,6 +74,7 @@ import (
 	const {{.Type}}ABI = "{{.InputABI}}"
 
 	{{if .InputSrcMap}}
+		// {{.Type}}SrcMap is used in order to generate source maps to use when we want to debug bytecode.
 		const {{.Type}}SrcMap = "{{.InputSrcMap}}"
 	{{end}}
 
