@@ -1,15 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/aws"
-	"log"
-	"bytes"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/kowala-tech/kcoin/client/version"
+	"log"
 	"path/filepath"
 	"strings"
-	"fmt"
 )
 
 const (
@@ -48,6 +49,10 @@ func listS3Objects(svc *s3.S3, bucket string) bytes.Buffer {
 	}
 	err := svc.ListObjectsPages(listObjectsInput, func(p *s3.ListObjectsOutput, _ bool) (shouldContinue bool) {
 		for _, obj := range p.Contents {
+			if _, err := version.FilenameParser(*obj.Key); err != nil {
+				// skip file, it's not parsable not a binary release file
+				continue
+			}
 			_, err := buffer.WriteString(*obj.Key + "\n")
 			if err != nil {
 				log.Fatal("failed to list objects", err)
