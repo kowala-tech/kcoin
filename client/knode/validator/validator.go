@@ -687,12 +687,14 @@ func (val *validator) preCommit() {
 			val.lockedRound = 0
 			val.lockedBlock = nil
 		}
+
 	case val.lockedBlock != nil && currentLeader == val.lockedBlock.Hash():
 		log.Debug("Majority of validators pre-voted the locked block", "block", val.lockedBlock.Hash())
 		// update locked block round
 		val.lockedRound = val.round
 		// vote on the pre-vote election winner
 		vote = currentLeader
+
 	case val.block != nil && currentLeader == val.block.Hash():
 		log.Debug("Majority of validators pre-voted the proposed block", "block", val.block.Hash())
 		// lock block
@@ -701,17 +703,19 @@ func (val *validator) preCommit() {
 		// vote on the pre-vote election winner
 		vote = currentLeader
 		// we don't have the current block (fetch)
+
 	default:
 		// fetch block, unlock, precommit
 		// unlock locked block
 		if val.lockedBlock != nil {
-			log.Warn("preCommit default case. lockedBlock",
+			log.Warn("lockedBlock.preCommit default case",
 				"equal", val.lockedBlock.Hash() == currentLeader,
 				"currentLeader", currentLeader,
 				"lockedHash", val.lockedBlock.Hash())
 		}
+
 		if val.block != nil {
-			log.Warn("preCommit default case. block",
+			log.Warn("block.preCommit default case.",
 				"equal", val.block.Hash() == currentLeader,
 				"currentLeader", currentLeader,
 				"block", val.block.Hash())
@@ -736,6 +740,10 @@ func (val *validator) vote(vote *types.Vote) {
 		log.Crit("Failed to make address Vote", "err", err)
 	}
 
+	if val.walletAccount.Account().Address != addressVote.Address() {
+		panic("!!!!!!!!!!!!!!!!!!!!!!!!")
+	}
+
 	err = val.votingSystem.Add(addressVote)
 	if err != nil {
 		log.Debug("Failed to add own vote to voting table",
@@ -750,6 +758,10 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Ha
 
 	if val.blockNumber.Cmp(blockNumber) != 0 {
 		return fmt.Errorf("expected block fragments for %d, got %d", val.blockNumber.Int64(), blockNumber.Int64())
+	}
+
+	if val.round != round {
+		return fmt.Errorf("expected block fragments for round %d, got %d", val.round, round)
 	}
 
 	err, canAssemble := val.addFragment(fragment, blockHash)
@@ -812,6 +824,7 @@ func (val *validator) addFragment(fragment *types.BlockFragment, blockHash commo
 func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, blockHash common.Hash) error {
 	val.blockFragmentsLock.Lock()
 	defer val.blockFragmentsLock.Unlock()
+
 	blockFragments := val.blockFragments[blockHash]
 
 	block, err := blockFragments.Assemble()

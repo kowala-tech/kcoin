@@ -223,7 +223,6 @@ func (vote *Vote) String() string {
 type Votes []*Vote
 
 var (
-	errDuplicate       = errors.New("already voted")
 	errNonNilDuplicate = errors.New("duplicate NON-NIL vote")
 	errNilDuplicate    = errors.New("duplicate NIL vote")
 )
@@ -251,13 +250,15 @@ func (v *VotesSet) Add(vote AddressVote) {
 	defer v.l.Unlock()
 
 	voteData := vote.Vote()
+	voteAddress := vote.Address()
 
-	if _, ok := v.isVoted[vote.Address()]; ok {
-		log.Warn("already voted", "address", vote.Address(), "vote", vote.Vote().String())
+	if _, ok := v.isVoted[voteAddress]; ok {
+		log.Debug("already voted", "address", voteAddress, "vote", vote.Vote().String())
 		return
-	} else {
-		v.isVoted[vote.Address()] = struct{}{}
 	}
+
+	log.Debug("vote was successfully added", "address", voteAddress, "vote", vote.Vote().String())
+	v.isVoted[voteAddress] = struct{}{}
 
 	if bytes.Equal(voteData.data.BlockHash.Bytes(), common.Hash{}.Bytes()) {
 		v.nilVotes[voteData.Hash()] = voteData
@@ -279,7 +280,7 @@ func (v *VotesSet) Contains(vote AddressVote) error {
 	defer v.l.RUnlock()
 
 	if _, ok := v.isVoted[vote.Address()]; ok {
-		return errDuplicate
+		return fmt.Errorf("already voted address %q", vote.Address().Hash().String())
 	}
 
 	h := vote.Vote().Hash()
@@ -289,11 +290,9 @@ func (v *VotesSet) Contains(vote AddressVote) error {
 		return errNonNilDuplicate
 	}
 
-	if !res {
-		_, res = v.nilVotes[h]
-		if res {
-			return errNilDuplicate
-		}
+	_, res = v.nilVotes[h]
+	if res {
+		return errNilDuplicate
 	}
 
 	return nil

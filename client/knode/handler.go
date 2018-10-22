@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -632,10 +633,20 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
-		p.MarkProposal(proposal.Hash())
-
 		log.Info("got a proposal block", "chainID", proposal.ChainID().Int64(),
 			"number", proposal.BlockNumber().Int64(), "round", proposal.Round(), "hash", proposal.Hash().String())
+
+		localBlock := pm.blockchain.CurrentBlock()
+		proposalHeightDiff := big.NewInt(0).Sub(proposal.BlockNumber(), localBlock.Number())
+		// we expect proposalHeightDiff to be +1
+		if proposalHeightDiff.Cmp(big.NewInt(1)) < 0 {
+			log.Info("got a proposal from past", "proposal", proposal.BlockNumber().Int64(), "current", localBlock.Number().Int64())
+			break
+		}
+		if proposalHeightDiff.Cmp(big.NewInt(2)) >= 0 {
+			log.Info("got a proposal from too far future", "proposal", proposal.BlockNumber().Int64(), "current", localBlock.Number().Int64())
+			break
+		}
 
 		if err := pm.validator.AddProposal(&proposal); err != nil {
 			log.Warn("got a proposal block add error", "err", err.Error(), "block", proposal.String())
@@ -644,6 +655,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 		log.Info("a proposal block added successfully", "chainID", proposal.ChainID().Int64(),
 			"number", proposal.BlockNumber().Int64(), "round", proposal.Round(), "hash", proposal.Hash().String())
+
+		p.MarkProposal(proposal.Hash())
 
 	case msg.Code == VoteMsg:
 		if !pm.validator.Validating() {
@@ -655,12 +668,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
-		p.MarkVote(vote.Hash())
-
 		if err := pm.validator.AddVote(&vote); err != nil {
 			// ignore
 			break
 		}
+		p.MarkVote(vote.Hash())
 
 	case msg.Code == BlockFragmentMsg:
 		if !pm.validator.Validating() {
@@ -673,13 +685,25 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
-		p.MarkBlockFragment(request.Data.Proof)
+		localBlock := pm.blockchain.CurrentBlock()
+		proposalHeightDiff := big.NewInt(0).Sub(request.BlockNumber, localBlock.Number())
+		// we expect proposalHeightDiff to be +1
+		if proposalHeightDiff.Cmp(big.NewInt(1)) < 0 {
+			log.Info("got a proposal block fragment from past", "proposal", request.BlockNumber, "current", localBlock.Number().Int64())
+			break
+		}
+		if proposalHeightDiff.Cmp(big.NewInt(2)) >= 0 {
+			log.Info("got a proposal block fragment from too far future", "proposal", request.BlockNumber, "current", localBlock.Number().Int64())
+			break
+		}
+
 		if err := pm.validator.AddBlockFragment(request.BlockNumber, request.Hash, request.Round, request.Data); err != nil {
 			log.Debug("error while adding a new block fragment", "err", err,
 				"requestRound", request.Round, "requestBlock", request.BlockNumber, "requestFragment", request.Data)
 			// ignore
 			break
 		}
+		p.MarkBlockFragment(request.Data.Proof)
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)

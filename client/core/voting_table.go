@@ -58,8 +58,12 @@ func (table *votingTable) isDuplicate(voteAddressed types.AddressVote) error {
 	err := table.votes.Contains(voteAddressed)
 	if err != nil {
 		vote := voteAddressed.Vote()
-		log.Debug(fmt.Sprintf("a duplicate vote in voting table %v; blockHash %v; voteHash %v; from validator %v. Error: %s",
-			table.voteType, vote.BlockHash().String(), vote.Hash().String(), voteAddressed.Address().String(), vote.String()))
+		log.Debug("a duplicate vote",
+			"table", table.voteType,
+			"blockHash", vote.BlockHash().String(),
+			"voteHash", vote.Hash().String(),
+			"validator", voteAddressed.Address().Hash().String(),
+			"err", vote.String())
 		return err
 	}
 	return nil
