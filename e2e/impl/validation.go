@@ -219,6 +219,7 @@ func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
 	return common.WaitFor("node is synchronised", 1*time.Second, time.Second*20, func() error {
 		res := &cluster.ExecResponse{}
 		if err := ctx.globalCtx.execCommand(ctx.nodeID(), isSyncedCommand(), res); err != nil {
+			log.Debug(res.StdOut)
 			return err
 		}
 		if strings.TrimSpace(res.StdOut) != "true" {
