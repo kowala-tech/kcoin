@@ -4,12 +4,11 @@ import (
 	"testing"
 
 	"github.com/kowala-tech/kcoin/client/common"
-
 	"github.com/stretchr/testify/assert"
 )
 
 func TestWeCanCreateAMapAndGetItsFiles(t *testing.T) {
-	mapper, err := NewFromCombinedRuntime("files/combined.json")
+	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", nil)
 	assert.NoError(t, err)
 
 	t.Run("Getting file out of bounds", func(t *testing.T) {
@@ -22,9 +21,9 @@ func TestWeCanCreateAMapAndGetItsFiles(t *testing.T) {
 		assert.NoError(t, err)
 
 		expectedFiles := []string{
-			"../truffle/contracts/sysvars/SystemVars.sol",
-			"../truffle/node_modules/openzeppelin-solidity/contracts/math/Math.sol",
-			"../truffle/node_modules/zos-lib/contracts/migrations/Initializable.sol",
+			"../../truffle/contracts/sysvars/SystemVars.sol",
+			"../../truffle/node_modules/openzeppelin-solidity/contracts/math/Math.sol",
+			"../../truffle/node_modules/zos-lib/contracts/migrations/Initializable.sol",
 		}
 
 		for i, expectedFile := range expectedFiles {
@@ -37,7 +36,7 @@ func TestWeCanCreateAMapAndGetItsFiles(t *testing.T) {
 }
 
 func TestWeCanCreateAMapAndGetInstructions(t *testing.T) {
-	mapper, err := NewFromCombinedRuntime("files/combined.json")
+	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", nil)
 	assert.NoError(t, err)
 
 	t.Run("We Can Get Instructions By Index", func(t *testing.T) {
@@ -47,7 +46,7 @@ func TestWeCanCreateAMapAndGetInstructions(t *testing.T) {
 }
 
 func TestWeCanGetTheContractByIndex(t *testing.T) {
-	mapper, err := NewFromCombinedRuntime("files/combined.json")
+	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", nil)
 	assert.NoError(t, err)
 
 	contract, err := mapper.GetContractByIndex(1)
@@ -57,7 +56,7 @@ func TestWeCanGetTheContractByIndex(t *testing.T) {
 }
 
 func TestItFailsWhenGettingContractWithOutOfBoundsIndex(t *testing.T) {
-	mapper, err := NewFromCombinedRuntime("files/combined.json")
+	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", nil)
 	assert.NoError(t, err)
 
 	_, err = mapper.GetContractByIndex(50)
@@ -98,8 +97,17 @@ func TestWeCanGetInstructionsByPcFromContract(t *testing.T) {
 	})
 }
 
-func TestPrueba(t *testing.T) {
-	mapper, err := NewFromCombinedRuntime("files/combined.json")
+func TestWeCanSetThePathForContracts(t *testing.T) {
+	t.Run("from file", func(t *testing.T) {
+		mapper, err := NewFromCombinedRuntimeFile("files/combined.json", &Config{ContractsPath: "/hi"})
+		assert.NoError(t, err)
+
+		assert.Equal(t, mapper.contractsPath, "/hi")
+	})
+}
+
+func TestItReturnsTheLineFromTheSolidityFile(t *testing.T) {
+	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", &Config{ContractsPath: "home"})
 	assert.NoError(t, err)
 
 	lineContent, err := mapper.GetSolidityLineByPc(907)

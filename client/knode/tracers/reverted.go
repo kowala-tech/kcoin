@@ -5,11 +5,11 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/contracts/mapping"
-
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
+	"github.com/kowala-tech/kcoin/client/contracts/mapping"
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/log"
 )
@@ -37,9 +37,20 @@ func (e *EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, g
 	}
 
 	if err.Error() == "evm: execution reverted" {
+		mapper, err := mapping.NewFromCombinedRuntime([]byte(sysvars.SystemVarsSrcMap), nil)
+		if err != nil {
+			return fmt.Errorf("error %s", err)
+		}
+
+		var lineContent string
+		lineContent, err = mapper.GetSolidityLineByPc(pc)
+		if err != nil {
+			lineContent = "cannot get the line code"
+		}
+
 		log.Error(
 			fmt.Sprintf(
-				"error with transaction from address: %s (%s) to address: %s (%s) {opcode: %s (%s) pc: %d Error msg: %s}\n",
+				"error with transaction from address: %s (%s) to address: %s (%s) {opcode: %s (%s) pc: %d code: %s Error msg: %s}\n",
 				contract.CallerAddress.String(),
 				callerContractName,
 				contract.Address().String(),
@@ -47,14 +58,10 @@ func (e *EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, g
 				op.String(),
 				fmt.Sprintf("%s%s", "0x", common.Bytes2Hex([]byte{byte(op)})),
 				pc,
+				lineContent,
 				err,
 			),
 		)
-	}
-
-	_, err = mapping.NewFromCombinedRuntime("../../contracts/bindings/build/combined.json")
-	if err != nil {
-		return fmt.Errorf("error %s", err)
 	}
 
 	return nil

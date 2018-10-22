@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
+	"sort"
 
 	"github.com/kowala-tech/kcoin/client/common"
 )
@@ -13,11 +15,16 @@ type SourceMapper struct {
 	contracts             []*Contract
 	sourceMapInstructions []SourceMapInstruction
 	files                 []string
+	contractsPath         string
 }
 
 type Contract struct {
 	instructions          []*Instruction
 	sourceMapInstructions []*SourceMapInstruction
+}
+
+type Config struct {
+	ContractsPath string
 }
 
 func (c *Contract) GetInstructionByPc(pc uint64) (*Instruction, *SourceMapInstruction, error) {
@@ -53,16 +60,24 @@ type contract struct {
 	SrcMapRuntime string `json:"srcmap-runtime"`
 }
 
-func NewFromCombinedRuntime(filePath string) (*SourceMapper, error) {
+func NewFromCombinedRuntimeFile(filePath string, config *Config) (*SourceMapper, error) {
 	fileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading source map: %s", err)
 	}
 
+	return NewFromCombinedRuntime(fileContent, config)
+}
+
+func NewFromCombinedRuntime(fileContent []byte, config *Config) (*SourceMapper, error) {
+	if config == nil {
+		config = &Config{}
+	}
+
 	sourceMap := JSONSourceMap{}
 
 	decoder := json.NewDecoder(bytes.NewReader(fileContent))
-	err = decoder.Decode(&sourceMap)
+	err := decoder.Decode(&sourceMap)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding source map: %s", err)
 	}
@@ -73,8 +88,9 @@ func NewFromCombinedRuntime(filePath string) (*SourceMapper, error) {
 	}
 
 	return &SourceMapper{
-		files:     parseFiles(sourceMap),
-		contracts: contracts,
+		files:         parseFiles(sourceMap),
+		contracts:     contracts,
+		contractsPath: config.ContractsPath,
 	}, nil
 }
 
@@ -110,7 +126,8 @@ func (sm *SourceMapper) GetSolidityLineByPc(pc uint64) (string, error) {
 		return "", fmt.Errorf("error getting contract file: %s", err)
 	}
 
-	fileContents, err := ioutil.ReadFile(fileName)
+	contractsPath := filepath.Join(sm.contractsPath, fileName)
+	fileContents, err := ioutil.ReadFile(contractsPath)
 	if err != nil {
 		return "", fmt.Errorf("error getting contents of contract file: %s", err)
 	}
@@ -130,14 +147,21 @@ func parseFiles(jsm JSONSourceMap) []string {
 
 func parseContracts(jsm JSONSourceMap) ([]*Contract, error) {
 	var contracts []*Contract
+	var keys []string
 
-	for _, c := range jsm.Contracts {
-		smi, err := ParseSourceMap(c.SrcMapRuntime)
+	for k := range jsm.Contracts {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys) // Force ordering by string to avoid randomness in maps.
+
+	for _, c := range keys {
+		theContract := jsm.Contracts[c]
+		smi, err := ParseSourceMap(theContract.SrcMapRuntime)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing source map: %s", err)
 		}
 
-		ins, err := ParseByteCode(common.Hex2Bytes(c.BinRuntime))
+		ins, err := ParseByteCode(common.Hex2Bytes(theContract.BinRuntime))
 		if err != nil {
 			return nil, fmt.Errorf("error parsing bytecode: %s", err)
 		}
