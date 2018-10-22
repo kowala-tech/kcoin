@@ -27,6 +27,7 @@ import (
 //go:generate solc --allow-paths ., --abi --bin --overwrite -o build zos-lib/=../../truffle/node_modules/zos-lib/ github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ ../../truffle/contracts/consensus/token/MiningToken.sol
 //go:generate solc --allow-paths ., --combined-json bin-runtime,srcmap-runtime --overwrite -o build/mining-token-combined zos-lib/=../../truffle/node_modules/zos-lib/ github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ ../../truffle/contracts/consensus/token/MiningToken.sol
 //go:generate ../../../build/bin/abigen -abi build/MiningToken.abi -bin build/MiningToken.bin -srcmap build/mining-token-combined/combined.json -pkg consensus -type MiningToken -out ./gen_mtoken.go
+//go:generate go-bindata -o bind_contracts.go -pkg consensus ../../truffle/contracts/consensus/token/MiningToken.sol ../../truffle/contracts/consensus/mgr/ValidatorMgr.sol
 
 const RegistrationHandler = "registerValidator(address,uint256)"
 
