@@ -1,16 +1,14 @@
 package mapping
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/kowala-tech/kcoin/client/common"
-	"github.com/kowala-tech/kcoin/client/contracts/mapping/files"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestWeCanCreateAMapAndGetItsFiles(t *testing.T) {
-	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", nil)
+	mapper, err := NewFromCombinedRuntimeFile("files/build/combined.json", nil)
 	assert.NoError(t, err)
 
 	t.Run("Getting file out of bounds", func(t *testing.T) {
@@ -38,7 +36,7 @@ func TestWeCanCreateAMapAndGetItsFiles(t *testing.T) {
 }
 
 func TestWeCanCreateAMapAndGetInstructions(t *testing.T) {
-	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", nil)
+	mapper, err := NewFromCombinedRuntimeFile("files/build/combined.json", nil)
 	assert.NoError(t, err)
 
 	t.Run("We Can Get Instructions By Index", func(t *testing.T) {
@@ -48,7 +46,7 @@ func TestWeCanCreateAMapAndGetInstructions(t *testing.T) {
 }
 
 func TestWeCanGetTheContractByIndex(t *testing.T) {
-	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", nil)
+	mapper, err := NewFromCombinedRuntimeFile("files/build/combined.json", nil)
 	assert.NoError(t, err)
 
 	contract, err := mapper.GetContractByIndex(1)
@@ -58,7 +56,7 @@ func TestWeCanGetTheContractByIndex(t *testing.T) {
 }
 
 func TestItFailsWhenGettingContractWithOutOfBoundsIndex(t *testing.T) {
-	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", nil)
+	mapper, err := NewFromCombinedRuntimeFile("files/build/combined.json", nil)
 	assert.NoError(t, err)
 
 	_, err = mapper.GetContractByIndex(50)
@@ -101,7 +99,7 @@ func TestWeCanGetInstructionsByPcFromContract(t *testing.T) {
 
 func TestWeCanSetThePathForContracts(t *testing.T) {
 	t.Run("from file", func(t *testing.T) {
-		mapper, err := NewFromCombinedRuntimeFile("files/combined.json", &Config{ContractsPath: "/hi"})
+		mapper, err := NewFromCombinedRuntimeFile("files/build/combined.json", &Config{ContractsPath: "/hi"})
 		assert.NoError(t, err)
 
 		assert.Equal(t, mapper.contractsPath, "/hi")
@@ -109,7 +107,7 @@ func TestWeCanSetThePathForContracts(t *testing.T) {
 }
 
 func TestItReturnsTheLineFromTheSolidityFile(t *testing.T) {
-	mapper, err := NewFromCombinedRuntimeFile("files/combined.json", &Config{ContractsPath: "home"})
+	mapper, err := NewFromCombinedRuntimeFile("files/build/combined.json", &Config{ContractsPath: "home"})
 	assert.NoError(t, err)
 
 	lineContent, err := mapper.GetSolidityLineByPc(907)
@@ -119,8 +117,11 @@ func TestItReturnsTheLineFromTheSolidityFile(t *testing.T) {
 }
 
 func TestWeCanUseAssetInsteadOfLookingFileSystem(t *testing.T) {
-	asset, err := files.Asset("../../truffle/contracts/sysvars/SystemVars.sol")
+	mapper, err := NewFromCombinedRuntimeFile("files/build/combined.json", &Config{UseBinding: true})
 	assert.NoError(t, err)
 
-	fmt.Printf("%v", string(asset))
+	lineContent, err := mapper.GetSolidityLineByPc(907)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "revert()", lineContent)
 }

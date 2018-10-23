@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/assets"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
@@ -16,6 +17,7 @@ type SourceMapper struct {
 	sourceMapInstructions []SourceMapInstruction
 	files                 []string
 	contractsPath         string
+	useBinding            bool
 }
 
 type Contract struct {
@@ -25,6 +27,7 @@ type Contract struct {
 
 type Config struct {
 	ContractsPath string
+	UseBinding    bool
 }
 
 func (c *Contract) GetInstructionByPc(pc uint64) (*Instruction, *SourceMapInstruction, error) {
@@ -91,6 +94,7 @@ func NewFromCombinedRuntime(fileContent []byte, config *Config) (*SourceMapper, 
 		files:         parseFiles(sourceMap),
 		contracts:     contracts,
 		contractsPath: config.ContractsPath,
+		useBinding:    config.UseBinding, // Uses the bindings from contracts/bindings/assets intead of file path.
 	}, nil
 }
 
@@ -126,10 +130,18 @@ func (sm *SourceMapper) GetSolidityLineByPc(pc uint64) (string, error) {
 		return "", fmt.Errorf("error getting contract file: %s", err)
 	}
 
-	contractsPath := filepath.Join(sm.contractsPath, fileName)
-	fileContents, err := ioutil.ReadFile(contractsPath)
-	if err != nil {
-		return "", fmt.Errorf("error getting contents of contract file: %s", err)
+	var fileContents []byte
+	if sm.useBinding {
+		fileContents, err = assets.Asset(fileName)
+		if err != nil {
+			return "", fmt.Errorf("error getting contract data from bindings: %s", err)
+		}
+	} else {
+		contractsPath := filepath.Join(sm.contractsPath, fileName)
+		fileContents, err = ioutil.ReadFile(contractsPath)
+		if err != nil {
+			return "", fmt.Errorf("error getting contents of contract file: %s", err)
+		}
 	}
 
 	return string(fileContents[insMap.byteOffsetStart : insMap.byteOffsetStart+insMap.sourceRangeLength]), nil
