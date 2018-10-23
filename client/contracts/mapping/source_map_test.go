@@ -9,11 +9,11 @@ import (
 func TestParseSourceMap(t *testing.T) {
 	items := []struct {
 		line  string
-		items []SourceMapInstruction
+		items []*SourceMapInstruction
 	}{
 		{
 			"83:453:1:-;;;",
-			[]SourceMapInstruction{
+			[]*SourceMapInstruction{
 				{
 					byteOffsetStart:   83,
 					sourceRangeLength: 453,
@@ -42,7 +42,7 @@ func TestParseSourceMap(t *testing.T) {
 		},
 		{
 			"1:2:1:-;:9;2:1:2;;",
-			[]SourceMapInstruction{
+			[]*SourceMapInstruction{
 				{
 					byteOffsetStart:   1,
 					sourceRangeLength: 2,
