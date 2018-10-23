@@ -622,7 +622,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == ProposalMsg:
-		if !pm.validator.Validating() {
+		if !pm.validator.Validating() && !pm.validator.WaitProposal() {
 			break
 		}
 
@@ -675,7 +675,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		p.MarkVote(vote.Hash())
 
 	case msg.Code == BlockFragmentMsg:
-		if !pm.validator.Validating() {
+		if !pm.validator.Validating() && !pm.validator.WaitProposal() {
 			break
 		}
 

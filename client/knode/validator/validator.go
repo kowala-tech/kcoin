@@ -62,6 +62,7 @@ type Validator interface {
 type Service interface {
 	Validating() bool
 	Running() bool
+	WaitProposal() bool
 	AddProposal(proposal *types.Proposal) error
 	AddVote(vote *types.Vote) error
 	AddBlockFragment(blockNumber *big.Int, blockHash common.Hash, round uint64, fragment *types.BlockFragment) error
@@ -90,8 +91,9 @@ type validator struct {
 	consensus *consensus.Consensus // consensus binding
 
 	// sync
-	canStart  int32 // can start indicates whether we can start the validation operation
-	isStarted int32 // is Start method has been already called
+	canStart          int32 // can start indicates whether we can start the validation operation
+	isStarted         int32 // is Start method has been already called
+	waitProposalBlock int32
 
 	// events
 	eventMux    *event.TypeMux
@@ -206,6 +208,10 @@ func (val *validator) SetExtra(extra []byte) error { return nil }
 
 func (val *validator) Validating() bool {
 	return atomic.LoadInt32(&val.validating) > 0
+}
+
+func (val *validator) WaitProposal() bool {
+	return atomic.LoadInt32(&val.waitProposalBlock) == 1
 }
 
 func (val *validator) Running() bool {
@@ -643,6 +649,17 @@ func (val *validator) propose() {
 	}
 
 	log.Info("all block fragments has been sent",
+		"account", val.walletAccount.Account().Address.String(),
+		"chainID", val.config.ChainID.Int64(),
+		"block", signedProposal.String(),
+		"round", val.round)
+
+	// give some time to other validators to receive and validate the proposed block
+	timeout := val.getProposeTimeout()
+	minTimeToWaitDuration := time.Duration(timeout-params.ProposeDurationMin) * time.Millisecond
+	<-time.NewTimer(minTimeToWaitDuration).C
+
+	log.Info("proposal stage is done",
 		"account", val.walletAccount.Account().Address.String(),
 		"chainID", val.config.ChainID.Int64(),
 		"block", signedProposal.String(),

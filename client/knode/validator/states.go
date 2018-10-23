@@ -129,6 +129,8 @@ func (val *validator) newRoundState() stateFn {
 		val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 	}
 
+	atomic.StoreInt32(&val.waitProposalBlock, 1)
+
 	if val.round != 0 {
 		val.checkUpdateValidators(false)
 		if err := val.makeCurrent(parent); err != nil {
@@ -142,6 +144,8 @@ func (val *validator) newRoundState() stateFn {
 }
 
 func (val *validator) newProposalState() stateFn {
+	defer atomic.StoreInt32(&val.waitProposalBlock, 0)
+
 	val.proposer = val.voters.NextProposer()
 
 	log.Debug("a new proposer",
@@ -162,7 +166,7 @@ func (val *validator) newProposalState() stateFn {
 }
 
 func (val *validator) waitForProposal() {
-	timeout := time.Duration(params.ProposeDuration+val.round*params.ProposeDeltaDuration) * time.Millisecond
+	timeout := time.Duration(val.getProposeTimeout()) * time.Millisecond
 	for {
 		select {
 		case block := <-val.blockCh:
@@ -177,10 +181,14 @@ func (val *validator) waitForProposal() {
 				"want", val.blockNumber.Int64(),
 				"got", block.Number().Int64())
 		case <-time.After(timeout):
-			log.Info("Timeout expired. waitForProposal stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
+			log.Info("Timeout expired waitForProposal stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
 			return
 		}
 	}
+}
+
+func (val *validator) getProposeTimeout() uint64 {
+	return params.ProposeDuration + val.round*params.ProposeDeltaDuration
 }
 
 func (val *validator) preVoteState() stateFn {
@@ -199,7 +207,7 @@ func (val *validator) preVoteWaitState() stateFn {
 		log.Info("There's a majority in the pre-vote sub-election!")
 		// fixme shall we do something here with current stateDB?
 	case <-time.After(timeout):
-		log.Info("Timeout expired. preVoteWaitState stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
+		log.Info("Timeout expired preVoteWaitState stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
 	}
 
 	return val.preCommitState
@@ -242,7 +250,7 @@ func (val *validator) preCommitWaitState() stateFn {
 		}
 		return val.commitState
 	case <-time.After(timeout):
-		log.Info("Timeout expired. preCommitWaitState stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
+		log.Info("Timeout expired preCommitWaitState stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
 
 		val.round++
 		return val.newRoundState

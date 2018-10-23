@@ -58,6 +58,7 @@ const (
 
 	// Proof of Stake - timeouts
 	ProposeDuration        uint64 = 500
+	ProposeDurationMin            = ProposeDuration - 100
 	ProposeDeltaDuration   uint64 = 50
 	PreVoteDuration        uint64 = 200
 	PreVoteDeltaDuration   uint64 = 50
