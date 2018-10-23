@@ -33,7 +33,9 @@ type VotingState struct {
 	lockedRound uint64
 	lockedBlock *types.Block
 
-	start time.Time // used to sync the validator nodes
+	parentBlockCreatedAt   time.Time // used to sync the validator nodes
+	previousRoundCreatedAt time.Time // used to sync the validator nodes
+	roundCreatedAt         time.Time // used to sync the validator nodes
 
 	commitRound int
 

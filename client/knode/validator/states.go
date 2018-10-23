@@ -94,7 +94,7 @@ func (val *validator) newElectionState() stateFn {
 		return nil
 	}
 
-	<-time.NewTimer(val.start.Sub(time.Now())).C
+	<-roundStartTimer(val.parentBlockCreatedAt, val.round).C
 
 	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
 	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
@@ -117,7 +117,8 @@ func (val *validator) newRoundState() stateFn {
 	val.block = nil
 
 	parent := val.chain.CurrentBlock()
-	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
+	parentNumber := new(big.Int).Set(parent.Number())
+	val.blockNumber = parentNumber.Add(parentNumber, big.NewInt(1))
 
 	val.blockFragmentsLock.Lock()
 	val.blockFragments = make(map[common.Hash]*types.BlockFragments)
@@ -129,6 +130,16 @@ func (val *validator) newRoundState() stateFn {
 		val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 	}
 
+	<-roundStartTimer(val.parentBlockCreatedAt, val.round).C
+	currentRoundCreatedAt := time.Unix(time.Now().Unix(), 0)
+	if val.round > 0 {
+		val.previousRoundCreatedAt = val.roundCreatedAt
+	}
+	val.roundCreatedAt = currentRoundCreatedAt
+	log.Warn("round created at", "time", currentRoundCreatedAt.Format("2006-01-02T15:04:05.000"))
+	log.Warn("round will started at", "time", roundStartsAt(val.previousRoundCreatedAt, 0).Format("2006-01-02T15:04:05.000"))
+
+
 	atomic.StoreInt32(&val.waitProposalBlock, 1)
 
 	if val.round != 0 {
@@ -139,12 +150,17 @@ func (val *validator) newRoundState() stateFn {
 		}
 	}
 
-	log.Info("Starting a new voting round", "start time", val.start, "block number", val.blockNumber, "round", val.round)
+	log.Info("Starting a new voting round", "startTime", val.parentBlockCreatedAt, "block number", val.blockNumber, "round", val.round)
 	return val.newProposalState
 }
 
 func (val *validator) newProposalState() stateFn {
-	defer atomic.StoreInt32(&val.waitProposalBlock, 0)
+	defer func() {
+		if val.round > 0 {
+			<-roundStartTimer(val.previousRoundCreatedAt, 0).C
+		}
+		atomic.StoreInt32(&val.waitProposalBlock, 0)
+	}()
 
 	val.proposer = val.voters.NextProposer()
 

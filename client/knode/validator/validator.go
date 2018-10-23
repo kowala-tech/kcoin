@@ -253,9 +253,9 @@ func (val *validator) PendingBlock() *types.Block {
 
 func (val *validator) init() error {
 	parent := val.chain.CurrentBlock()
+	val.parentBlockCreatedAt = time.Unix(parent.Time().Int64(), 0)
+	val.previousRoundCreatedAt = time.Unix(time.Now().Unix(), 0)
 
-	start := time.Unix(parent.Time().Int64(), 0)
-	val.start = start.Add(time.Duration(params.BlockTime) * time.Millisecond)
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
 
@@ -355,9 +355,32 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 }
 
 func (val *validator) AddVote(vote *types.Vote) error {
+	val.handleMutex.Lock()
+	defer val.handleMutex.Unlock()
+
+	addressVote, err := types.NewAddressVote(val.signer, vote)
+	if err != nil {
+		return err
+	}
+
+	if err = val.addVote(addressVote); err != nil {
+		log.Info("a proposal block added successfully",
+			"validator", addressVote.Address(),
+			"number", vote.BlockNumber().Int64(),
+			"round", vote.Round(),
+			"chainID", vote.ChainID().Int64(),
+			"hash", vote.Hash().String())
+	}
+
+	return err
+}
+
+func (val *validator) addVote(addressVote types.AddressVote) error {
 	if !val.Validating() {
 		return ErrCantVoteNotValidating
 	}
+
+	vote := addressVote.Vote()
 
 	if val.config.ChainID.Cmp(vote.ChainID()) != 0 {
 		return fmt.Errorf("expected vote for chainID %v, got %v",
@@ -374,16 +397,9 @@ func (val *validator) AddVote(vote *types.Vote) error {
 			val.round, vote.Round())
 	}
 
-	val.handleMutex.Lock()
-	defer val.handleMutex.Unlock()
-
-	addressVote, err := types.NewAddressVote(val.signer, vote)
-	if err != nil {
-		return err
-	}
-
 	if err := val.votingSystem.Add(addressVote); err != nil {
 		log.Debug("cannot add the vote", "err", err)
+		return err
 	}
 
 	return nil
@@ -996,4 +1012,13 @@ func (val *validator) RedeemDeposits() error {
 
 func (val *validator) HasProposer() bool {
 	return val.proposer != nil
+}
+
+func roundStartTimer(blockStarts time.Time, round uint64) *time.Timer {
+	startsAt := roundStartsAt(blockStarts, round)
+	return time.NewTimer(startsAt.Sub(time.Now()))
+}
+
+func roundStartsAt(blockStarts time.Time, round uint64) time.Time {
+	return blockStarts.Add(time.Duration(params.BlockTime*(round+1)) * time.Millisecond)
 }
