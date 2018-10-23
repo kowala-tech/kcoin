@@ -256,7 +256,7 @@ func (api *PublicTokenAPI) TotalSupply() (*big.Int, error) {
 	return api.consensus.Token().TotalSupply()
 }
 
-func (api *PublicTokenAPI) SetMaxValidators(max *big.Int) error {
+func (api *PublicTokenAPI) SetMaxValidators(max *big.Int) (common.Hash, error) {
 	tOpts := &accounts.TransactOpts{}
 	return api.consensus.SetMaxValidators(tOpts, max)
 }

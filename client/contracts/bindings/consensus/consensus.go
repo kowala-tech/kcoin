@@ -255,8 +255,6 @@ func (css *Consensus) Token() token.Token {
 
 //Minter interface implementation
 
-var once.
-
 func (css *Consensus) MintInit() error {
 	var err error
 	css.initMint.Do(func() {
