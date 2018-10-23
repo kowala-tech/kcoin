@@ -16,7 +16,6 @@ import (
 //go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ zos-lib/=../../truffle/node_modules/zos-lib/ ../../truffle/contracts/oracle/ExchangeMgr.sol
 //go:generate solc --allow-paths ., --combined-json bin-runtime,srcmap-runtime --overwrite -o build/exchange-combined github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ zos-lib/=../../truffle/node_modules/zos-lib/ ../../truffle/contracts/oracle/ExchangeMgr.sol
 //go:generate ../../../build/bin/abigen -abi build/ExchangeMgr.abi -bin build/ExchangeMgr.bin -srcmap build/exchange-combined/combined.json -pkg oracle -type ExchangeMgr -out ./gen_exchange.go
-//go:generate go-bindata -o bind_contracts.go -pkg oracle ../../truffle/contracts/oracle/ExchangeMgr.sol ../../truffle/contracts/oracle/OracleMgr.sol
 
 type Manager struct {
 	*OracleMgrSession

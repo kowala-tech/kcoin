@@ -13,7 +13,6 @@ import (
 //go:generate solc --allow-paths ., --abi --bin --overwrite -o build github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ zos-lib/=../../truffle/node_modules/zos-lib/ ../../truffle/contracts/stability/Stability.sol
 //go:generate solc --allow-paths ., --combined-json bin-runtime,srcmap-runtime --overwrite -o build/stability-combined github.com/kowala-tech/kcoin/client/contracts/=../../truffle/contracts openzeppelin-solidity/=../../truffle/node_modules/openzeppelin-solidity/ zos-lib/=../../truffle/node_modules/zos-lib/ ../../truffle/contracts/stability/Stability.sol
 //go:generate ../../../build/bin/abigen -abi build/Stability.abi -bin build/Stability.bin -srcmap build/stability-combined/combined.json -pkg stability -type Stability -out ./gen_stability.go
-//go:generate go-bindata -o bind_contracts.go -pkg stability ../../truffle/contracts/stability/Stability.sol
 
 type StabilityContract struct {
 	*StabilitySession

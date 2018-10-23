@@ -1,9 +1,11 @@
 package mapping
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/mapping/files"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -114,4 +116,11 @@ func TestItReturnsTheLineFromTheSolidityFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "revert()", lineContent)
+}
+
+func TestWeCanUseAssetInsteadOfLookingFileSystem(t *testing.T) {
+	asset, err := files.Asset("../../truffle/contracts/sysvars/SystemVars.sol")
+	assert.NoError(t, err)
+
+	fmt.Printf("%v", string(asset))
 }
