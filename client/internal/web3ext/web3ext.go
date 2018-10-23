@@ -487,6 +487,11 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.utils.fromDecimal]
 		}),
 		new web3._extend.Method({
+			name: 'setMaxValidators',
+			call: 'mtoken_setMaxValidators',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'mintList',
 			call: 'mtoken_mintList'
 		})
