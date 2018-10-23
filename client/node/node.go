@@ -14,6 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/event"
 	"github.com/kowala-tech/kcoin/client/internal/debug"
 	"github.com/kowala-tech/kcoin/client/kcoindb"
+	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/p2p"
 	"github.com/kowala-tech/kcoin/client/rpc"
@@ -587,6 +588,11 @@ func (n *Node) apis() []rpc.API {
 			Namespace: "web3",
 			Version:   "1.0",
 			Service:   NewPublicWeb3API(n),
+			Public:    true,
+		}, {
+			Namespace: "token",
+			Version:   "1.0",
+			Service:   knode.NewPublicTokenAPI(),
 			Public:    true,
 		},
 	}
