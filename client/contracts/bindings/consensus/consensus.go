@@ -333,6 +333,11 @@ func (css *Consensus) Confirm(opts *accounts.TransactOpts, transactionID *big.In
 	return tx.Hash(), err
 }
 
+func (css *Consensus) SetMaxValidators(opts *accounts.TransactOpts, max *big.Int) error {
+	_, err := css.manager.SetMaxValidators(toBind(opts), max)
+	return err
+}
+
 // @TODO(rgeraldes) - temporary method
 func (css *Consensus) Domain() string {
 	return ""
