@@ -54,9 +54,16 @@ func main() {
 	}
 }
 
+type mintListItem struct {
+	Amount    *big.Int `json:"amount"`
+	Confirmed bool     `json:"confirmed"`
+	Id        int      `json:"id"`
+	To        string   `json:"to"`
+}
 type state struct {
 	block    int64
 	coinbase string
+	mintList []*mintListItem
 }
 
 // control represents a control backed
@@ -114,6 +121,7 @@ func (ctrl *control) close() error {
 func (ctrl *control) listenAndServe(port int) error {
 	go ctrl.syncBlock()
 	go ctrl.syncCoinbase()
+	go ctrl.syncMintList()
 	http.HandleFunc("/", ctrl.webHandler)
 	http.Handle("/api", websocket.Handler(ctrl.apiHandler))
 
@@ -165,6 +173,24 @@ func (ctrl *control) syncCoinbase() {
 	}
 }
 
+func (ctrl *control) syncMintList() {
+	for {
+		time.Sleep(time.Second)
+
+		var mintList []*mintListItem
+
+		err := ctrl.rpcClient.Call(&mintList, "mtoken_mintList")
+		if err != nil {
+			log.Error(err.Error())
+			break
+		}
+		ctrl.stateLock.Lock()
+		ctrl.state.mintList = mintList
+		ctrl.stateLock.Unlock()
+		ctrl.sendState()
+	}
+}
+
 // apiHandler handles requests for kcoin grants and transaction statuses.
 func (ctrl *control) apiHandler(conn *websocket.Conn) {
 	defer conn.Close()
@@ -193,6 +219,15 @@ func (ctrl *control) apiHandler(conn *websocket.Conn) {
 				mintAddress,
 				hexutil.EncodeBig(finalAmmount),
 			)
+			if err != nil {
+				log.Error(err.Error())
+			}
+		case "confirm_mint":
+			governor := data["governor"].(string)
+			id, _ := data["id"].(float64)
+
+			bigId := big.NewInt(int64(id))
+			err := ctrl.rpcClient.Call(nil, "mtoken_confirm", governor, hexutil.EncodeBig(bigId))
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -228,6 +263,7 @@ func (ctrl *control) sendStateToConn(conn *websocket.Conn) {
 	if err := send(conn, map[string]interface{}{
 		"coinbase": ctrl.state.coinbase,
 		"block":    ctrl.state.block,
+		"mintList": ctrl.state.mintList,
 	}, 3*time.Second); err != nil {
 		log.Warn("Failed to send state", "err", err)
 	}

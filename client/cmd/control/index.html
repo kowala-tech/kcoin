@@ -108,21 +108,7 @@
 								<th>Actions</th>
 							</tr>
 						</thead>
-						<tbody>
-								<tr>
-									<td>1</td>
-									<td>0xbbb69d4af598e868752db0b348c175a5a0191b46</td>
-									<td>1.00 (1000000000000000000)</td>
-									<td>Completed</td>
-									<td></td>
-								</tr>
-								<tr>
-									<td>1</td>
-									<td>0xbbb69d4af598e868752db0b348c175a5a0191b46</td>
-									<td>2.30 (2300000000000000000)</td>
-									<td>Pending</td>
-									<td><a href="#">Confirm</a></td>
-								</tr>
+						<tbody id="mintList">
 						</tbody>
 					</table>
 				</fieldset>
@@ -146,6 +132,20 @@
 						$("#block").text(msg.block);
 					}
 					if (msg.coinbase !== undefined) {
+						$("#coinbase").text(msg.coinbase);
+					}
+					if (msg.mintList !== undefined) {
+						const list = $("#mintList");
+						msg.mintList.forEach(function(entry) {
+							const el = $("#mintList-"+entry.id);
+							if (el.length > 0) {
+								if (entry.confirmed != el.hasClass("confirmed")) {
+									el.replaceWith(mintingListElementItem(entry))
+								}
+							} else {
+								list.append(mintingListElementItem(entry))
+							}
+						})
 						$("#coinbase").text(msg.coinbase);
 					}
 					if (msg.error !== undefined) {
@@ -174,6 +174,35 @@
 					mint_unit
 				}));
 			})
+
+			function mintingListElementItem(entry) {
+				const newEl = $(`<tr id="mintList-${entry.id}"></tr>`)
+				const fromWeis = (entry.amount / 1.0e18).toFixed(2)
+
+				newEl.append(`<td>${entry.id}</td>`)
+				newEl.append(`<td>${entry.to}</td>`)
+				newEl.append(`<td>${fromWeis} (${entry.amount})</td>`)
+				if (entry.confirmed) {
+					newEl.append(`<td>Confirmed</td>`)
+					newEl.append(`<td></td>`)
+				} else {
+					newEl.append(`<td>Pending</td>`)
+
+					const confirmLink = $(`<a href="#"></a>`).text("Confirm")
+					confirmLink.click(function(){
+						const governor = $("#governor_account").val();
+						server.send(JSON.stringify({
+							action: "confirm_mint",
+							governor,
+							id: entry.id,
+						}));
+					})
+					const td = $("<td></td>")
+					td.append(confirmLink)
+					newEl.append(td)
+				}
+				return newEl;
+			}
 		</script>
 	</body>
 </html>
