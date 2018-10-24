@@ -11,6 +11,12 @@ module.exports = {
             network_id: '*',
             gas: 2000000,
         },
+        kcoin_dev: {
+            host: '127.0.0.1',
+            port: 30504,
+            network_id: '*',
+            gas: 4712388,
+        },
         kcoin_main: {
             host: '127.0.0.1',
             port: 30503,
@@ -22,6 +28,11 @@ module.exports = {
             port: 8545,
             gasPrice: 0x1,
           },
+        dev: {
+            host: '127.0.0.1',
+            port: 7545,
+            network_id: '*',
+        },
     },
     solc: {
         optimizer: {

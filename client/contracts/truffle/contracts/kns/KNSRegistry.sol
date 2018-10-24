@@ -21,12 +21,12 @@ contract KNSRegistry is KNS, Initializable {
         _;
     }
 
-    // /**
-    //  * @dev Constructs a new KNS registrar.
-    //  */
-    // constructor() public {
-    //     records[0x0].owner = msg.sender;
-    // }
+    /**
+     * @dev Constructs a new KNS registrar.
+     */
+    constructor() public {
+        records[0x0].owner = msg.sender;
+    }
 
      /**
      * @dev initialize function for Proxy Pattern.
