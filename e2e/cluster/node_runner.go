@@ -134,7 +134,7 @@ func (runner *dockerNodeRunner) Run(node *NodeSpec) error {
 	}()
 
 	if node.IsReadyFn != nil {
-		return common.WaitFor("node starts", 1*time.Second, 10*time.Second, func() error {
+		return common.WaitFor("node starts", 1*time.Second, 30*time.Second, func() error {
 			return node.IsReadyFn(runner)
 		})
 	}
