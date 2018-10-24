@@ -1,3 +1,4 @@
+@bootes
 Feature: Joining network as a validator
   As a user
   I want to be able to join validators set
