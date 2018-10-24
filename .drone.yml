@@ -542,7 +542,7 @@ pipeline:
 
 services:
   docker:
-    image: docker:dind
+    image: docker:18.06.1-ce-dind
     command: [ '-l', 'fatal' ]
     privileged: true
 
