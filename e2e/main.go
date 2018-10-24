@@ -44,6 +44,7 @@ func main() {
 		Paths:         []string(featuresFlag),
 		Randomize:     -1,
 		StopOnFailure: true,
+		Tags:          "bootes",
 	})
 
 	os.Exit(status)
