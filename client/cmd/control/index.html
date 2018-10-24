@@ -79,8 +79,8 @@
 					<legend>Mint tokens</legend>
 					<label for="governor_account">Governor account: </label>
 					<select type="text" name="governor_account" id="governor_account">
-						<option value="0xbbb69d4af598e868752db0b348c175a5a0191b46">0xbbb69d4af598e868752db0b348c175a5a0191b46</option>
-						<option value="0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0">0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0</option>
+						<option value="0xf861e10641952a42f9c527a43ab77c3030ee2c8f">0xf861e10641952a42f9c527a43ab77c3030ee2c8f</option>
+						<option value="0x7dd43075b89c129bcd2cca1e2d680a6f3f30b5d9">0x7dd43075b89c129bcd2cca1e2d680a6f3f30b5d9</option>
 					</select>
 
 					<form>
@@ -91,9 +91,9 @@
 						<label for="mint_unit">Unit:</label>
 						<select type="text" name="mint_unit" id="mint_unit">
 							<option value="18">mToken</option>
-							<option value="1">mToken wei</option>
+							<option value="0">mToken wei</option>
 						</select>
-						<button id="mint">Propose</button>
+						<button id="proposeMinting">Propose</button>
 					</form>
 
 					<hr/>
@@ -159,6 +159,21 @@
 			}
 			// Establish a websocket connection to the API server
 			reconnect();
+
+			$("#proposeMinting").click(function(e) {
+				e.preventDefault();
+				const governor = $("#governor_account").val();
+				const mint_address = $("#mint_address").val();
+				const mint_amount = $("#mint_amount").val();
+				const mint_unit = $("#mint_unit").val();
+				server.send(JSON.stringify({
+					action: "mint",
+					governor,
+					mint_address,
+					mint_amount,
+					mint_unit
+				}));
+			})
 		</script>
 	</body>
 </html>

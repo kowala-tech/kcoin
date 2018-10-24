@@ -9,15 +9,17 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"math/big"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"
-
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/rpc"
 	"golang.org/x/net/websocket"
 )
 
@@ -62,6 +64,7 @@ type control struct {
 	state     *state
 	stateLock sync.RWMutex
 	index     []byte // Index page to serve up on the web
+	rpcClient *rpc.Client
 	client    *kcoinclient.Client
 	conns     []*websocket.Conn
 	connLock  sync.RWMutex
@@ -69,32 +72,35 @@ type control struct {
 }
 
 func newControl(ipcFile string, index []byte) (*control, error) {
-	client, err := dial(ipcFile)
+	rpcClient, client, err := dial(ipcFile)
 	if err != nil {
 		return nil, err
 	}
 
 	return &control{
-		client: client,
-		index:  index,
-		state:  &state{},
+		rpcClient: rpcClient,
+		client:    client,
+		index:     index,
+		state:     &state{},
 	}, nil
 }
 
 // dial dials to the kcoin process. It retries every second up to ten times.
-func dial(ipcFile string) (*kcoinclient.Client, error) {
+func dial(ipcFile string) (*rpc.Client, *kcoinclient.Client, error) {
 	attempts := 10
 	var err error
+	var rpcClient *rpc.Client
 	var client *kcoinclient.Client
 	for attempts > 0 {
-		client, err = kcoinclient.Dial(ipcFile)
+		rpcClient, err = rpc.Dial(ipcFile)
 		if err == nil {
-			return client, nil
+			client = kcoinclient.NewClient(rpcClient)
+			return rpcClient, client, nil
 		}
 		attempts -= 1
 		time.Sleep(1 * time.Second)
 	}
-	return nil, err
+	return nil, nil, err
 }
 
 // close terminates the Kowala connection and tears down the faucet.
@@ -171,6 +177,25 @@ func (ctrl *control) apiHandler(conn *websocket.Conn) {
 		data := make(map[string]interface{})
 		if err := websocket.JSON.Receive(conn, &data); err != nil {
 			return
+		}
+		switch data["action"] {
+		case "mint":
+			governor := data["governor"].(string)
+			mintAddress := data["mint_address"].(string)
+			mintAmount, _ := big.NewInt(0).SetString(data["mint_amount"].(string), 10)
+			mintUnit, _ := big.NewInt(0).SetString(data["mint_unit"].(string), 10)
+
+			mintScale := big.NewInt(10)
+			mintScale = mintScale.Exp(mintScale, mintUnit, nil)
+			finalAmmount := mintAmount.Mul(mintAmount, mintScale)
+
+			err := ctrl.rpcClient.Call(nil, "mtoken_mint", governor,
+				mintAddress,
+				hexutil.EncodeBig(finalAmmount),
+			)
+			if err != nil {
+				log.Error(err.Error())
+			}
 		}
 	}
 }
