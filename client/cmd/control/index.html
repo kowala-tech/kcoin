@@ -76,13 +76,14 @@
 				<hr/>
 
 				<fieldset>
-					<legend>Mint new mTokens</legend>
+					<legend>Mint tokens</legend>
+					<label for="governor_account">Governor account: </label>
+					<select type="text" name="governor_account" id="governor_account">
+						<option value="0xbbb69d4af598e868752db0b348c175a5a0191b46">0xbbb69d4af598e868752db0b348c175a5a0191b46</option>
+						<option value="0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0">0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0</option>
+					</select>
+
 					<form>
-						<label for="mint_from">Governor account: </label>
-						<select type="text" name="mint_from" id="mint_from">
-							<option value="0xbbb69d4af598e868752db0b348c175a5a0191b46">0xbbb69d4af598e868752db0b348c175a5a0191b46</option>
-							<option value="0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0">0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0</option>
-						</select>
 						<label for="mint_address">Address: </label>
 						<input type="text" name="mint_address" id="mint_address"/>
 						<label for="mint_amount">Amount: </label>
@@ -94,37 +95,37 @@
 						</select>
 						<button id="mint">Propose</button>
 					</form>
+
+					<hr/>
+
+					<table>
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>Address</th>
+								<th>Amount</th>
+								<th>Status</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+								<tr>
+									<td>1</td>
+									<td>0xbbb69d4af598e868752db0b348c175a5a0191b46</td>
+									<td>1.00 (1000000000000000000)</td>
+									<td>Completed</td>
+									<td></td>
+								</tr>
+								<tr>
+									<td>1</td>
+									<td>0xbbb69d4af598e868752db0b348c175a5a0191b46</td>
+									<td>2.30 (2300000000000000000)</td>
+									<td>Pending</td>
+									<td><a href="#">Confirm</a></td>
+								</tr>
+						</tbody>
+					</table>
 				</fieldset>
-
-				<hr/>
-
-				<table>
-					<thead>
-						<tr>
-							<th>ID</th>
-							<th>Address</th>
-							<th>Amount</th>
-							<th>Status</th>
-							<th>Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-							<tr>
-								<td>1</td>
-								<td>0xbbb69d4af598e868752db0b348c175a5a0191b46</td>
-								<td>1.00 (1000000000000000000)</td>
-								<td>Completed</td>
-								<td></td>
-							</tr>
-							<tr>
-								<td>1</td>
-								<td>0xbbb69d4af598e868752db0b348c175a5a0191b46</td>
-								<td>2.30 (2300000000000000000)</td>
-								<td>Pending</td>
-								<td><a href="#">Confirm</a></td>
-							</tr>
-					</tbody>
-				</table>
 			</div>
 		</div>
 
