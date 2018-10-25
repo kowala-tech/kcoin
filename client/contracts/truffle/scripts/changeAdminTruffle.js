@@ -2,8 +2,7 @@
 
 const Web3 = require('web3');
 
-const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:30504'));
-// const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
+const web3 = new Web3(new Web3.providers.HttpProvider('http://0.0.0.0:30503'));
 
 const gov1 = '0x2429f4aa5cf9d23fea0961780ffb4ff8916a26a0';
 const gov2 = '0xf861e10641952a42f9c527a43ab77c3030ee2c8f';
@@ -34,14 +33,20 @@ module.exports = async () => {
     const publicResolver = await PublicResolver.at(knsResolverAddr);
 
     const sysvarAddr = await publicResolver.addr(namehash(domain1));
+    console.log(sysvarAddr);
     const oraclemgrAddr = await publicResolver.addr(namehash(domain3));
+    console.log(oraclemgrAddr);
     const validatormgrAdrr = await publicResolver.addr(namehash(domain4));
+    console.log(validatormgrAdrr);
     const miningtokenAddr = await publicResolver.addr(namehash(domain5));
+    console.log(miningtokenAddr);
     const stabilityAddr = await publicResolver.addr(namehash(domain6));
+    console.log(stabilityAddr);
 
     const knsRegistryProxy = await AdminUpgradeabilityProxy.at(knsRegistryAddr);
     const knsResolverProxy = await AdminUpgradeabilityProxy.at(knsResolverAddr);
     const knsRegistrarProxy = await AdminUpgradeabilityProxy.at(knsRegistrarAddr);
+    
     const sysvarProxy = await AdminUpgradeabilityProxy.at(sysvarAddr);
     const oraclemgrProxy = await AdminUpgradeabilityProxy.at(oraclemgrAddr);
     const validatormgrProxy = await AdminUpgradeabilityProxy.at(validatormgrAdrr);
