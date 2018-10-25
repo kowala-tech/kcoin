@@ -22,6 +22,9 @@ const {
   PublicResolver,
 } = require('./helpers.js');
 
+
+
+
 module.exports = async () => {
   try {
     const domain1 = 'systemvars.kowala';
