@@ -74,9 +74,7 @@ func (ctx *ValidationContext) IStartTheValidator(kcoin int64) error {
 }
 
 func (ctx *ValidationContext) IWaitForMyNodeToBeSynced() error {
-	return common.WaitFor("timeout waiting for node sync", time.Second, time.Second*5, func() error {
-		return ctx.MyNodeIsAlreadySynchronised()
-	})
+	return ctx.MyNodeIsAlreadySynchronised()
 }
 
 func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
@@ -218,9 +216,10 @@ func (ctx *ValidationContext) IRestartTheValidator() error {
 }
 
 func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
-	return common.WaitFor("node is synchronised", 200*time.Millisecond, time.Second*20, func() error {
+	return common.WaitFor("node is synchronised", 1*time.Second, time.Second*20, func() error {
 		res := &cluster.ExecResponse{}
 		if err := ctx.globalCtx.execCommand(ctx.nodeID(), isSyncedCommand(), res); err != nil {
+			log.Debug(res.StdOut)
 			return err
 		}
 		if strings.TrimSpace(res.StdOut) != "true" {
