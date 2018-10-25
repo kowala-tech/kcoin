@@ -78,10 +78,7 @@
 				<fieldset>
 					<legend>Mint tokens</legend>
 					<label for="governor_account">Governor account: </label>
-					<select type="text" name="governor_account" id="governor_account">
-						<option value="0xf861e10641952a42f9c527a43ab77c3030ee2c8f">0xf861e10641952a42f9c527a43ab77c3030ee2c8f</option>
-						<option value="0x7dd43075b89c129bcd2cca1e2d680a6f3f30b5d9">0x7dd43075b89c129bcd2cca1e2d680a6f3f30b5d9</option>
-					</select>
+					<span id="governor_selector"></span>
 
 					<form>
 						<label for="mint_address">Address: </label>
@@ -115,8 +112,13 @@
 			</div>
 		</div>
 
-		<script>
+		<script type="application/javascript" src="https://unpkg.com/react@16.0.0/umd/react.production.min.js"></script>
+		<script type="application/javascript" src="https://unpkg.com/react-dom@16.0.0/umd/react-dom.production.min.js"></script>
+		<script type="application/javascript" src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+
+		<script type="text/babel">
 			var server;
+			var accounts = [];
 
 			// Define a method to reconnect upon server loss
 			var reconnect = function() {
@@ -133,6 +135,9 @@
 					}
 					if (msg.coinbase !== undefined) {
 						$("#coinbase").text(msg.coinbase);
+					}
+					if (msg.accounts !== undefined) {
+						accounts = msg.accounts;
 					}
 					if (msg.mintList !== undefined) {
 						const list = $("#mintList");
@@ -203,6 +208,42 @@
 				}
 				return newEl;
 			}
+
+			class GovernorList extends React.Component {
+				constructor(props) {
+					super(props);
+					this.state = { accounts: accounts };
+				}
+				
+				tick() {
+					this.setState(state => ({accounts: accounts}));
+				}
+
+				componentDidMount() {
+					this.interval = setInterval(() => this.tick(), 1000);
+				}
+			
+				componentWillUnmount() {
+					clearInterval(this.interval);
+				}
+
+				render() {
+					return (
+						<select type="text" name="governor_account" id="governor_account">
+								{this.state.accounts.map((account) => (
+									<option key={account} value={account}>{account}</option>
+								))}
+						</select>
+					)
+				}
+			}
+
+			ReactDOM.render(
+				<GovernorList />,
+				document.getElementById('governor_selector')
+			);
+
+
 		</script>
 	</body>
 </html>

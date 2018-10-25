@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"reflect"
 	"sync"
 	"time"
 
@@ -63,6 +64,7 @@ type mintListItem struct {
 type state struct {
 	block    int64
 	coinbase string
+	accounts []string
 	mintList []*mintListItem
 }
 
@@ -120,7 +122,7 @@ func (ctrl *control) close() error {
 // for service user funding requests.
 func (ctrl *control) listenAndServe(port int) error {
 	go ctrl.syncBlock()
-	go ctrl.syncCoinbase()
+	go ctrl.syncAccounts()
 	go ctrl.syncMintList()
 	http.HandleFunc("/", ctrl.webHandler)
 	http.Handle("/api", websocket.Handler(ctrl.apiHandler))
@@ -153,21 +155,42 @@ func (ctrl *control) syncBlock() {
 	}
 }
 
-func (ctrl *control) syncCoinbase() {
+func (ctrl *control) syncAccounts() {
 	lastCoinbase := ""
+	lastAccounts := []string{}
+
 	for {
 		time.Sleep(time.Second)
+		var coinbase string
+		var accounts []string
 
-		coinbase, err := ctrl.client.Coinbase(context.Background())
-		if err != nil {
+		if err := ctrl.rpcClient.Call(&coinbase, "eth_coinbase"); err != nil {
 			log.Warn("error fetching coinbase", "err", err)
 			break
 		}
-		if coinbase != nil && lastCoinbase != coinbase.Hex() {
-			lastCoinbase = coinbase.Hex()
+		if err := ctrl.rpcClient.Call(&accounts, "eth_accounts"); err != nil {
+			log.Warn("error fetching accounts", "err", err)
+			break
+		}
+
+		sendState := false
+		if coinbase != "" && lastCoinbase != coinbase {
+			lastCoinbase = coinbase
 			ctrl.stateLock.Lock()
-			ctrl.state.coinbase = coinbase.Hex()
+			ctrl.state.coinbase = coinbase
 			ctrl.stateLock.Unlock()
+			sendState = true
+		}
+
+		if accounts != nil && !reflect.DeepEqual(accounts, lastAccounts) {
+			lastAccounts = accounts
+			ctrl.stateLock.Lock()
+			ctrl.state.accounts = accounts
+			ctrl.stateLock.Unlock()
+			sendState = true
+		}
+
+		if sendState {
 			ctrl.sendState()
 		}
 	}
@@ -264,6 +287,7 @@ func (ctrl *control) sendStateToConn(conn *websocket.Conn) {
 		"coinbase": ctrl.state.coinbase,
 		"block":    ctrl.state.block,
 		"mintList": ctrl.state.mintList,
+		"accounts": ctrl.state.accounts,
 	}, 3*time.Second); err != nil {
 		log.Warn("Failed to send state", "err", err)
 	}
