@@ -1,14 +1,12 @@
 package main
 
-//go:generate go-bindata -nometadata -o website.go index.html
+//go:generate go-bindata -nometadata -o website.go static/...
 //go:generate gofmt -w -s website.go
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
-	"html/template"
 	"math/big"
 	"net/http"
 	"os"
@@ -35,16 +33,8 @@ func main() {
 	flag.Parse()
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 
-	// Load up and render the website
-	tmpl := MustAsset("index.html")
-	website := new(bytes.Buffer)
-	err := template.Must(template.New("").Parse(string(tmpl))).Execute(website, map[string]interface{}{})
-	if err != nil {
-		log.Crit("Failed to render the template", "err", err)
-	}
-
 	// Assemble and start the control service
-	control, err := newControl(*IPCFlag, website.Bytes())
+	control, err := newControl(*IPCFlag)
 	if err != nil {
 		log.Crit("Failed to start control", "err", err)
 	}
@@ -72,7 +62,6 @@ type state struct {
 type control struct {
 	state     *state
 	stateLock sync.RWMutex
-	index     []byte // Index page to serve up on the web
 	rpcClient *rpc.Client
 	client    *kcoinclient.Client
 	conns     []*websocket.Conn
@@ -80,7 +69,7 @@ type control struct {
 	headers   chan *types.Header
 }
 
-func newControl(ipcFile string, index []byte) (*control, error) {
+func newControl(ipcFile string) (*control, error) {
 	rpcClient, client, err := dial(ipcFile)
 	if err != nil {
 		return nil, err
@@ -89,7 +78,6 @@ func newControl(ipcFile string, index []byte) (*control, error) {
 	return &control{
 		rpcClient: rpcClient,
 		client:    client,
-		index:     index,
 		state:     &state{},
 	}, nil
 }
@@ -124,16 +112,20 @@ func (ctrl *control) listenAndServe(port int) error {
 	go ctrl.syncBlock()
 	go ctrl.syncAccounts()
 	go ctrl.syncMintList()
-	http.HandleFunc("/", ctrl.webHandler)
+
 	http.Handle("/api", websocket.Handler(ctrl.apiHandler))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		data := MustAsset("static/index.html")
+		w.Header().Set("Content-Type", "text/html")
+		w.Write(data)
+	})
+	http.HandleFunc("/scripts.js", func(w http.ResponseWriter, r *http.Request) {
+		data := MustAsset("static/scripts.js")
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Write(data)
+	})
 
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-}
-
-// webHandler handles all non-api requests, simply flattening and returning the
-// faucet website.
-func (ctrl *control) webHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write(ctrl.index)
 }
 
 func (ctrl *control) syncBlock() {
