@@ -4,6 +4,7 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/gherkin"
@@ -38,6 +39,7 @@ func FeatureContext(opts *FeatureContextOpts) {
 		validationCtx.Reset()
 		walletBackendCtx.Reset()
 		faucetCtx.Reset()
+		time.Sleep(5 * time.Second)
 	})
 
 	// Genesis and cluster creation
