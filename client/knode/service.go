@@ -19,7 +19,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/bloombits"
@@ -126,7 +125,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 			oracle.Bind,
 			consensus.Bind,
 			sysvars.Bind,
-			stability.Bind,
 		},
 		contracts: make(map[reflect.Type]bindings.Binding),
 	}
