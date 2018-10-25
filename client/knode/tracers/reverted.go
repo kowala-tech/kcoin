@@ -13,7 +13,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/contracts/mapping"
 	"github.com/kowala-tech/kcoin/client/core/vm"
@@ -32,7 +31,6 @@ var srcMapContractsData = map[string][]byte{
 	params.KNSDomains[params.ValidatorMgrDomain].FullDomain(): []byte(consensus.ValidatorMgrSrcMap),
 	params.KNSDomains[params.MiningTokenDomain].FullDomain():  []byte(consensus.MiningTokenSrcMap),
 	params.KNSDomains[params.SystemVarsDomain].FullDomain():   []byte(sysvars.SystemVarsSrcMap),
-	params.KNSDomains[params.StabilityDomain].FullDomain():    []byte(stability.StabilitySrcMap),
 }
 
 type EvmRevertedTracer struct {

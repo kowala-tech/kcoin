@@ -8,7 +8,6 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/stretchr/testify/assert"
@@ -58,10 +57,6 @@ func TestSrcMapDomains(t *testing.T) {
 		{
 			expectedSrcMap: []byte(sysvars.SystemVarsSrcMap),
 			contractName:   params.KNSDomains[params.SystemVarsDomain].FullDomain(),
-		},
-		{
-			expectedSrcMap: []byte(stability.StabilitySrcMap),
-			contractName:   params.KNSDomains[params.StabilityDomain].FullDomain(),
 		},
 	}
 
