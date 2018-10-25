@@ -8,11 +8,32 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/kns"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/consensus"
+	kns2 "github.com/kowala-tech/kcoin/client/contracts/bindings/kns"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/contracts/mapping"
 	"github.com/kowala-tech/kcoin/client/core/vm"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/params"
 )
+
+var srcMapContractsData = map[string][]byte{
+	"Proxy Factory Contract":                                  []byte(proxy.UpgradeabilityProxyFactorySrcMap),
+	"Proxy KNS Registry Contract":                             []byte(kns2.KNSRegistrySrcMap),
+	"Proxy Registrar Contract":                                []byte(kns2.FIFSRegistrarSrcMap),
+	"Proxy Resolver Contract":                                 []byte(kns2.PublicResolverSrcMap),
+	"Multisig Wallet Contract":                                []byte(ownership.MultiSigWalletSrcMap),
+	params.KNSDomains[params.MultiSigDomain].FullDomain():     []byte(ownership.MultiSigWalletSrcMap),
+	params.KNSDomains[params.OracleMgrDomain].FullDomain():    []byte(oracle.OracleMgrSrcMap),
+	params.KNSDomains[params.ValidatorMgrDomain].FullDomain(): []byte(consensus.ValidatorMgrSrcMap),
+	params.KNSDomains[params.MiningTokenDomain].FullDomain():  []byte(consensus.MiningTokenSrcMap),
+	params.KNSDomains[params.SystemVarsDomain].FullDomain():   []byte(sysvars.SystemVarsSrcMap),
+	params.KNSDomains[params.StabilityDomain].FullDomain():    []byte(stability.StabilitySrcMap),
+}
 
 type EvmRevertedTracer struct {
 }
@@ -26,26 +47,32 @@ func (*EvmRevertedTracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas
 }
 
 func (e *EvmRevertedTracer) CaptureFault(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost uint64, memory *vm.Memory, stack *vm.Stack, contract *vm.Contract, depth int, err error) error {
-	contractName, cErr := e.getContractByAddr(contract.Address(), env)
-	if cErr != nil {
-		contractName = "Undetected Contract"
-	}
-
-	callerContractName, cErr := e.getContractByAddr(contract.CallerAddress, env)
-	if cErr != nil {
-		callerContractName = "Undetected Contract"
-	}
-
 	if err.Error() == "evm: execution reverted" {
-		mapper, err := mapping.NewFromCombinedRuntime([]byte(sysvars.SystemVarsSrcMap), nil)
-		if err != nil {
-			return fmt.Errorf("error %s", err)
+		contractName, cErr := e.getContractByAddr(contract.Address(), env)
+		if cErr != nil {
+			contractName = "Undetected Contract"
 		}
 
-		var lineContent string
-		lineContent, err = mapper.GetSolidityLineByPc(pc)
-		if err != nil {
-			lineContent = "cannot get the line code"
+		callerContractName, cErr := e.getContractByAddr(contract.CallerAddress, env)
+		if cErr != nil {
+			callerContractName = "Undetected Contract"
+		}
+
+		lineContent := "cannot get the code line"
+		srcMap, ok := srcMapContractsData[contractName]
+		if ok {
+			mapper, cErr := mapping.NewFromCombinedRuntime(
+				srcMap,
+				&mapping.Config{UseBinding: true},
+			)
+			if cErr != nil {
+				return fmt.Errorf("error %s", cErr)
+			}
+
+			lineContent, cErr = mapper.GetSolidityLineByPc(pc)
+			if cErr != nil {
+				lineContent = "cannot get the code line"
+			}
 		}
 
 		log.Error(

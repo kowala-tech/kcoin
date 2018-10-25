@@ -13,7 +13,11 @@ func ParseByteCode(byteCode []byte) ([]*Instruction, error) {
 
 		if IsPush(byteCode[i]) {
 			lengthPushBytes = GetLengthPushBytes(byteCode[i])
-			instruction.OpCode = byteCode[i : i+lengthPushBytes+1]
+			if (i + lengthPushBytes + 1) < numBytes {
+				instruction.OpCode = byteCode[i : i+lengthPushBytes+1]
+			} else {
+				instruction.OpCode = byteCode[i:numBytes]
+			}
 		} else {
 			instruction.OpCode = []byte{byteCode[i]}
 		}

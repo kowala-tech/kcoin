@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/kowala-tech/kcoin/client/contracts/bindings/assets"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
 
 	"github.com/kowala-tech/kcoin/client/common"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/assets"
 )
 
 type SourceMapper struct {
