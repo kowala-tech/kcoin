@@ -35,12 +35,6 @@ evm:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/evm\" to start the evm."
 
-.PHONY: genesis
-genesis:
-	cd client; build/env.sh go run build/ci.go install ./cmd/genesis
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/genesis\" to generate genesis files."
-
 .PHONY: all
 all:
 	cd client; build/env.sh go run build/ci.go install
@@ -61,13 +55,12 @@ ios:
 abigen:
 	cd client; build/env.sh go run build/ci.go install ./cmd/abigen
 
+genesisgen:
+	cd client; build/env.sh go run build/ci.go install ./cmd/genesisgen
+
 .PHONY: test
 test: all
 	cd client; build/env.sh go run build/ci.go test
-
-.PHONY: test_genesis
-test_genesis: all
-	cd client/knode/genesis && go test . || curl -X POST -H 'Content-type: application/json' --data '{"attachments":[{"actions":[{"type":"button","text":"Build link","url":"${DRONE_BUILD_LINK}"}],"title":"Build failure","pretext":"Some days, you just cant get rid of a bomb!","text":"*Network config has changed!* Regenerate golden files, this will also require a network restart.","mrkdwn_in":["text","pretext","title"],"color":"#ff0000"}]}' ${SLACK_APP_WEBHOOK}
 
 .PHONY: test_notifications
 test_notifications: dep
@@ -85,7 +78,7 @@ lint: all
 
 .PHONY: clean
 clean:
-	rm -fr client/build/_workspace/pkg/ $(GOBIN)/* client/build/bin/abigen client/contracts/truffle/node_modules
+	rm -fr client/build/_workspace/pkg/ $(GOBIN)/* client/build/bin/abigen client/build/bin/genesisgen client/contracts/truffle/node_modules
 
 # Bindings tools
 
@@ -95,7 +88,7 @@ bindings:
 	go generate ./client/contracts/bindings/...
 
 .PHONY: install_tools
-install_tools: notifications_dep wallet_backend_dep abigen moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
+install_tools: notifications_dep wallet_backend_dep abigen genesisgen moq go-bindata stringer gencodec mockery protoc-gen-go stringer go-bindata gencodec
 
 client/contracts/truffle/node_modules:
 	cd client/contracts/truffle; npm ci
@@ -106,14 +99,25 @@ go_generate: client/contracts/truffle/node_modules
 	go generate ./client/contracts/bindings/utils/namehash.go
 	go generate ./...
 
+# This is designed to be run inside a kowalatech/solidoc container
+.PHONY: solidoc_generate
+solidoc_generate: client/contracts/truffle/node_modules
+	dotnet /app/bin/Release/netcoreapp2.1/publish/Solidoc.dll /go/src/github.com/kowala-tech/kcoin/client/contracts/truffle /go/src/github.com/kowala-tech/kcoin/docs/docs/smartcontracts
+
+.PHONY: docker_generate
+docker_generate: docker_go_generate docker_solidoc_generate 
+
 .PHONY: docker_go_generate
 docker_go_generate:
 	docker run --rm -v $(PWD):/go/src/github.com/kowala-tech/kcoin -w /go/src/github.com/kowala-tech/kcoin kowalatech/go:1.0.12 make install_tools go_generate
 
+docker_solidoc_generate:
+	docker run --rm -it -v $(PWD)/client/contracts/truffle/:/src -v $(PWD)/docs/docs/smartcontracts:/out kowalatech/solidoc:1.0.3 /src /out
+
 .PHONY: assert_no_changes
 assert_no_changes:
 	git status
-	@if ! git diff-index --quiet HEAD; then echo 'There are uncommited go generate files.\nRun `make docker_go_generate` to regenerate all of them.'; exit 1; fi
+	@if ! git diff-index --quiet HEAD; then echo 'There are uncommited generated files.\nRun `make docker_generate` to regenerate all of them.'; exit 1; fi
 
 .PHONY: notifications_dep
 notifications_dep: dep

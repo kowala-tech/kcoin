@@ -108,3 +108,19 @@ const knsv1 = await KNSV1.new();
 await knsProxy.upgradeTo(knsv1.address, { from: admin });
 knsContract = await KNSV1.at(knsProxyAddress);
 ```
+
+# How to generate solidity documentation
+We are using docker image with built in tool from https://github.com/binodnp/solidoc to generate our documentation for Solidity.
+
+In the main folder of truffle you will need to do these steps:
+
+1. Build docker image : `docker build . -t kowalatech/solidoc`
+2. Run docker image : `docker run --rm -it -v absolute/path/to/the/project/kcoin/client/contracts/truffle/:/src -v aboslute/path/to/the/project/kcoin/client/contracts/truffle/docs:/out kowalatech/solidoc /src /out`
+
+First argument is the project path and second is the output folder where all generated docs will be.
+
+Or, from the kcoin root:
+
+```
+make docker_solidoc_generate
+```

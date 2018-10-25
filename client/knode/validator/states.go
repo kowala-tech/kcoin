@@ -29,56 +29,51 @@ type work struct {
 
 type stateFn func() stateFn
 
+func (val *validator) genesisNotLoggedInState() stateFn {
+	// no need to make a deposit if the block number is 0
+	// since these validators will be marked as voters from the start
+	if val.isBlockZero() {
+		log.Info("Deposit is not necessary for a genesis validator (first block)")
+		return val.startValidating
+	}
+	return val.notLoggedInState
+}
+
 func (val *validator) notLoggedInState() stateFn {
-	isGenesis, err := val.consensus.IsGenesisValidator(val.walletAccount.Account().Address)
+	isValidator, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 	if err != nil {
-		log.Warn("Failed to verify the voter information", "err", err)
-		return nil
+		log.Crit("Failed to verify if account is already a validator")
 	}
 
-	// @NOTE (rgeraldes) - sync was already done at this point and by default the investors will be
-	// part of the initial set of validators - no need to make a deposit if the block number is 0
-	// since these validators will be marked as voters from the start
-	if !isGenesis || (isGenesis && val.chain.CurrentBlock().NumberU64() > 0) {
-		chainHeadCh := make(chan core.ChainHeadEvent)
-		chainHeadSub := val.chain.SubscribeChainHeadEvent(chainHeadCh)
-		defer chainHeadSub.Unsubscribe()
-
-		isValidator, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
-		if err != nil {
-			log.Crit("Failed to verify if account is already a validator")
-		}
-
-		if !isValidator {
-			txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
-			if err != nil {
-				log.Error("Error joining validators network", "err", err)
-				return nil
-			}
-			log.Info("Waiting confirmation to participate in the consensus")
-
-			receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
-			if err != nil {
-				log.Crit("Failed to verify the voter registration", "err", err)
-			}
-			if receipt.Status == types.ReceiptStatusFailed {
-				log.Crit("Failed to register the validator - receipt status failed")
-			}
-		}
-
-	} else {
-		isVoter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
-		if err != nil {
-			log.Crit("Failed to verify the voter information", "err", err)
+	if !isValidator {
+		if err := val.makeDeposit(); err != nil {
+			log.Error("Failed to make deposit", "err", err)
 			return nil
 		}
-		if !isVoter {
-			log.Crit("Invalid genesis - genesis validator needs to be registered as a voter", "address", val.walletAccount.Account().Address)
-		}
-
-		log.Info("Deposit is not necessary for a genesis validator (first block)")
 	}
 
+	return val.startValidating
+}
+
+func (val *validator) makeDeposit() error {
+	txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
+	if err != nil {
+		log.Error("Error joining validators network", "err", err)
+		return nil
+	}
+	log.Info("Waiting confirmation to participate in the consensus")
+
+	receipt, err := tx.WaitMinedWithTimeout(val.backend, txHash, txConfirmationTimeout)
+	if err != nil {
+		log.Crit("Failed to verify the voter registration", "err", err)
+	}
+	if receipt.Status == types.ReceiptStatusFailed {
+		log.Crit("Failed to register the validator - receipt status failed")
+	}
+	return nil
+}
+
+func (val *validator) startValidating() stateFn {
 	log.Info("Starting validation operation")
 	atomic.StoreInt32(&val.validating, 1)
 
@@ -86,6 +81,10 @@ func (val *validator) notLoggedInState() stateFn {
 	val.restoreLastCommit()
 
 	return val.newElectionState
+}
+
+func (val *validator) isBlockZero() bool {
+	return val.chain.CurrentBlock().NumberU64() == 0
 }
 
 func (val *validator) newElectionState() stateFn {
@@ -123,8 +122,8 @@ func (val *validator) newRoundState() stateFn {
 		val.block = nil
 		val.blockFragments = nil
 
-		//fixme: should be checked how to revert stateDB state
-		val.state.RevertToSnapshot(val.state.Snapshot())
+		parent := val.chain.CurrentBlock()
+		val.makeCurrent(parent)
 	}
 
 	return val.newProposalState
