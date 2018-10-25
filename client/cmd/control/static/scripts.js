@@ -59,7 +59,7 @@ class Minting extends React.Component {
         <label for="governor_account">Governor account: </label>
 
         <select type="text" onChange={this.handleGovernorChange} value={this.state.governor}>
-          {this.props.accounts.map((account) => (
+          {(this.props.accounts||[]).map((account) => (
             <option key={account} value={account}>{account}</option>
           ))}
         </select>
@@ -67,13 +67,16 @@ class Minting extends React.Component {
         <form onSubmit={this.handleProposeMint}>
           <label for="mint_address">Address: </label>
           <input type="text" id="mint_address" onChange={this.handleAddressChange} value={this.state.address}/>
+          <br/>
           <label for="mint_amount">Amount: </label>
           <input type="text" id="mint_amount" onChange={this.handleAmountChange} value={this.state.amount}/>
+          <br/>
           <label for="mint_unit">Unit:</label>
           <select type="text" id="mint_unit" onChange={this.handleUnitChange} value={this.state.unit}>
             <option value="18">mToken</option>
             <option value="0">mToken wei</option>
           </select>
+          <br/>
           <button>Propose</button>
         </form>
 
@@ -145,7 +148,7 @@ class App extends React.Component {
   reconnect() {
     this.ws = new WebSocket(((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + "/api");
     this.ws.onclose = () => {
-      setTimeout(this.reconnect, 3000);
+      setTimeout(this.reconnect.bind(this), 3000);
     };
     this.ws.onmessage = this.onWsMessage.bind(this)
   }

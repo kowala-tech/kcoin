@@ -221,10 +221,36 @@ func (ctrl *control) apiHandler(conn *websocket.Conn) {
 		}
 		switch data["action"] {
 		case "mint":
-			governor := data["governor"].(string)
-			mintAddress := data["mint_address"].(string)
-			mintAmount, _ := big.NewInt(0).SetString(data["mint_amount"].(string), 10)
-			mintUnit, _ := big.NewInt(0).SetString(data["mint_unit"].(string), 10)
+			governor, ok := data["governor"].(string)
+			if !ok || governor == "" {
+				ctrl.sendError(conn, "Invalid governor")
+				continue
+			}
+			mintAddress, ok := data["mint_address"].(string)
+			if !ok || mintAddress == "" {
+				ctrl.sendError(conn, "Invalid address")
+				continue
+			}
+			mintAmountStr, ok := data["mint_amount"].(string)
+			if !ok || mintAmountStr == "" {
+				ctrl.sendError(conn, "Invalid amount")
+				continue
+			}
+			mintAmount, ok := big.NewInt(0).SetString(mintAmountStr, 10)
+			if !ok {
+				ctrl.sendError(conn, "Amount is not a valid number")
+				continue
+			}
+			mintUnitStr, ok := data["mint_unit"].(string)
+			if !ok || mintUnitStr == "" {
+				ctrl.sendError(conn, "Invalid unit")
+				continue
+			}
+			mintUnit, ok := big.NewInt(0).SetString(mintUnitStr, 10)
+			if !ok {
+				ctrl.sendError(conn, "Unit is not a valid")
+				continue
+			}
 
 			mintScale := big.NewInt(10)
 			mintScale = mintScale.Exp(mintScale, mintUnit, nil)
@@ -235,17 +261,31 @@ func (ctrl *control) apiHandler(conn *websocket.Conn) {
 				hexutil.EncodeBig(finalAmmount),
 			)
 			if err != nil {
+				ctrl.sendError(conn, "Error proposing mint")
 				log.Error(err.Error())
+				continue
 			}
+			ctrl.sendSuccess(conn, "Mint proposed")
 		case "confirm_mint":
-			governor := data["governor"].(string)
-			id, _ := data["id"].(float64)
+			governor, ok := data["governor"].(string)
+			if !ok || governor == "" {
+				ctrl.sendError(conn, "Invalid governor")
+				continue
+			}
+			id, ok := data["id"].(float64)
+			if !ok {
+				ctrl.sendError(conn, "Invalid ID")
+				continue
+			}
 
 			bigId := big.NewInt(int64(id))
 			err := ctrl.rpcClient.Call(nil, "mtoken_confirm", governor, hexutil.EncodeBig(bigId))
 			if err != nil {
+				ctrl.sendError(conn, "Error confirming mint")
 				log.Error(err.Error())
+				continue
 			}
+			ctrl.sendSuccess(conn, "Mint confirmed")
 		}
 	}
 }
@@ -284,6 +324,22 @@ func (ctrl *control) sendStateToConn(conn *websocket.Conn) {
 		log.Warn("Failed to send state", "err", err)
 	}
 	ctrl.stateLock.RUnlock()
+}
+
+func (ctrl *control) sendError(conn *websocket.Conn, message string) {
+	if err := send(conn, map[string]interface{}{
+		"error": message,
+	}, 3*time.Second); err != nil {
+		log.Warn("Failed to send error message", "err", err)
+	}
+}
+
+func (ctrl *control) sendSuccess(conn *websocket.Conn, message string) {
+	if err := send(conn, map[string]interface{}{
+		"success": message,
+	}, 3*time.Second); err != nil {
+		log.Warn("Failed to send error message", "err", err)
+	}
 }
 
 // sends transmits a data packet to the remote end of the websocket, but also
