@@ -29,6 +29,76 @@ class MintListEntry extends React.Component {
   }
 }
 
+class MintList extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      idSearch: "",
+      addrSearch: "",
+      statusSearch: "0",
+    }
+    this.handleIdSearchChange = this.handleIdSearchChange.bind(this);
+    this.handleAddrSearchChange = this.handleAddrSearchChange.bind(this);
+    this.handleStatusSearchChange = this.handleStatusSearchChange.bind(this);
+  }
+
+  entries() {
+    return this.props.entries.filter( (entry) => {
+      if (this.state.idSearch != "" && entry.id != this.state.idSearch) {
+        return false
+      }
+      if (this.state.addrSearch != "" && entry.to.indexOf(this.state.addrSearch) == -1) {
+        return false
+      }
+      if (this.state.statusSearch == "1" && !entry.confirmed) {
+        return false
+      }
+      if (this.state.statusSearch == "2" && entry.confirmed) {
+        return false
+      }
+      return true
+    })
+  }
+
+  handleIdSearchChange(e) {
+    this.setState({idSearch: e.target.value})
+  }
+
+  handleAddrSearchChange(e) {
+    this.setState({addrSearch: e.target.value})
+  }
+
+  handleStatusSearchChange(e) {
+    this.setState({statusSearch: e.target.value})
+  }
+
+  render() {
+    return (
+      <table>
+        <thead>
+          <tr>
+            <th>ID <input placeholder="all" type="text" value={this.state.idSearch} onChange={this.handleIdSearchChange} style={{width: 40}}/></th>
+            <th>Address <input placeholder="all" type="text" value={this.state.addrSearch} onChange={this.handleAddrSearchChange}/></th>
+            <th>Amount</th>
+            <th>Status <select value={this.state.statusSearch} onChange={this.handleStatusSearchChange}>
+              <option value="0">All</option>
+              <option value="1">Confirmed</option>
+              <option value="2">Pending</option>
+            </select></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {this.entries().map((entry) => (
+            <MintListEntry key={entry.id} entry={entry} governor={this.props.governor} sendData={this.props.sendData} />
+          ))}
+        </tbody>
+      </table>
+    )
+  }
+}
+
 class Minting extends React.Component {
   constructor(props) {
     super(props);
@@ -79,22 +149,7 @@ class Minting extends React.Component {
 
 		<h3>Mint operations</h3>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Address</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(this.props.mintList||[]).map((entry) => (
-              <MintListEntry key={entry.id} entry={entry} governor={this.state.governor} sendData={this.props.sendData} />
-            ))}
-          </tbody>
-        </table>
+        <MintList entries={this.props.mintList || []} governor={this.state.governor} sendData={this.props.sendData}/>
       </fieldset>
     )
   }
