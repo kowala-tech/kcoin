@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"sync"
 	"time"
@@ -18,14 +19,16 @@ import (
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/rpc"
 	"golang.org/x/net/websocket"
 )
 
 var (
-	IPCFlag     = flag.String("ipc", "", "Path to the IPC file")
-	apiPortFlag = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
-	logFlag     = flag.Int("verbosity", 3, "Log level to use for the control panel service")
+	IPCFlag      = flag.String("ipc", "", "Path to the IPC file")
+	currencyFlag = flag.String("currency", "kusd", "currency name")
+	apiPortFlag  = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
+	logFlag      = flag.Int("verbosity", 3, "Log level to use for the control panel service")
 )
 
 func main() {
@@ -34,7 +37,7 @@ func main() {
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 
 	// Assemble and start the control service
-	control, err := newControl(*IPCFlag)
+	control, err := newControl(ipcPath())
 	if err != nil {
 		log.Crit("Failed to start control", "err", err)
 	}
@@ -69,7 +72,16 @@ type control struct {
 	headers   chan *types.Header
 }
 
+func ipcPath() string {
+	if *IPCFlag != "" {
+		return *IPCFlag
+	}
+
+	return filepath.Join(node.DefaultDataDir(), *currencyFlag, "kcoin.ipc")
+}
+
 func newControl(ipcFile string) (*control, error) {
+
 	rpcClient, client, err := dial(ipcFile)
 	if err != nil {
 		return nil, err
