@@ -12,7 +12,7 @@ class MintListEntry extends React.Component {
         <td>{this.props.entry.confirmed ? "Confirmed" : "Pending"}</td>
         <td>
           {!this.props.entry.confirmed &&
-            <a href="#" onClick={this.onConfirm}>Confirm</a>
+            <a href="#" class="button" onClick={this.onConfirm}>Confirm</a>
           }
         </td>
         
@@ -47,7 +47,7 @@ class Minting extends React.Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    if (this.state.governor == "" && nextProps.accounts.length > 0) {
+    if (this.state.governor == "" && nextProps.accounts && nextProps.accounts.length > 0) {
       this.setState({ governor: nextProps.accounts[0] });
     }
   }
@@ -55,8 +55,8 @@ class Minting extends React.Component {
   render() {
     return (
       <fieldset>
-        <legend>Mint tokens</legend>
-        <label for="governor_account">Governor account: </label>
+        <h3>Mint tokens</h3>
+        <label for="governor_account">Governor account</label>
 
         <select type="text" onChange={this.handleGovernorChange} value={this.state.governor}>
           {(this.props.accounts||[]).map((account) => (
@@ -65,22 +65,19 @@ class Minting extends React.Component {
         </select>
 
         <form onSubmit={this.handleProposeMint}>
-          <label for="mint_address">Address: </label>
+          <label for="mint_address">Recipient ddress</label>
           <input type="text" id="mint_address" onChange={this.handleAddressChange} value={this.state.address}/>
-          <br/>
-          <label for="mint_amount">Amount: </label>
+          <label for="mint_amount">Amount</label>
           <input type="text" id="mint_amount" onChange={this.handleAmountChange} value={this.state.amount}/>
-          <br/>
-          <label for="mint_unit">Unit:</label>
+          <label for="mint_unit">Unit</label>
           <select type="text" id="mint_unit" onChange={this.handleUnitChange} value={this.state.unit}>
             <option value="18">mToken</option>
             <option value="0">mToken wei</option>
           </select>
-          <br/>
           <button>Propose</button>
         </form>
 
-        <hr/>
+		<h3>Mint operations</h3>
 
         <table>
           <thead>
@@ -186,6 +183,7 @@ class App extends React.Component {
   render() {
     return (
       <div class="container">
+	<header>
         <div class="row">
           <div class="col-lg-12">
             <h1>kcoin Control Panel</h1>
@@ -195,8 +193,7 @@ class App extends React.Component {
           <div class="col-sm-5"><i class="fa fa-database" aria-hidden="true"></i> {this.state.coinbase} coinbase</div>
           <div class="col-sm-3"><i class="fa fa-database" aria-hidden="true"></i> {this.state.block} blocks</div>
         </div>
-
-        <hr/>
+	</header>
 
         <Minting accounts={this.state.accounts} mintList={this.state.mintList} sendData={this.sendData.bind(this)} />
       </div>
