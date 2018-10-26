@@ -387,7 +387,7 @@ pipeline:
     environment:
       - DOCKER_HOST=tcp://docker:2375
     commands:
-      - make kcoin_cross controll_cross
+      - make kcoin_cross control_cross
     when:
       event: [push, tag]
       branch: [dev, master]
