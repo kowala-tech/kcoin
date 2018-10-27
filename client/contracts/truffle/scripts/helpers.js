@@ -115,6 +115,23 @@ async function deployContract(_bytecode, _from, _pk){
   const contract = await web3.eth.sendSignedTransaction(txRaw.rawTransaction).on('receipt', console.log);
   return contract.contractAddress;
 }
+
+async function getParamFromTxEvent (transaction, paramName, contractFactory, eventName){
+  assert.isObject(transaction);
+  let logs = transaction.logs;
+  if (eventName != null) {
+    logs = logs.filter(l => l.event === eventName);
+  }
+  assert.equal(logs.length, 1, 'too many logs found!');
+  const param = logs[0].args[paramName];
+  if (contractFactory != null) {
+    const contract = contractFactory.at(param);
+    assert.isObject(contract, `getting ${paramName} failed for ${param}`);
+    return contract;
+  }
+  return param;
+};
+
 module.exports = {
   AdminUpgradeabilityProxy,
   AdminUpgradabilityProxyAbi,
@@ -126,4 +143,5 @@ module.exports = {
   signTransactionAndSend,
   readABIAndByteCode,
   deployContract,
+  getParamFromTxEvent,
 };

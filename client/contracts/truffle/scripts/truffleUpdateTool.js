@@ -1,119 +1,91 @@
 /* global artifacts, assert */
 /* eslint-disable max-len */
 
-const Web3 = require('web3');
+const argv = require('yargs')
+    .usage('Usage: $0 option contractAddr option admin option privateKey option file \n e.g $0 -c 0x123 -a 0xAd123 -k 9876655 -f ./build/contracts/SampleContract.json')
+    .alias('c', 'contractAddr') // contractAddr option
+    .nargs('c', 1)
+    .describe('c', 'contract address to update')
+    .alias('d', 'domain') // domain option
+    .nargs('d', 1)
+    .describe('d', 'domain of a contract to be updated')
+    .alias('a', 'admin') // admin of the proxy contract (who updates the contract)
+    .nargs('a', 1)
+    .describe('a', 'admin of the proxy contract (who updates the contract)')
+    .alias('f', 'file') // file option
+    .nargs('f', 1)
+    .describe('f', 'path to a JSON file with ABI and Bytecode for the new version of a contract. Usually a file from build diretory after truffle compile')
+    .demandOption(['a','k','f'])
+    .help('h')
+    .alias('h', 'help')
+    .epilog('Copyright Kowala 2018')
+    .argv;
 
-// const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:30504'));
+const Web3 = require('web3');
+const namehash = require('eth-ens-namehash');
+const assert = require('chai').assert;
+const truffleContract = require('truffle-contract');
+
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 const MultiSig = artifacts.require('MultiSigWallet.sol');
-const SysVars1 = artifacts.require('SystemVars.sol');
-const SysVars2 = artifacts.require('SystemVars2.sol');
-const MyContractV2 = artifacts.require('MyContractV2.sol');
-const KNS = artifacts.require('KNSRegistry.sol');
-const KNSV1 = artifacts.require('KNSRegistryV1.sol');
 
 const governor1 = '0xf861e10641952a42f9c527a43ab77c3030ee2c8f';
-const governor2 = '0x7dd43075b89c129bcd2cca1e2d680a6f3f30b5d9';
-const validator1 = '0xa4a06cb7bcaa0162082f170d4b6f4b5360da9e11';
-const validator2 = '0xa0b5cd08648cf5d29269356377ac06c538d7de96';
+const governor3 = '0xa1d4755112491db5ddf0e10b9253b5a0f6783759';
 
-const acc1 = '0x7A9E64e6baA8BD021C9FAa72869e8A4aF953D906';
-const acc2 = '0xD1eFC9Ed211F8943B07a5Ce739d6C3a05e7EF4FD';
-const acc3 = '0x1f3A8b01516e6031870cCC7810214D85D39165cb';
-const acc4 = '0xa028EEB91b1661589888D26a4c9814294241dA69';
-const acc5 = '0xfaA8C086182086f6cA16610E58baE5A14fc5Fc26';
-
-const namehash = require('eth-ens-namehash');
-const assert = require('chai').assert;
 
 const {
-  AdminUpgradeabilityProxy,AdminUpgradabilityProxyAbi,
-  UpgradeabilityProxyFactory,
-  PublicResolver, KNSRegistry,
-  signTransactionAndSend,
+  AdminUpgradeabilityProxy,
+  PublicResolver,
   readABIAndByteCode,
+  getParamFromTxEvent,
 } = require('./helpers.js');
 
-const kcoin = n => new web3.utils.BN(web3.utils.toWei(n, 'ether'));
-// const {
-//   AdminUpgradabilityProxyAbi,
-//   PublicResolverABI,
-//   signTransactionAndSend,
-//   readABIAndByteCode,
-//   deployContract,
-// } = require('./helpers.js');
-const getParamFromTxEvent = async (transaction, paramName, contractFactory, eventName) => {
-  assert.isObject(transaction);
-  let logs = transaction.logs;
-  if (eventName != null) {
-    logs = logs.filter(l => l.event === eventName);
-  }
-  assert.equal(logs.length, 1, 'too many logs found!');
-  const param = logs[0].args[paramName];
-  if (contractFactory != null) {
-    const contract = contractFactory.at(param);
-    assert.isObject(contract, `getting ${paramName} failed for ${param}`);
-    return contract;
-  }
-  return param;
-};
-// const multiSigAddr = '0x0e5d0Fd336650E663C710EF420F85Fb081E21415';
+const multiSigAddr = '0x0e5d0Fd336650E663C710EF420F85Fb081E21415';
+const prAddress = '0x01e1056f6a829E53dadeb8a5A6189A9333Bd1d63';
 
 module.exports = async () => {
   try {
-    const sig = await MultiSig.new([acc2, acc3, acc4], 2, { from: acc1 });
-    // const contractV2 = await MyContractV2.new();
+    let proxyAddr;
+    let admin;
+    const file = argv.file;
 
-    // const domain = 'systemvars.kowala';
-    // const prAddress = '0x01e1056f6a829E53dadeb8a5A6189A9333Bd1d63';
-    // const publicResolver = await PublicResolver.new();
-    // const svAddr = await publicResolver.addr(namehash(domain));
-    const proxyFactory = await UpgradeabilityProxyFactory.new({ from: acc1 });
-    // KNS Proxy
-    const kns = await KNS.new();
-    const logs = await proxyFactory.createProxy(sig.address, kns.address, { from: acc1 });
-    const logs1 = logs.logs;
-    const knsProxyAddress = logs1.find(l => l.event === 'ProxyCreated').args.proxy;
-    const knsProxy = await AdminUpgradeabilityProxy.at(knsProxyAddress);
-    let knsContract = await KNS.at(knsProxyAddress);
-    await knsContract.initialize(acc5);
-    console.log(await knsContract.owner(0x0));
-    const knsv1 = await KNSV1.new();
-    // await knsProxy.upgradeTo(knsv1.address, { from: acc1 });
+    if (!(await web3.utils.isAddress(argv.admin))) throw 'Admin field should be an address';
+    else { admin = argv.admin; }
+    if (argv.domain !== undefined && argv.contractAddr === undefined) {
+      const publicResolver = await PublicResolver.at(prAddress);
+      proxyAddr = await publicResolver.methods.addr(namehash(argv.domain)).call();
+    } else if (argv.domain === undefined && argv.contractAddr !== undefined && await web3.utils.isAddress(argv.contractAddr)) {
+      proxyAddr = argv.contractAddr;
+    } else {
+      throw 'domain or contract address should be populated';
+    }
 
-    const upgradeData = knsProxy.contract.upgradeTo.getData(knsv1.address);
+    const sig = await MultiSig.at(multiSigAddr);
+    const adminProxy = await AdminUpgradeabilityProxy.at(proxyAddr);
+    console.log(await adminProxy.admin({ from: multiSigAddr }));
 
+    const contractInternals = await readABIAndByteCode(file);
 
+    const ContractVersion2 = truffleContract({
+      abi: contractInternals[0],
+      bytecode: contractInternals[1],
+    });
+    ContractVersion2.setProvider(web3.currentProvider);
+
+    const contractVersion2 = await ContractVersion2.new();
+    const upgradeData = adminProxy.contract.upgradeTo.getData(contractVersion2.address);
     console.log("submitting");
-    // const addOwnerData = contractV2.contract.setValue.getData(5);
     const transactionID = await getParamFromTxEvent(
-      await sig.submitTransaction(knsProxy.address, 0, upgradeData, { from: acc2 }),
+      await sig.submitTransaction(adminProxy.address, 0, upgradeData, { from: admin }),
       'transactionId',
       null,
       'Submission',
     );
-    console.log("confirming");
-    const tmp = await sig.confirmTransaction(transactionID, { from: acc3 });
-    console.log(tmp);
-    // const transactionID = await getParamFromTxEvent(
-    //   await sig.submitTransaction(adminProxy.address, 0, upgradeData, { from: acc2 }),
-    //   'transactionId',
-    //   null,
-    //   'Submission',
-    // );
-    // console.log("confirming");
-    // const tmp = await sig.confirmTransaction(transactionID, { from: acc3 });
-    // console.log(tmp);
-    console.log("confirmed");
-    knsContract = await KNSV1.at(knsProxyAddress);
+    console.log("submitted");
 
-    const hello = await knsContract.helloProxy();
-    console.log(hello);
-    // const contract2 = await SysVars2.at(sys1Proxy);
-    // console.log("8");
-    // const tmp2 = await contract2.helloProxy();
-    // console.log("9");
-    // console.log(tmp2);
+    console.log("confirming");
+    await sig.confirmTransaction(transactionID, { from: governor3 });
+    console.log("confirmed");
   } catch (err) { console.log(err); }
 };

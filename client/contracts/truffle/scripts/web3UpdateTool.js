@@ -6,16 +6,6 @@ const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 const namehash = require('eth-ens-namehash');
-// const commandLineArgs = require('command-line-args');
-
-// const optionDefinitions = [
-//   { name: 'contractAddr', alias: 'c', type: String },
-//   { name: 'domain', alias: 'd', type: String },
-//   { name: 'admin', alias: 'a', type: String },
-//   { name: 'privateKey', alias: 'k', type: String },
-//   { name: 'file', alias: 'f', type: String }
-// ];
-// const options = commandLineArgs(optionDefinitions);
 
 const argv = require('yargs')
     .usage('Usage: $0 option contractAddr option admin option privateKey option file \n e.g $0 -c 0x123 -a 0xAd123 -k 9876655 -f ./build/contracts/SampleContract.json')
@@ -62,7 +52,7 @@ const {
     if (!(await web3.utils.isAddress(argv.admin))) throw 'Admin field should be an address'
     if (argv.domain !== undefined && argv.contractAddr === undefined) {
       const publicResolver = new web3.eth.Contract(PublicResolverABI, publicResolverAddr);
-      proxyAddr = await publicResolver.methods.addr(namehash(argv.domain)).call(); 
+      proxyAddr = await publicResolver.methods.addr(namehash(argv.domain)).call();
     } else if (argv.domain === undefined && argv.contractAddr !== undefined && await web3.utils.isAddress(argv.contractAddr)) {
       proxyAddr = argv.contractAddr;
     } else {
