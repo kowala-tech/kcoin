@@ -1,4 +1,3 @@
-/* eslint no-unused-expressions: 0 */
 /* eslint-disable max-len */
 
 const Web3 = require('web3');
@@ -8,6 +7,10 @@ const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 const truffleContract = require('truffle-contract');
 const fs = require('fs');
+require('chai')
+  .use(require('chai-as-promised'))
+  .use(require('chai-bignumber')())
+  .should();
 
 const assert = require('chai').assert;
 
@@ -120,7 +123,49 @@ async function deployContract(_bytecode, _from, _pk){
   return contract.contractAddress;
 }
 
-async function getParamFromTxEvent (transaction, paramName, contractFactory, eventName){
+// async function getParamFromTxEvent (transaction, paramName, contractFactory, eventName){
+//   assert.isObject(transaction);
+//   let logs = transaction.logs;
+//   if (eventName != null) {
+//     logs = logs.filter(l => l.event === eventName);
+//   }
+//   assert.equal(logs.length, 1, 'too many logs found!');
+//   const param = logs[0].args[paramName];
+//   if (contractFactory != null) {
+//     const contract = contractFactory.at(param);
+//     assert.isObject(contract, `getting ${paramName} failed for ${param}`);
+//     return contract;
+//   }
+//   return param;
+// };
+
+const mineBlock = () => (
+  new Promise((resolve, reject) =>
+    web3.currentProvider.sendAsync({
+      jsonrpc: '2.0',
+      method: 'evm_mine',
+      id: new Date().getTime(),
+    }, (error, result) => (error ? reject(error) : resolve(result.result))))
+);
+
+const mineNBlocks = async (n) => {
+  for (let i = 0; i < n; i += 1) {
+    mineBlock();
+  }
+};
+
+const addSeconds = seconds => (
+  new Promise((resolve, reject) =>
+    web3.currentProvider.sendAsync({
+      jsonrpc: '2.0',
+      method: 'evm_increaseTime',
+      params: [seconds],
+      id: new Date().getTime(),
+    }, (error, result) => (error ? reject(error) : resolve(result.result))))
+    .then(mineBlock)
+);
+
+const getParamFromTxEvent = async (transaction, paramName, contractFactory, eventName) => {
   assert.isObject(transaction);
   let logs = transaction.logs;
   if (eventName != null) {
@@ -136,6 +181,8 @@ async function getParamFromTxEvent (transaction, paramName, contractFactory, eve
   return param;
 };
 
+const EVMError = message => `VM Exception while processing transaction: ${message}`;
+const kcoin = n => new web3.BigNumber(web3.toWei(n, 'ether'));
 
 module.exports = {
   AdminUpgradeabilityProxy,
@@ -148,5 +195,10 @@ module.exports = {
   signTransactionAndSend,
   readABIAndByteCode,
   deployContract,
+  kcoin,
+  EVMError,
+  addSeconds,
+  mineNBlocks,
+  mineBlock,
   getParamFromTxEvent,
 };
