@@ -387,7 +387,7 @@ pipeline:
     environment:
       - DOCKER_HOST=tcp://docker:2375
     commands:
-      - make kcoin_cross
+      - make kcoin_cross control_cross
     when:
       event: [push, tag]
       branch: [dev, master]
@@ -467,7 +467,7 @@ pipeline:
     acl: public-read
     encryption: AES256
     bucket: releases.kowala.tech
-    source: client/build/bin/kcoin-*.zip
+    source: client/build/bin/*.zip
     strip_prefix: client/build/bin/
     target: /
     when:
