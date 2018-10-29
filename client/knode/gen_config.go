@@ -38,6 +38,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		EnablePreimageRecording bool
 		DocRoot                 string `toml:"-"`
 		Currency                string
+		DebugEvm                bool
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -60,6 +61,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.DocRoot = c.DocRoot
 	enc.Currency = c.Currency
+	enc.DebugEvm = c.DebugEvm
 	return &enc, nil
 }
 
@@ -86,6 +88,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		EnablePreimageRecording *bool
 		DocRoot                 *string `toml:"-"`
 		Currency                *string
+		DebugEvm                *bool
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -150,6 +153,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.Currency != nil {
 		c.Currency = *dec.Currency
+	}
+	if dec.DebugEvm != nil {
+		c.DebugEvm = *dec.DebugEvm
 	}
 	return nil
 }
