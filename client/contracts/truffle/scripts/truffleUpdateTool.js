@@ -61,16 +61,16 @@ module.exports = async () => {
 
     const sig = await MultiSig.at(multiSigAddr);
     const adminProxy = await AdminUpgradeabilityProxy.at(proxyAddr);
-    console.log("Loading contract's ABI and Bytecode");
+    console.log('Loading contract`s ABI and Bytecode');
     const contractInternals = await readABIAndByteCode(file);
-    console.log("Creating contract object");
+    console.log('Creating contract object');
     const ContractVersion2 = truffleContract({
       abi: contractInternals[0],
       bytecode: contractInternals[1],
     });
-    console.log("Setting provider");
+    console.log('Setting provider');
     ContractVersion2.setProvider(web3.currentProvider);
-    if (typeof ContractVersion2.currentProvider.sendAsync !== "function") {
+    if (typeof ContractVersion2.currentProvider.sendAsync !== 'function') {
       ContractVersion2.currentProvider.sendAsync = function () {
         return ContractVersion2.currentProvider.send.apply(ContractVersion2.currentProvider, arguments);
       };
@@ -79,20 +79,20 @@ module.exports = async () => {
       gas: 4712388,
       gasPrice: 1,
     });
-    console.log("Creating contract instance");
+    console.log('Creating contract instance');
     const contractVersion2 = await ContractVersion2.new({ from: admin });
-    console.log("Getting update data for a transaction");
+    console.log('Getting update data for a transaction');
     const upgradeData = adminProxy.contract.upgradeTo.getData(contractVersion2.address);
-    console.log("Submitting transaction");
+    console.log('Submitting transaction');
     const transactionID = await getParamFromTxEvent(
       await sig.submitTransaction(adminProxy.address, 0, upgradeData, { from: admin }),
       'transactionId',
       null,
       'Submission',
     );
-    console.log("Transaction submitted");
-    // console.log("Confirming transaction");
+    console.log('Transaction submitted');
+    // console.log('Confirming transaction');
     // await sig.confirmTransaction(transactionID, { from: owner2 });
-    // console.log("Transaction confirmed");
+    // console.log('Transaction confirmed');
   } catch (err) { console.log(err); }
 };
