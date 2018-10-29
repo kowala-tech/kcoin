@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/tx"
@@ -35,7 +36,7 @@ var (
 )
 
 var (
-	txConfirmationTimeout = 10 * time.Second
+	txConfirmationTimeout = 20 * time.Second
 )
 
 // Backend wraps all methods required for mining.
@@ -57,6 +58,7 @@ type Validator interface {
 	PendingBlock() *types.Block
 	Deposits(address *common.Address) ([]*types.Deposit, error)
 	RedeemDeposits() error
+	Post(interface{}) error
 }
 
 type Service interface {
@@ -122,13 +124,18 @@ func New(backend Backend, consensus *consensus.Consensus, config *params.ChainCo
 }
 
 func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.Int) {
-	log.Warn("initial sync is going to run")
-	ctx, cancel := context.WithTimeout(context.Background(), txConfirmationTimeout)
-	defer cancel()
+	log.Warn("initial sync is going to run", "account", walletAccount.Account().Address.String(), "deposit", spew.Sdump(deposit))
 
-	if err := SyncWaiter(ctx, val.eventMux); err != nil {
-		log.Warn("Failed to sync with network", "err", err)
-		return
+	val.walletAccount = walletAccount
+	val.deposit = deposit
+
+	if isGenesisValidator, err := val.isGenesisValidator(); err == nil && !isGenesisValidator {
+		if !val.isBlockZero() {
+			if err := val.tryJoin(); err != nil {
+				log.Warn("stopping validation", "err", err)
+				return
+			}
+		}
 	}
 	log.Warn("initial sync done")
 
@@ -145,13 +152,9 @@ func (val *validator) Start(walletAccount accounts.WalletAccount, deposit *big.I
 		return
 	}
 
-	log.Info("starting validation", "account", walletAccount.Account().Address.String(), "deposit", deposit.Int64())
-	val.walletAccount = walletAccount
-	val.deposit = deposit
-
 	if atomic.LoadInt32(&val.canStart) == 0 {
 		atomic.StoreInt32(&val.isStarted, 0)
-		log.Info("network syncing, will start validator afterwards")
+		log.Debug("network syncing, will start validator afterwards")
 		return
 	}
 
@@ -231,7 +234,12 @@ func (val *validator) SetDeposit(deposit *big.Int) error {
 		return ErrIsRunning
 	}
 
-	log.Info("setting a deposit", "account", val.walletAccount.Account().Address.String(), "deposit", deposit.Int64())
+	if deposit != nil {
+		log.Info("setting a deposit on setDeposit call", "deposit", deposit)
+	} else {
+		log.Info("setting a deposit on setDeposit call", "deposit", "nil")
+	}
+
 	val.deposit = deposit
 
 	return nil
@@ -319,6 +327,10 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 		return fmt.Errorf("expected proposed block round %v, got %v", val.round, proposal.Round())
 	}
 
+	if val.isProposal {
+		return errors.New("is proposal itself")
+	}
+
 	proposalAddress, err := types.ProposalSender(val.signer, proposal)
 	if err != nil {
 		return err
@@ -333,12 +345,10 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	}
 
 	val.handleMutex.Lock()
-	defer val.handleMutex.Unlock()
 
 	val.proposal = proposal
 
 	val.blockFragmentsLock.Lock()
-	defer val.blockFragmentsLock.Unlock()
 
 	blockFragments, ok := val.blockFragments[proposal.Hash()]
 	if !ok {
@@ -346,7 +356,12 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 	}
 	val.blockFragments[proposal.Hash()] = blockFragments
 
-	if blockFragments.HasAll() {
+	val.blockFragmentsLock.Unlock()
+
+	hasAllFragments := blockFragments.HasAll()
+	val.handleMutex.Unlock()
+
+	if hasAllFragments {
 		log.Debug("addProposal has all fragments and assembling a block")
 		return val.assembleBlock(proposal.Round(), proposal.BlockNumber(), proposal.Hash())
 	}
@@ -355,23 +370,29 @@ func (val *validator) AddProposal(proposal *types.Proposal) error {
 }
 
 func (val *validator) AddVote(vote *types.Vote) error {
+	log.Debug("adding vote", "vote", vote.String())
+
 	val.handleMutex.Lock()
-	defer val.handleMutex.Unlock()
+	defer func() {
+		val.handleMutex.Unlock()
+	}()
 
 	addressVote, err := types.NewAddressVote(val.signer, vote)
 	if err != nil {
+		log.Debug("can't add a vote", "err", err, "vote", vote.String())
 		return err
 	}
 
 	if err = val.addVote(addressVote); err != nil {
-		log.Info("a proposal block added successfully",
+		log.Debug("cant add a vote",
 			"validator", addressVote.Address(),
 			"number", vote.BlockNumber().Int64(),
 			"round", vote.Round(),
 			"chainID", vote.ChainID().Int64(),
-			"hash", vote.Hash().String())
+			"hash", vote.Hash().String(),
+			"err", err.Error())
 	}
-
+	log.Debug("vote has been added", "vote", vote.String())
 	return err
 }
 
@@ -496,11 +517,12 @@ func (val *validator) join() error {
 		return err
 	}
 
-	log.Warn("joining the network",
+	log.Debug("joining the network",
 		"chainID", val.config.ChainID.Int64(),
 		"account", val.walletAccount,
 		"deposit", val.deposit,
-		"block", val.block)
+		"block", val.block,
+		"deposit", spew.Sdump(val.consensus.Deposits(val.walletAccount.Account().Address)))
 
 	txHash, err := val.consensus.Join(val.walletAccount, val.deposit)
 	if err != nil {
@@ -582,7 +604,7 @@ func (val *validator) createBlock() *types.Block {
 
 	var commit *types.Commit
 
-	first := types.NewVote(blockNumber, parent.Hash(), 0, types.PreCommit)
+	first := types.NewVote(blockNumber, parent.Hash(), val.round, types.PreCommit)
 
 	if blockNumber.Cmp(big.NewInt(1)) == 0 {
 		commit = &types.Commit{
@@ -639,12 +661,15 @@ func (val *validator) propose() {
 	}
 
 	val.proposal = signedProposal
+	val.isProposal = true
 	val.block = block
 
+	// give some time to the network to start waiting for the proposed block
+	time.Sleep(time.Duration(params.ProposeDeltaDuration) * time.Millisecond)
 	if err := val.eventMux.Post(core.NewProposalEvent{Proposal: signedProposal}); err != nil {
 		log.Warn("can't post an event", "err", err, "event", "NewProposalEvent", "proposal", signedProposal)
 	}
-	log.Info("sending a signed proposal",
+	log.Debug("sending a signed proposal",
 		"account", val.walletAccount.Account().Address.String(),
 		"chainID", val.config.ChainID.Int64(),
 		"block", signedProposal.String(),
@@ -664,22 +689,15 @@ func (val *validator) propose() {
 		}
 	}
 
-	log.Info("all block fragments has been sent",
+	log.Debug("all block fragments has been sent",
 		"account", val.walletAccount.Account().Address.String(),
 		"chainID", val.config.ChainID.Int64(),
 		"block", signedProposal.String(),
 		"round", val.round)
+}
 
-	// give some time to other validators to receive and validate the proposed block
-	timeout := val.getProposeTimeout()
-	minTimeToWaitDuration := time.Duration(timeout-params.ProposeDurationMin) * time.Millisecond
-	<-time.NewTimer(minTimeToWaitDuration).C
-
-	log.Info("proposal stage is done",
-		"account", val.walletAccount.Account().Address.String(),
-		"chainID", val.config.ChainID.Int64(),
-		"block", signedProposal.String(),
-		"round", val.round)
+func (val *validator) Post(e interface{}) error {
+	return val.eventMux.Post(e)
 }
 
 func (val *validator) preVote() {
@@ -696,6 +714,10 @@ func (val *validator) preVote() {
 		vote = val.block.Hash()
 	}
 
+	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreVote))
+
+	// fixme: fix only for a small network - resend vote. It's necessary because we don't have a reliable sync mechanism with heartbeat
+	time.Sleep(time.Duration(params.PreVoteDeltaDuration) * time.Millisecond)
 	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreVote))
 }
 
@@ -774,7 +796,7 @@ func (val *validator) vote(vote *types.Vote) {
 	}
 
 	if val.walletAccount.Account().Address != addressVote.Address() {
-		panic("!!!!!!!!!!!!!!!!!!!!!!!!")
+		log.Crit("vote signature is incorrect", "vote", addressVote, "account", val.walletAccount.Account())
 	}
 
 	err = val.votingSystem.Add(addressVote)
@@ -797,6 +819,10 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Ha
 		return fmt.Errorf("expected block fragments for round %d, got %d", val.round, round)
 	}
 
+	if val.isProposal {
+		return errors.New("is proposer itself")
+	}
+
 	err, canAssemble := val.addFragment(fragment, blockHash)
 	if err != nil {
 		return err
@@ -813,7 +839,9 @@ func (val *validator) AddBlockFragment(blockNumber *big.Int, blockHash common.Ha
 // returns true if all fragments can be assembled now
 func (val *validator) addFragment(fragment *types.BlockFragment, blockHash common.Hash) (error, bool) {
 	val.blockFragmentsLock.Lock()
-	defer val.blockFragmentsLock.Unlock()
+	defer func() {
+		val.blockFragmentsLock.Unlock()
+	}()
 
 	var (
 		blockFragmentsList []*types.BlockFragment
@@ -855,8 +883,17 @@ func (val *validator) addFragment(fragment *types.BlockFragment, blockHash commo
 }
 
 func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, blockHash common.Hash) error {
+	val.handleMutex.Lock()
+	if val.block != nil {
+		return nil
+	}
+
 	val.blockFragmentsLock.Lock()
-	defer val.blockFragmentsLock.Unlock()
+	defer func() {
+		val.handleMutex.Unlock()
+
+		val.blockFragmentsLock.Unlock()
+	}()
 
 	blockFragments := val.blockFragments[blockHash]
 
@@ -888,23 +925,19 @@ func (val *validator) assembleBlock(round uint64, blockNumber *big.Int, blockHas
 		log.Crit("Failed to process the block", "err", err)
 	}
 
-	val.handleMutex.Lock()
-	defer val.handleMutex.Unlock()
-
 	val.receipts = receipts
 
 	// Validate the state using the default validator
 	err = val.chain.Validator().ValidateState(block, parent, val.state, receipts, usedGas)
 	if err != nil {
-		log.Error("Failed to validate the state", "err", err,
-			"round", round, "block", blockNumber, "block", block)
-
-		log.Crit("Failed to validate the state", "err", err)
+		log.Crit("Failed to validate the state", "err", err, "round", round, "block", blockNumber, "parent", parent.Number().Int64(), "blockFragments", blockFragments.Count(), "receipts", receipts, "block", block)
 	}
 
 	val.block = block
 
-	go func() { val.blockCh <- block }()
+	go func() {
+		val.blockCh <- block
+	}()
 
 	return nil
 }

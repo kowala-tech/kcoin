@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/kowala-tech/kcoin/client/log"
 	"io"
 	"math/big"
 	"os"
@@ -25,6 +24,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/crypto"
 	"github.com/kowala-tech/kcoin/client/internal/kcoinapi"
 	"github.com/kowala-tech/kcoin/client/knode/validator"
+	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/params"
 	"github.com/kowala-tech/kcoin/client/rlp"
 	"github.com/kowala-tech/kcoin/client/rpc"
@@ -69,7 +69,7 @@ func (api *PrivateValidatorAPI) Start(deposit *hexutil.Big) error {
 		api.kcoin.lock.RUnlock()
 
 		bigint := deposit.ToInt()
-		if bigint.Cmp(big.NewInt(0)) != 0 {
+		if bigint.Cmp(big.NewInt(0)) > 0 {
 			err := api.kcoin.SetDeposit(bigint)
 			if err != nil && err != validator.ErrIsNotRunning {
 				return err

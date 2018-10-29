@@ -2,11 +2,13 @@ package tx
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/params"
 )
 
 type Backend interface {
@@ -21,7 +23,7 @@ func WaitMinedWithTimeout(ctx context.Context, backend Backend, txHash common.Ha
 // WaitMined waits for tx to be mined on the blockchain.
 // It stops waiting when the context is canceled.
 func WaitMined(ctx context.Context, backend Backend, txHash common.Hash) (*types.Receipt, error) {
-	queryTicker := time.NewTicker(time.Second)
+	queryTicker := time.NewTicker(time.Duration(params.PreCommitDeltaDuration) * time.Millisecond)
 	defer queryTicker.Stop()
 
 	logger := log.New("hash", txHash)
@@ -38,6 +40,10 @@ func WaitMined(ctx context.Context, backend Backend, txHash common.Hash) (*types
 
 		select {
 		case <-ctx.Done():
+			logger.Trace("Transaction failed by timeout", "err", ctx.Err())
+			if receipt == nil && ctx.Err() == nil {
+				return nil, errors.New("context deadline exceeded")
+			}
 			return nil, ctx.Err()
 		case <-queryTicker.C:
 			// Wait for the next round.

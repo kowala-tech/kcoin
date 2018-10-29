@@ -37,39 +37,47 @@ func (val *validator) genesisNotLoggedInState() stateFn {
 }
 
 func (val *validator) notLoggedInState() stateFn {
+	if err := val.tryJoin(); err != nil {
+		log.Warn("stopping validation", "err", err)
+		return nil
+	}
+
+	return val.startValidating
+}
+
+func (val *validator) isValidator() bool {
 	isValidator, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
 	if err != nil {
 		log.Crit("Failed to verify if account is already a validator")
 	}
+	return isValidator
+}
 
+func (val *validator) tryJoin() error {
+	var err error
+
+	isValidator := val.isValidator()
 	if !isValidator {
 		try := 0
 		err = val.join()
 		for err != nil {
 			log.Error("Failed to make deposit", "try", try, "err", err)
-			time.Sleep(3 * time.Second)
 
-			isValidator, err = val.consensus.IsValidator(val.walletAccount.Account().Address)
-			if err != nil {
-				log.Crit("Failed to verify if account is already a validator")
-			}
-
+			isValidator = val.isValidator()
 			if isValidator {
 				break
 			}
 
 			err = val.join()
 
-			if try >= 10 {
-				log.Error("Failed to make deposit. Stopping validation", "try", try)
-				return nil
+			if try >= 500 {
+				return fmt.Errorf("failed to make deposit. try %d", try)
 			}
 			try++
 		}
 		log.Warn("started as a validator")
 	}
-
-	return val.startValidating
+	return nil
 }
 
 func (val *validator) startValidating() stateFn {
@@ -94,6 +102,7 @@ func (val *validator) newElectionState() stateFn {
 		return nil
 	}
 
+	log.Warn("newElectionState will start at", "time", roundStartsAt(val.parentBlockCreatedAt, val.round).Format("2006-01-02T15:04:05.000"))
 	<-roundStartTimer(val.parentBlockCreatedAt, val.round).C
 
 	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
@@ -112,7 +121,9 @@ func (val *validator) newElectionState() stateFn {
 }
 
 func (val *validator) newRoundState() stateFn {
+	log.Debug("newRoundState", "time", time.Now().Format("2006-01-02T15:04:05.000"), "block", val.blockNumber, "round", val.round)
 	val.proposal = nil
+	val.isProposal = false
 	val.proposer = nil
 	val.block = nil
 
@@ -131,17 +142,16 @@ func (val *validator) newRoundState() stateFn {
 	}
 
 	<-roundStartTimer(val.parentBlockCreatedAt, val.round).C
-	currentRoundCreatedAt := time.Unix(time.Now().Unix(), 0)
+	currentRoundCreatedAt := time.Now()
 	if val.round > 0 {
 		val.previousRoundCreatedAt = val.roundCreatedAt
 	}
 	val.roundCreatedAt = currentRoundCreatedAt
 	log.Warn("round created at", "time", currentRoundCreatedAt.Format("2006-01-02T15:04:05.000"))
+	log.Warn("previous round created at", "time", val.previousRoundCreatedAt.Format("2006-01-02T15:04:05.000"))
 	log.Warn("round will started at", "time", roundStartsAt(val.previousRoundCreatedAt, 0).Format("2006-01-02T15:04:05.000"))
 
-
 	atomic.StoreInt32(&val.waitProposalBlock, 1)
-
 	if val.round != 0 {
 		val.checkUpdateValidators(false)
 		if err := val.makeCurrent(parent); err != nil {
@@ -155,11 +165,20 @@ func (val *validator) newRoundState() stateFn {
 }
 
 func (val *validator) newProposalState() stateFn {
+	newProposalStateStarted := time.Now()
+	newProposalStateStarted = newProposalStateStarted.Add(time.Duration(val.getProposeTimeout()-1*params.ProposeDeltaDuration) * time.Millisecond)
+	log.Warn("newProposalState will wait until", "time", newProposalStateStarted.Format("2006-01-02T15:04:05.000"))
+
 	defer func() {
-		if val.round > 0 {
-			<-roundStartTimer(val.previousRoundCreatedAt, 0).C
-		}
+		<-roundStartTimer(val.previousRoundCreatedAt, val.round-1).C
+		<-time.NewTimer(newProposalStateStarted.Sub(time.Now())).C
+
 		atomic.StoreInt32(&val.waitProposalBlock, 0)
+		log.Info("proposal stage is done",
+			"account", val.walletAccount.Account().Address.String(),
+			"chainID", val.config.ChainID.Int64(),
+			"block", val.blockNumber.Int64(),
+			"round", val.round)
 	}()
 
 	val.proposer = val.voters.NextProposer()
@@ -208,7 +227,15 @@ func (val *validator) getProposeTimeout() uint64 {
 }
 
 func (val *validator) preVoteState() stateFn {
+	preVoteStarted := time.Now()
 	log.Info("Pre vote sub-election")
+
+	preVoteStarted = preVoteStarted.Add(time.Duration(params.PreVoteDuration+(val.round-1)*params.PreVoteDeltaDuration) * time.Millisecond)
+	log.Warn("preVoteState will wait until", "time", preVoteStarted.Format("2006-01-02T15:04:05.000"))
+	defer func() {
+		<-time.NewTimer(preVoteStarted.Sub(time.Now())).C
+	}()
+
 	val.preVote()
 
 	return val.preVoteWaitState
@@ -230,7 +257,15 @@ func (val *validator) preVoteWaitState() stateFn {
 }
 
 func (val *validator) preCommitState() stateFn {
+	preCommitStarted := time.Now()
 	log.Info("Pre commit sub-election")
+
+	preCommitStarted = preCommitStarted.Add(time.Duration(params.PreCommitDuration+(val.round-1)*params.PreCommitDeltaDuration) * time.Millisecond)
+	log.Warn("preCommitState will wait until", "time", preCommitStarted.Format("2006-01-02T15:04:05.000"))
+	defer func() {
+		<-time.NewTimer(preCommitStarted.Sub(time.Now())).C
+	}()
+
 	val.preCommit()
 
 	return val.preCommitWaitState
@@ -238,7 +273,7 @@ func (val *validator) preCommitState() stateFn {
 
 func (val *validator) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit sub-election", "blockNumber", val.blockNumber, "round", val.round)
-	timeout := time.Duration(params.PreCommitDuration+val.round+params.PreCommitDeltaDuration) * time.Millisecond
+	timeout := time.Duration(params.PreCommitDuration+val.round*params.PreCommitDeltaDuration) * time.Millisecond
 	defer val.majority.Unsubscribe()
 
 	select {
@@ -313,10 +348,7 @@ func (val *validator) commitState() stateFn {
 	// election state updates
 	val.commitRound = int(val.round)
 
-	voter, err := val.consensus.IsValidator(val.walletAccount.Account().Address)
-	if err != nil {
-		log.Crit("Failed to verify if the validator is a voter", "err", err)
-	}
+	voter := val.isValidator()
 	if !voter {
 		log.Info(fmt.Sprintf("Logging out. Account %q is not a validator", val.walletAccount.Account().Address.String()))
 		return val.loggedOutState

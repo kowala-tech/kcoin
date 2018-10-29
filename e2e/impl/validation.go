@@ -85,7 +85,7 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 
 	spec := cluster.NewKcoinNodeBuilder().
 		WithBootnode(ctx.globalCtx.bootnode).
-		WithLogLevel(6).
+		WithLogLevel(4).
 		WithID(ctx.nodeID().String()).
 		WithSyncMode("full").
 		WithNetworkId(ctx.globalCtx.chainID.String()).
@@ -93,7 +93,6 @@ func (ctx *ValidationContext) IHaveMyNodeRunning(account string) error {
 		WithCoinbase(ctx.globalCtx.accounts[account]).
 		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.accounts[account]).
 		WithAccount(ctx.globalCtx.AccountsStorage, ctx.globalCtx.mtokensSeederAccount).
-		WithValidation().
 		NodeSpec()
 
 	if err := ctx.globalCtx.nodeRunner.Run(spec); err != nil {
@@ -216,7 +215,7 @@ func (ctx *ValidationContext) IRestartTheValidator() error {
 }
 
 func (ctx *ValidationContext) MyNodeIsAlreadySynchronised() error {
-	return common.WaitFor("node is synchronised", 1*time.Second, time.Second*20, func() error {
+	return common.WaitFor("node is synchronised", 2*time.Second, time.Second*40, func() error {
 		res := &cluster.ExecResponse{}
 		if err := ctx.globalCtx.execCommand(ctx.nodeID(), isSyncedCommand(), res); err != nil {
 			log.Debug(res.StdOut)

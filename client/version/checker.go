@@ -19,7 +19,7 @@ func Checker(repository string) {
 	checker := &checker{
 		repository:    repository,
 		current:       current,
-		checkInterval: time.Minute,
+		checkInterval: 2 * time.Minute,
 	}
 	go checker.check()
 }

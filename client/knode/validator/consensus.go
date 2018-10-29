@@ -6,12 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/log"
-
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/event"
+	"github.com/kowala-tech/kcoin/client/log"
 )
 
 // VotingState encapsulates the consensus state for a specific block election
@@ -24,6 +23,7 @@ type VotingState struct {
 
 	proposer              *types.Voter
 	proposal              *types.Proposal
+	isProposal            bool
 	block                 *types.Block
 	blockFragmentsLock    sync.RWMutex
 	blockFragments        map[common.Hash]*types.BlockFragments

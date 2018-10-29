@@ -598,6 +598,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// @NOTE (rgeraldes) Schedule a sync if above ours. Note, this will not fire a sync for
 			// a gap of a single block
 			if block.Number().Cmp(localBlock.Number()) > 0 {
+				log.Debug("going to sync with a peer", "block", block.Number().Int64(), "local", localBlock.Number().Int64(), "peer", p.String())
 				go pm.synchronise(p)
 			}
 		}
@@ -622,15 +623,24 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.txpool.AddRemotes(txs)
 
 	case msg.Code == ProposalMsg:
-		if !pm.validator.Validating() && !pm.validator.WaitProposal() {
-			break
-		}
-
 		// Retrieve and decode the propagated proposal
 		var proposal types.Proposal
 		if err := msg.Decode(&proposal); err != nil {
 			log.Info("got a proposal block error", "data", msg, "err", err)
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		log.Info("got a proposal block",
+			"chainID", proposal.ChainID().Int64(),
+			"number", proposal.BlockNumber().Int64(),
+			"round", proposal.Round(),
+			"hash", proposal.Hash().String())
+		if !p.knownProposals.Has() {
+			pm.validator.Post(core.NewProposalEvent{Proposal: &proposal})
+		}
+		p.MarkProposal(proposal.Hash())
+
+		if !pm.validator.Validating() || !pm.validator.WaitProposal() {
+			break
 		}
 
 		log.Info("got a proposal block", "chainID", proposal.ChainID().Int64(),
@@ -656,37 +666,63 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		log.Info("a proposal block added successfully", "chainID", proposal.ChainID().Int64(),
 			"number", proposal.BlockNumber().Int64(), "round", proposal.Round(), "hash", proposal.Hash().String())
 
-		p.MarkProposal(proposal.Hash())
-
 	case msg.Code == VoteMsg:
-		if !pm.validator.Validating() {
-			break
-		}
 		// Retrieve and decode the propagated vote
 		var vote types.Vote
 		if err := msg.Decode(&vote); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
+		log.Info("got a vote",
+			"chainID", vote.ChainID().Int64(),
+			"number", vote.BlockNumber().Int64(),
+			"round", vote.Round(),
+			"type", vote.Type(),
+			"hash", vote.Hash().String())
+		if !p.knownVotes.Has() {
+			pm.validator.Post(core.NewVoteEvent{Vote: &vote})
+		}
+		p.MarkVote(vote.Hash())
+
+		if !pm.validator.Validating() {
+			log.Warn("add vote fail. not voting")
+			break
+		}
+
 		if err := pm.validator.AddVote(&vote); err != nil {
 			// ignore
 			break
 		}
-		p.MarkVote(vote.Hash())
 
 	case msg.Code == BlockFragmentMsg:
-		if !pm.validator.Validating() && !pm.validator.WaitProposal() {
-			break
-		}
-
 		// Retrieve and decode the propagated block fragment
 		var request blockFragmentData
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
+		log.Info("got an block fragment",
+			"number", request.BlockNumber,
+			"round", request.Round,
+			"hash", request.Hash.String())
+
+		if !p.knownBlockFragments.Has() {
+			pm.validator.Post(core.NewBlockFragmentEvent{
+				BlockNumber: request.BlockNumber,
+				BlockHash:   request.Hash,
+				Round:       request.Round,
+				Data:        request.Data,
+			})
+		}
+		p.MarkBlockFragment(request.Data.Proof)
+
+		if !pm.validator.Validating() || !pm.validator.WaitProposal() {
+			break
+		}
+
 		localBlock := pm.blockchain.CurrentBlock()
 		proposalHeightDiff := big.NewInt(0).Sub(request.BlockNumber, localBlock.Number())
+
 		// we expect proposalHeightDiff to be +1
 		if proposalHeightDiff.Cmp(big.NewInt(1)) < 0 {
 			log.Info("got a proposal block fragment from past", "proposal", request.BlockNumber, "current", localBlock.Number().Int64())
@@ -703,7 +739,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// ignore
 			break
 		}
-		p.MarkBlockFragment(request.Data.Proof)
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
@@ -772,12 +807,48 @@ func (pm *ProtocolManager) proposalBroadcastLoop() {
 	for obj := range pm.proposalSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case core.NewProposalEvent:
-			for _, peer := range pm.peers.PeersWithoutProposal(ev.Proposal.Hash()) {
-				peer.SendNewProposal(ev.Proposal)
+			peers := pm.peers.PeersWithoutProposal(ev.Proposal.Hash())
+
+			log.Debug("Broadcast Proposal is going to be sent",
+				"number", ev.Proposal.BlockNumber().Int64(),
+				"round", ev.Proposal.Round(),
+				"hash", ev.Proposal.Hash(),
+				"size", ev.Proposal.Size(),
+				"totalPeers", pm.peers.Len(),
+				"peersN", len(peers),
+				"peers", peers)
+
+			for _, peer := range peers {
+				err := peer.SendNewProposal(ev.Proposal)
+				log.Debug("Broadcast Proposal sent",
+					"number", ev.Proposal.BlockNumber().Int64(),
+					"round", ev.Proposal.Round(),
+					"hash", ev.Proposal.Hash(),
+					"peer", peer.RemoteAddr(),
+					"size", ev.Proposal.Size(),
+					"err", err)
 			}
 		case core.NewBlockFragmentEvent:
-			for _, peer := range pm.peers.PeersWithoutBlockFragment(ev.Data.Proof) {
-				peer.SendBlockFragment(ev.BlockNumber, ev.BlockHash, ev.Round, ev.Data)
+			peers := pm.peers.PeersWithoutBlockFragment(ev.Data.Proof)
+
+			log.Debug("Broadcast Proposal block fragment is going to be sent",
+				"number", ev.BlockNumber,
+				"round", ev.Round,
+				"hash", ev.BlockHash,
+				"index", ev.Data.Index,
+				"totalPeers", pm.peers.Len(),
+				"peersN", len(peers),
+				"peers", peers)
+
+			for _, peer := range peers {
+				err := peer.SendBlockFragment(ev.BlockNumber, ev.BlockHash, ev.Round, ev.Data)
+				log.Debug("Broadcast Proposal block fragment sent",
+					"number", ev.BlockNumber,
+					"round", ev.Round,
+					"hash", ev.BlockHash,
+					"index", ev.Data.Index,
+					"peer", peer.RemoteAddr(),
+					"err", err)
 			}
 		}
 	}
@@ -789,8 +860,25 @@ func (pm *ProtocolManager) voteBroadcastLoop() {
 		switch ev := obj.Data.(type) {
 		case core.NewVoteEvent:
 			peers := pm.peers.PeersWithoutVote(ev.Vote.Hash())
+
+			log.Debug("Broadcast Vote is going to be sent",
+				"type", ev.Vote.Type(),
+				"number", ev.Vote.BlockNumber().Int64(),
+				"round", ev.Vote.Round(),
+				"hash", ev.Vote.Hash(),
+				"totalPeers", pm.peers.Len(),
+				"peersN", len(peers),
+				"peers", peers)
+
 			for _, peer := range peers {
-				peer.SendVote(ev.Vote)
+				err := peer.SendVote(ev.Vote)
+				log.Debug("Broadcast Vote sent",
+					"type", ev.Vote.Type(),
+					"number", ev.Vote.BlockNumber().Int64(),
+					"round", ev.Vote.Round(),
+					"hash", ev.Vote.Hash(),
+					"peer", peer.RemoteAddr(),
+					"err", err)
 			}
 		}
 	}

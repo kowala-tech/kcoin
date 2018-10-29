@@ -267,7 +267,7 @@ func (v *VotesSet) Add(vote AddressVote) {
 	}
 
 	log.Debug("voting. add vote", "type", voteData.data.Type, "number", voteData.data.BlockNumber.Int64(),
-		"round", voteData.data.Round, "blockHash", voteData.data.BlockHash.String())
+		"round", voteData.data.Round, "blockHash", voteData.data.BlockHash.String(), "vote", vote.Vote().String())
 
 	v.counter[voteData.data.BlockHash]++
 	if v.counter[voteData.data.BlockHash] > v.counter[v.leader] {

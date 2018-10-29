@@ -387,8 +387,10 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, blockNumb
 	defer func() {
 		// reset on error
 		if err != nil {
+			log.Debug("syncWithPeer failed", "err", err)
 			d.mux.Post(FailedEvent{err})
 		} else {
+			log.Debug("syncWithPeer done")
 			d.mux.Post(DoneEvent{})
 		}
 	}()
@@ -438,16 +440,17 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, blockNumb
 		d.syncInitHook(origin, height)
 	}
 
+	log.Debug("syncWithPeer", "origin", origin, "height", height, "blockNumber", blockNumber.Int64(), "peer", p.id)
 	fetchers := []func() error{
-		func() error { return d.fetchHeaders(p, origin+1, pivot) }, // Headers are always retrieved
-		func() error { return d.fetchBodies(origin + 1) },          // Bodies are retrieved during normal and fast sync
-		func() error { return d.fetchReceipts(origin + 1) },        // Receipts are retrieved during fast sync
-		func() error { return d.processHeaders(origin+1, pivot, blockNumber) },
+		func() error { log.Debug("@@@ 1"); return d.fetchHeaders(p, origin+1, pivot) }, // Headers are always retrieved
+		func() error { log.Debug("@@@ 2"); return d.fetchBodies(origin + 1) },          // Bodies are retrieved during normal and fast sync
+		func() error { log.Debug("@@@ 3"); return d.fetchReceipts(origin + 1) },        // Receipts are retrieved during fast sync
+		func() error { log.Debug("@@@ 4"); return d.processHeaders(origin+1, pivot, blockNumber) },
 	}
 	if d.mode == FastSync {
 		fetchers = append(fetchers, func() error { return d.processFastSyncContent(latest) })
 	} else if d.mode == FullSync {
-		fetchers = append(fetchers, d.processFullSyncContent)
+		fetchers = append(fetchers, func() error { log.Debug("@@@ 5"); return d.processFullSyncContent()})
 	}
 	return d.spawnSync(fetchers)
 }
