@@ -333,6 +333,29 @@ func (css *Consensus) Confirm(opts *accounts.TransactOpts, transactionID *big.In
 	return tx.Hash(), err
 }
 
+func (css *Consensus) SetMaxValidators(opts *accounts.TransactOpts, max *big.Int) (common.Hash, error) {
+	if err := css.MintInit(); err != nil {
+		return common.Hash{}, err
+	}
+
+	tokenABI, err := abi.JSON(strings.NewReader(MiningTokenABI))
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	setMaxValidatorsParams, err := tokenABI.Pack("setMaxValidators", max)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	tx, err := css.multiSigWallet.SubmitTransaction(toBind(opts), css.mtokenAddr, common.Big0, setMaxValidatorsParams)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return tx.Hash(), err
+}
+
 // @TODO(rgeraldes) - temporary method
 func (css *Consensus) Domain() string {
 	return ""
