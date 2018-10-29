@@ -95,7 +95,7 @@ func TruffleContractsConsensusTokenMiningtokenSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/consensus/token/MiningToken.sol", size: 632, mode: os.FileMode(420), modTime: time.Unix(1535712721, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/consensus/token/MiningToken.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xde, 0x9c, 0x98, 0x14, 0x59, 0x3c, 0xe7, 0x59, 0xea, 0x3, 0x18, 0xbe, 0xca, 0xa6, 0xeb, 0x6d, 0xf9, 0x5, 0x95, 0x30, 0x13, 0xae, 0xed, 0x93, 0x42, 0x3, 0xd0, 0x7c, 0x38, 0x3a, 0x29, 0x24}}
 	return a, nil
 }
@@ -115,7 +115,7 @@ func TruffleContractsConsensusMgrValidatormgrSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/consensus/mgr/ValidatorMgr.sol", size: 11246, mode: os.FileMode(420), modTime: time.Unix(1535712721, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/consensus/mgr/ValidatorMgr.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x78, 0xff, 0x4e, 0x8b, 0xe0, 0x41, 0x30, 0xa3, 0x70, 0x94, 0xa7, 0x50, 0xe9, 0xf8, 0x3a, 0x88, 0x5d, 0xca, 0xed, 0x4c, 0x4a, 0x85, 0x55, 0xa1, 0x42, 0x86, 0x49, 0x7a, 0xd0, 0x82, 0xc, 0x75}}
 	return a, nil
 }
@@ -135,7 +135,7 @@ func TruffleContractsKnsPublicresolverSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/kns/PublicResolver.sol", size: 8606, mode: os.FileMode(420), modTime: time.Unix(1533199628, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/kns/PublicResolver.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x9b, 0x6c, 0xe6, 0x81, 0x7e, 0x36, 0xdb, 0xbf, 0xd3, 0xec, 0x38, 0x62, 0x1a, 0x18, 0x3e, 0x82, 0xb4, 0x56, 0x55, 0xb, 0x49, 0xdd, 0x8b, 0x2e, 0xbc, 0xf5, 0x2f, 0xa4, 0xad, 0xec, 0x3a, 0xa9}}
 	return a, nil
 }
@@ -155,7 +155,7 @@ func TruffleContractsKnsFifsregistrarSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/kns/FIFSRegistrar.sol", size: 1376, mode: os.FileMode(420), modTime: time.Unix(1538736199, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/kns/FIFSRegistrar.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x91, 0x50, 0x16, 0x2b, 0x3a, 0x81, 0xa0, 0x51, 0x39, 0x74, 0x81, 0xa0, 0xeb, 0xe0, 0x48, 0xe7, 0x74, 0x75, 0xf4, 0x33, 0xf0, 0x61, 0xa9, 0xe0, 0x40, 0xab, 0xf7, 0x53, 0xd6, 0x4, 0xa9, 0x47}}
 	return a, nil
 }
@@ -175,7 +175,7 @@ func TruffleContractsKnsKnsregistrySol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/kns/KNSRegistry.sol", size: 3236, mode: os.FileMode(420), modTime: time.Unix(1533199628, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/kns/KNSRegistry.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xbb, 0xee, 0xf7, 0x65, 0x91, 0xdb, 0xae, 0x88, 0xda, 0xa5, 0xb4, 0x7, 0xa7, 0xec, 0x36, 0x98, 0xf5, 0x6e, 0xe3, 0x27, 0x53, 0x11, 0x1c, 0x3c, 0xf4, 0x3c, 0x33, 0x76, 0xea, 0xe8, 0x15, 0x9e}}
 	return a, nil
 }
@@ -195,7 +195,7 @@ func TruffleContractsOracleExchangemgrSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/oracle/ExchangeMgr.sol", size: 4152, mode: os.FileMode(420), modTime: time.Unix(1540461083, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/oracle/ExchangeMgr.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xfe, 0x9b, 0xa6, 0x40, 0xf1, 0x70, 0x95, 0x8c, 0xfa, 0x95, 0xc7, 0x45, 0x56, 0x6a, 0x38, 0xb9, 0xe5, 0xaf, 0x68, 0xf7, 0x6e, 0xbf, 0xba, 0x1c, 0x28, 0x7a, 0xe7, 0x97, 0x88, 0x99, 0xdf, 0x87}}
 	return a, nil
 }
@@ -215,7 +215,7 @@ func TruffleContractsOracleOraclemgrSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/oracle/OracleMgr.sol", size: 6038, mode: os.FileMode(420), modTime: time.Unix(1535712721, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/oracle/OracleMgr.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x95, 0xc1, 0x79, 0x3d, 0x36, 0x44, 0xd1, 0x5f, 0xc9, 0xe6, 0xa6, 0xdc, 0x3f, 0x59, 0x2e, 0xa1, 0x6c, 0x52, 0xeb, 0xcc, 0xc0, 0x9b, 0xa, 0x81, 0x96, 0x5d, 0xe0, 0xe6, 0xfc, 0xa6, 0xae, 0x20}}
 	return a, nil
 }
@@ -235,7 +235,7 @@ func TruffleContractsOwnershipMultisigwalletSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/ownership/MultiSigWallet.sol", size: 12489, mode: os.FileMode(420), modTime: time.Unix(1535712721, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/ownership/MultiSigWallet.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x7d, 0x34, 0xf2, 0xe7, 0xec, 0x7c, 0x9d, 0x5d, 0xa9, 0x81, 0x87, 0xb4, 0xd8, 0x96, 0xb1, 0x85, 0x3, 0x12, 0x16, 0x20, 0x3e, 0x5d, 0x67, 0x83, 0x2d, 0x8d, 0xe9, 0xf9, 0xc, 0x78, 0xde, 0x65}}
 	return a, nil
 }
@@ -255,7 +255,7 @@ func TruffleNode_modulesZosLibContractsUpgradeabilityUpgradeabilityproxyfactoryS
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/node_modules/zos-lib/contracts/upgradeability/UpgradeabilityProxyFactory.sol", size: 2108, mode: os.FileMode(420), modTime: time.Unix(1534968025, 0)}
+	info := bindataFileInfo{name: "../../truffle/node_modules/zos-lib/contracts/upgradeability/UpgradeabilityProxyFactory.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xc7, 0xaa, 0x6, 0x50, 0x3e, 0x0, 0xa2, 0xb4, 0x91, 0x85, 0x3a, 0xdc, 0x5a, 0xa3, 0xc4, 0x9d, 0x2c, 0x4, 0x24, 0x0, 0x41, 0xd7, 0x82, 0xe3, 0x19, 0xaf, 0x32, 0xec, 0x57, 0x67, 0x51, 0x12}}
 	return a, nil
 }
@@ -275,7 +275,7 @@ func TruffleContractsSysvarsSystemvarsSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/sysvars/SystemVars.sol", size: 3015, mode: os.FileMode(420), modTime: time.Unix(1540461038, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/sysvars/SystemVars.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x5d, 0x80, 0xe9, 0x5b, 0xfa, 0x6f, 0xd7, 0x8e, 0x53, 0xdc, 0xf8, 0xcf, 0xe1, 0xf9, 0xdc, 0x3e, 0x38, 0x99, 0x5d, 0xa7, 0xa0, 0xb2, 0xba, 0x3c, 0x1a, 0x6a, 0x50, 0x49, 0xc8, 0x75, 0x78, 0xe6}}
 	return a, nil
 }
@@ -295,7 +295,7 @@ func TruffleContractsUtilsNamehashSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/utils/NameHash.sol", size: 1057, mode: os.FileMode(420), modTime: time.Unix(1535536576, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/utils/NameHash.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x42, 0xa9, 0xcf, 0xa9, 0x7d, 0x25, 0xc2, 0x27, 0x95, 0x21, 0x8e, 0x5d, 0x66, 0x8f, 0x4f, 0xfe, 0x48, 0xa3, 0xbc, 0x60, 0x3d, 0x7f, 0xd0, 0xae, 0xd8, 0x6e, 0x71, 0xbd, 0x49, 0x94, 0xbe, 0x6f}}
 	return a, nil
 }
@@ -315,7 +315,7 @@ func TruffleContractsUtilsStringsSol() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "../../truffle/contracts/utils/Strings.sol", size: 24684, mode: os.FileMode(420), modTime: time.Unix(1535536576, 0)}
+	info := bindataFileInfo{name: "../../truffle/contracts/utils/Strings.sol", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x99, 0x22, 0xc1, 0x32, 0x20, 0x0, 0x89, 0x48, 0x5, 0x25, 0x60, 0x37, 0x74, 0x3, 0xbc, 0xe1, 0x4d, 0x6a, 0x6f, 0x37, 0xf4, 0xe, 0x7c, 0x14, 0x5b, 0x1a, 0xda, 0x16, 0xbf, 0x50, 0xb9, 0x3f}}
 	return a, nil
 }
