@@ -73,6 +73,8 @@ type Config struct {
 	DocRoot string `toml:"-"`
 
 	Currency string
+
+	DebugEvm bool
 }
 
 type configMarshaling struct {

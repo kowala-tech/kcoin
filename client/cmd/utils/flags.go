@@ -11,13 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
-	"github.com/kowala-tech/kcoin/client/stats"
-
 	"github.com/kowala-tech/kcoin/client/accounts"
 	"github.com/kowala-tech/kcoin/client/accounts/keystore"
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/fdlimit"
+	"github.com/kowala-tech/kcoin/client/consensus/konsensus"
 	"github.com/kowala-tech/kcoin/client/core"
 	"github.com/kowala-tech/kcoin/client/core/state"
 	"github.com/kowala-tech/kcoin/client/core/vm"
@@ -36,7 +34,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/p2p/nat"
 	"github.com/kowala-tech/kcoin/client/p2p/netutil"
 	"github.com/kowala-tech/kcoin/client/params"
-
+	"github.com/kowala-tech/kcoin/client/stats"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -128,6 +126,10 @@ var (
 		Name:  "currency",
 		Usage: "Currency to use with the client",
 		Value: knode.DefaultConfig.Currency,
+	}
+	DebugEvmFlag = cli.BoolFlag{
+		Name:  "debug-evm",
+		Usage: "Enables debug for evm",
 	}
 	DocRootFlag = DirectoryFlag{
 		Name:  "docroot",
@@ -965,6 +967,10 @@ func SetKowalaConfig(ctx *cli.Context, stack *node.Node, cfg *knode.Config) {
 	}
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
+	}
+
+	if ctx.GlobalBool(DebugEvmFlag.Name) {
+		cfg.DebugEvm = true
 	}
 
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheDatabaseFlag.Name) {

@@ -32,6 +32,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode/filters"
 	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/knode/protocol"
+	"github.com/kowala-tech/kcoin/client/knode/tracers"
 	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/log"
 	"github.com/kowala-tech/kcoin/client/node"
@@ -144,6 +145,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Kowala, error) {
 	}
 
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
+	if config.DebugEvm {
+		vmConfig.Debug = true
+		vmConfig.Tracer = &tracers.EvmRevertedTracer{}
+	}
+
 	cacheConfig := &core.CacheConfig{Disabled: config.NoPruning, TrieNodeLimit: config.TrieCache, TrieTimeLimit: config.TrieTimeout}
 	kcoin.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, kcoin.chainConfig, kcoin.engine, vmConfig)
 	if err != nil {
