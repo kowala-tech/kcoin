@@ -26,7 +26,7 @@ const namehash = require('eth-ens-namehash');
 const assert = require('chai').assert;
 const truffleContract = require('truffle-contract');
 
-const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
+const web3 = new Web3(new Web3.providers.HttpProvider('http://0.0.0.0:30503'));
 
 const {
   AdminUpgradeabilityProxy,
@@ -39,9 +39,6 @@ const MultiSig = artifacts.require('MultiSigWallet.sol');
 const multiSigAddr = '0x0e5d0Fd336650E663C710EF420F85Fb081E21415';
 const prAddress = '0x01e1056f6a829E53dadeb8a5A6189A9333Bd1d63';
 
-const governor1 = '0xf861e10641952a42f9c527a43ab77c3030ee2c8f';
-const governor3 = '0xa1d4755112491db5ddf0e10b9253b5a0f6783759';
-
 module.exports = async () => {
   try {
     let proxyAddr;
@@ -52,7 +49,7 @@ module.exports = async () => {
     else { admin = argv.admin; }
     if (argv.domain !== undefined && argv.contractAddr === undefined) {
       const publicResolver = await PublicResolver.at(prAddress);
-      proxyAddr = await publicResolver.methods.addr(namehash(argv.domain)).call();
+      proxyAddr = await publicResolver.addr(namehash(argv.domain));
     } else if (argv.domain === undefined && argv.contractAddr !== undefined && await web3.utils.isAddress(argv.contractAddr)) {
       proxyAddr = argv.contractAddr;
     } else {
@@ -91,8 +88,5 @@ module.exports = async () => {
       'Submission',
     );
     console.log('Transaction submitted');
-    // console.log('Confirming transaction');
-    // await sig.confirmTransaction(transactionID, { from: owner2 });
-    // console.log('Transaction confirmed');
   } catch (err) { console.log(err); }
 };
