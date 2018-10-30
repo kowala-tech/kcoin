@@ -1,30 +1,34 @@
 package main
 
-//go:generate go-bindata -nometadata -o website.go index.html
+//go:generate go-bindata -nometadata -o website.go static/...
 //go:generate gofmt -w -s website.go
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
-	"html/template"
+	"math/big"
 	"net/http"
 	"os"
+	"path/filepath"
+	"reflect"
 	"sync"
 	"time"
 
+	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/core/types"
 	"github.com/kowala-tech/kcoin/client/kcoinclient"
-
 	"github.com/kowala-tech/kcoin/client/log"
+	"github.com/kowala-tech/kcoin/client/node"
+	"github.com/kowala-tech/kcoin/client/rpc"
 	"golang.org/x/net/websocket"
 )
 
 var (
-	IPCFlag     = flag.String("ipc", "", "Path to the IPC file")
-	apiPortFlag = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
-	logFlag     = flag.Int("verbosity", 3, "Log level to use for the control panel service")
+	IPCFlag      = flag.String("ipc", "", "Path to the IPC file")
+	currencyFlag = flag.String("currency", "kusd", "currency name")
+	apiPortFlag  = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
+	logFlag      = flag.Int("verbosity", 3, "Log level to use for the control panel service")
 )
 
 func main() {
@@ -32,16 +36,8 @@ func main() {
 	flag.Parse()
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*logFlag), log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 
-	// Load up and render the website
-	tmpl := MustAsset("index.html")
-	website := new(bytes.Buffer)
-	err := template.Must(template.New("").Parse(string(tmpl))).Execute(website, map[string]interface{}{})
-	if err != nil {
-		log.Crit("Failed to render the template", "err", err)
-	}
-
 	// Assemble and start the control service
-	control, err := newControl(*IPCFlag, website.Bytes())
+	control, err := newControl(ipcPath())
 	if err != nil {
 		log.Crit("Failed to start control", "err", err)
 	}
@@ -52,49 +48,68 @@ func main() {
 	}
 }
 
+type mintListItem struct {
+	Amount    *big.Int `json:"amount"`
+	Confirmed bool     `json:"confirmed"`
+	Id        int      `json:"id"`
+	To        string   `json:"to"`
+}
 type state struct {
 	block    int64
 	coinbase string
+	accounts []string
+	mintList []*mintListItem
 }
 
 // control represents a control backed
 type control struct {
 	state     *state
 	stateLock sync.RWMutex
-	index     []byte // Index page to serve up on the web
+	rpcClient *rpc.Client
 	client    *kcoinclient.Client
 	conns     []*websocket.Conn
 	connLock  sync.RWMutex
 	headers   chan *types.Header
 }
 
-func newControl(ipcFile string, index []byte) (*control, error) {
-	client, err := dial(ipcFile)
+func ipcPath() string {
+	if *IPCFlag != "" {
+		return *IPCFlag
+	}
+
+	return filepath.Join(node.DefaultDataDir(), *currencyFlag, "kcoin.ipc")
+}
+
+func newControl(ipcFile string) (*control, error) {
+
+	rpcClient, client, err := dial(ipcFile)
 	if err != nil {
 		return nil, err
 	}
 
 	return &control{
-		client: client,
-		index:  index,
-		state:  &state{},
+		rpcClient: rpcClient,
+		client:    client,
+		state:     &state{},
 	}, nil
 }
 
 // dial dials to the kcoin process. It retries every second up to ten times.
-func dial(ipcFile string) (*kcoinclient.Client, error) {
+func dial(ipcFile string) (*rpc.Client, *kcoinclient.Client, error) {
 	attempts := 10
 	var err error
+	var rpcClient *rpc.Client
 	var client *kcoinclient.Client
 	for attempts > 0 {
-		client, err = kcoinclient.Dial(ipcFile)
+		rpcClient, err = rpc.Dial(ipcFile)
 		if err == nil {
-			return client, nil
+			client = kcoinclient.NewClient(rpcClient)
+			return rpcClient, client, nil
 		}
 		attempts -= 1
 		time.Sleep(1 * time.Second)
 	}
-	return nil, err
+	return nil, nil, err
 }
 
 // close terminates the Kowala connection and tears down the faucet.
@@ -107,17 +122,22 @@ func (ctrl *control) close() error {
 // for service user funding requests.
 func (ctrl *control) listenAndServe(port int) error {
 	go ctrl.syncBlock()
-	go ctrl.syncCoinbase()
-	http.HandleFunc("/", ctrl.webHandler)
+	go ctrl.syncAccounts()
+	go ctrl.syncMintList()
+
 	http.Handle("/api", websocket.Handler(ctrl.apiHandler))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		data := MustAsset("static/index.html")
+		w.Header().Set("Content-Type", "text/html")
+		w.Write(data)
+	})
+	http.HandleFunc("/scripts.js", func(w http.ResponseWriter, r *http.Request) {
+		data := MustAsset("static/scripts.js")
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Write(data)
+	})
 
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-}
-
-// webHandler handles all non-api requests, simply flattening and returning the
-// faucet website.
-func (ctrl *control) webHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write(ctrl.index)
 }
 
 func (ctrl *control) syncBlock() {
@@ -139,23 +159,62 @@ func (ctrl *control) syncBlock() {
 	}
 }
 
-func (ctrl *control) syncCoinbase() {
+func (ctrl *control) syncAccounts() {
 	lastCoinbase := ""
+	lastAccounts := []string{}
+
 	for {
 		time.Sleep(time.Second)
+		var coinbase string
+		var accounts []string
 
-		coinbase, err := ctrl.client.Coinbase(context.Background())
-		if err != nil {
+		if err := ctrl.rpcClient.Call(&coinbase, "eth_coinbase"); err != nil {
 			log.Warn("error fetching coinbase", "err", err)
 			break
 		}
-		if coinbase != nil && lastCoinbase != coinbase.Hex() {
-			lastCoinbase = coinbase.Hex()
+		if err := ctrl.rpcClient.Call(&accounts, "eth_accounts"); err != nil {
+			log.Warn("error fetching accounts", "err", err)
+			break
+		}
+
+		sendState := false
+		if coinbase != "" && lastCoinbase != coinbase {
+			lastCoinbase = coinbase
 			ctrl.stateLock.Lock()
-			ctrl.state.coinbase = coinbase.Hex()
+			ctrl.state.coinbase = coinbase
 			ctrl.stateLock.Unlock()
+			sendState = true
+		}
+
+		if accounts != nil && !reflect.DeepEqual(accounts, lastAccounts) {
+			lastAccounts = accounts
+			ctrl.stateLock.Lock()
+			ctrl.state.accounts = accounts
+			ctrl.stateLock.Unlock()
+			sendState = true
+		}
+
+		if sendState {
 			ctrl.sendState()
 		}
+	}
+}
+
+func (ctrl *control) syncMintList() {
+	for {
+		time.Sleep(time.Second)
+
+		var mintList []*mintListItem
+
+		err := ctrl.rpcClient.Call(&mintList, "mtoken_mintList")
+		if err != nil {
+			log.Error(err.Error())
+			break
+		}
+		ctrl.stateLock.Lock()
+		ctrl.state.mintList = mintList
+		ctrl.stateLock.Unlock()
+		ctrl.sendState()
 	}
 }
 
@@ -171,6 +230,74 @@ func (ctrl *control) apiHandler(conn *websocket.Conn) {
 		data := make(map[string]interface{})
 		if err := websocket.JSON.Receive(conn, &data); err != nil {
 			return
+		}
+		switch data["action"] {
+		case "mint":
+			governor, ok := data["governor"].(string)
+			if !ok || governor == "" {
+				ctrl.sendError(conn, "Invalid governor")
+				continue
+			}
+			mintAddress, ok := data["mint_address"].(string)
+			if !ok || mintAddress == "" {
+				ctrl.sendError(conn, "Invalid address")
+				continue
+			}
+			mintAmountStr, ok := data["mint_amount"].(string)
+			if !ok || mintAmountStr == "" {
+				ctrl.sendError(conn, "Invalid amount")
+				continue
+			}
+			mintAmount, ok := big.NewInt(0).SetString(mintAmountStr, 10)
+			if !ok {
+				ctrl.sendError(conn, "Amount is not a valid number")
+				continue
+			}
+			mintUnitStr, ok := data["mint_unit"].(string)
+			if !ok || mintUnitStr == "" {
+				ctrl.sendError(conn, "Invalid unit")
+				continue
+			}
+			mintUnit, ok := big.NewInt(0).SetString(mintUnitStr, 10)
+			if !ok {
+				ctrl.sendError(conn, "Unit is not a valid")
+				continue
+			}
+
+			mintScale := big.NewInt(10)
+			mintScale = mintScale.Exp(mintScale, mintUnit, nil)
+			finalAmmount := mintAmount.Mul(mintAmount, mintScale)
+
+			err := ctrl.rpcClient.Call(nil, "mtoken_mint", governor,
+				mintAddress,
+				hexutil.EncodeBig(finalAmmount),
+			)
+			if err != nil {
+				ctrl.sendError(conn, "Error proposing mint")
+				log.Error(err.Error())
+				continue
+			}
+			ctrl.sendSuccess(conn, "Mint proposed")
+		case "confirm_mint":
+			governor, ok := data["governor"].(string)
+			if !ok || governor == "" {
+				ctrl.sendError(conn, "Invalid governor")
+				continue
+			}
+			id, ok := data["id"].(float64)
+			if !ok {
+				ctrl.sendError(conn, "Invalid ID")
+				continue
+			}
+
+			bigId := big.NewInt(int64(id))
+			err := ctrl.rpcClient.Call(nil, "mtoken_confirm", governor, hexutil.EncodeBig(bigId))
+			if err != nil {
+				ctrl.sendError(conn, "Error confirming mint")
+				log.Error(err.Error())
+				continue
+			}
+			ctrl.sendSuccess(conn, "Mint confirmed")
 		}
 	}
 }
@@ -203,10 +330,28 @@ func (ctrl *control) sendStateToConn(conn *websocket.Conn) {
 	if err := send(conn, map[string]interface{}{
 		"coinbase": ctrl.state.coinbase,
 		"block":    ctrl.state.block,
+		"mintList": ctrl.state.mintList,
+		"accounts": ctrl.state.accounts,
 	}, 3*time.Second); err != nil {
 		log.Warn("Failed to send state", "err", err)
 	}
 	ctrl.stateLock.RUnlock()
+}
+
+func (ctrl *control) sendError(conn *websocket.Conn, message string) {
+	if err := send(conn, map[string]interface{}{
+		"error": message,
+	}, 3*time.Second); err != nil {
+		log.Warn("Failed to send error message", "err", err)
+	}
+}
+
+func (ctrl *control) sendSuccess(conn *websocket.Conn, message string) {
+	if err := send(conn, map[string]interface{}{
+		"success": message,
+	}, 3*time.Second); err != nil {
+		log.Warn("Failed to send error message", "err", err)
+	}
 }
 
 // sends transmits a data packet to the remote end of the websocket, but also
