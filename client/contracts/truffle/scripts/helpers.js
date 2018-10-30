@@ -1,13 +1,20 @@
 /* eslint no-unused-expressions: 0 */
 /* eslint-disable max-len */
+/* global web3, assert */
 
 const Web3 = require('web3');
-
-const web3 = new Web3(new Web3.providers.HttpProvider('http://0.0.0.0:30503'));
-// const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
-
 const truffleContract = require('truffle-contract');
 const fs = require('fs');
+const path = require('path');
+const JSON5 = require('json5');
+
+const network = global.process.argv[4];
+const source = fs.readFileSync(path.resolve(__dirname, '../truffle.js'), 'utf8');
+const truffleJS = JSON5.parse(source.slice(17, -2));
+const host = truffleJS.networks[network]['host'];
+const port = truffleJS.networks[network]['port'];
+
+const web3 = new Web3(new Web3.providers.HttpProvider(`http:\/\/${host}:${port}`));
 
 const assert = require('chai').assert;
 
