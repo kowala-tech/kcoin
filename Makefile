@@ -179,6 +179,41 @@ else
 	done;
 endif
 
+.PHONY: control_cross
+control_cross: control_cross_build control_cross_compress control_cross_rename
+	@echo "Full cross compilation done."
+
+.PHONY: control_cross_build
+control_cross_build:
+	go generate ./client/cmd/control
+	cd client; build/env.sh go run build/ci.go xgo -- --go=latest --targets=linux/amd64,linux/arm64,darwin/amd64,windows/amd64 -v ./cmd/control
+	mv client/build/bin/control-darwin-10.6-amd64 client/build/bin/control-darwin-amd64
+	mv client/build/bin/control-windows-4.0-amd64.exe client/build/bin/control-windows-amd64.exe
+
+.PHONY: control_cross_compress
+control_cross_compress:
+	cd client/build/bin; for f in control*; do zip $$f.zip $$f; rm $$f; done; cd -
+
+.PHONY: control_cross_rename
+control_cross_rename:
+ifdef DRONE_TAG
+	mkdir -p client/build/bin/tags/$(DRONE_TAG)
+	cd client/build/bin && for f in control-*; do \
+		release=$$(echo $$f | awk '{ gsub("control", "control-stable"); print }');\
+		version=$$(echo $$f | awk '{ gsub("control", "control-$(DRONE_TAG)"); print }');\
+		cp $$f $$release;\
+		mv $$f $$version;\
+	done;
+else
+	mkdir -p client/build/bin/commits/$(DRONE_COMMIT_SHA)
+	cd client/build/bin && for f in control-*; do \
+		release=$$(echo $$f | awk '{ gsub("control", "control-unstable"); print }');\
+		version=$$(echo $$f | awk '{ gsub("control", "commits/$(DRONE_COMMIT_SHA)/control"); print }');\
+		cp $$f $$release;\
+		mv $$f $$version;\
+	done;
+endif
+
 ## E2E tests
 
 .PHONY: e2e
