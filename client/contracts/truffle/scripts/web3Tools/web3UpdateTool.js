@@ -30,7 +30,6 @@ const argv = require('yargs')
     .epilog('Copyright Kowala 2018')
     .argv;
 
-
 const multiSigAddr = '0x0e5d0Fd336650E663C710EF420F85Fb081E21415';
 const publicResolverAddr = '0x01e1056f6a829E53dadeb8a5A6189A9333Bd1d63';
 
@@ -40,7 +39,7 @@ const {
   signTransactionAndSend,
   readABIAndByteCode,
   deployContract,
-} = require('./helpers.js');
+} = require('../helpers/helpers.js');
 
 (async () => {
   try {

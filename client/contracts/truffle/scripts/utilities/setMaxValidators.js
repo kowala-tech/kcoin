@@ -28,7 +28,7 @@ const {
   AdminUpgradeabilityProxy,
   PublicResolver,
   getParamFromTxEvent,
-} = require('./helpers.js');
+} = require('../helpers/helpers.js');
 
 const multiSigAddr = '0x0e5d0fd336650e663c710ef420f85fb081e21415';
 const prAddress = '0x01e1056f6a829E53dadeb8a5A6189A9333Bd1d63';

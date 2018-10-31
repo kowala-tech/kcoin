@@ -2,7 +2,7 @@
 /* eslint-disable max-len */
 
 const argv = require('yargs')
-    .usage('Usage: $0 option contractAddr option admin option privateKey option file \n e.g $0 -c 0x123 -a 0xAd123 -k 9876655 -f ./build/contracts/SampleContract.json')
+    .usage('Usage: $0 option domain option admin option privateKey option file \n e.g $0 -d samplecontract.kowala -a 0xAd123 -f ./build/contracts/SampleContract.json')
     .alias('c', 'contractAddr') // contractAddr option
     .nargs('c', 1)
     .describe('c', 'contract address to update')
@@ -98,5 +98,6 @@ module.exports = async () => {
       'Submission',
     );
     console.log('Transaction submitted');
+    console.log(`Transaction ID: ${transactionID}`);
   } catch (err) { console.log(err); }
 };
