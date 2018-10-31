@@ -102,9 +102,6 @@ func (val *validator) newElectionState() stateFn {
 		return nil
 	}
 
-	log.Warn("newElectionState will start at", "time", roundStartsAt(val.parentBlockCreatedAt, val.round).Format("2006-01-02T15:04:05.000"))
-	<-roundStartTimer(val.parentBlockCreatedAt, val.round).C
-
 	// @NOTE (rgeraldes) - wait for txs - sync genesis validators, round zero for the first block only.
 	if val.blockNumber.Cmp(big.NewInt(1)) == 0 {
 		numTxs, _ := val.backend.TxPool().Stats() //
@@ -131,6 +128,8 @@ func (val *validator) newRoundState() stateFn {
 	parentNumber := new(big.Int).Set(parent.Number())
 	val.blockNumber = parentNumber.Add(parentNumber, big.NewInt(1))
 
+	val.timers = newTimers(val.previousRoundCreatedAt, val.blockNumber, val.round)
+
 	val.blockFragmentsLock.Lock()
 	val.blockFragments = make(map[common.Hash]*types.BlockFragments)
 	val.blockFragmentsStorage = make(map[common.Hash][]*types.BlockFragment)
@@ -141,15 +140,14 @@ func (val *validator) newRoundState() stateFn {
 		val.majority = val.eventMux.Subscribe(core.NewMajorityEvent{})
 	}
 
-	<-roundStartTimer(val.parentBlockCreatedAt, val.round).C
 	currentRoundCreatedAt := time.Now()
 	if val.round > 0 {
 		val.previousRoundCreatedAt = val.roundCreatedAt
 	}
 	val.roundCreatedAt = currentRoundCreatedAt
-	log.Warn("round created at", "time", currentRoundCreatedAt.Format("2006-01-02T15:04:05.000"))
-	log.Warn("previous round created at", "time", val.previousRoundCreatedAt.Format("2006-01-02T15:04:05.000"))
-	log.Warn("round will started at", "time", roundStartsAt(val.previousRoundCreatedAt, 0).Format("2006-01-02T15:04:05.000"))
+
+	log.Debug("round created at", "time", currentRoundCreatedAt.Format(millisecondFormat), "number", val.blockNumber.Int64(), "round", val.round)
+	log.Debug("previous round created at", "time", val.previousRoundCreatedAt.Format(millisecondFormat), "number", val.blockNumber.Int64(), "round", val.round)
 
 	atomic.StoreInt32(&val.waitProposalBlock, 1)
 	if val.round != 0 {
@@ -160,18 +158,12 @@ func (val *validator) newRoundState() stateFn {
 		}
 	}
 
-	log.Info("Starting a new voting round", "startTime", val.parentBlockCreatedAt, "block number", val.blockNumber, "round", val.round)
 	return val.newProposalState
 }
 
 func (val *validator) newProposalState() stateFn {
-	newProposalStateStarted := time.Now()
-	newProposalStateStarted = newProposalStateStarted.Add(time.Duration(val.getProposeTimeout()-1*params.ProposeDeltaDuration) * time.Millisecond)
-	log.Warn("newProposalState will wait until", "time", newProposalStateStarted.Format("2006-01-02T15:04:05.000"))
-
 	defer func() {
-		<-roundStartTimer(val.previousRoundCreatedAt, val.round-1).C
-		<-time.NewTimer(newProposalStateStarted.Sub(time.Now())).C
+		<-val.timers.getProposingTimers().endsAt.C
 
 		atomic.StoreInt32(&val.waitProposalBlock, 0)
 		log.Info("proposal stage is done",
@@ -193,6 +185,7 @@ func (val *validator) newProposalState() stateFn {
 		log.Info("Proposing a new block")
 		val.propose()
 	} else {
+		<-val.timers.getRoundStartTimer().C
 		log.Info("Waiting for the proposal", "addr", val.proposer.Address())
 		val.waitForProposal()
 	}
@@ -201,7 +194,6 @@ func (val *validator) newProposalState() stateFn {
 }
 
 func (val *validator) waitForProposal() {
-	timeout := time.Duration(val.getProposeTimeout()) * time.Millisecond
 	for {
 		select {
 		case block := <-val.blockCh:
@@ -215,8 +207,7 @@ func (val *validator) waitForProposal() {
 			log.Debug("unexpected proposed block number",
 				"want", val.blockNumber.Int64(),
 				"got", block.Number().Int64())
-		case <-time.After(timeout):
-			log.Info("Timeout expired waitForProposal stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
+		case <-val.timers.getProposingTimers().deadline.C:
 			return
 		}
 	}
@@ -227,14 +218,7 @@ func (val *validator) getProposeTimeout() uint64 {
 }
 
 func (val *validator) preVoteState() stateFn {
-	preVoteStarted := time.Now()
 	log.Info("Pre vote sub-election")
-
-	preVoteStarted = preVoteStarted.Add(time.Duration(params.PreVoteDuration+(val.round-1)*params.PreVoteDeltaDuration) * time.Millisecond)
-	log.Warn("preVoteState will wait until", "time", preVoteStarted.Format("2006-01-02T15:04:05.000"))
-	defer func() {
-		<-time.NewTimer(preVoteStarted.Sub(time.Now())).C
-	}()
 
 	val.preVote()
 
@@ -243,28 +227,21 @@ func (val *validator) preVoteState() stateFn {
 
 func (val *validator) preVoteWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-vote sub-election")
-	timeout := time.Duration(params.PreVoteDuration+val.round*params.PreVoteDeltaDuration) * time.Millisecond
+
+	defer func() { <-val.timers.getPreVotingTimers().endsAt.C }()
 
 	select {
 	case <-val.majority.Chan():
 		log.Info("There's a majority in the pre-vote sub-election!")
 		// fixme shall we do something here with current stateDB?
-	case <-time.After(timeout):
-		log.Info("Timeout expired preVoteWaitState stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
+	case <-val.timers.getPreVotingTimers().deadline.C:
 	}
 
 	return val.preCommitState
 }
 
 func (val *validator) preCommitState() stateFn {
-	preCommitStarted := time.Now()
 	log.Info("Pre commit sub-election")
-
-	preCommitStarted = preCommitStarted.Add(time.Duration(params.PreCommitDuration+(val.round-1)*params.PreCommitDeltaDuration) * time.Millisecond)
-	log.Warn("preCommitState will wait until", "time", preCommitStarted.Format("2006-01-02T15:04:05.000"))
-	defer func() {
-		<-time.NewTimer(preCommitStarted.Sub(time.Now())).C
-	}()
 
 	val.preCommit()
 
@@ -273,7 +250,9 @@ func (val *validator) preCommitState() stateFn {
 
 func (val *validator) preCommitWaitState() stateFn {
 	log.Info("Waiting for a majority in the pre-commit sub-election", "blockNumber", val.blockNumber, "round", val.round)
-	timeout := time.Duration(params.PreCommitDuration+val.round*params.PreCommitDeltaDuration) * time.Millisecond
+
+	defer func() { <-val.timers.getPreCommitTimers().endsAt.C }()
+
 	defer val.majority.Unsubscribe()
 
 	select {
@@ -300,9 +279,7 @@ func (val *validator) preCommitWaitState() stateFn {
 			return val.newRoundState
 		}
 		return val.commitState
-	case <-time.After(timeout):
-		log.Info("Timeout expired preCommitWaitState stage", "duration", timeout, "number", val.blockNumber.Int64(), "round", val.round)
-
+	case <-val.timers.getPreCommitTimers().deadline.C:
 		val.round++
 		return val.newRoundState
 	}

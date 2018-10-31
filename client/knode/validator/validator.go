@@ -261,11 +261,11 @@ func (val *validator) PendingBlock() *types.Block {
 
 func (val *validator) init() error {
 	parent := val.chain.CurrentBlock()
-	val.parentBlockCreatedAt = time.Unix(parent.Time().Int64(), 0)
-	val.previousRoundCreatedAt = time.Unix(time.Now().Unix(), 0)
-
 	val.blockNumber = parent.Number().Add(parent.Number(), big.NewInt(1))
 	val.round = 0
+
+	val.previousRoundCreatedAt = time.Unix(parent.Time().Int64(), 0)
+	val.roundCreatedAt = time.Unix(parent.Time().Int64(), 0)
 
 	val.lockedRound = 0
 	val.lockedBlock = nil
@@ -564,6 +564,9 @@ func (val *validator) leave() {
 	if err != nil {
 		log.Error("Failed to verify the voter unregistration", "err", err)
 	}
+	if receipt == nil {
+		log.Error("Failed to unregister validator - receipt status failed")
+	}
 	if receipt.Status == types.ReceiptStatusFailed {
 		log.Error("Failed to unregister validator - receipt status failed")
 	}
@@ -665,7 +668,9 @@ func (val *validator) propose() {
 	val.block = block
 
 	// give some time to the network to start waiting for the proposed block
-	time.Sleep(time.Duration(params.ProposeDeltaDuration) * time.Millisecond)
+	<-val.timers.getRoundStartTimer().C
+	val.timers.WaitProposingDelay()
+
 	if err := val.eventMux.Post(core.NewProposalEvent{Proposal: signedProposal}); err != nil {
 		log.Warn("can't post an event", "err", err, "event", "NewProposalEvent", "proposal", signedProposal)
 	}
@@ -714,15 +719,11 @@ func (val *validator) preVote() {
 		vote = val.block.Hash()
 	}
 
-	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreVote))
-
-	// fixme: fix only for a small network - resend vote. It's necessary because we don't have a reliable sync mechanism with heartbeat
-	time.Sleep(time.Duration(params.PreVoteDeltaDuration) * time.Millisecond)
-	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreVote))
+	val.tryVote(val.blockNumber, vote, val.round, types.PreVote)
 }
 
 func (val *validator) preCommit() {
-	var vote common.Hash
+	var leaderBlockHash common.Hash
 
 	// current leader by simple majority
 	votingTable, err := val.votingSystem.getVotingTable(val.round, types.PreVote)
@@ -747,16 +748,16 @@ func (val *validator) preCommit() {
 		log.Debug("Majority of validators pre-voted the locked block", "block", val.lockedBlock.Hash())
 		// update locked block round
 		val.lockedRound = val.round
-		// vote on the pre-vote election winner
-		vote = currentLeader
+		// leaderBlockHash on the pre-leaderBlockHash election winner
+		leaderBlockHash = currentLeader
 
 	case val.block != nil && currentLeader == val.block.Hash():
 		log.Debug("Majority of validators pre-voted the proposed block", "block", val.block.Hash())
 		// lock block
 		val.lockedRound = val.round
 		val.lockedBlock = val.block
-		// vote on the pre-vote election winner
-		vote = currentLeader
+		// leaderBlockHash on the pre-leaderBlockHash election winner
+		leaderBlockHash = currentLeader
 		// we don't have the current block (fetch)
 
 	default:
@@ -781,7 +782,22 @@ func (val *validator) preCommit() {
 		val.block = nil
 	}
 
-	val.vote(types.NewVote(val.blockNumber, vote, val.round, types.PreCommit))
+	val.tryVote(val.blockNumber, leaderBlockHash, val.round, types.PreCommit)
+}
+
+func (val *validator) tryVote(blockNumber *big.Int, blockHash common.Hash, round uint64, voteType types.VoteType) {
+	vote := types.NewVote(blockNumber, blockHash, round, voteType)
+	const tries = 2
+
+	for i := 0; i < tries; i++ {
+		val.vote(vote)
+
+		if i != tries-1 {
+			// fixme: fix only for a small network - resend vote.
+			// It's necessary because we don't have a reliable sync mechanism with heartbeat
+			val.timers.WaitVotingDelay()
+		}
+	}
 }
 
 func (val *validator) vote(vote *types.Vote) {
@@ -1045,13 +1061,4 @@ func (val *validator) RedeemDeposits() error {
 
 func (val *validator) HasProposer() bool {
 	return val.proposer != nil
-}
-
-func roundStartTimer(blockStarts time.Time, round uint64) *time.Timer {
-	startsAt := roundStartsAt(blockStarts, round)
-	return time.NewTimer(startsAt.Sub(time.Now()))
-}
-
-func roundStartsAt(blockStarts time.Time, round uint64) time.Time {
-	return blockStarts.Add(time.Duration(params.BlockTime*(round+1)) * time.Millisecond)
 }
