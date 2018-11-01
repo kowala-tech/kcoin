@@ -124,3 +124,25 @@ Or, from the kcoin root:
 ```
 make docker_solidoc_generate
 ```
+
+# How to update contracts
+We have created a CLI tool to be used with truffle to send a transaction via MultiSig for our governors, so they can request a change in contract. CLI update tool is located under `client/contracts/truffle/scripts/truffleTools/truffleUpdateTool.js`.
+
+```Usage: truffle exec --network networkName option contractAddr option domain option admin option file
+ e.g truffle -d systemvars.kowala -a 0xAd123 -k 9876655 -f
+ ./build/contracts/SampleContract.json
+
+Options:
+  --version           Show version number                              [boolean]
+  -c, --contractAddr  contract address to update
+  -d, --domain        domain of a contract to be updated
+  -a, --admin         admin of the proxy contract (who updates the contract)
+                                                                      [required]
+  -f, --file          path to a JSON file with ABI and Bytecode for the new
+                      version of a contract. Usually a file from build diretory
+                      after truffle compile                           [required]
+  -h, --help          Show help                                        [boolean]
+
+Copyright Kowala 2018```
+
+

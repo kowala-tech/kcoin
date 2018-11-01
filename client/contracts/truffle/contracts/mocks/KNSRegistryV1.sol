@@ -36,6 +36,10 @@ contract KNSRegistryV1 is KNS, Initializable {
         return "HelloProxy";
     }
 
+    function meaningOfLife() public pure returns(string){
+        return "Answer: 42";
+    }
+
     /**
      * @dev Transfers ownership of a node to a new address. May only be called by the current owner of the node.
      * @param node The node to transfer ownership of.

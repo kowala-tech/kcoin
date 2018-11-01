@@ -10,6 +10,8 @@ require('chai')
   .use(require('chai-bignumber')(web3.BigNumber))
   .should();
 
+const truffleContract = require('truffle-contract');
+
 const { Contracts } = require('zos-lib');
 
 const KNS = artifacts.require('KNSRegistry.sol');
@@ -23,15 +25,14 @@ const namehash = require('eth-ens-namehash');
 
 contract('Proxy Functionality', ([_, admin, owner, anotherAccount]) => {
   it('should access contracts via proxy', async () => {
-    const proxyFactory = await UpgradeabilityProxy.new();
-
+    const proxyFactory = await UpgradeabilityProxy.new({from: admin});
     // KNS Proxy
     const kns = await KNS.new();
     const logs = await proxyFactory.createProxy(admin, kns.address, { from: admin });
     const logs1 = logs.logs;
     const knsProxyAddress = logs1.find(l => l.event === 'ProxyCreated').args.proxy;
     const knsProxy = await AdminUpgradeabilityProxy.at(knsProxyAddress);
-    let knsContract = new KNS(knsProxyAddress);
+    let knsContract = await KNS.at(knsProxyAddress);
     await knsContract.initialize(owner);
 
     // Registrar Proxy
@@ -42,15 +43,13 @@ contract('Proxy Functionality', ([_, admin, owner, anotherAccount]) => {
     const registrarProxy = await AdminUpgradeabilityProxy.at(registrarProxyAddress);
     const registrarContract = await FIFSRegistrar.at(registrarProxyAddress);
     await registrarContract.initialize(knsProxyAddress, namehash('kowala'));
-
     // Resolver Proxy
     const resolver = await PublicResolver.new(knsProxyAddress, { from: admin });
-    const logs4 = await proxyFactory.createProxy(admin, resolver.address);
+    const logs4 = await proxyFactory.createProxy(admin, resolver.address, { from: admin });
     const logs5 = logs4.logs;
     const resolverProxyAddress = logs5.find(l => l.event === 'ProxyCreated').args.proxy;
     const resolverProxy = await AdminUpgradeabilityProxy.at(resolverProxyAddress);
     const resolverContract = await PublicResolver.at(resolverProxyAddress);
-
     await resolverContract.initialize(knsProxyAddress);
     await knsContract.setSubnodeOwner(0, web3.sha3('kowala'), registrarProxyAddress, { from: owner });
     const validator = await ValidatorMgr.new(1, 2, 3, 1, resolverProxyAddress);

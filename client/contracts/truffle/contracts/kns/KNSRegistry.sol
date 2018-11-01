@@ -104,5 +104,4 @@ contract KNSRegistry is KNS, Initializable {
     function ttl(bytes32 node) public view returns (uint64) {
         return records[node].ttl;
     }
-
 }
