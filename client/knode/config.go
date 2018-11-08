@@ -10,6 +10,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/knode/currency"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/knode/gasprice"
+	"github.com/kowala-tech/kcoin/client/knode/validator"
 	"github.com/kowala-tech/kcoin/client/params"
 )
 
@@ -73,6 +74,8 @@ type Config struct {
 	DocRoot string `toml:"-"`
 
 	Currency string
+
+	ValidatorConfig *validator.Config
 }
 
 type configMarshaling struct {

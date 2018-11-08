@@ -104,7 +104,9 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, kcoinConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
+
 	utils.SetKowalaConfig(ctx, stack, &cfg.Kowala)
+
 	if ctx.GlobalIsSet(utils.KowalaStatsURLFlag.Name) {
 		cfg.Stats.URL = ctx.GlobalString(utils.KowalaStatsURLFlag.Name)
 	}
