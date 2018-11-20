@@ -165,7 +165,7 @@ func (b *SimulatedBackend) CallContract(ctx context.Context, call kowala.CallMsg
 	if err != nil {
 		return nil, err
 	}
-	rval, _, _, err := b.callContract(ctx, call, b.CurrentBlock(), state)
+	rval, _, _, _, err := b.callContract(ctx, call, b.CurrentBlock(), state)
 	return rval, err
 }
 
@@ -175,7 +175,7 @@ func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call kowala.
 	defer b.mu.Unlock()
 	defer b.pendingState.RevertToSnapshot(b.pendingState.Snapshot())
 
-	rval, _, _, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
+	rval, _, _, _, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
 	return rval, err
 }
 
@@ -218,7 +218,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg)
 		call.Gas = gas
 
 		snapshot := b.pendingState.Snapshot()
-		_, _, failed, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
+		_, _, _, failed, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
 		b.pendingState.RevertToSnapshot(snapshot)
 
 		if err != nil || failed {
@@ -250,7 +250,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kowala.CallMsg)
 
 // callContract implements common code between normal and pending contract calls.
 // state is modified during execution, make sure to copy it if necessary.
-func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, uint64, bool, error) {
+func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, uint64, *big.Int, bool, error) {
 	// Ensure message is initialized properly.
 	if call.GasPrice == nil {
 		call.GasPrice = big.NewInt(1)
@@ -267,7 +267,8 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call kowala.CallMsg
 	// Execute the call.
 	msg := callmsg{call}
 
-	evmContext := core.NewEVMContext(msg, block.Header(), b.BlockChain, nil)
+	// Stability fee disabled by default
+	evmContext := core.NewEVMContext(msg, block.Header(), b.BlockChain, nil, 0)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})

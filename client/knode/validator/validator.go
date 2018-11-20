@@ -340,7 +340,8 @@ func (val *validator) AddVote(vote *types.Vote) error {
 	return nil
 }
 
-func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
+func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) *big.Int {
+	accruedStabilityFees := new(big.Int).SetUint64(0)
 	gp := new(core.GasPool).AddGas(val.header.GasLimit)
 
 	var coalescedLogs []*types.Log
@@ -360,7 +361,7 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 		// Start executing the transaction
 		val.state.Prepare(tx.Hash(), common.Hash{}, val.tcount)
 
-		err, logs := val.commitTransaction(tx, bc, coinbase, gp)
+		err, logs, stabilityFee := val.commitTransaction(tx, bc, coinbase, gp)
 		switch err {
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
@@ -380,6 +381,7 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
+			accruedStabilityFees.Add(accruedStabilityFees, stabilityFee)
 			val.tcount++
 			txs.Shift()
 
@@ -409,20 +411,22 @@ func (val *validator) commitTransactions(mux *event.TypeMux, txs *types.Transact
 			}
 		}(cpy, val.tcount)
 	}
+
+	return accruedStabilityFees
 }
 
-func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
+func (val *validator) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log, *big.Int) {
 	snap := val.state.Snapshot()
 
-	receipt, _, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
+	receipt, err := core.ApplyTransaction(val.config, bc, &coinbase, gp, val.state, val.header, tx, &val.header.GasUsed, vm.Config{})
 	if err != nil {
 		val.state.RevertToSnapshot(snap)
-		return err, nil
+		return err, nil, nil
 	}
 	val.txs = append(val.txs, tx)
 	val.receipts = append(val.receipts, receipt)
 
-	return nil, receipt.Logs
+	return nil, receipt.Logs, receipt.StabilityFee
 }
 
 func (val *validator) leave() {
@@ -494,11 +498,11 @@ func (val *validator) createBlock() *types.Block {
 	}
 
 	txs := types.NewTransactionsByPriceAndNonce(val.signer, pending)
-	val.commitTransactions(val.eventMux, txs, val.chain, val.walletAccount.Account().Address)
+	cumulativeStabilityFees := val.commitTransactions(val.eventMux, txs, val.chain, val.walletAccount.Account().Address)
 
 	// Create the new block to seal with the consensus engine
 	var block *types.Block
-	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, commit, val.receipts); err != nil {
+	if block, err = val.engine.Finalize(val.chain, header, val.state, val.txs, commit, val.receipts, cumulativeStabilityFees); err != nil {
 		log.Crit("Failed to finalize block for sealing", "err", err)
 	}
 

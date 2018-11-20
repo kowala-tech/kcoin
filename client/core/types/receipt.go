@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"unsafe"
 
 	"github.com/kowala-tech/kcoin/client/common"
@@ -52,9 +53,10 @@ type Receipt struct {
 	Logs              []*Log `json:"logs"              gencodec:"required"`
 
 	// Implementation fields (don't reorder!)
-	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
+	TxHash          common.Hash    `json:"transactionHash"  gencodec:"required"`
 	ContractAddress common.Address `json:"contractAddress"`
-	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
+	GasUsed         uint64         `json:"gasUsed"          gencodec:"required"`
+	StabilityFee    *big.Int       `json:"stabilityFee"     gencodec:"required"`
 }
 
 type receiptMarshaling struct {
@@ -62,6 +64,7 @@ type receiptMarshaling struct {
 	Status            hexutil.Uint64
 	CumulativeGasUsed hexutil.Uint64
 	GasUsed           hexutil.Uint64
+	StabilityFee      *hexutil.Big
 }
 
 // receiptRLP is the consensus encoding of a receipt.
@@ -80,6 +83,7 @@ type receiptStorageRLP struct {
 	ContractAddress   common.Address
 	Logs              []*LogForStorage
 	GasUsed           uint64
+	StabilityFee      *big.Int
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
@@ -154,11 +158,12 @@ func (r *Receipt) String() string {
 TxHash:			 	%s
 ContractAddress: 	%s
 GasUsed:		 	%d
+StabilityFee:       %#x
 CumulativeGasUsed:	%d
 Status: 			%d
 Size: 				%s
 Logs: %v
-`, r.TxHash.String(), r.ContractAddress.String(), r.CumulativeGasUsed, r.GasUsed, r.Status, r.Size().String(), r.Logs)
+`, r.TxHash.String(), r.ContractAddress.String(), r.CumulativeGasUsed, r.GasUsed, r.StabilityFee, r.Status, r.Size().String(), r.Logs)
 }
 
 // ReceiptForStorage is a wrapper around a Receipt that flattens and parses the
@@ -176,6 +181,7 @@ func (r *ReceiptForStorage) EncodeRLP(w io.Writer) error {
 		ContractAddress:   r.ContractAddress,
 		Logs:              make([]*LogForStorage, len(r.Logs)),
 		GasUsed:           r.GasUsed,
+		StabilityFee:      r.StabilityFee,
 	}
 	for i, log := range r.Logs {
 		enc.Logs[i] = (*LogForStorage)(log)
@@ -200,7 +206,7 @@ func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
 		r.Logs[i] = (*Log)(log)
 	}
 	// Assign the implementation fields
-	r.TxHash, r.ContractAddress, r.GasUsed = dec.TxHash, dec.ContractAddress, dec.GasUsed
+	r.TxHash, r.ContractAddress, r.GasUsed, r.StabilityFee = dec.TxHash, dec.ContractAddress, dec.GasUsed, dec.StabilityFee
 	return nil
 }
 
