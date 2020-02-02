@@ -14,6 +14,7 @@ import (
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/oracle"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/ownership"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/proxy"
+	"github.com/kowala-tech/kcoin/client/contracts/bindings/stability"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/sysvars"
 	"github.com/kowala-tech/kcoin/client/contracts/bindings/utils"
 	"github.com/kowala-tech/kcoin/client/core"
@@ -117,6 +118,84 @@ var ProxiedSystemVars = &contract{
 	},
 	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
 		return registerAddressToDomain(contract, opts, params.KNSDomains[params.SystemVarsDomain].Node())
+	},
+}
+
+var StabilityContract = &contract{
+	name: "Stability",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.stability
+
+		stabilityABI, err := abi.JSON(strings.NewReader(stability.StabilityABI))
+		if err != nil {
+			return err
+		}
+
+		stabilityParams, err := stabilityABI.Pack(
+			"",
+			args.minDeposit,
+			args.systemVarsAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		runtimeCfg := contract.runtimeCfg
+		runtimeCfg.Origin = args.owner
+		contractCode, contractAddr, _, err := runtime.Create(append(common.FromHex(stability.StabilityBin), stabilityParams...), runtimeCfg)
+		if err != nil {
+			return err
+		}
+		contract.code = contractCode
+		contract.address = contractAddr
+
+		return nil
+	},
+}
+
+var ProxiedStability = &contract{
+	name: "Proxied Stability Contract",
+	deploy: func(contract *contract, opts *validGenesisOptions) error {
+		args := opts.stability
+
+		runtimeCfg := contract.runtimeCfg
+
+		proxyContractAddr, code, err := createProxyFromContract(
+			common.HexToAddress("0xCdCA8b1B7EdFb0827F10F4ED3968D98FA5C90ea0"),
+			*opts.multiSig.multiSigCreator,
+			runtimeCfg,
+		)
+		if err != nil {
+			return err
+		}
+
+		contract.address = *proxyContractAddr
+		contract.code = code
+
+		runtimeCfg.Origin = bindings.MultiSigWalletAddr
+		abi, err := abi.JSON(strings.NewReader(stability.StabilityABI))
+		if err != nil {
+			return err
+		}
+
+		initKnsParams, err := abi.Pack(
+			"initialize",
+			args.minDeposit,
+			args.systemVarsAddr,
+		)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = runtime.Call(contract.address, initKnsParams, runtimeCfg)
+		if err != nil {
+			return fmt.Errorf("%s:%s", "Failed to initialize Proxied System Vars.", err)
+		}
+
+		return nil
+	},
+	postDeploy: func(contract *contract, opts *validGenesisOptions) error {
+		return registerAddressToDomain(contract, opts, params.KNSDomains[params.StabilityDomain].Node())
 	},
 }
 
@@ -410,6 +489,7 @@ var MultiSigContract = &contract{
 		opts.validatorMgr.owner = contractAddr
 		opts.oracleMgr.owner = contractAddr
 		opts.sysvars.owner = contractAddr
+		opts.stability.owner = contractAddr
 
 		return nil
 	},

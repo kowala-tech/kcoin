@@ -147,6 +147,7 @@ type validSystemVarsOpts struct {
 type validStabilityContractOpts struct {
 	minDeposit     *big.Int
 	systemVarsAddr common.Address
+	owner          common.Address
 }
 
 type validTokenHolder struct {

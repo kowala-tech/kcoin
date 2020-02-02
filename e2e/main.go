@@ -40,11 +40,10 @@ func main() {
 		})
 	}, godog.Options{
 		Format:        "progress",
-		Concurrency:   1,
+		Concurrency:   2,
 		Paths:         []string(featuresFlag),
 		Randomize:     -1,
 		StopOnFailure: true,
-		Tags:          "bootes",
 	})
 
 	os.Exit(status)

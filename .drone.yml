@@ -15,39 +15,13 @@ pipeline:
     commands:
       - make install_tools
     when:
-      event: [push, pull_request]
-      branch: [dev]
-  
-  truffle_node_modules:
-    group: truffle_setup
-    image: kowalatech/go:1.0.12
-    commands:
-      - make client/contracts/truffle/node_modules
-    when:
-      event: [push, pull_request]
-      branch: [dev]
-
-  build_solidity_docs:
-    group: solidity_docs
-    image: kowalatech/solidoc:1.0.3
-    commands: 
-      - make solidoc_generate
-    when:
-      event: [push, pull_request]
-      branch: [dev]
+      event: [pull_request]
 
   go_generate:
     group: generate
     image: kowalatech/go:1.0.12
     commands:
       - make go_generate
-    when:
-      event: [pull_request]
-
-  assert_no_changes:
-    group: assert_no_changes
-    image: kowalatech/go:1.0.12
-    commands:
       - make assert_no_changes
     when:
       event: [pull_request]
@@ -56,6 +30,7 @@ pipeline:
     group: testing
     image: kowalatech/go:1.0.12
     commands:
+      - make test_genesis
       - make test
       - make lint
     secrets: [ slack_app_webhook ]
@@ -387,7 +362,7 @@ pipeline:
     environment:
       - DOCKER_HOST=tcp://docker:2375
     commands:
-      - make kcoin_cross control_cross
+      - make kcoin_cross
     when:
       event: [push, tag]
       branch: [dev, master]
@@ -399,15 +374,15 @@ pipeline:
     when:
       branch: [dev]
       event: [push]
-  
+
   build_docs:
     group: build_artifacts
     image: kowalatech/mkdocs
     commands:
       - make build_docs
     when:
-      event: [push]
-      branch: [dev]
+      event: [push,tag]
+      branch: [master,dev]
 
   build_cdn:
     group: build_artifacts
@@ -467,7 +442,7 @@ pipeline:
     acl: public-read
     encryption: AES256
     bucket: releases.kowala.tech
-    source: client/build/bin/*.zip
+    source: client/build/bin/kcoin-*.zip
     strip_prefix: client/build/bin/
     target: /
     when:
@@ -542,7 +517,7 @@ pipeline:
 
 services:
   docker:
-    image: docker:18.06.1-ce-dind
+    image: docker:dind
     command: [ '-l', 'fatal' ]
     privileged: true
 

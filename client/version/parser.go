@@ -9,7 +9,7 @@ import (
 // ex: kcoin-1.0.11-linux-amd64.zip -> version: 1.0.11, platform: linux-amd64
 var re = regexp.MustCompile("^kcoin-(\\d+\\.\\d+\\.\\d+)-([\\w\\-\\d\\.]+)-(\\w+)(\\.exe)*\\.(zip|gz)$")
 
-func FilenameParser(filename string) (Asset, error) {
+func filenameParser(filename string) (Asset, error) {
 	if len(filename) < len("kcoin-1.0.1-os.zip") {
 		return asset{}, errors.New("cant parse filename")
 	}

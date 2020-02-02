@@ -107,7 +107,7 @@ contract ExchangeMgr is Pausable, Initializable {
     }
 
     /**
-     * @dev checks whether the given name is a whitelisted exchange or not
+     * @dev checks whether the given name is an whitelisted exchange or not
      * @param name exchange name.
      */
     function isExchange(string name) public view returns (bool isIndeed) {
@@ -115,7 +115,7 @@ contract ExchangeMgr is Pausable, Initializable {
     }
 
     /**
-     * @dev checks whether the given name is a whitelisted exchange or not
+     * @dev checks whether the given name is an whitelisted exchange or not
      * @param name exchange name.
      */
     function isWhitelistedExchange(string name) public view returns (bool isIndeed) {

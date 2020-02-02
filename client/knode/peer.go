@@ -40,9 +40,8 @@ const (
 	// above some healthy uncle limit, so use that.
 	maxQueuedAnns = 4
 
-	maxKnownProposals      = 1024 // Maximum proposal hashes to keep in the known list (prevent DOS)
-	maxKnownBlockFragments = 1024 // Maximum block fragment hashes to keep in the known list (prevent DOS)
-	maxKnownVotes          = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
+	maxKnownVotes     = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
+	maxKnownFragments = 1024 // Maximum vote hashes to keep in the known list (prevent DOS)
 
 	handshakeTimeout = 5 * time.Second
 )
@@ -72,13 +71,10 @@ type peer struct {
 	head        common.Hash
 	lock        sync.RWMutex
 
-	knownTxs    *set.Set
-	knownBlocks *set.Set
-
-	// consensus
-	knownProposals      *set.Set
-	knownBlockFragments *set.Set
-	knownVotes          *set.Set
+	knownTxs       *set.Set // Set of transaction hashes known to be known by this peer
+	knownBlocks    *set.Set // Set of block hashes known to be known by this peer
+	knownVotes     *set.Set // set of vote hashes known to be known by this peer
+	knownFragments *set.Set // set of fragment hashes known to be known by this peer
 
 	queuedTxs   chan []*types.Transaction // Queue of transactions to broadcast to the peer
 	queuedProps chan *propEvent           // Queue of blocks to broadcast to the peer
@@ -88,19 +84,18 @@ type peer struct {
 
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	return &peer{
-		Peer:                p,
-		rw:                  rw,
-		version:             version,
-		id:                  fmt.Sprintf("%x", p.ID().Bytes()[:8]),
-		knownTxs:            set.New(),
-		knownBlocks:         set.New(),
-		knownProposals:      set.New(),
-		knownBlockFragments: set.New(),
-		knownVotes:          set.New(),
-		queuedTxs:           make(chan []*types.Transaction, maxQueuedTxs),
-		queuedProps:         make(chan *propEvent, maxQueuedProps),
-		queuedAnns:          make(chan *types.Block, maxQueuedAnns),
-		term:                make(chan struct{}),
+		Peer:           p,
+		rw:             rw,
+		version:        version,
+		id:             fmt.Sprintf("%x", p.ID().Bytes()[:8]),
+		knownTxs:       set.New(),
+		knownBlocks:    set.New(),
+		knownVotes:     set.New(),
+		knownFragments: set.New(),
+		queuedTxs:      make(chan []*types.Transaction, maxQueuedTxs),
+		queuedProps:    make(chan *propEvent, maxQueuedProps),
+		queuedAnns:     make(chan *types.Block, maxQueuedAnns),
+		term:           make(chan struct{}),
 	}
 }
 
@@ -179,26 +174,6 @@ func (p *peer) MarkBlock(hash common.Hash) {
 	p.knownBlocks.Add(hash)
 }
 
-// MarkProposal marks a proposal as known for the peer, ensuring that the
-// proposal will never be propagated to this particular peer.
-func (p *peer) MarkProposal(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known fragment hash
-	for p.knownProposals.Size() >= maxKnownProposals {
-		p.knownProposals.Pop()
-	}
-	p.knownProposals.Add(hash)
-}
-
-// MarkFragment marks a block fragment as known for the peer, ensuring that the
-// fragment will never be propagated to this particular peer.
-func (p *peer) MarkBlockFragment(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known fragment hash
-	for p.knownBlockFragments.Size() >= maxKnownBlockFragments {
-		p.knownBlockFragments.Pop()
-	}
-	p.knownBlockFragments.Add(hash)
-}
-
 // MarkVote marks a vote as known for the peer, ensuring that the block will
 // never be propagated to this particular peer.
 func (p *peer) MarkVote(hash common.Hash) {
@@ -207,6 +182,16 @@ func (p *peer) MarkVote(hash common.Hash) {
 		p.knownVotes.Pop()
 	}
 	p.knownVotes.Add(hash)
+}
+
+// MarkFragment marks a block fragment as known for the peer, ensuring that the
+// fragment will never be propagated to this particular peer.
+func (p *peer) MarkFragment(hash common.Hash) {
+	// If we reached the memory allowance, drop a previously known fragment hash
+	for p.knownFragments.Size() >= maxKnownFragments {
+		p.knownFragments.Pop()
+	}
+	p.knownFragments.Add(hash)
 }
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
@@ -291,7 +276,6 @@ func (p *peer) SendNewProposal(proposal *types.Proposal) error {
 
 // SendNewBlock propagates a vote to a remote peer.
 func (p *peer) SendVote(vote *types.Vote) error {
-	p.knownVotes.Add(vote.Hash())
 	return p2p.Send(p.rw, VoteMsg, vote)
 }
 
@@ -549,30 +533,15 @@ func (ps *peerSet) PeersWithoutVote(hash common.Hash) []*peer {
 	return list
 }
 
-// PeersWithoutBlockFragment retrieves a list of peers that do not have a given block fragment
+// PeersWithoutFragment retrieves a list of peers that do not have a given block fragment
 // in their set of known hashes.
-func (ps *peerSet) PeersWithoutBlockFragment(hash common.Hash) []*peer {
+func (ps *peerSet) PeersWithoutFragment(hash common.Hash) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if !p.knownBlockFragments.Has(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
-// PeersWithoutProposal retrieves a list of peers that do not have a given proposal
-// in their set of known hashes.
-func (ps *peerSet) PeersWithoutProposal(hash common.Hash) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.knownProposals.Has(hash) {
+		if !p.knownFragments.Has(hash) {
 			list = append(list, p)
 		}
 	}

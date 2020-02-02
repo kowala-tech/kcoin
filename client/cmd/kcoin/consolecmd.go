@@ -10,7 +10,6 @@ import (
 
 	"github.com/kowala-tech/kcoin/client/cmd/utils"
 	"github.com/kowala-tech/kcoin/client/console"
-	"github.com/kowala-tech/kcoin/client/knode"
 	"github.com/kowala-tech/kcoin/client/node"
 	"github.com/kowala-tech/kcoin/client/rpc"
 	"gopkg.in/urfave/cli.v1"
@@ -111,7 +110,6 @@ func remoteConsole(ctx *cli.Context) error {
 				path = filepath.Join(path, "testnet")
 			}
 		}
-		path = filepath.Join(path, knode.DefaultConfig.Currency)
 		endpoint = fmt.Sprintf("%s/kcoin.ipc", path)
 	}
 	client, err := dialRPC(endpoint)

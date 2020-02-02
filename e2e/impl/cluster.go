@@ -100,8 +100,6 @@ func (ctx *Context) runNodes() error {
 		return err
 	}
 
-	time.Sleep(7 * time.Second)
-
 	if err := ctx.triggerGenesisValidation(); err != nil {
 		return err
 	}

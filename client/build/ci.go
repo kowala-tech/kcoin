@@ -136,6 +136,7 @@ var (
 		"./contracts/bindings/consensus",
 		"./contracts/bindings/oracle",
 		"./contracts/bindings/ownership",
+		"./contracts/bindings/stability",
 		"./contracts/bindings/sysvars",
 		"./contracts/bindings/token",
 		"./version",

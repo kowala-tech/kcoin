@@ -1,4 +1,3 @@
-@bootes
 Feature: Sending and receiving transactions
   As a user
   I want to be able to send and receive transactions

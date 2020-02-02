@@ -31,8 +31,10 @@ func TestLoaderFromFile(t *testing.T) {
 			updateGenesisGolden(t, genesisSampleBlockFilename(), jsonConfig)
 		}
 
-		_, err := NetworkGenesisBlock(genesisSampleBlockFilename(), "", "")
+		loadedBlock, err := NetworkGenesisBlock(genesisSampleBlockFilename(), "", "")
 		require.NoError(t, err, "Unexpected error when creating genesis block")
+
+		require.Equal(t, getHashFromGenesisBlock(deterministicBlock), getHashFromGenesisBlock(loadedBlock))
 	})
 }
 

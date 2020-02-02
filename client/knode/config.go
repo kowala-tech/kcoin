@@ -7,11 +7,12 @@ import (
 	"github.com/kowala-tech/kcoin/client/common"
 	"github.com/kowala-tech/kcoin/client/common/hexutil"
 	"github.com/kowala-tech/kcoin/client/core"
-	"github.com/kowala-tech/kcoin/client/knode/currency"
 	"github.com/kowala-tech/kcoin/client/knode/downloader"
 	"github.com/kowala-tech/kcoin/client/knode/gasprice"
 	"github.com/kowala-tech/kcoin/client/params"
 )
+
+const KUSD = "kusd"
 
 // DefaultConfig contains default settings for use on the Kowala main net.
 var DefaultConfig = Config{
@@ -28,7 +29,7 @@ var DefaultConfig = Config{
 		Blocks:     20,
 		Percentile: 60,
 	},
-	Currency: currency.KUSD,
+	Currency: KUSD,
 }
 
 //go:generate gencodec -type Config -field-override configMarshaling -formats toml -out gen_config.go

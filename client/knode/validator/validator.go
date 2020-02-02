@@ -166,13 +166,8 @@ func (val *validator) run() {
 		atomic.StoreInt32(&val.running, 0)
 	}()
 
-	initialStateFunc := val.notLoggedInState
-	if isGenesisValidator, err := val.isGenesisValidator(); err != nil && isGenesisValidator {
-		initialStateFunc = val.genesisNotLoggedInState
-	}
-
 	log.Info("Starting the consensus state machine")
-	for state, numTransitions := initialStateFunc, 0; state != nil; numTransitions++ {
+	for state, numTransitions := val.notLoggedInState, 0; state != nil; numTransitions++ {
 		state = state()
 		if val.maxTransitions > 0 && numTransitions == val.maxTransitions {
 			break
@@ -180,12 +175,7 @@ func (val *validator) run() {
 	}
 }
 
-func (val *validator) isGenesisValidator() (bool, error) {
-	return val.consensus.IsGenesisValidator(val.walletAccount.Account().Address)
-}
-
 func (val *validator) Stop() error {
-
 	if !val.Running() {
 		return nil
 	}

@@ -79,7 +79,7 @@ func (ctx *Context) isTransactionInBlockchain(tx *types.Transaction) (bool, erro
 
 func (ctx *Context) OnlyOneTransactionIsDone() error {
 	// wait some for new blocks
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	currentBlock, err := ctx.client.BlockNumber(context.Background())
 	if err != nil {
